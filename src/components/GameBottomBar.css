@@ -1,0 +1,58 @@
+.game-bottom-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2000; /* above app header, feedback trigger, and other fixed UI */
+
+  display: flex;
+  gap: 8px;
+  justify-content: space-around;
+  align-items: center;
+  flex-wrap: wrap;
+
+  padding: 12px 12px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+
+  background: rgba(26, 27, 31, 0.96);
+  border-top: 2px solid rgba(127, 166, 80, 0.6);
+  box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+}
+
+.gbb-btn {
+  flex: 1 1 calc(33.333% - 8px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.22);
+  color: #dcddde;
+  padding: 10px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  min-height: 44px;
+  letter-spacing: 0.02em;
+}
+
+.gbb-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.gbb-btn.danger {
+  border-color: rgba(255, 107, 107, 0.5);
+  color: #ff6b6b;
+}
+
+@media (max-width: 420px) {
+  .game-bottom-bar {
+    gap: 6px;
+    padding: 10px 10px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .gbb-btn {
+    flex: 1 1 calc(50% - 6px);
+    min-height: 42px;
+    font-size: 0.85rem;
+  }
+}

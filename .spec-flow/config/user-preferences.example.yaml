@@ -1,0 +1,206 @@
+# User Preferences Example
+# Copy this file to user-preferences.yaml and customize for your workflow
+
+# Command-specific preferences
+commands:
+  # /feature command preferences
+  feature:
+    # Options: auto | interactive
+    # - auto: Skip spec/plan reviews, run until blocker
+    # - interactive: Pause at spec review and plan review
+    default_mode: interactive
+
+    # Skip the mode selection prompt when preference is clear
+    # When true and default_mode is set, uses default without asking
+    skip_mode_prompt: false
+
+  # /epic command preferences
+  epic:
+    # Options: auto | interactive
+    # - auto: Skip all prompts, run until blocker
+    # - interactive: Pause at spec review and plan review
+    default_mode: interactive
+
+    # Skip the mode selection prompt when preference is clear
+    skip_mode_prompt: false
+
+  # /tasks command preferences
+  tasks:
+    # Options: standard | ui-first
+    # - standard: Generate tasks for TDD implementation
+    # - ui-first: Generate HTML mockups before implementation
+    default_mode: standard
+
+  # /init-project command preferences
+  init-project:
+    # Options: interactive | ci
+    # - interactive: Run questionnaire (15-48 questions)
+    # - ci: Use environment variables (for automation)
+    default_mode: interactive
+
+    # Automatically include design system setup (--with-design)
+    include_design: false
+
+  # /run-prompt command preferences
+  run-prompt:
+    # Options: auto-detect | parallel | sequential
+    # - auto-detect: Analyze dependencies and choose strategy
+    # - parallel: Run all prompts simultaneously
+    # - sequential: Run prompts one-by-one
+    default_strategy: auto-detect
+
+# Automation preferences
+automation:
+  # Automatically approve minor changes (formatting, comments, docs)
+  # Useful for CI/CD pipelines
+  auto_approve_minor_changes: false
+
+  # Default to CI-friendly behavior (assume --no-input)
+  # Set to true for fully automated environments
+  ci_mode_default: false
+
+# UI preferences
+ui:
+  # Show usage statistics in prompts (e.g., "used 8/10 times")
+  show_usage_stats: true
+
+  # Mark last-used option with ⭐ in prompts
+  recommend_last_used: true
+
+# Git worktree preferences
+worktrees:
+  # Automatically create git worktrees for epics and features
+  # Enables parallel development across multiple Claude Code instances
+  auto_create: false
+
+  # Automatically cleanup worktrees after /finalize completes
+  cleanup_on_finalize: true
+
+# Prototype workflow preferences
+prototype:
+  # Options: commit | gitignore | ask
+  # - commit: Version control prototype (recommended for design assets)
+  # - gitignore: Exclude prototype from git (rapid iteration)
+  # - ask: Prompt each time when creating prototype
+  git_persistence: ask
+
+# E2E and Visual Regression Testing (Gate 7)
+e2e_visual:
+  # Enable/disable E2E and visual testing gate
+  enabled: true
+
+  # Behavior when E2E/visual tests fail
+  # Options: blocking | warning
+  # - blocking: Fail the /optimize phase (recommended)
+  # - warning: Log warning but continue
+  failure_mode: blocking
+
+  # Pixel difference threshold (0.0-1.0)
+  # 0.1 = 10% pixel difference allowed
+  # Lower values are stricter, higher values are more lenient
+  threshold: 0.1
+
+  # Automatically commit generated baselines on first run
+  # When true, baselines are committed without user review
+  auto_commit_baselines: true
+
+  # Viewport presets for visual testing
+  # Tests run against each viewport
+  viewports:
+    - name: desktop
+      width: 1280
+      height: 720
+    - name: mobile
+      width: 375
+      height: 667
+
+# Perpetual learning system
+learning:
+  # Master switch for learning system
+  enabled: true
+
+  # Automatically apply low-risk learnings (performance patterns, abbreviations)
+  # Low-risk patterns have 90%+ confidence and don't modify behavior
+  auto_apply_low_risk: true
+
+  # Require approval for high-risk changes (CLAUDE.md system prompt tweaks)
+  # High-risk changes always require explicit approval
+  require_approval_high_risk: true
+
+  # Allow CLAUDE.md optimization (project-specific additions)
+  # When true, approved learnings can append to CLAUDE.md
+  claude_md_optimization: true
+
+  # Pattern detection thresholds
+  thresholds:
+    # Minimum occurrences before pattern is considered
+    pattern_detection_min_occurrences: 3
+
+    # Statistical significance threshold (0.0-1.0)
+    # Higher values require more confidence before auto-applying
+    statistical_significance: 0.95
+
+# Database migration safety (v10.5)
+migrations:
+  # How to handle pending migrations during /implement
+  # Options: blocking | warning | auto_apply
+  # - blocking: Stop and require manual apply (default, safest)
+  # - warning: Log warning but continue execution
+  # - auto_apply: Automatically run migrations (for CI/CD)
+  strictness: blocking
+
+  # Detection sensitivity - minimum keyword score to trigger migration detection
+  # Score based on keywords found in spec.md (store, persist, table, column, etc.)
+  # Lower values = more sensitive, Higher values = fewer false positives
+  # Range: 1-10, Default: 3
+  detection_threshold: 3
+
+  # Automatically generate migration-plan.md during /plan phase
+  # When true, detected schema changes produce a detailed migration plan
+  auto_generate_plan: true
+
+  # LLM analysis for low-confidence detections
+  # When score is 1-2 (ambiguous), use LLM to confirm if migrations needed
+  llm_analysis_for_low_confidence: true
+
+# ============================================================================
+# Example Configurations
+# ============================================================================
+
+# For Power Users (prefer automation):
+# commands:
+#   feature:
+#     default_mode: auto
+#     skip_mode_prompt: true
+#   epic:
+#     default_mode: auto
+#     skip_mode_prompt: true
+#   tasks:
+#     default_mode: standard
+#   run-prompt:
+#     default_strategy: parallel
+
+# For UI/Design-Focused Developers:
+# commands:
+#   feature:
+#     default_mode: interactive
+#   tasks:
+#     default_mode: ui-first
+#   init-project:
+#     include_design: true
+
+# For CI/CD Automation:
+# commands:
+#   feature:
+#     default_mode: auto
+#     skip_mode_prompt: true
+#   epic:
+#     default_mode: auto
+#     skip_mode_prompt: true
+#   init-project:
+#     default_mode: ci
+# automation:
+#   auto_approve_minor_changes: true
+#   ci_mode_default: true
+#   ui:
+#     show_usage_stats: false

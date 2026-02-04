@@ -1,0 +1,113 @@
+# Spec-Flow User Preferences
+# Customize command defaults and behavior to match your workflow
+# Documentation: docs/configuration.md
+
+commands:
+  epic:
+    default_mode: interactive
+
+  tasks:
+    default_mode: standard
+
+  init-project:
+    default_mode: interactive
+    include_design: false
+
+  run-prompt:
+    default_strategy: auto-detect
+
+# Planning depth preferences (ultrathink mode)
+planning:
+  # Master switch: always use deep/craftsman planning in --auto mode
+  # When true, /feature --auto and /epic --auto use ultrathink by default
+  auto_deep_mode: false
+
+  # Fine-grained triggers (when auto_deep_mode is false)
+  # These conditions automatically enable ultrathink even in standard mode
+  deep_planning_triggers:
+    # All epics get deep planning regardless of other settings
+    epic_features: true
+
+    # Features with estimated complexity > threshold get deep planning
+    # Based on task count estimate during /plan phase
+    complexity_threshold: 30
+
+    # New architectural patterns trigger deep planning
+    # Detected when /plan identifies components not matching existing patterns
+    architecture_change: true
+
+automation:
+  auto_approve_minor_changes: false
+  ci_mode_default: false
+
+ui:
+  show_usage_stats: true
+  recommend_last_used: true
+
+# Git worktree preferences
+worktrees:
+  # Automatically create git worktrees for epics and features
+  # Isolates git state per feature/epic, preventing merge conflicts
+  # Root Claude Code orchestrates, Task() agents work in worktrees
+  auto_create: true
+
+  # Automatically cleanup worktrees after /finalize completes
+  # Merges worktree branch to main, then removes worktree directory
+  cleanup_on_finalize: true
+
+# Dev Studio preferences (parallel AI development)
+studio:
+  # Skip 'Pick up next issue?' prompt after /finalize
+  # When true, agents automatically continue to next feature
+  auto_continue: false
+
+  # Default number of agent worktrees for /studio init
+  default_agents: 3
+
+# E2E and visual regression testing
+e2e_visual:
+  # Enable E2E and visual testing gate during /optimize
+  enabled: true
+
+  # How to handle failures: blocking (fail) or warning (continue)
+  failure_mode: blocking
+
+  # Pixel difference threshold for visual regression (0.1 = 10%)
+  threshold: 0.1
+
+  # Auto-commit baseline screenshots on first run
+  auto_commit_baselines: true
+
+# Database migrations
+migrations:
+  # How to handle pending migrations during /implement
+  # blocking: Stop and require manual apply
+  # warning: Log warning, continue
+  # auto_apply: Automatically run migrations
+  strictness: blocking
+
+# Perpetual learning system
+learning:
+  # Master switch for learning system
+  enabled: true
+
+  # Automatically apply low-risk learnings (performance patterns, abbreviations)
+  # Low-risk patterns have 90%+ confidence and don't modify behavior
+  auto_apply_low_risk: true
+
+  # Require approval for high-risk changes (CLAUDE.md system prompt tweaks)
+  # High-risk changes always require explicit approval
+  require_approval_high_risk: true
+
+  # Allow CLAUDE.md optimization (project-specific additions)
+  # When true, approved learnings can append to CLAUDE.md
+  claude_md_optimization: true
+
+  # Pattern detection thresholds
+  thresholds:
+    # Minimum occurrences before pattern is considered
+    pattern_detection_min_occurrences: 3
+
+    # Statistical significance threshold (0.0-1.0)
+    # Higher values require more confidence before auto-applying
+    statistical_significance: 0.95

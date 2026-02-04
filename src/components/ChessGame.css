@@ -1,0 +1,42 @@
+/* Chess Game Error State */
+.chess-game-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 2rem;
+}
+
+.chess-game-error .error-message {
+  text-align: center;
+  background: #3c3a37;
+  padding: 2rem;
+  border-radius: 8px;
+  border: 1px solid #ff6b6b;
+  max-width: 400px;
+}
+
+.chess-game-error h2 {
+  color: #ff6b6b;
+  margin-bottom: 1rem;
+}
+
+.chess-game-error p {
+  color: #b8b9ba;
+  margin-bottom: 1.5rem;
+}
+
+.chess-game-error .retry-button {
+  background: #7fa650;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.2s;
+}
+
+.chess-game-error .retry-button:hover {
+  background: #8fb85a;
+}

@@ -1,0 +1,112 @@
+.guest-blocked-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  background: var(--color-bg-primary);
+}
+
+.guest-blocked-content {
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: 48px 32px;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--color-border-default);
+  text-align: center;
+}
+
+.guest-blocked-icon {
+  font-size: 4rem;
+  margin-bottom: 16px;
+}
+
+.guest-blocked-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 12px;
+}
+
+.guest-blocked-description {
+  color: var(--color-text-secondary);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.guest-blocked-target {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-bg-tertiary);
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  margin-bottom: 32px;
+}
+
+.target-label {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.target-page {
+  color: var(--color-accent-gold);
+  font-weight: 600;
+}
+
+.guest-blocked-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btn {
+  padding: 14px 24px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: none;
+}
+
+.btn-primary {
+  background: linear-gradient(180deg, var(--color-accent-primary) 0%, #6a9344 100%);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
+}
+
+.btn-secondary {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-default);
+}
+
+.btn-secondary:hover {
+  background: var(--color-bg-hover);
+  border-color: var(--color-border-hover);
+}
+
+@media (max-width: 600px) {
+  .guest-blocked-content {
+    padding: 32px 20px;
+  }
+
+  .guest-blocked-icon {
+    font-size: 3rem;
+  }
+
+  .guest-blocked-title {
+    font-size: 1.25rem;
+  }
+}

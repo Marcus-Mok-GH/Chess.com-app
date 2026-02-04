@@ -1,0 +1,61 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(<add-your-project-paths-here>)"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "disableAllHooks": false,
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/session-start-restore.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/session-start-restore.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/session-start-restore.sh"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/pre-compact-handoff.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/stop-checkpoint.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

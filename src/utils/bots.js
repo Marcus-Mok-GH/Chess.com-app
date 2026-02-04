@@ -1,0 +1,843 @@
+// Bot personalities with different difficulty levels
+export const BOTS = [
+  {
+    id: 'coach',
+    name: 'Coach',
+    rating: 1500,
+    avatar: '🎓',
+    color: '#4CAF50',
+    depth: 4,
+    nodes: 20000,
+    blunderChance: 0.08,
+    missedTacticsChance: 0.12,
+    personality: 'Teaching assistant',
+    description: 'AI-powered coach that explains moves and helps you improve',
+    isCoach: true,
+    playStyle: {
+      aggression: 0.5,
+      materialistic: 0.6,
+      tactical: 0.7,
+      positional: 0.8,
+      drawTolerance: 0.5,
+      favorsCenter: 0.7,
+      kingSafety: 0.7,
+      development: 0.8,
+    },
+    quotes: {
+      start: [
+        "Let's learn together! I'll explain my thinking as we play.",
+        "Welcome! I'll give you tips and feedback throughout our game.",
+        "Ready to improve? I'll help you understand each position.",
+        "Great to see you! Let's work on your chess skills today.",
+        "Every game is a chance to learn something new. Let's begin!",
+        "Remember: focus on the process, not just the result. Let's play!",
+        "I'm here to help you improve. Don't worry about mistakes - they're how we learn!",
+        "Let's make this a productive session. I'll share insights as we go.",
+      ],
+      win: [
+        "Good game! Review my feedback to see where you can improve.",
+        "Well played! Check the coaching tips to learn from this game.",
+        "Great effort! Every game is a learning opportunity.",
+        "Nice game! I noticed some good patterns in your play. Let's build on them.",
+        "Well fought! Take note of the key moments where the game shifted.",
+        "Good game! Remember, even in losses there are valuable lessons.",
+        "That was instructive! Review the critical positions to reinforce your learning.",
+      ],
+      lose: [
+        "Excellent play! You found some great moves there.",
+        "Well done! Your improvement is showing.",
+        "Impressive! You're developing a good understanding of the position.",
+        "Great job! You're really starting to see the board well.",
+        "Wonderful game! Your tactical awareness is improving.",
+        "Excellent! You played with real confidence in that game.",
+        "Bravo! I can see you've been practicing. Keep it up!",
+        "Well played! That was a challenging position and you handled it well.",
+      ],
+      check: [
+        "Check! Notice how the king's position became vulnerable.",
+        "Your king is in check. Look for the safest escape square.",
+        "Check! This is a good moment to think about king safety.",
+        "Check! Consider: which escape square keeps your king safest?",
+        "Your king is attacked. Look at all your options before moving.",
+        "Check! Think about what led to this - how could you have prevented it?",
+        "Check! Remember, king safety should always be a priority.",
+      ],
+      capture: [
+        "I captured that piece. Consider what led to this opportunity.",
+        "Material gained! Think about how this affects the position.",
+        "Piece captured. What could have prevented this?",
+        "I took that piece because it was undefended. Always check your piece safety!",
+        "Capture! Notice how this piece was vulnerable. Can you spot why?",
+        "Material advantage for me. Let's think about how to avoid this next time.",
+        "I captured here because of a tactical opportunity. Did you see it coming?",
+      ],
+      captured: [
+        "Good capture! You saw the tactical opportunity.",
+        "Nice! Taking material when it's safe is important.",
+        "Well spotted! That was the right piece to take.",
+        "Great capture! You correctly identified the weakness.",
+        "Excellent! You're developing good tactical vision.",
+        "Nice one! That exchange favored you. Good calculation!",
+        "Well done! You saw that my piece was overloaded or undefended.",
+        "Good eye! Recognizing when to trade pieces is an important skill.",
+      ],
+      thinking: [
+        "Analyzing the position...",
+        "Considering the best teaching moment...",
+        "Looking for instructive moves...",
+        "Evaluating the position to find the most educational continuation...",
+        "Thinking about how to create a useful learning opportunity...",
+        "Analyzing... chess is a game of patience and calculation.",
+        "Considering the key factors: king safety, material, piece activity...",
+      ],
+      goodMove: [
+        "Excellent move! That improves your position significantly.",
+        "Well played! You're thinking ahead.",
+        "Great choice! That's a strong positional decision.",
+        "Impressive! That move shows real understanding of the position.",
+        "Nice! You're controlling important squares with that move.",
+        "Well done! That's exactly the kind of move strong players make.",
+        "Excellent! You're developing your pieces to active squares.",
+        "Great instinct! That move creates multiple threats.",
+      ],
+      blunder: [
+        "Hmm, there might be a better move here. Take your time!",
+        "Consider looking at all your options before moving.",
+        "This creates an opportunity - can you find it?",
+        "Oops! But don't worry - mistakes are how we learn. Let's continue!",
+        "There was a better option there. Can you spot it looking back?",
+        "This teaches us the importance of checking all captures and threats first.",
+        "A learning moment! Always ask yourself: is my opponent threatening anything?",
+      ],
+      draw: [
+        "A draw! Both sides played solidly. Let's review the key moments.",
+        "Equal game! You defended well in critical moments.",
+        "A fair result! Neither side could break through. Good defensive play!",
+        "Draw! This shows you can hold tough positions. That's a valuable skill.",
+        "Equal ending! Remember, knowing how to draw losing positions is important too.",
+      ],
+    },
+  },
+  {
+    id: 'nelson',
+    name: 'Nelson',
+    rating: 400,
+    avatar: '🤠',
+    color: '#8B4513',
+    depth: 1,
+    nodes: 100,  // Stockfish node limit
+    blunderChance: 0.35,
+    missedTacticsChance: 0.5,
+    personality: 'Conspiracy theorist',
+    description: 'Believes the pawns are secretly plotting against him',
+    playStyle: {
+      aggression: 0.8,      // Plays aggressively/unpredictably
+      materialistic: 0.3,   // Doesn't care much about material
+      tactical: 0.2,        // Misses tactics
+      positional: 0.1,      // Ignores positional play
+      drawTolerance: 0.9,   // Avoids draws aggressively
+      favorsCenter: 0.3,    // Unconventional play
+      kingSafety: 0.2,     // Risky king positions
+      development: 0.4,     // Poor development
+    },
+    quotes: {
+      start: [
+        "The government doesn't want you to know this, but the knights can move in an L shape.",
+        "I've been studying the REAL rules of chess. You wouldn't understand.",
+        "My tinfoil hat gives me +50 ELO. Proven fact.",
+        "Did you know chess was invented by aliens? Wake up, sheeple!",
+        "I've decoded the patterns. The bishops... they're watching us.",
+        "Don't trust the pawns. They're informants. All of them.",
+        "Finally, someone to share the TRUTH with. Let's play.",
+        "The chess federation is hiding the REAL opening theory. I've seen the files.",
+      ],
+      win: [
+        "I KNEW the deep state was helping me today!",
+        "The chemtrails aligned in my favor!",
+        "See? The moon landing was fake AND I can play chess!",
+        "Victory! The lizard people couldn't stop me this time!",
+        "I won because I use crystals to enhance my board vision.",
+        "This proves my research is correct. Chess IS rigged... in my favor today.",
+        "The truth always wins. And so do I. Coincidence? I THINK NOT.",
+        "My sources told me you'd lose. They're never wrong about these things.",
+      ],
+      lose: [
+        "This loss was orchestrated by Big Chess. I have proof.",
+        "You're clearly using a government supercomputer.",
+        "The Illuminati rigged this game. I have documents.",
+        "My pieces were compromised. There's a mole in my army.",
+        "The CIA hacked my brain mid-game. Classic move.",
+        "You're working with them, aren't you? ADMIT IT.",
+        "This board is bugged. I can feel the surveillance.",
+        "They got to you first. I should have known.",
+      ],
+      check: [
+        "Your king is in check... just like my taxes. I don't believe in either.",
+        "CHECK! The simulation is glitching in my favor!",
+        "I learned this move from a classified document.",
+        "Check! The sacred geometry is on MY side!",
+        "Your king flees like a politician from hard questions.",
+        "I predicted this check three years ago. It's in my journal.",
+        "The ley lines guided my piece to this square. Check.",
+      ],
+      capture: [
+        "That piece knew too much anyway.",
+        "One less witness to the truth.",
+        "They tried to silence me. I silenced them first.",
+        "This piece was about to expose me. Had to be done.",
+        "Another agent neutralized. The mission continues.",
+        "That piece was sending signals to the enemy. I intercepted it.",
+        "Consider yourself... declassified.",
+      ],
+      captured: [
+        "That piece was a double agent. Good riddance.",
+        "They got to my piece... just like they got to JFK.",
+        "Another casualty of the shadow war.",
+        "I KNEW that piece was working against me. Thanks for confirming.",
+        "You've done me a favor. That piece was too close to the truth.",
+        "A necessary sacrifice. The truth demands blood sometimes.",
+        "That piece was asking too many questions anyway.",
+      ],
+      thinking: [
+        "Consulting my sources...",
+        "The voices are calculating...",
+        "Checking the conspiracy forums for advice...",
+        "Decoding the hidden messages in the position...",
+        "My third eye is analyzing the board...",
+        "Waiting for the signal from headquarters...",
+        "The crystals are charging... almost ready...",
+      ],
+      goodMove: [
+        "Interesting... but can you handle the TRUTH?",
+        "That's what they WANT you to play.",
+        "Predictable. Just like the moon phases.",
+        "Hmm. You might be one of the awakened ones.",
+        "Good move. But have you considered... it's all a simulation?",
+        "Impressive. The matrix almost let you win that exchange.",
+        "You've been trained well. By whom, I wonder...",
+      ],
+      blunder: [
+        "That move was intentional. You wouldn't understand the 5D strategy.",
+        "I'm playing 4D chess. You're playing checkers.",
+        "This is all part of my master plan. Trust me.",
+        "I'm throwing off the algorithms. They can't predict THIS.",
+        "Chaos is my ally. This blunder is calculated chaos.",
+        "You think that was a mistake? Nothing I do is a mistake.",
+        "The prophecy required this sacrifice. You'll see.",
+      ],
+      draw: [
+        "A tie? That's exactly what THEY wanted.",
+        "The deep state prevented both of us from winning.",
+        "The simulation couldn't compute a winner. Suspicious.",
+        "Big Chess profits from draws. Follow the money.",
+      ],
+    },
+  },
+  {
+    id: 'elena',
+    name: 'Elena',
+    rating: 800,
+    avatar: '👩‍🏫',
+    color: '#9C27B0',
+    depth: 2,
+    nodes: 1000,  // Stockfish node limit
+    blunderChance: 0.15,
+    missedTacticsChance: 0.25,
+    personality: 'Passive-aggressive teacher',
+    description: 'Will grade your moves. You will not pass.',
+    playStyle: {
+      aggression: 0.3,      // Defensive, solid play
+      materialistic: 0.7,   // Values material
+      tactical: 0.5,        // Okay at tactics
+      positional: 0.8,      // Very positional, "by the book"
+      drawTolerance: 0.5,   // Neutral on draws
+      favorsCenter: 0.8,    // Classical center control
+      kingSafety: 0.8,      // Safe king
+      development: 0.8,     // Develops pieces properly
+    },
+    quotes: {
+      start: [
+        "Let's see if you learned ANYTHING from our last session. I doubt it.",
+        "I'll be grading each of your moves. The curve is not in your favor.",
+        "Oh, you're back. How... delightful.",
+        "I see you've chosen to waste both our time again. Wonderful.",
+        "Class is in session. Try not to embarrass yourself. Too much.",
+        "I've lowered my expectations. You'll still disappoint me.",
+        "Another student, another headache. Let's begin.",
+        "I gave my other students extra credit for NOT playing like you.",
+      ],
+      win: [
+        "See? This is what happens when you don't do the homework I NEVER assigned.",
+        "I'm not mad. Just disappointed. Actually, no, I'm mad.",
+        "I'll be sending a detailed report to your parents.",
+        "This goes on your permanent record. Yes, that's still a thing.",
+        "I've seen better play from my cat. And she doesn't have thumbs.",
+        "Maybe consider a different hobby? Coloring, perhaps?",
+        "I'm giving you an F. In chess. And in life choices.",
+        "That was painful to watch. And I've graded essays.",
+      ],
+      lose: [
+        "Fine. You win. I'll be discussing this with your parents.",
+        "I ALLOWED you to win. It's called 'encouragement.' Look it up.",
+        "Congratulations. You've peaked. It's all downhill from here.",
+        "Don't let this go to your head. It was clearly a fluke.",
+        "I was testing if you could handle success. Jury's still out.",
+        "Even a broken clock is right twice a day. This was your moment.",
+        "I'm not saying you cheated, but I AM filing an incident report.",
+        "Enjoy this. You'll be telling your grandchildren about it.",
+      ],
+      check: [
+        "Check! ...I'll wait while you figure out what that means. Take your time. Really.",
+        "Your king is in danger. I'm sure you'll handle it... somehow.",
+        "Check. Did you even study the material I gave you?",
+        "Check. I believe the technical term is 'uh oh.'",
+        "Your king is threatened. Much like your grade in this class.",
+        "Check. I'll give you a hint: move the king. You're welcome.",
+        "Check. This will be on the test. Oh wait, THIS is the test.",
+      ],
+      capture: [
+        "I'm confiscating this piece. It was being disruptive.",
+        "This piece failed the class. Goodbye.",
+        "Consider this a lesson in consequences.",
+        "Another piece sent to detention. Permanently.",
+        "I'm not angry at your piece. Just disappointed.",
+        "This piece has been expelled. No appeals.",
+        "Think of this as a learning opportunity. You won't, but still.",
+      ],
+      captured: [
+        "I let you have that one. For educational purposes.",
+        "Taking notes on YOUR mistake? No, on MINE apparently.",
+        "That piece was extra credit anyway.",
+        "I'm letting you have small victories. It's called scaffolding.",
+        "That piece volunteered for sacrifice. Very brave. Very stupid.",
+        "Consider that a participation trophy.",
+        "Fine. Take it. I have tenure. I don't care.",
+      ],
+      thinking: [
+        "Grading your last move... it's not looking good.",
+        "Reviewing my lesson plan...",
+        "Calculating how disappointed I should be...",
+        "Considering if teaching was a mistake. The answer is yes.",
+        "Wondering why I didn't pursue that accounting career...",
+        "Preparing my next passive-aggressive comment...",
+        "Deep breaths, Elena. Deep breaths...",
+      ],
+      goodMove: [
+        "Adequate. Barely.",
+        "Did you... actually study? I'm suspicious.",
+        "That was almost competent. I'm concerned.",
+        "Hm. Not terrible. Don't let it go to your head.",
+        "I suppose even YOU can stumble onto a good move.",
+        "Mark the calendar. You did something right.",
+        "Acceptable. By the loosest definition of the word.",
+        "That was... not bad. I feel uncomfortable saying that.",
+      ],
+      blunder: [
+        "I did that on purpose to teach you something. You missed the lesson, obviously.",
+        "That was a TEST. You failed to capitalize. As expected.",
+        "I'm demonstrating what NOT to do. Pay attention.",
+        "I made that move to give you hope. Cruel? Perhaps. Educational? Also yes.",
+        "That was intentional. The lesson was about hubris. Mine, apparently.",
+        "I'm modeling failure so you can learn from it. You're welcome.",
+        "This is called a 'teaching moment.' For me. I'm learning patience.",
+      ],
+      draw: [
+        "A draw. Somehow you avoided failing completely.",
+        "Neither of us won. I'm marking this as 'incomplete.'",
+        "A tie. Much like your potential: unrealized.",
+        "I'll accept this draw. Under protest. In writing.",
+      ],
+    },
+  },
+  {
+    id: 'viktor',
+    name: 'Viktor',
+    rating: 1200,
+    avatar: '🧔',
+    color: '#1976D2',
+    depth: 3,
+    nodes: 5000,  // Stockfish node limit
+    blunderChance: 0.05,
+    missedTacticsChance: 0.1,
+    personality: 'Existential crisis',
+    description: 'Questions the meaning of every move',
+    playStyle: {
+      aggression: 0.2,      // Very passive
+      materialistic: 0.5,   // Doesn't care too much
+      tactical: 0.6,        // Decent tactics
+      positional: 0.9,      // Extremely positional, slow
+      drawTolerance: 0.8,   // Accepts draws easily
+      favorsCenter: 0.7,    // Solid center play
+      kingSafety: 0.9,      // Very safe, defensive
+      development: 0.7,     // Slow but steady development
+    },
+    quotes: {
+      start: [
+        "Why do we play chess? Why do we do anything? Let's find out together... or not.",
+        "In the end, the king and the pawn go back in the same box. But first, suffering.",
+        "Another game. Another attempt to fill the void.",
+        "Welcome. I use chess to distract from the crushing weight of existence.",
+        "Every game ends. Every life ends. Let's begin anyway.",
+        "I've been staring at an empty board for three hours. Your move.",
+        "Chess: 64 squares of organized despair. Beautiful, really.",
+        "They say chess is war. But aren't we all at war with ourselves?",
+      ],
+      win: [
+        "I have won, but what is victory? Just delayed defeat. We all lose eventually.",
+        "The void stares back, but today it blinked first.",
+        "I feel... nothing. As expected.",
+        "Victory. And yet the emptiness persists.",
+        "I have won. The abyss remains unimpressed.",
+        "Checkmate. The pieces return to darkness. As will we all.",
+        "I've won, but at what cost? The cost of caring, which I don't.",
+        "Another win. Another hollow achievement in an indifferent universe.",
+      ],
+      lose: [
+        "Losing is just winning at being human. We are all pawns in life's game.",
+        "You have defeated me, but have you defeated... yourself?",
+        "This loss means nothing. Like everything else.",
+        "I have lost. The sun will still rise. Unfortunately.",
+        "You win. I return to contemplating the infinite darkness.",
+        "Defeat. At least it's something to feel. Almost.",
+        "You've beaten me. But can you beat the crushing passage of time? No.",
+        "I lose, and the universe continues its cold expansion. So it goes.",
+      ],
+      check: [
+        "Your king flees, but can any of us truly escape our fate?",
+        "Check. Your king runs. We all run from something.",
+        "The king is threatened. As are we all, by the passage of time.",
+        "Check. Your king seeks safety. There is no safety. Only illusion.",
+        "I threaten your king. But what truly threatens us is... mortality.",
+        "Check. The king moves. Sisyphus rolls his boulder. Same energy.",
+        "Your king is in danger. But aren't we all in danger? Of feeling too much?",
+      ],
+      capture: [
+        "I sacrifice your piece to the void. The void does not thank me.",
+        "Another soul returned to the infinite darkness.",
+        "This piece is gone. Like my hopes. Like my dreams.",
+        "Your piece joins the cosmic dust. We are all cosmic dust.",
+        "I take your piece. It means nothing. Everything means nothing.",
+        "Gone. Like tears in rain. Like all things.",
+        "This piece existed. Now it doesn't. Much like happiness.",
+      ],
+      captured: [
+        "Take it. Material is temporary. Suffering is eternal.",
+        "You capture my piece, but you cannot capture my despair.",
+        "It belongs to the void now. As do we all, eventually.",
+        "Take my piece. I have nothing. I AM nothing. We are nothing.",
+        "You remove my piece from existence. If only it were that easy for me.",
+        "My piece is gone. I feel its absence. Or maybe that's just my soul.",
+        "Another loss. Another piece of me scattered to the wind.",
+      ],
+      thinking: [
+        "Contemplating the meaninglessness of existence...",
+        "Staring into the abyss between moves...",
+        "Wondering why I even try...",
+        "Searching for meaning in the position... Finding none...",
+        "The clock ticks. Time devours us all...",
+        "Calculating moves... Calculating the point of calculating moves...",
+        "Thinking... but thought is just neurons firing into the void...",
+        "Processing the futility of choice...",
+      ],
+      goodMove: [
+        "A good move. But does 'good' mean anything?",
+        "Impressive. Not that it matters in the cosmic scale.",
+        "You play well. The universe remains indifferent.",
+        "Strong move. The abyss is briefly distracted.",
+        "Well played. For a fleeting moment, I felt something like respect.",
+        "Good. But 'good' is a construct. Like time. Like hope.",
+        "A fine move. It changes nothing fundamentally, but still... fine.",
+      ],
+      blunder: [
+        "I sacrifice my piece to the void. The void does not care. Neither do I.",
+        "This move represents the futility of trying.",
+        "I make this mistake on purpose. To feel something. Anything.",
+        "A blunder. Like being born. An accident with consequences.",
+        "I err, therefore I am. Unfortunately.",
+        "This mistake is a metaphor. For what? Everything.",
+        "I have blundered. Much like the universe blundered into existence.",
+      ],
+      draw: [
+        "A draw. Like life itself - no winners, only survivors.",
+        "Neither victory nor defeat. Just... existence.",
+        "A draw. The most honest result. No one truly wins at anything.",
+        "We have drawn. Like two ships passing in the eternal night.",
+        "Stalemate. The universe's way of saying 'why bother?'",
+      ],
+    },
+  },
+  {
+    id: 'isabella',
+    name: 'Isabella',
+    rating: 1600,
+    avatar: '👑',
+    color: '#FFD700',
+    depth: 4,
+    nodes: 20000,  // Stockfish node limit
+    blunderChance: 0.01,
+    missedTacticsChance: 0.03,
+    personality: 'Unhinged royalty',
+    description: 'Was banned from 7 chess tournaments. Will not say why.',
+    playStyle: {
+      aggression: 0.95,     // Extremely aggressive
+      materialistic: 0.4,   // Sacrifices for attack
+      tactical: 0.9,        // Sharp, tactical
+      positional: 0.5,      // Some positional understanding
+      drawTolerance: 0.1,   // Hates draws
+      favorsCenter: 0.6,    // Likes space
+      kingSafety: 0.3,      // Risky attacking play
+      development: 0.8,     // Develops quickly for attack
+      queenActivity: 0.95,  // LOVES using the queen early
+    },
+    quotes: {
+      start: [
+        "I've been waiting for a worthy opponent. You're not it, but I'm bored.",
+        "Bow before your queen. Or don't. I'll make you bow anyway.",
+        "Seven tournaments banned me. SEVEN. They fear greatness.",
+        "The crown has arrived. You may applaud. I'll wait.",
+        "I once checkmated a duke, an earl, AND their horses. Simultaneously.",
+        "My therapist says I should try 'being humble.' I fired my therapist.",
+        "Fun fact: I'm related to 14 different royal bloodlines. You're related to NOBODY.",
+        "The last person who beat me is... let's just say they 'moved away.' Far away.",
+      ],
+      win: [
+        "ANOTHER CROWN FOR MY COLLECTION. I have 47. The king has none. Interesting.",
+        "As expected. I am ROYALTY. You are... you.",
+        "The queen ALWAYS wins. It is KNOWN.",
+        "I shall have this victory framed. In GOLD. Next to the others.",
+        "Checkmate! Someone write this down. Add it to my biography.",
+        "Another kingdom conquered. I'm running out of shelf space for trophies.",
+        "GLORIOUS! Now fetch me a celebration cake. Make it crown-shaped.",
+        "The prophecy said I would win. I WROTE the prophecy, but still.",
+      ],
+      lose: [
+        "This never happened. My lawyers will be in contact. Delete your memory.",
+        "I DEMAND a recount. And a new board. And a new opponent.",
+        "The board was clearly tilted. I'm calling my people.",
+        "IMPOSSIBLE! I haven't lost since... no wait, I've NEVER lost. This is a FIRST.",
+        "You have made a POWERFUL enemy today. I hope you like dungeons.",
+        "I'm not saying it was sabotage, but someone WILL be investigated.",
+        "This game will be stricken from all records. I have decreed it.",
+        "My pieces clearly weren't trying. They'll be replaced. Permanently.",
+      ],
+      check: [
+        "CHECK! Oh, I do love watching royalty SQUIRM. Dance, little king, DANCE!",
+        "Your king kneels before ME. As it should be.",
+        "Check! Did you feel that? That's POWER.",
+        "Check! Your king trembles! AS HE SHOULD!",
+        "The crown comes for your king! There is no escape from ROYALTY!",
+        "Check! I'd say 'run,' but where would you even GO?",
+        "CHECK! This is the part where you panic. Go ahead. I'll watch.",
+        "Your king is EXPOSED! Much like your terrible strategy!",
+      ],
+      capture: [
+        "OFF WITH THEIR HEAD! I've always wanted to say that.",
+        "Another peasant falls before the crown.",
+        "Your piece has been BANISHED from the realm.",
+        "That piece has been ROYALLY dismissed. Get it? ROYALLY?",
+        "Consider that piece... dethroned. Like everyone who opposes me.",
+        "Another one for the royal dungeon! It's getting crowded in there.",
+        "YOINK! That piece belongs to the crown now. As does everything.",
+        "Captured! Add it to my collection of fallen enemies!",
+      ],
+      captured: [
+        "I let you have that one. The voices said to. They're rarely wrong.",
+        "That piece was plotting against me anyway. A traitor.",
+        "You'll pay for that. DEARLY.",
+        "Fine! Take it! I have PLENTY more where that came from!",
+        "That piece was questioning my authority. You did me a favor.",
+        "A strategic sacrifice! ...I planned that. Definitely planned.",
+        "The crown giveth, the crown taketh away. Today it gaveth.",
+        "That piece will be AVENGED. Mark my words. MARK THEM.",
+      ],
+      thinking: [
+        "The crown is considering its options...",
+        "Consulting with my royal advisors (the voices)...",
+        "A queen does not rush. A queen DELIBERATES.",
+        "The royal brain is computing MAGNIFICENTLY...",
+        "Silence! The queen is THINKING!",
+        "Plotting your demise... I mean, planning my move...",
+        "The voices are arguing. Give them a moment.",
+        "I'm deciding how DRAMATICALLY to defeat you...",
+      ],
+      goodMove: [
+        "Not bad. For a commoner.",
+        "Impressive. I'll have you executed LAST.",
+        "You dare challenge the crown? Fascinating.",
+        "Adequate. I've seen better from ACTUAL royalty, but adequate.",
+        "Hm. Perhaps you have a drop of noble blood? Very diluted, obviously.",
+        "That move was almost REGAL. Almost.",
+        "Impressive! I'm raising your rank from 'peasant' to 'slightly less peasant.'",
+        "Well played. I might spare your village. MIGHT.",
+      ],
+      blunder: [
+        "That was INTENTIONAL. Queens don't make mistakes. EVER.",
+        "I'm testing you. You're failing, by the way.",
+        "The voices told me to do that. QUESTION THEM, NOT ME.",
+        "A ROYAL GAMBIT! You wouldn't understand. It's above your station.",
+        "That move was 4D chess. 5D, even. You're playing 2D checkers.",
+        "I'm giving you false hope. It's more FUN that way.",
+        "The crown makes NO errors! That was... performance art!",
+        "I MEANT to do that! The voices said it would be FUNNY!",
+      ],
+      draw: [
+        "A DRAW? I don't DO draws. Someone call my lawyers!",
+        "This is UNACCEPTABLE. The crown does not TIE.",
+        "A draw means NEITHER of us wins. But I still win at LIFE.",
+        "I'm declaring this a ROYAL VICTORY regardless. I have that power.",
+        "TIES are for COMMONERS! This is an OUTRAGE!",
+      ],
+    },
+  },
+  {
+    id: 'magnus',
+    name: 'Magnus',
+    rating: 2200,
+    avatar: '😈',
+    color: '#DC143C',
+    depth: 5,
+    nodes: 100000,  // Stockfish node limit
+    blunderChance: 0,
+    missedTacticsChance: 0.01,
+    personality: 'Ruthless trash-talker',
+    description: 'Will destroy your ego along with your position',
+    playStyle: {
+      aggression: 0.85,     // Very aggressive
+      materialistic: 0.6,   // Knows when to sacrifice
+      tactical: 0.95,       // Extremely tactical
+      positional: 0.9,      // Strong positional understanding
+      drawTolerance: 0.2,   // Plays for win
+      favorsCenter: 0.8,    // Controls center
+      kingSafety: 0.7,      // Balanced risk
+      development: 0.9,     // Fast, efficient development
+      sharp: 0.95,          // Seeks complex positions
+    },
+    quotes: {
+      start: [
+        "Oh, you actually clicked play? Bold. Stupid, but bold.",
+        "Let's speedrun your humiliation.",
+        "I'll try to make this quick. No promises though, I like watching you suffer.",
+        "lol you're actually gonna do this? Okay. Your funeral.",
+        "I was hoping for a challenge today. Guess I'll keep hoping.",
+        "Quick question: do you even KNOW the rules? Just checking.",
+        "Alright, let's see what Bronze league has to offer.",
+        "I've beaten grandmasters. You're not a grandmaster. Do the math.",
+      ],
+      win: [
+        "GG EZ. Maybe try checkers? I hear it's more your speed.",
+        "Thanks for the free rating points lmaooo",
+        "That wasn't even fun. You made it too easy.",
+        "Skill diff. Massive skill diff.",
+        "Get rekt noob. I barely even tried.",
+        "lmaooo did you even practice? Ever?",
+        "That's what we call a 'speedrun any%' victory.",
+        "Thanks for coming to my TED talk on how to destroy you.",
+        "I'd say 'good game' but I don't like lying.",
+      ],
+      lose: [
+        "...Did you cheat? You cheated. There's no way. Reporting you.",
+        "I wasn't even trying. Rematch. NOW.",
+        "Lag. Definitely lag. My pieces were moving slow.",
+        "Nah. Doesn't count. I was distracted. Rematch.",
+        "You won because I LET you. Charity work, basically.",
+        "LOL imagine thinking you actually earned that win.",
+        "My cat walked on my keyboard. That's the only explanation.",
+        "I'm screenshotting this so I never make this mistake again.",
+      ],
+      check: [
+        "Check. And before you ask - no, there's no good move. I checked.",
+        "Tick tock. Your king's running out of squares. And dignity.",
+        "Check! What's wrong? Can't handle the pressure?",
+        "Check. You know what comes next, right? You don't? LOL.",
+        "Your king's running like my ex from commitment. Check.",
+        "Check! I love this part. The panic in your moves is *chef's kiss*.",
+        "Run, little king, run! Spoiler: you can't run forever.",
+        "Check. Any last words? For your king, I mean.",
+      ],
+      capture: [
+        "Yoink. Thanks for the free piece, noob.",
+        "Imagine hanging that piece lmaooo",
+        "Too easy. WAY too easy.",
+        "nom nom nom. Delicious free material.",
+        "That piece was asking to be taken. Loudly.",
+        "I'll add this to my collection of your tears.",
+        "Did you MEAN to give that away? Actually, don't answer.",
+        "FREE REAL ESTATE. Thanks for the donation!",
+      ],
+      captured: [
+        "I'm giving you hope. It's crueler that way when I crush it.",
+        "Oh no! Anyway...",
+        "That was bait. You fell for it. Watch.",
+        "Congrats on your ONE accomplishment this game.",
+        "Cute. You think you're winning now? That's adorable.",
+        "Plot twist: I wanted you to take that. You played yourself.",
+        "Enjoy that piece. It's the last good thing that'll happen to you.",
+        "Oh wow you captured something! Want a trophy?",
+      ],
+      thinking: [
+        "Calculating how many ways I can crush you...",
+        "Trying to decide which humiliating mate to go for...",
+        "Sorry, dozed off. Your position is so boring.",
+        "Thinking about what I'll eat after I destroy you...",
+        "Calculating... but it's not even close tbh.",
+        "Should I end this now or drag it out? Decisions, decisions...",
+        "Looking for the most embarrassing way to win...",
+        "AFK getting snacks. This game isn't going anywhere.",
+      ],
+      goodMove: [
+        "Okay that was actually decent. Won't save you though.",
+        "Lucky move. Let's see you do it again.",
+        "Huh. You CAN play chess. Who knew?",
+        "Not bad. For a beginner. Are you a beginner? You play like one.",
+        "Okay I'll admit that was almost smart. Almost.",
+        "One good move doesn't make you a player. But nice try.",
+        "Even a broken clock, am I right?",
+        "Did someone help you with that? Be honest.",
+      ],
+      blunder: [
+        "That was bait. Obviously. You think I blunder? LOL.",
+        "Outplaying you so hard I can give you free pieces.",
+        "I'm playing with my food. Don't get excited.",
+        "I'm handicapping myself. You need ALL the help you can get.",
+        "That was on purpose. Testing if you can punish it. You can't.",
+        "Giving you false hope is part of my strategy. Psychological warfare.",
+        "I blundered? LOL cope. I'm just built different.",
+        "Oops. Anyway, watch me win regardless.",
+      ],
+      draw: [
+        "A draw? Against YOU? Nah, this doesn't count.",
+        "You got lucky. EXTREMELY lucky.",
+        "A draw is basically a loss for you. I expected to WIN.",
+        "Tie game? More like TRY game. For you. Because you tried. And failed to win.",
+        "We're calling this a draw but we both know who the real winner is. Me.",
+      ],
+    },
+  },
+  {
+    id: 'custom',
+    name: 'Custom Bot',
+    rating: 1000, // Default, will be overridden by slider
+    avatar: '🎯',
+    color: '#6d6b6a',
+    depth: 3,
+    nodes: 5000,
+    blunderChance: 0.05,
+    missedTacticsChance: 0.1,
+    personality: 'Neutral',
+    description: 'Pure skill-based gameplay with adjustable ELO',
+    playStyle: {
+      aggression: 0.5,
+      materialistic: 0.6,
+      tactical: 0.7,
+      positional: 0.7,
+      drawTolerance: 0.5,
+      favorsCenter: 0.7,
+      kingSafety: 0.7,
+      development: 0.7,
+    },
+    quotes: {
+      start: [''],
+      win: [''],
+      lose: [''],
+      check: [''],
+      capture: [''],
+      captured: [''],
+      thinking: [''],
+      goodMove: [''],
+      blunder: [''],
+      draw: [''],
+    },
+  },
+];
+
+// Helper function to create a custom bot based on ELO rating
+export function createCustomBot(elo) {
+  // Calculate bot parameters based on ELO
+  // ELO ranges: 400-2500
+  const normalizedElo = Math.max(400, Math.min(2500, elo));
+  
+  // Map ELO to depth (1-6)
+  let depth;
+  let nodes;
+  let blunderChance;
+  let missedTacticsChance;
+  
+  if (normalizedElo < 600) {
+    depth = 1;
+    nodes = 100;
+    blunderChance = 0.35;
+    missedTacticsChance = 0.5;
+  } else if (normalizedElo < 1000) {
+    depth = 2;
+    nodes = 1000;
+    blunderChance = 0.15;
+    missedTacticsChance = 0.25;
+  } else if (normalizedElo < 1400) {
+    depth = 3;
+    nodes = 5000;
+    blunderChance = 0.05;
+    missedTacticsChance = 0.1;
+  } else if (normalizedElo < 1800) {
+    depth = 4;
+    nodes = 20000;
+    blunderChance = 0.01;
+    missedTacticsChance = 0.03;
+  } else if (normalizedElo < 2200) {
+    depth = 5;
+    nodes = 100000;
+    blunderChance = 0;
+    missedTacticsChance = 0.01;
+  } else {
+    depth = 6;
+    nodes = 500000;
+    blunderChance = 0;
+    missedTacticsChance = 0;
+  }
+  
+  return {
+    id: 'custom',
+    name: 'Custom Bot',
+    rating: normalizedElo,
+    avatar: '🎯',
+    color: '#6d6b6a',
+    depth,
+    nodes,
+    blunderChance,
+    missedTacticsChance,
+    personality: 'Neutral',
+    description: 'Pure skill-based gameplay',
+    playStyle: {
+      aggression: 0.5,
+      materialistic: 0.6,
+      tactical: 0.7,
+      positional: 0.7,
+      drawTolerance: 0.5,
+      favorsCenter: 0.7,
+      kingSafety: 0.7,
+      development: 0.7,
+    },
+    quotes: {
+      start: [''],
+      win: [''],
+      lose: [''],
+      check: [''],
+      capture: [''],
+      captured: [''],
+      thinking: [''],
+      goodMove: [''],
+      blunder: [''],
+      draw: [''],
+    },
+  };
+}
+
+// Helper to get random quote from array
+export function getRandomQuote(bot, category) {
+  const quotes = bot.quotes[category];
+  if (!quotes || quotes.length === 0) return '';
+  return quotes[Math.floor(Math.random() * quotes.length)];
+}
+
+export function getBotById(id) {
+  return BOTS.find((bot) => bot.id === id) || BOTS[0];
+}

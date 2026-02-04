@@ -1,0 +1,165 @@
+.game-history-page {
+  min-height: 100vh;
+  background: #302e2b;
+  color: #dcddde;
+  padding: 24px;
+}
+
+.game-history-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.game-history-header {
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.game-history-header h1 {
+  font-size: 2rem;
+  color: #fff;
+  margin: 0 0 8px;
+}
+
+.game-count {
+  color: #b8b8b8;
+  margin: 0;
+  font-size: 1rem;
+}
+
+.loading, .error-message, .offline-message, .no-games {
+  text-align: center;
+  padding: 48px 24px;
+}
+
+.loading .spinner {
+  border: 4px solid #4d4a47;
+  border-top: 4px solid #81b64c;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 16px;
+}
+
+.loading p, .error-message p, .offline-message p, .no-games p {
+  color: #b8b8b8;
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.no-games p:last-child {
+  color: #9a9a9a;
+  font-size: 0.875rem;
+}
+
+.error-message {
+  background: rgba(229, 115, 115, 0.1);
+  border: 1px solid rgba(229, 115, 115, 0.3);
+  border-radius: 8px;
+}
+
+.games-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.game-item {
+  background: #262421;
+  border: 1px solid #3a3937;
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.game-item:hover {
+  background: #2a2724;
+  border-color: #4a4744;
+}
+
+.game-info {
+  flex: 1;
+}
+
+.game-details {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.game-code {
+  font-family: monospace;
+  font-weight: 600;
+  color: #81b64c;
+  background: rgba(129, 182, 76, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+
+.game-result {
+  color: #fff;
+  font-weight: 500;
+}
+
+.game-mode {
+  background: #3a3937;
+  color: #b8b8b8;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  text-transform: capitalize;
+}
+
+.game-date {
+  color: #9a9a9a;
+  font-size: 0.875rem;
+}
+
+.game-actions {
+  margin-left: 16px;
+}
+
+.view-game-btn {
+  padding: 8px 16px;
+  background: linear-gradient(180deg, #81b64c 0%, #6fa03d 100%);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.view-game-btn:hover {
+  background: linear-gradient(180deg, #92c95e 0%, #81b64c 100%);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 640px) {
+  .game-history-page {
+    padding: 16px;
+  }
+
+  .game-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .game-actions {
+    margin-left: 0;
+    align-self: flex-end;
+  }
+
+  .game-details {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}

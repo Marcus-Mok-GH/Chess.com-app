@@ -1,0 +1,78 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build output
+dist/
+build/
+.next/
+.vercel/
+*.log
+
+# Environment files (except template)
+.env*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+.cache/
+
+# Claude configuration files (development only)
+.claude/
+.cursor/
+.opencode/
+.spec-flow/
+.pythonlibs/
+
+# Local caches and user data
+.config/
+.local/
+.upm/
+.crush/
+.kiro/
+.cache/
+.venv/
+
+# Git
+.git/
+
+# Assets and large binaries not needed for deploy
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.mp4
+*.mov
+public/stockfish.wasm
+public/stockfish.wasm.js
+public/stockfish.js
+
+# Development and documentation
+*.md
+!README.md
+!CLAUDE.md
+!AI_COACH_README.md
+
+# Test files
+test-*.js
+test-*.sh
+test-*.cjs
+temp_*.js
+health-check.js
+screenshot.js
+
+# Docker and deployment configs
+Dockerfile
+docker-compose*.yml

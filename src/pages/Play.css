@@ -1,0 +1,68 @@
+/* ========================================
+   PLAY PAGE - Professional Design
+   ======================================== */
+
+.play-page {
+  min-height: 100vh;
+  background: var(--color-bg-primary);
+  display: flex;
+  flex-direction: column;
+}
+
+.play-nav {
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border-default);
+  padding: 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.play-nav .nav-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  height: 56px;
+  gap: 20px;
+}
+
+.play-nav .logo {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.play-nav .logo:hover {
+  color: var(--color-accent-primary);
+}
+
+.play-nav .page-title {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+@media (max-width: 600px) {
+  .play-nav .nav-content {
+    padding: 0 16px;
+    gap: 12px;
+    height: 52px;
+  }
+
+  .play-nav .logo {
+    font-size: 1.125rem;
+  }
+
+  .play-nav .page-title {
+    font-size: 0.875rem;
+  }
+}

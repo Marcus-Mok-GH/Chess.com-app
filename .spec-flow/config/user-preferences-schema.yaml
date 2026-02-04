@@ -1,0 +1,412 @@
+# User Preferences Schema
+# Defines the structure and validation rules for user-preferences.yaml
+
+schema_version: "1.0"
+description: "User preferences for Spec-Flow command defaults and behavior"
+
+properties:
+  commands:
+    type: object
+    description: "Command-specific preference overrides"
+    properties:
+      feature:
+        type: object
+        description: "Preferences for /feature command"
+        properties:
+          default_mode:
+            type: string
+            enum: [auto, interactive]
+            default: interactive
+            description: "Default execution mode (auto skips spec/plan reviews, interactive pauses at reviews)"
+          skip_mode_prompt:
+            type: boolean
+            default: false
+            description: "Skip mode selection prompt when preference is clear (uses default_mode without asking)"
+
+      epic:
+        type: object
+        description: "Preferences for /epic command"
+        properties:
+          default_mode:
+            type: string
+            enum: [auto, interactive]
+            default: interactive
+            description: "Default execution mode (auto skips prompts, interactive pauses at reviews)"
+          skip_mode_prompt:
+            type: boolean
+            default: false
+            description: "Skip mode selection prompt when preference is clear (uses default_mode without asking)"
+
+      tasks:
+        type: object
+        description: "Preferences for /tasks command"
+        properties:
+          default_mode:
+            type: string
+            enum: [standard, ui-first]
+            default: standard
+            description: "Default task generation mode (ui-first generates mockups first)"
+
+      init-project:
+        type: object
+        description: "Preferences for /init-project command"
+        properties:
+          default_mode:
+            type: string
+            enum: [interactive, ci]
+            default: interactive
+            description: "Default initialization mode (interactive uses questionnaire, ci uses env vars)"
+          include_design:
+            type: boolean
+            default: false
+            description: "Automatically include --with-design flag (design system setup)"
+
+      run-prompt:
+        type: object
+        description: "Preferences for /run-prompt command"
+        properties:
+          default_strategy:
+            type: string
+            enum: [auto-detect, parallel, sequential]
+            default: auto-detect
+            description: "Default execution strategy (auto-detect analyzes dependencies, parallel runs simultaneously, sequential runs one-by-one)"
+
+  automation:
+    type: object
+    description: "Automation and CI/CD behavior"
+    properties:
+      auto_approve_minor_changes:
+        type: boolean
+        default: false
+        description: "Automatically approve minor changes (formatting, comments, docs) without prompts"
+
+      ci_mode_default:
+        type: boolean
+        default: false
+        description: "Default to CI-friendly behavior (non-interactive, assumes --no-input)"
+
+  ui:
+    type: object
+    description: "User interface preferences"
+    properties:
+      show_usage_stats:
+        type: boolean
+        default: true
+        description: "Show command usage statistics in AskUserQuestion prompts (e.g., 'used 8/10 times')"
+
+      recommend_last_used:
+        type: boolean
+        default: true
+        description: "Mark last-used option with ⭐ in prompts"
+
+  worktrees:
+    type: object
+    description: "Git worktree configuration for safe parallel development (v11.8)"
+    properties:
+      auto_create:
+        type: boolean
+        default: true
+        description: "Automatically create git worktrees for epics and features (enables parallel development and isolation)"
+
+      cleanup_on_finalize:
+        type: boolean
+        default: true
+        description: "Automatically remove worktrees after /finalize completes"
+
+      enforce_isolation:
+        type: boolean
+        default: true
+        description: "Enforce worktree isolation - all implementation happens in worktrees, root is orchestration-only"
+
+      root_protection:
+        type: string
+        enum: [strict, prompt, none]
+        default: strict
+        description: "Protection level when in root with active worktrees (strict=block changes, prompt=ask first, none=allow)"
+
+      auto_switch_on_continue:
+        type: boolean
+        default: true
+        description: "When resuming a feature/epic from root, automatically prompt to switch to its worktree"
+
+  studio:
+    type: object
+    description: "Dev Studio configuration for parallel AI development (v10.12)"
+    properties:
+      auto_continue:
+        type: boolean
+        default: false
+        description: "Skip 'Pick up next issue?' prompt after /finalize (always continue to next feature)"
+
+      default_agents:
+        type: integer
+        default: 3
+        minimum: 1
+        maximum: 10
+        description: "Default number of agent worktrees for /studio init"
+
+  prototype:
+    type: object
+    description: "Prototype workflow configuration"
+    properties:
+      git_persistence:
+        type: string
+        enum: [commit, gitignore, ask]
+        default: ask
+        description: "How to handle prototype in git (commit=version control, gitignore=exclude, ask=prompt each time)"
+
+  e2e_visual:
+    type: object
+    description: "E2E and visual regression testing configuration (v10.4)"
+    properties:
+      enabled:
+        type: boolean
+        default: true
+        description: "Enable E2E and visual regression testing gate during /optimize phase"
+
+      failure_mode:
+        type: string
+        enum: [blocking, warning]
+        default: blocking
+        description: "How to handle E2E/visual test failures (blocking=fail optimize, warning=continue with warning)"
+
+      threshold:
+        type: float
+        default: 0.1
+        minimum: 0.0
+        maximum: 1.0
+        description: "Pixel difference threshold for visual regression (0.1 = 10% allowed)"
+
+      auto_commit_baselines:
+        type: boolean
+        default: true
+        description: "Automatically commit generated baseline screenshots on first run"
+
+      viewports:
+        type: array
+        description: "Viewport configurations for visual testing"
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+            width:
+              type: integer
+            height:
+              type: integer
+        default:
+          - name: desktop
+            width: 1280
+            height: 720
+          - name: mobile
+            width: 375
+            height: 667
+
+  learning:
+    type: object
+    description: "Perpetual learning system configuration"
+    properties:
+      enabled:
+        type: boolean
+        default: true
+        description: "Master switch for learning system (pattern detection and workflow improvements)"
+
+      auto_apply_low_risk:
+        type: boolean
+        default: true
+        description: "Automatically apply low-risk learnings (90%+ confidence, no behavior changes)"
+
+      require_approval_high_risk:
+        type: boolean
+        default: true
+        description: "Require explicit approval for high-risk changes (CLAUDE.md system prompt modifications)"
+
+      claude_md_optimization:
+        type: boolean
+        default: true
+        description: "Allow approved learnings to append project-specific guidance to CLAUDE.md"
+
+      thresholds:
+        type: object
+        description: "Pattern detection thresholds and confidence levels"
+        properties:
+          pattern_detection_min_occurrences:
+            type: integer
+            default: 3
+            minimum: 2
+            maximum: 10
+            description: "Minimum number of pattern occurrences before detection"
+
+          statistical_significance:
+            type: float
+            default: 0.95
+            minimum: 0.5
+            maximum: 1.0
+            description: "Statistical significance threshold (0.0-1.0) for pattern confidence"
+
+  deployment:
+    type: object
+    description: "Deployment behavior configuration (v11.7)"
+    properties:
+      auto_ship:
+        type: boolean
+        default: false
+        description: "Automatically continue from optimize to ship to finalize when using --auto mode (no pause after optimize)"
+
+      auto_merge:
+        type: boolean
+        default: false
+        description: "Automatically merge PR when CI passes without production approval prompt"
+
+      auto_finalize:
+        type: boolean
+        default: true
+        description: "Automatically run /finalize after successful deployment (documentation, CHANGELOG, GitHub release)"
+
+  migrations:
+    type: object
+    description: "Database migration safety configuration (v10.5)"
+    properties:
+      strictness:
+        type: string
+        enum: [blocking, warning, auto_apply]
+        default: blocking
+        description: "How to handle pending migrations during /implement (blocking=stop, warning=continue, auto_apply=run automatically)"
+
+      detection_threshold:
+        type: integer
+        default: 3
+        minimum: 1
+        maximum: 10
+        description: "Minimum keyword score to trigger migration detection (lower=more sensitive)"
+
+      auto_generate_plan:
+        type: boolean
+        default: true
+        description: "Automatically generate migration-plan.md during /plan phase when schema changes detected"
+
+      llm_analysis_for_low_confidence:
+        type: boolean
+        default: true
+        description: "Use LLM analysis for ambiguous detections (score 1-2) to confirm if migrations needed"
+
+# Validation rules
+validation:
+  required_fields: []
+  optional_fields: [commands, automation, ui, worktrees, studio, prototype, e2e_visual, learning, deployment, migrations]
+
+# Migration notes
+version_history:
+  "1.0": "Initial schema version"
+  "1.1": "Added e2e_visual section for E2E and visual regression testing (v10.4)"
+  "1.2": "Added migrations section for database migration safety (v10.5)"
+  "1.3": "Added feature command preferences with auto/interactive mode and skip_mode_prompt (v10.9)"
+  "1.4": "Added studio section for Dev Studio parallel AI development (v10.12)"
+  "1.5": "Added deployment section for auto-ship, auto-merge, auto-finalize (v11.7)"
+  "1.6": "Enhanced worktrees section with enforce_isolation, root_protection, auto_switch_on_continue (v11.8)"
+
+# Examples
+examples:
+  - name: "Power user (always auto mode)"
+    config:
+      commands:
+        feature:
+          default_mode: auto
+          skip_mode_prompt: true
+        epic:
+          default_mode: auto
+          skip_mode_prompt: true
+        tasks:
+          default_mode: standard
+        run-prompt:
+          default_strategy: parallel
+      automation:
+        ci_mode_default: false
+      ui:
+        show_usage_stats: true
+        recommend_last_used: true
+
+  - name: "Design-focused user"
+    config:
+      commands:
+        feature:
+          default_mode: interactive
+        epic:
+          default_mode: interactive
+        tasks:
+          default_mode: ui-first
+        init-project:
+          include_design: true
+      ui:
+        show_usage_stats: true
+
+  - name: "CI/CD automation"
+    config:
+      commands:
+        feature:
+          default_mode: auto
+          skip_mode_prompt: true
+        epic:
+          default_mode: auto
+          skip_mode_prompt: true
+        tasks:
+          default_mode: standard
+        init-project:
+          default_mode: ci
+      automation:
+        auto_approve_minor_changes: true
+        ci_mode_default: true
+      ui:
+        show_usage_stats: false
+        recommend_last_used: false
+
+  - name: "Full autopilot (auto-ship enabled)"
+    description: "End-to-end automation: optimize → ship → finalize without stopping"
+    config:
+      commands:
+        feature:
+          default_mode: auto
+          skip_mode_prompt: true
+        epic:
+          default_mode: auto
+          skip_mode_prompt: true
+      deployment:
+        auto_ship: true
+        auto_merge: true
+        auto_finalize: true
+      automation:
+        auto_approve_minor_changes: true
+
+  - name: "Worktree-first (recommended for teams)"
+    description: "Safe parallel development - all changes isolated in worktrees, root is read-only"
+    config:
+      worktrees:
+        auto_create: true
+        enforce_isolation: true
+        root_protection: strict
+        auto_switch_on_continue: true
+        cleanup_on_finalize: true
+      deployment:
+        auto_merge: true
+        auto_finalize: true
+
+  - name: "Multi-agent parallel (full studio mode)"
+    description: "Run multiple Claude Code instances from root, each with isolated worktrees"
+    config:
+      worktrees:
+        auto_create: true
+        enforce_isolation: true
+        root_protection: strict
+        auto_switch_on_continue: true
+        cleanup_on_finalize: true
+      studio:
+        auto_continue: true
+        default_agents: 3
+      deployment:
+        auto_ship: true
+        auto_merge: true
+        auto_finalize: true
+      commands:
+        feature:
+          default_mode: auto
+          skip_mode_prompt: true

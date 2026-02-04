@@ -1,0 +1,95 @@
+/* ========================================
+   NAVIGATION - Professional Design
+   ======================================== */
+
+.main-nav {
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border-default);
+  padding: 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(12px);
+}
+
+.main-nav .nav-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  height: 60px;
+  gap: 24px;
+}
+
+.main-nav .logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: var(--color-text-primary);
+  transition: color var(--transition-fast);
+  text-decoration: none;
+}
+
+.main-nav .logo:hover {
+  color: var(--color-accent-primary);
+}
+
+.main-nav .page-title {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  margin: 0;
+  flex: 1;
+}
+
+.main-nav .nav-links {
+  display: flex;
+  gap: 8px;
+}
+
+.main-nav .nav-link {
+  background: transparent;
+  border: 1px solid var(--color-border-default);
+  color: var(--color-text-secondary);
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.main-nav .nav-link:hover {
+  background: var(--color-bg-hover);
+  border-color: var(--color-border-hover);
+  color: var(--color-text-primary);
+}
+
+.main-nav .nav-link.active {
+  background: var(--color-accent-primary);
+  border-color: var(--color-accent-primary);
+  color: var(--color-text-primary);
+}
+
+@media (max-width: 640px) {
+  .main-nav .nav-content {
+    padding: 0 16px;
+    gap: 12px;
+  }
+
+  .main-nav .logo {
+    font-size: 1.125rem;
+  }
+
+  .main-nav .page-title {
+    display: none;
+  }
+
+  .main-nav .nav-link {
+    padding: 6px 12px;
+    font-size: 0.8125rem;
+  }
+}
