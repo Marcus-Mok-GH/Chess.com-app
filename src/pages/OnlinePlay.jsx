@@ -9,6 +9,8 @@ import socketService from '../services/socket';
 import api from '../services/api';
 import './OnlinePlay.css';
 
+const GAME_SESSION_STORAGE_KEY = 'online_game_session';
+
 export default function OnlinePlay() {
   const GAME_CODE_LENGTH = 8;
   const [searchParams] = useSearchParams();
@@ -44,7 +46,19 @@ export default function OnlinePlay() {
       ? crypto.randomUUID()
       : `${Date.now()}_${Math.random().toString(36).slice(2)}`
   );
-  const gameSessionRef = useRef({ gameId: null, playerId: null, playerColor: null, opponentInfo: null });
+  const gameSessionRef = useRef({ gameId: null, playerId: null, playerColor: null, opponentInfo: null, gameMode: null });
+
+  const readGameSession = useCallback(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = sessionStorage.getItem(GAME_SESSION_STORAGE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (error) {
+      console.warn('[OnlinePlay] Failed to read game session:', error);
+      return null;
+    }
+  }, []);
 
   const persistGameSession = useCallback((session) => {
     const nextSession = {
@@ -52,10 +66,16 @@ export default function OnlinePlay() {
       ...session,
     };
     gameSessionRef.current = nextSession;
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(GAME_SESSION_STORAGE_KEY, JSON.stringify(nextSession));
+    }
   }, []);
 
   const clearGameSession = useCallback(() => {
-    gameSessionRef.current = { gameId: null, playerId: null, playerColor: null, opponentInfo: null };
+    gameSessionRef.current = { gameId: null, playerId: null, playerColor: null, opponentInfo: null, gameMode: null };
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem(GAME_SESSION_STORAGE_KEY);
+    }
   }, []);
   const heartbeatInterval = useRef(null);
   const pendingMatchmakingRef = useRef(false);
@@ -84,19 +104,30 @@ export default function OnlinePlay() {
     return () => {
       isMounted = false;
       console.log('[OnlinePlay] Cleaning up...');
-      socketService.disconnect();
+      const storedSession = readGameSession();
+      if (!storedSession?.gameId) {
+        socketService.disconnect();
+      }
     };
-  }, []);
+  }, [readGameSession]);
 
   // Handle URL game code or direct game route
   useEffect(() => {
     if (routeGameId) {
       const normalizedGameId = routeGameId.toUpperCase();
+      const storedSession = readGameSession();
       setGameId(normalizedGameId);
 
-      setPlayerId(null);
-      setPlayerColor(null);
-      setOpponentInfo(null);
+      if (storedSession?.gameId?.toUpperCase() === normalizedGameId) {
+        setPlayerId(storedSession.playerId || null);
+        setPlayerColor(storedSession.playerColor || null);
+        setOpponentInfo(storedSession.opponentInfo || null);
+        setGameMode(storedSession.gameMode || null);
+      } else {
+        setPlayerId(null);
+        setPlayerColor(null);
+        setOpponentInfo(null);
+      }
 
       setView('playing');
       return;
@@ -109,7 +140,7 @@ export default function OnlinePlay() {
       setGameMode('friendly');
       setView('lobby');
     }
-  }, [routeGameId, searchParams, GAME_CODE_LENGTH]);
+  }, [routeGameId, searchParams, GAME_CODE_LENGTH, readGameSession]);
 
   const startMatchmaking = useCallback(() => {
     // Socket may still be connecting; queue the request instead of erroring.
@@ -256,13 +287,13 @@ export default function OnlinePlay() {
         playerId: yourId,
         playerColor: yourColor,
         opponentInfo: opponent,
+        gameMode: 'ranked',
       });
 
       // Join the game room
       socketService.joinGame(matchedGameId, yourId);
       
       // Transition to playing
-      setView('playing');
       setIsWaiting(false);
       navigate(`/game/${matchedGameId}`, { replace: true });
       
@@ -414,11 +445,18 @@ export default function OnlinePlay() {
       setPlayerColor(result.playerColor);
       setView('waiting');
       setIsWaiting(true);
+      persistGameSession({
+        gameId: result.gameCode,
+        playerId,
+        playerColor: result.playerColor,
+        opponentInfo: null,
+        gameMode: 'friendly',
+      });
     } catch (error) {
       console.error('[OnlinePlay] Failed to create online game:', error);
       setError('Failed to create game. Please try again.');
     }
-  }, [selectedColor, isLoggedIn, user]);
+  }, [selectedColor, isLoggedIn, user, persistGameSession]);
 
   const handleJoinGame = useCallback(async () => {
     setError('');
@@ -452,11 +490,18 @@ export default function OnlinePlay() {
       setPlayerId(playerId);
       setPlayerColor(result.playerColor);
       setView('playing');
+      persistGameSession({
+        gameId: result.gameCode,
+        playerId,
+        playerColor: result.playerColor,
+        opponentInfo: null,
+        gameMode: 'friendly',
+      });
     } catch (error) {
       console.error('[OnlinePlay] Failed to join online game:', error);
       setError('Game not found or already started.');
     }
-  }, [joinCode, isLoggedIn, user, GAME_CODE_LENGTH]);
+  }, [joinCode, isLoggedIn, user, GAME_CODE_LENGTH, persistGameSession]);
 
   const handleCopyLink = useCallback(() => {
     const link = `${window.location.origin}/online?code=${gameId}`;
@@ -496,7 +541,7 @@ export default function OnlinePlay() {
     setPlayerElo(user?.elo || 1200);
     clearGameSession();
     navigate('/online');
-  }, [gameId, playerId, gameMode, navigate]);
+  }, [gameId, playerId, gameMode, navigate, clearGameSession]);
 
   const handleCancelWaiting = useCallback(() => {
     if (gameId && playerId) {
@@ -516,7 +561,7 @@ export default function OnlinePlay() {
     setIsWaiting(false);
     clearGameSession();
     navigate('/online');
-  }, [gameId, playerId, gameMode, navigate]);
+  }, [gameId, playerId, gameMode, navigate, clearGameSession]);
 
   const handleBackToModeSelect = useCallback(() => {
     setView('mode-select');

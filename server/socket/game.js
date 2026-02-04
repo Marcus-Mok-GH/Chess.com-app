@@ -351,6 +351,34 @@ export function setupGameHandlers(io, socket) {
       return;
     }
 
+    const isWhitePlayer = game.white_player_id === playerId;
+    const isBlackPlayer = game.black_player_id === playerId;
+
+    if (isWhitePlayer || isBlackPlayer) {
+      const socketColumn = isWhitePlayer ? 'white_socket_id' : 'black_socket_id';
+      const currentSocketId = isWhitePlayer ? game.white_socket_id : game.black_socket_id;
+
+      if (currentSocketId !== socket.id) {
+        try {
+          await query(
+            `UPDATE active_games
+             SET ${socketColumn} = $1,
+                 status = CASE WHEN status = 'disconnected' THEN 'playing' ELSE status END,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE game_id = $2`,
+            [socket.id, gameId]
+          );
+          if (isWhitePlayer) {
+            game.white_socket_id = socket.id;
+          } else {
+            game.black_socket_id = socket.id;
+          }
+        } catch (error) {
+          console.error('[Game] Error updating socket session:', error);
+        }
+      }
+    }
+
     // Join the socket room for this game
     socket.join(gameId);
 

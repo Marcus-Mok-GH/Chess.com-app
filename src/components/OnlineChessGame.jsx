@@ -79,8 +79,14 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
 
     console.log('[OnlineChessGame] Setting up socket listeners for game:', gameId);
 
-    // Join the game room
-    socketService.joinGame(gameId, playerId);
+    const attemptJoin = () => {
+      if (socketService.isConnected) {
+        socketService.joinGame(gameId, playerId);
+      }
+    };
+
+    // Join the game room (or retry after reconnect)
+    attemptJoin();
 
     const handleGameState = (data) => {
       console.log('[OnlineChessGame] Received game state:', data);
@@ -173,6 +179,12 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
       moveErrorTimeoutRef.current = setTimeout(() => setMoveError(''), 5000);
     };
 
+    const handleConnectionStatus = (data) => {
+      if (data?.connected) {
+        attemptJoin();
+      }
+    };
+
     // Subscribe to socket events
     socketService.on('game_state', handleGameState);
     socketService.on('move_made', handleMoveMade);
@@ -185,6 +197,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     socketService.on('draw_offered', handleDrawOffered);
     socketService.on('draw_declined', handleDrawDeclined);
     socketService.on('move_error', handleMoveError);
+    socketService.on('connection_status', handleConnectionStatus);
 
     return () => {
       // Unsubscribe from socket events
@@ -199,6 +212,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
       socketService.off('draw_offered', handleDrawOffered);
       socketService.off('draw_declined', handleDrawDeclined);
       socketService.off('move_error', handleMoveError);
+      socketService.off('connection_status', handleConnectionStatus);
       
       // Leave the game room
       socketService.leaveGame(gameId, playerId);
