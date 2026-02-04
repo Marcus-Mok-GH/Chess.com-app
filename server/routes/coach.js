@@ -5,7 +5,7 @@ import { errorResponse, handleRouteError } from '../middleware/errors.js';
 const router = Router();
 
 const MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
-const COACH_MODEL = 'mistral-large-latest';
+const COACH_MODEL = 'magistral-medium-latest';
 
 const SYSTEM_PROMPT = `You are an expert chess coach with deep strategic knowledge. Think carefully about each position before responding. Analyze the position thoroughly, considering:
 - Tactical threats and opportunities
@@ -47,6 +47,30 @@ async function callMistral(messages, options = {}) {
   }
 
   return response;
+}
+
+function extractMistralText(content) {
+  if (typeof content === 'string') return content;
+
+  if (Array.isArray(content)) {
+    const chunks = content
+      .map((part) => {
+        if (!part) return '';
+        if (part.type === 'text' && typeof part.text === 'string') return part.text;
+        if (part.type === 'thinking') return '';
+        if (typeof part.text === 'string') return part.text;
+        return '';
+      })
+      .filter((chunk) => chunk);
+
+    return chunks.join('\n').trim();
+  }
+
+  if (content && typeof content === 'object' && typeof content.text === 'string') {
+    return content.text;
+  }
+
+  return '';
 }
 
 function extractJson(content) {
@@ -173,7 +197,7 @@ Be concise and supportive. No greetings or sign-offs.`
     const response = await callMistral(messages);
     const data = await response.json();
     
-    const text = data.choices?.[0]?.message?.content || '';
+    const text = extractMistralText(data.choices?.[0]?.message?.content);
     res.json({ feedback: text });
   } catch (error) {
     console.error('[Coach] Feedback error:', error);
@@ -207,7 +231,7 @@ Think through why this move is strong, then explain it in 2-3 sentences. Focus o
     const response = await callMistral(messages);
     const data = await response.json();
     
-    const text = data.choices?.[0]?.message?.content || '';
+    const text = extractMistralText(data.choices?.[0]?.message?.content);
     res.json({ explanation: text });
   } catch (error) {
     console.error('[Coach] Explain error:', error);
@@ -311,7 +335,7 @@ Rules:
     const response = await callMistral(messages, { maxTokens });
     const data = await response.json();
     
-    const text = data.choices?.[0]?.message?.content || '';
+    const text = extractMistralText(data.choices?.[0]?.message?.content);
     const parsed = extractJson(text);
 
     const rawMoves = Array.isArray(parsed?.moves)

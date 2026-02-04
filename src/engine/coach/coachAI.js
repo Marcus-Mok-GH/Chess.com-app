@@ -27,7 +27,7 @@ export async function isCoachAIAvailable() {
 
 /**
  * Get AI coaching feedback for a player's move
- * Uses Mistral AI mistral-large-latest model via server API
+ * Uses Mistral AI magistral-medium-latest reasoning model via server API
  */
 export async function getCoachingFeedback(fen, playerMove, moveHistory, onStream = null) {
   try {
@@ -62,7 +62,7 @@ export async function getCoachingFeedback(fen, playerMove, moveHistory, onStream
 
 /**
  * Get AI explanation for the coach's move
- * Uses Mistral AI mistral-large-latest model via server API
+ * Uses Mistral AI magistral-medium-latest reasoning model via server API
  */
 export async function explainCoachMove(fenBefore, move, fenAfter, onStream = null) {
   try {
@@ -97,7 +97,7 @@ export async function explainCoachMove(fenBefore, move, fenAfter, onStream = nul
 
 /**
  * Analyze a complete game with move-by-move reviews
- * Uses Mistral AI mistral-large-latest model via server API
+ * Uses Mistral AI magistral-medium-latest reasoning model via server API
  */
 export async function analyzeGame(moveHistory, result, gameId = null) {
   try {
