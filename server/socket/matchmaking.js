@@ -3,21 +3,34 @@ import { query } from '../db.js';
 const DEFAULT_ELO = 1200;
 const ELO_RANGE_INITIAL = 200;
 const ELO_RANGE_RELAXATION_TIME = 10000; // 10 seconds
-const K_FACTOR = 32;
+const MATCHMAKING_INTERVAL_MS = 2000;
+const MATCHMAKING_BATCH_SIZE = 200;
+const MATCHMAKING_IDLE_BACKOFF = 10000;
 
 // Matchmaking service class
 class MatchmakingService {
   constructor(io) {
     this.io = io;
     this.matchmakingInterval = null;
+    this.matchmakingDelay = MATCHMAKING_INTERVAL_MS;
     this.startMatchmakingLoop();
   }
 
   startMatchmakingLoop() {
-    // Run matchmaking every 2 seconds
+    if (this.matchmakingInterval) {
+      clearInterval(this.matchmakingInterval);
+    }
+
     this.matchmakingInterval = setInterval(async () => {
       await this.processMatchmaking();
-    }, 2000);
+    }, this.matchmakingDelay);
+  }
+
+  updateMatchmakingInterval(hasMatches) {
+    const nextDelay = hasMatches ? MATCHMAKING_INTERVAL_MS : MATCHMAKING_IDLE_BACKOFF;
+    if (nextDelay === this.matchmakingDelay) return;
+    this.matchmakingDelay = nextDelay;
+    this.startMatchmakingLoop();
   }
 
   stopMatchmakingLoop() {
@@ -33,11 +46,16 @@ class MatchmakingService {
       const result = await query(
         `SELECT * FROM matchmaking_queue
          WHERE last_heartbeat > NOW() - INTERVAL '2 minutes'
-         ORDER BY joined_at ASC`
+         ORDER BY joined_at ASC
+         LIMIT $1`,
+        [MATCHMAKING_BATCH_SIZE]
       );
 
       const queue = result.rows;
-      if (queue.length < 2) return;
+      if (queue.length < 2) {
+        this.updateMatchmakingInterval(false);
+        return;
+      }
 
       const matched = new Set();
 
@@ -81,9 +99,13 @@ class MatchmakingService {
           `DELETE FROM matchmaking_queue WHERE id = ANY($1)`,
           [ids]
         );
+        this.updateMatchmakingInterval(true);
+      } else {
+        this.updateMatchmakingInterval(false);
       }
     } catch (error) {
       console.error('[Matchmaking] Error processing queue:', error);
+      this.updateMatchmakingInterval(false);
     }
   }
 

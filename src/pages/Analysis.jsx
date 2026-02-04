@@ -4,7 +4,7 @@ import { Chess } from 'chess.js';
 import ChessBoard from '../components/ChessBoard';
 import GameAnalysis from '../components/GameAnalysis';
 import api from '../services/api';
-import { normalizeMoveHistory, toDetailedMoveHistory, toSanHistory } from '../utils/moveHistory';
+import { normalizeMoveHistory, toDetailedMoveHistory, toSanHistory } from '../engine/game/moveHistory';
 import './Analysis.css';
 
 function getPositionAtMove(history, moveIndex) {

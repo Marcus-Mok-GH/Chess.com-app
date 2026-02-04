@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+import { API_BASE_URL, isNetworkError } from '../../services/apiBase';
 
 let coachAvailable = null;
 
@@ -51,6 +51,10 @@ export async function getCoachingFeedback(fen, playerMove, moveHistory, onStream
     
     return feedback;
   } catch (error) {
+    if (isNetworkError(error)) {
+      console.error('[CoachAI] Feedback network error:', error.message);
+      return null;
+    }
     console.error('[CoachAI] Feedback error:', error);
     return null;
   }
@@ -82,6 +86,10 @@ export async function explainCoachMove(fenBefore, move, fenAfter, onStream = nul
     
     return explanation;
   } catch (error) {
+    if (isNetworkError(error)) {
+      console.error('[CoachAI] Explain network error:', error.message);
+      return null;
+    }
     console.error('[CoachAI] Explain error:', error);
     return null;
   }
@@ -111,6 +119,10 @@ export async function analyzeGame(moveHistory, result, gameId = null) {
     const data = await response.json();
     return data.analysis || null;
   } catch (error) {
+    if (isNetworkError(error)) {
+      console.error('[CoachAI] Analyze network error:', error.message);
+      return null;
+    }
     console.error('[CoachAI] Analyze error:', error);
     return null;
   }

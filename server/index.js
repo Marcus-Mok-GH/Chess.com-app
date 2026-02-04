@@ -10,7 +10,8 @@ import { config } from 'dotenv';
 // Load environment variables first
 config();
 
-import { initDatabase, query, cleanupStaleMatchmakingEntries, cleanupOldActiveGames } from './db.js';
+import { initDatabase, cleanupStaleMatchmakingEntries, cleanupOldActiveGames } from './db.js';
+import { registerSocketHandlers } from './socket/index.js';
 import matchmakingRouter from './routes/matchmaking.js';
 import gamesRouter from './routes/games.js';
 import usersRouter from './routes/users.js';
@@ -77,15 +78,18 @@ httpServer.on('error', (error) => {
 });
 
 // Prefer WebSocket when available but allow opting into polling-only deployments
-const io = new Server(httpServer, {
-  cors: {
-    origin: corsOrigin,
-    methods: ['GET', 'POST'],
-    credentials: true
-  },
-  transports: process.env.FORCE_POLLING ? ['polling'] : ['websocket', 'polling'],
-  allowEIO3: true
-});
+let io = null;
+if (!isServerless) {
+  io = new Server(httpServer, {
+    cors: {
+      origin: corsOrigin,
+      methods: ['GET', 'POST'],
+      credentials: true
+    },
+    transports: process.env.FORCE_POLLING ? ['polling'] : ['websocket', 'polling'],
+    allowEIO3: true
+  });
+}
 
 // Middleware
 app.use(cors({
@@ -149,54 +153,12 @@ app.use((err, req, res, next) => {
 });
 
 // Socket.io
-io.on('connection', async (socket) => {
-  console.log(`[Socket] Client connected: ${socket.id}`);
-
-  try {
-    const { setupMatchmakingHandlers } = await import('./socket/matchmaking.js');
-    const { setupGameHandlers } = await import('./socket/game.js');
-
-    setupMatchmakingHandlers(io, socket);
-    setupGameHandlers(io, socket);
-  } catch (error) {
-    console.error('[Socket] Error setting up handlers:', error);
-  }
-
-  socket.on('disconnect', async (reason) => {
-    console.log(`[Socket] Client disconnected: ${socket.id}, reason: ${reason}`);
-
-    try {
-      await query('DELETE FROM matchmaking_queue WHERE socket_id = $1', [socket.id]);
-
-      const activeGames = await query(
-        `SELECT * FROM active_games WHERE white_socket_id = $1 OR black_socket_id = $1`,
-        [socket.id]
-      );
-
-      for (const game of activeGames.rows) {
-        if (game.status === 'playing') {
-          const otherSocketId = game.white_socket_id === socket.id
-            ? game.black_socket_id
-            : game.white_socket_id;
-
-          if (otherSocketId) {
-            io.to(otherSocketId).emit('opponent_disconnected', {
-              gameId: game.game_id,
-              reason: 'Player disconnected'
-            });
-          }
-
-          await query(
-            'UPDATE active_games SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE game_id = $2',
-            ['disconnected', game.game_id]
-          );
-        }
-      }
-    } catch (error) {
-      console.error('[Socket] Error handling disconnect:', error);
-    }
+if (io) {
+  io.on('connection', async (socket) => {
+    console.log(`[Socket] Client connected: ${socket.id}`);
+    await registerSocketHandlers(io, socket);
   });
-});
+}
 
 // Periodic cleanup
 if (!isServerless) {

@@ -1,6 +1,7 @@
 import express from 'express';
 import { query } from '../db.js';
 import crypto from 'crypto';
+import { errorResponse, handleRouteError } from '../middleware/errors.js';
 
 const router = express.Router();
 
@@ -26,11 +27,11 @@ router.post('/save', async (req, res) => {
     } = req.body;
 
     if (!result) {
-      return res.status(400).json({ error: 'Result is required' });
+      return errorResponse(res, 400, 'Result is required');
     }
 
     if (!Array.isArray(moveHistory)) {
-      return res.status(400).json({ error: 'Move history must be an array' });
+      return errorResponse(res, 400, 'Move history must be an array');
     }
 
     // Use client-provided game code when available (e.g. local games at /game/:gameId)
@@ -95,7 +96,7 @@ router.post('/save', async (req, res) => {
     });
   } catch (error) {
     console.error('Save game error:', error);
-    res.status(500).json({ error: 'Failed to save game' });
+    return handleRouteError(res, error, 'Failed to save game');
   }
 });
 
@@ -112,7 +113,7 @@ router.post('/local/create', async (req, res) => {
     } = req.body;
 
     if (!username) {
-      return res.status(400).json({ error: 'Username is required' });
+      return errorResponse(res, 400, 'Username is required');
     }
 
     const gameCode = (requestedGameCode || generateGameCode()).toString().toUpperCase();
@@ -164,7 +165,7 @@ router.post('/local/create', async (req, res) => {
     res.json({ success: true, gameCode });
   } catch (error) {
     console.error('Create local game error:', error);
-    res.status(500).json({ error: 'Failed to create local game' });
+    return handleRouteError(res, error, 'Failed to create local game');
   }
 });
 
@@ -174,7 +175,7 @@ router.get('/local/:username/:gameCode', async (req, res) => {
     const { username, gameCode } = req.params;
 
     if (!username || !gameCode) {
-      return res.status(400).json({ error: 'Username and game code are required' });
+      return errorResponse(res, 400, 'Username and game code are required');
     }
 
     const result = await query(
@@ -188,13 +189,13 @@ router.get('/local/:username/:gameCode', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Game not found' });
+      return errorResponse(res, 404, 'Game not found');
     }
 
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Get local game error:', error);
-    res.status(500).json({ error: 'Failed to get local game' });
+    return handleRouteError(res, error, 'Failed to get local game');
   }
 });
 
@@ -204,7 +205,7 @@ router.post('/online/create', async (req, res) => {
     const { gameCode: requestedGameCode, playerId, playerName, playerColor = 'white', playerElo } = req.body;
 
     if (!playerId || !playerName) {
-      return res.status(400).json({ error: 'Player id and name are required' });
+      return errorResponse(res, 400, 'Player id and name are required');
     }
 
     const gameCode = (requestedGameCode || generateGameCode()).toString().toUpperCase();
@@ -249,7 +250,7 @@ router.post('/online/create', async (req, res) => {
     res.json({ success: true, gameCode, playerColor });
   } catch (error) {
     console.error('Create online game error:', error);
-    res.status(500).json({ error: 'Failed to create online game' });
+    return handleRouteError(res, error, 'Failed to create online game');
   }
 });
 
@@ -259,7 +260,7 @@ router.post('/online/join', async (req, res) => {
     const { gameCode, playerId, playerName, playerElo } = req.body;
 
     if (!gameCode || !playerId || !playerName) {
-      return res.status(400).json({ error: 'Game code, player id, and name are required' });
+      return errorResponse(res, 400, 'Game code, player id, and name are required');
     }
 
     const existing = await query(
@@ -268,13 +269,13 @@ router.post('/online/join', async (req, res) => {
     );
 
     if (existing.rows.length === 0) {
-      return res.status(404).json({ error: 'Game not found' });
+      return errorResponse(res, 404, 'Game not found');
     }
 
     const game = existing.rows[0];
 
     if (game.status !== 'waiting') {
-      return res.status(400).json({ error: 'Game already started or ended' });
+      return errorResponse(res, 400, 'Game already started or ended');
     }
 
     const isWhiteOpen = !game.white_player_id;
@@ -309,7 +310,7 @@ router.post('/online/join', async (req, res) => {
     });
   } catch (error) {
     console.error('Join online game error:', error);
-    res.status(500).json({ error: 'Failed to join online game' });
+    return handleRouteError(res, error, 'Failed to join online game');
   }
 });
 
@@ -319,7 +320,7 @@ router.post('/online/leave', async (req, res) => {
     const { gameCode, playerId } = req.body;
 
     if (!gameCode || !playerId) {
-      return res.status(400).json({ error: 'Game code and player id are required' });
+      return errorResponse(res, 400, 'Game code and player id are required');
     }
 
     await query(
@@ -332,7 +333,7 @@ router.post('/online/leave', async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error('Leave online game error:', error);
-    res.status(500).json({ error: 'Failed to leave online game' });
+    return handleRouteError(res, error, 'Failed to leave online game');
   }
 });
 
@@ -355,7 +356,7 @@ router.get('/history/:username', async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('Get game history error:', error);
-    res.status(500).json({ error: 'Failed to get game history' });
+    return handleRouteError(res, error, 'Failed to get game history');
   }
 });
 
@@ -365,7 +366,7 @@ router.get('/match-moves/:gameId/:username', async (req, res) => {
     const { gameId, username } = req.params;
 
     if (!gameId || !username) {
-      return res.status(400).json({ error: 'Game ID and username are required' });
+      return errorResponse(res, 400, 'Game ID and username are required');
     }
 
     const normalizedGameId = gameId.trim().toUpperCase();
@@ -380,7 +381,7 @@ router.get('/match-moves/:gameId/:username', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Match moves not found' });
+      return errorResponse(res, 404, 'Match moves not found');
     }
 
     const row = result.rows[0];
@@ -392,7 +393,7 @@ router.get('/match-moves/:gameId/:username', async (req, res) => {
     });
   } catch (error) {
     console.error('Get match moves error:', error);
-    return res.status(500).json({ error: 'Failed to get match moves' });
+    return handleRouteError(res, error, 'Failed to get match moves');
   }
 });
 
@@ -402,7 +403,7 @@ router.get('/by-code/:gameCode', async (req, res) => {
     const { gameCode } = req.params;
 
     if (!gameCode) {
-      return res.status(400).json({ error: 'Game code is required' });
+      return errorResponse(res, 400, 'Game code is required');
     }
 
     const result = await query(
@@ -414,13 +415,13 @@ router.get('/by-code/:gameCode', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Game not found' });
+      return errorResponse(res, 404, 'Game not found');
     }
 
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Get game by code error:', error);
-    res.status(500).json({ error: 'Failed to get game' });
+    return handleRouteError(res, error, 'Failed to get game');
   }
 });
 

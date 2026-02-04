@@ -11,13 +11,13 @@ import PlayerBar from './PlayerBar';
 import DebugPanel from './DebugPanel';
 import AnimatedPiece from './AnimatedPiece';
 import CoachingTip from './CoachingTip';
-import { BOTS, getRandomQuote, createCustomBot } from '../utils/bots';
-import { getCoachingFeedback, explainCoachMove } from '../utils/coachAI';
-import { generateGameId } from '../utils/gameId';
-import { normalizeMoveHistory, toSanHistory, toStoredMoveHistory, buildGameFromHistory } from '../utils/moveHistory';
+import { BOTS, getRandomQuote, createCustomBot } from '../engine/bots/bots';
+import { getCoachingFeedback, explainCoachMove } from '../engine/coach/coachAI';
+import { generateGameId } from '../engine/game/gameId';
+import { normalizeMoveHistory, toSanHistory, toStoredMoveHistory, buildGameFromHistory } from '../engine/game/moveHistory';
 import { useUser } from '../contexts/UserContext';
 import api from '../services/api';
-import StockfishWorker from '../utils/stockfishWorker.js?worker';
+import StockfishWorker from '../engine/workers/stockfishWorker.js?worker';
 import './ChessGame.css';
 
 function findKingSquare(game, color) {

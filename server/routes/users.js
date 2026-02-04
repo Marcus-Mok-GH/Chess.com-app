@@ -1,5 +1,6 @@
 import express from 'express';
 import { query } from '../db.js';
+import { errorResponse, handleRouteError } from '../middleware/errors.js';
 
 const router = express.Router();
 
@@ -9,21 +10,21 @@ router.post('/login', async (req, res) => {
     const { username } = req.body;
     
     if (!username || typeof username !== 'string') {
-      return res.status(400).json({ error: 'Username is required' });
+      return errorResponse(res, 400, 'Username is required');
     }
     
     const trimmedUsername = username.trim();
     
     if (trimmedUsername.length < 2) {
-      return res.status(400).json({ error: 'Username must be at least 2 characters' });
+      return errorResponse(res, 400, 'Username must be at least 2 characters');
     }
     
     if (trimmedUsername.length > 20) {
-      return res.status(400).json({ error: 'Username must be 20 characters or less' });
+      return errorResponse(res, 400, 'Username must be 20 characters or less');
     }
     
     if (!/^[a-zA-Z0-9_]+$/.test(trimmedUsername)) {
-      return res.status(400).json({ error: 'Username can only contain letters, numbers, and underscores' });
+      return errorResponse(res, 400, 'Username can only contain letters, numbers, and underscores');
     }
     
     // Try to find existing user
@@ -118,7 +119,7 @@ router.post('/login', async (req, res) => {
         console.error('Retry fetch error:', e);
       }
     }
-    res.status(500).json({ error: 'Failed to login' });
+    return handleRouteError(res, error, 'Failed to login');
   }
 });
 
@@ -133,7 +134,7 @@ router.get('/:username/settings', async (req, res) => {
     );
 
     if (userResult.rows.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
+      return errorResponse(res, 404, 'User not found');
     }
 
     const settingsResult = await query(
@@ -146,7 +147,7 @@ router.get('/:username/settings', async (req, res) => {
     });
   } catch (error) {
     console.error('Get user settings error:', error);
-    res.status(500).json({ error: 'Failed to get user settings' });
+    return handleRouteError(res, error, 'Failed to get user settings');
   }
 });
 
@@ -157,7 +158,7 @@ router.post('/:username/settings', async (req, res) => {
     const { settings } = req.body;
 
     if (!settings || typeof settings !== 'object') {
-      return res.status(400).json({ error: 'Settings payload is required' });
+      return errorResponse(res, 400, 'Settings payload is required');
     }
 
     const userResult = await query(
@@ -166,7 +167,7 @@ router.post('/:username/settings', async (req, res) => {
     );
 
     if (userResult.rows.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
+      return errorResponse(res, 404, 'User not found');
     }
 
     await query(
@@ -180,7 +181,7 @@ router.post('/:username/settings', async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error('Update user settings error:', error);
-    res.status(500).json({ error: 'Failed to update user settings' });
+    return handleRouteError(res, error, 'Failed to update user settings');
   }
 });
 
@@ -195,7 +196,7 @@ router.get('/:username', async (req, res) => {
     );
     
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
+      return errorResponse(res, 404, 'User not found');
     }
     
     const user = result.rows[0];
@@ -212,7 +213,7 @@ router.get('/:username', async (req, res) => {
     
   } catch (error) {
     console.error('Get user error:', error);
-    res.status(500).json({ error: 'Failed to get user' });
+    return handleRouteError(res, error, 'Failed to get user');
   }
 });
 
@@ -223,7 +224,7 @@ router.post('/:username/elo', async (req, res) => {
     const { opponentElo, result: gameResult } = req.body;
     
     if (typeof opponentElo !== 'number' || !['win', 'loss', 'draw'].includes(gameResult)) {
-      return res.status(400).json({ error: 'Invalid parameters' });
+      return errorResponse(res, 400, 'Invalid parameters');
     }
     
     // Get current user
@@ -233,7 +234,7 @@ router.post('/:username/elo', async (req, res) => {
     );
     
     if (userResult.rows.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
+      return errorResponse(res, 404, 'User not found');
     }
     
     const user = userResult.rows[0];
@@ -268,7 +269,7 @@ router.post('/:username/elo', async (req, res) => {
     
   } catch (error) {
     console.error('Update ELO error:', error);
-    res.status(500).json({ error: 'Failed to update ELO' });
+    return handleRouteError(res, error, 'Failed to update ELO');
   }
 });
 
@@ -296,7 +297,7 @@ router.get('/leaderboard/top', async (req, res) => {
     
   } catch (error) {
     console.error('Leaderboard error:', error);
-    res.status(500).json({ error: 'Failed to get leaderboard' });
+    return handleRouteError(res, error, 'Failed to get leaderboard');
   }
 });
 

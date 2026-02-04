@@ -6,8 +6,8 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useUser } from '../contexts/UserContext';
 import GameBottomBar from '../components/GameBottomBar';
 import PlaySetup from '../components/PlaySetup';
-import { BOTS } from '../utils/bots';
-import { generateGameId } from '../utils/gameId';
+import { BOTS } from '../engine/bots/bots';
+import { generateGameId } from '../engine/game/gameId';
 import api from '../services/api';
 
 import './Play.css';

@@ -10,6 +10,9 @@
     "multiplayer"
   ],
   "license": "ISC",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "npm run dev:all",
     "dev:vite": "vite --port 5173 --host",

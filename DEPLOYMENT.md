@@ -2,6 +2,10 @@
 
 ## Vercel Deployment
 
+> Note: Vercel Functions do **not** support long-lived WebSocket connections, so Socket.IO
+> realtime multiplayer must be hosted elsewhere. You can still deploy the Vite frontend
+> (and optional HTTP APIs) on Vercel.
+
 ### Environment Variables
 
 Set these environment variables in Vercel project settings:
@@ -11,48 +15,45 @@ Set these environment variables in Vercel project settings:
    postgresql://user:password@host:5432/dbname?sslmode=require
    ```
 
-2. **FRONTEND_URL** - Your frontend URL (default: https://your-domain.com)
+2. **FRONTEND_URL** - Your frontend URL
    - Set this to your Vercel URL or custom domain
 
-3. **SERVER_PORT** - Server port (default: 3001)
+3. **MISTRAL_API_KEY** - Required for coaching endpoints
 
-4. **VITE_SERVER_URL** - Backend URL for client-side API calls
-   - Use `https://your-project.vercel.app` or your custom domain
+4. **VITE_API_URL** - Backend URL for client-side API calls
+   - Use `/api` if deploying HTTP API routes on Vercel
+   - Use `https://your-backend.example.com/api` if backend is hosted elsewhere
+
+5. **VITE_SOCKET_URL** - Socket.IO server base URL (required for multiplayer)
+   - Use the external backend host (ex: `https://your-backend.example.com`)
+   - Do not include `/socket.io` in this value
+
+6. **VITE_SOCKET_PATH** - Socket.IO path (optional, default `/socket.io`)
 
 ### Configuration Files
 
-**vercel.json** - Main deployment configuration (already fixed)
+**vercel.json** - Main deployment configuration
 ```json
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "server/index.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "vite.config.js",
-      "use": "@vercel/vitejs"
+  "buildCommand": "npm run build",
+  "installCommand": "npm ci",
+  "framework": null,
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "nodejs20.x"
     }
-  ],
-  "routes": [
+  },
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "/server/index.js"
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
     },
     {
-      "src": "/socket.io/(.*)",
-      "dest": "/server/index.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/dist/$1"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
-  ],
-  "env": {
-    "NODE_ENV": "production",
-    "VITE_SERVER_URL": "https://your-project.vercel.app"
-  }
+  ]
 }
 ```
 
@@ -87,9 +88,9 @@ Set these environment variables in Vercel project settings:
 
 ### Health Check Endpoint
 
-The deployed app will have a health check at:
+The deployed API (if enabled) will have a health check at:
 ```
-https://your-project.vercel.app/health
+https://your-project.vercel.app/api/health
 ```
 
 ### Testing Deployment
@@ -103,9 +104,10 @@ https://your-project.vercel.app/health
    - Open https://your-project.vercel.app in browser
 
 3. **Test WebSocket connection**
-   - The Socket.io client will connect to:
+   - The Socket.io client will connect to your external backend host
+   - Example:
    ```
-   wss://your-project.vercel.app/socket.io/
+   wss://your-backend.example.com/socket.io/
    ```
 
 ## Troubleshooting
@@ -116,7 +118,7 @@ https://your-project.vercel.app/health
 
 ### WebSocket Connection Fails
 - Verify CORS settings in server/index.js
-- Ensure VITE_SERVER_URL is set correctly
+- Ensure VITE_SOCKET_URL is set correctly
 - Check firewall rules allow WebSocket connections
 
 ### 404 on Static Files

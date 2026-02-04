@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { query } from '../db.js';
+import { errorResponse, handleRouteError } from '../middleware/errors.js';
 
 const router = Router();
 
@@ -145,7 +146,7 @@ router.post('/feedback', async (req, res) => {
     const { fen, playerMove, moveHistory } = req.body;
 
     if (!fen || !playerMove) {
-      return res.status(400).json({ error: 'Missing required fields: fen, playerMove' });
+      return errorResponse(res, 400, 'Missing required fields: fen, playerMove');
     }
 
     const moves = Array.isArray(moveHistory) ? moveHistory.join(' ') : '';
@@ -176,7 +177,7 @@ Be concise and supportive. No greetings or sign-offs.`
     res.json({ feedback: text });
   } catch (error) {
     console.error('[Coach] Feedback error:', error);
-    res.status(500).json({ error: 'Failed to get coaching feedback' });
+    return handleRouteError(res, error, 'Failed to get coaching feedback');
   }
 });
 
@@ -186,7 +187,7 @@ router.post('/explain', async (req, res) => {
     const { fenBefore, move, fenAfter } = req.body;
 
     if (!fenBefore || !move) {
-      return res.status(400).json({ error: 'Missing required fields: fenBefore, move' });
+      return errorResponse(res, 400, 'Missing required fields: fenBefore, move');
     }
 
     const messages = [
@@ -210,7 +211,7 @@ Think through why this move is strong, then explain it in 2-3 sentences. Focus o
     res.json({ explanation: text });
   } catch (error) {
     console.error('[Coach] Explain error:', error);
-    res.status(500).json({ error: 'Failed to get move explanation' });
+    return handleRouteError(res, error, 'Failed to get move explanation');
   }
 });
 
@@ -241,7 +242,7 @@ router.post('/analyze', async (req, res) => {
     }
 
     if (!moveHistory || !Array.isArray(moveHistory) || moveHistory.length === 0) {
-      return res.status(400).json({ error: 'Missing required field: moveHistory (array)' });
+      return errorResponse(res, 400, 'Missing required field: moveHistory (array)');
     }
 
     const sanMoves = moveHistory
@@ -344,7 +345,7 @@ Rules:
     res.json({ analysis: { format: 'move_review', moves: movesReview } });
   } catch (error) {
     console.error('[Coach] Analyze error:', error);
-    res.status(500).json({ error: 'Failed to analyze game' });
+    return handleRouteError(res, error, 'Failed to analyze game');
   }
 });
 

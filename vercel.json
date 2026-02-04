@@ -1,44 +1,19 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "buildCommand": "npm run build",
-  "devCommand": "npm run dev:all",
-  "installCommand": "npm ci",
+  "installCommand": "npm install",
   "framework": null,
+  "outputDirectory": "dist",
   "regions": ["iad1"],
-  "env": {
-    "NODE_ENV": "production"
-  },
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "/server/index.js"
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
     },
     {
       "source": "/(.*)",
       "destination": "/index.html"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/socket.io/:path*",
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        },
-        {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET, POST, PUT, DELETE, OPTIONS"
-        },
-        {
-          "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, no-store, must-revalidate"
-        }
-      ]
     }
   ]
 }

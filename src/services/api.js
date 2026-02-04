@@ -1,7 +1,5 @@
-// API URL configuration
-// Uses relative URLs which work with Vite proxy in dev and same-origin in production
+import { API_BASE_URL, isNetworkError } from './apiBase';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 console.log('[API] Using API URL:', API_BASE_URL);
 
 class ApiService {
@@ -35,13 +33,7 @@ class ApiService {
       return data;
     } catch (error) {
       // Handle various network/connection errors
-      const isNetworkError = error.name === 'TypeError' || 
-                             error.message === 'Load failed' ||
-                             error.message === 'Failed to fetch' ||
-                             error.message.includes('NetworkError') ||
-                             error.message.includes('network');
-      
-      if (isNetworkError) {
+      if (isNetworkError(error)) {
         const connectionError = new Error(`[Database Connection Failed] Cannot reach server at ${API_BASE_URL}. Check if the server is running.`);
         console.error('🔴 DATABASE CONNECTION FAILED:', connectionError.message);
         console.error('🔴 Original error:', error.message);
@@ -110,13 +102,7 @@ class ApiService {
       return await response.json();
     } catch (error) {
       // Handle various network/connection errors
-      const isNetworkError = error.name === 'TypeError' || 
-                             error.message === 'Load failed' ||
-                             error.message === 'Failed to fetch' ||
-                             error.message.includes('NetworkError') ||
-                             error.message.includes('network');
-      
-      if (isNetworkError) {
+      if (isNetworkError(error)) {
         const connectionError = new Error(`[Database Connection Failed] Cannot reach server. Check if the server is running on port 3001.`);
         console.error('🔴 DATABASE CONNECTION FAILED:', connectionError.message);
         console.error('🔴 Original error:', error.message);

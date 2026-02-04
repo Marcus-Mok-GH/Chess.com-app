@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { toSanHistory } from '../utils/moveHistory';
+import { toSanHistory } from '../engine/game/moveHistory';
 
 export default function MoveHistory({ history }) {
   const scrollRef = useRef(null);

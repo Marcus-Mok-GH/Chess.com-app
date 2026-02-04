@@ -1,5 +1,6 @@
 import express from 'express';
 import { query } from '../db.js';
+import { handleRouteError } from '../middleware/errors.js';
 
 const router = express.Router();
 
@@ -9,8 +10,7 @@ router.get('/status', async (req, res) => {
     const result = await query('SELECT COUNT(*) as count FROM matchmaking_queue');
     res.json({ playersInQueue: parseInt(result.rows[0].count, 10) });
   } catch (error) {
-    console.error('Queue status error:', error);
-    res.status(500).json({ error: 'Failed to get queue status' });
+    handleRouteError(res, error, 'Failed to get queue status');
   }
 });
 
@@ -37,8 +37,7 @@ router.get('/details', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Queue details error:', error);
-    res.status(500).json({ error: 'Failed to get queue details' });
+    handleRouteError(res, error, 'Failed to get queue details');
   }
 });
 

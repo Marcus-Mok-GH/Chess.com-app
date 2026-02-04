@@ -5,7 +5,7 @@ import { Chess } from 'chess.js';
 import { useSettings } from '../contexts/SettingsContext';
 import { playSoundEffect } from '../utils/sound';
 import MoveHistory from './MoveHistory';
-import { normalizeMoveHistory, toStoredMoveHistory, buildGameFromHistory } from '../utils/moveHistory';
+import { normalizeMoveHistory, toStoredMoveHistory, buildGameFromHistory } from '../engine/game/moveHistory';
 import PlayerBar from './PlayerBar';
 import AnimatedPiece from './AnimatedPiece';
 import ChessPieceIcon from './ChessPieceIcon';

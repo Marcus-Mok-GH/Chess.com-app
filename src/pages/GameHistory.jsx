@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 import api from '../services/api';
-import { normalizeMoveHistory } from '../utils/moveHistory';
+import { normalizeMoveHistory } from '../engine/game/moveHistory';
 import './GameHistory.css';
 
 function formatDate(dateString) {

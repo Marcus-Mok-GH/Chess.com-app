@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { analyzeGame, isCoachAIAvailable } from '../utils/coachAI';
+import { analyzeGame, isCoachAIAvailable } from '../engine/coach/coachAI';
 import './GameAnalysis.css';
 
 export default function GameAnalysis({ moveHistory, gameId = null, onClose, variant = 'modal' }) {
