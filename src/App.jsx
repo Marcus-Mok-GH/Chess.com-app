@@ -27,7 +27,7 @@ function getTitle(path) {
 
 function AppHeader() {
   const location = useLocation()
-  const { isOnline, isLoggedIn, user, logout } = useUser()
+  const { isOnline, isLoggedIn, user } = useUser()
 
   const currentPath = location.pathname.startsWith('/online/') ? '/online' : location.pathname
 
@@ -51,9 +51,6 @@ function AppHeader() {
                 <span className="user-info">
                   {user.username} ({user.elo})
                 </span>
-                <button onClick={logout} className="logout-btn">
-                  Logout
-                </button>
               </div>
             </div>
           )}

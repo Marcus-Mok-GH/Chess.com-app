@@ -1,10 +1,8 @@
 import { useNavigate } from 'react-router-dom';
-import { useUser } from '../contexts/UserContext';
 import './GuestBlocked.css';
 
 export default function GuestBlocked({ targetPage = 'Online Play', reason = 'Online play requires authentication' }) {
   const navigate = useNavigate();
-  const { logout } = useUser();
 
   return (
     <div className="guest-blocked-container">

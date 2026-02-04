@@ -141,14 +141,6 @@
   background: rgba(255, 255, 255, 0.08);
 }
 
-.dropdown-item.logout {
-  color: #e57373;
-}
-
-.dropdown-item.logout:hover {
-  background: rgba(229, 115, 115, 0.1);
-}
-
 .db-indicator {
   font-size: 0.7rem;
   margin-left: 2px;

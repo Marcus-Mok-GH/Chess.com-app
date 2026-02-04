@@ -4,7 +4,7 @@ import LoginModal from './LoginModal';
 import './UserBadge.css';
 
 export default function UserBadge() {
-  const { user, isLoggedIn, logout, isOnline } = useUser();
+  const { user, isLoggedIn, isOnline } = useUser();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -81,16 +81,6 @@ export default function UserBadge() {
                 {isOnline ? '☁️ Connected' : '📴 Offline'}
               </span>
             </div>
-            <div className="dropdown-divider" />
-            <button 
-              className="dropdown-item logout"
-              onClick={() => {
-                logout();
-                setShowDropdown(false);
-              }}
-            >
-              🚪 Sign Out
-            </button>
           </div>
         </>
       )}
