@@ -558,6 +558,8 @@ body {
   border-radius: var(--radius-sm);
   border-left: 3px solid var(--color-accent-primary);
   animation: fadeInMessage 0.3s ease-out;
+  max-height: 120px;
+  overflow-y: auto;
 }
 
 @keyframes fadeInMessage {
@@ -576,10 +578,9 @@ body {
   color: var(--color-text-secondary);
   font-style: italic;
   line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  display: block;
+  overflow: visible;
+  white-space: normal;
 }
 
 /* Coach bot expanded message styles */
@@ -590,7 +591,6 @@ body {
 }
 
 .coach-quote {
-  -webkit-line-clamp: 3;
   color: #81c784;
 }
 
