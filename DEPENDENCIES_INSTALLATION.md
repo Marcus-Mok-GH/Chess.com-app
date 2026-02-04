@@ -17,7 +17,6 @@ All dependencies have been successfully installed and verified.
 - **codebuff** ^1.0.602 - Code formatting/linting
 - **next** ^16.1.6 - React framework
 - **opencode-ai** ^1.1.42 - OpenCode AI integration
-- **puter** ^1.0.0 - Cloud storage platform
 - **react-chessboard** ^4.7.3 - React chess UI component
 - **react-router-dom** ^7.13.0 - Client-side routing
 - **stockfish.js** ^10.0.2 - Chess AI engine (JavaScript version)
