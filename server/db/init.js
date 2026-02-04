@@ -1,6 +1,7 @@
-import pool from './pool.js';
+import { getPool, shouldClosePool } from './pool.js';
 
 export async function initDatabase() {
+  const pool = getPool();
   const client = await pool.connect();
   try {
     await client.query(`
@@ -130,5 +131,8 @@ export async function initDatabase() {
     throw error;
   } finally {
     client.release();
+    if (shouldClosePool) {
+      await pool.end();
+    }
   }
 }

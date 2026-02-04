@@ -1,4 +1,4 @@
-import pool from './pool.js';
+import { getPool, shouldClosePool } from './pool.js';
 
 const logQuery = (text, duration, rowCount) => {
   console.log('[DB] Query executed', {
@@ -10,9 +10,13 @@ const logQuery = (text, duration, rowCount) => {
 
 export async function query(text, params) {
   const start = Date.now();
+  const pool = getPool();
   const res = await pool.query(text, params);
   const duration = Date.now() - start;
   logQuery(text, duration, res.rowCount);
+  if (shouldClosePool) {
+    await pool.end();
+  }
   return res;
 }
 

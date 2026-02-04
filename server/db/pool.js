@@ -33,25 +33,38 @@ try {
   // ignore parsing errors; avoid logging secrets
 }
 
-if (dbHost) {
-  const sourceLabel = connectionSource ? ` via ${connectionSource}` : '';
-  console.log(`[DB] Connecting to ${dbHost} (IPv4 preferred)${sourceLabel}`);
-}
-
 const useNeonServerless = Boolean(process.env.VERCEL || process.env.NEON_PROJECT_ID);
 if (useNeonServerless) {
   neonConfig.webSocketConstructor = ws;
+  neonConfig.poolQueryViaFetch = true;
 }
 
 const PoolImpl = useNeonServerless ? NeonPool : Pool;
 
-const pool = new PoolImpl({
+const poolConfig = {
   connectionString,
   ssl: isProduction ? { rejectUnauthorized: false } : false,
   connectionTimeoutMillis: isProduction ? 20000 : 10000,
   idleTimeoutMillis: 30000,
   max: 10,
   family: 4
-});
+};
 
-export default pool;
+let didLog = false;
+function logConnectionTarget() {
+  if (didLog || !dbHost) return;
+  const sourceLabel = connectionSource ? ` via ${connectionSource}` : '';
+  console.log(`[DB] Connecting to ${dbHost} (IPv4 preferred)${sourceLabel}`);
+  didLog = true;
+}
+
+export const shouldClosePool = useNeonServerless;
+
+const sharedPool = useNeonServerless ? null : new PoolImpl(poolConfig);
+
+export function getPool() {
+  logConnectionTarget();
+  return useNeonServerless ? new PoolImpl(poolConfig) : sharedPool;
+}
+
+export default sharedPool ?? null;
