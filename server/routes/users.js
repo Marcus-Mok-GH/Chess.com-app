@@ -3,6 +3,15 @@ import { query } from '../db.js';
 import { errorResponse, handleRouteError } from '../middleware/errors.js';
 
 const router = express.Router();
+const hasDatabase = Boolean(process.env.DATABASE_URL);
+
+// Guard all user routes when database is not configured (common on Vercel).
+router.use((req, res, next) => {
+  if (!hasDatabase) {
+    return errorResponse(res, 503, 'Database not configured. Set DATABASE_URL in your deployment environment.');
+  }
+  return next();
+});
 
 // Login/Register - creates user if doesn't exist, returns user data
 router.post('/login', async (req, res) => {
