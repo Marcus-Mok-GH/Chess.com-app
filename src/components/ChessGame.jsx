@@ -152,57 +152,6 @@ function ChessGame(
     moveHistoryRef.current = moveHistory;
   }, [moveHistory]);
 
-  const requestBotDialogue = useCallback(async ({
-    event,
-    actor = 'bot',
-    move = null,
-    result = null,
-    botOverride = null,
-    fallbackCategory = null,
-    placeholder = null,
-  }) => {
-    if (isPassAndPlay) return;
-
-    const bot = botOverride || selectedBotRef.current;
-    if (!bot || bot.id === 'pass') return;
-
-    const requestId = ++dialogueRequestIdRef.current;
-
-    if (placeholder) {
-      setBotMessage(placeholder);
-    }
-
-    try {
-      const text = await getBotDialogue({
-        bot: {
-          id: bot.id,
-          name: bot.name,
-          personality: bot.personality,
-          description: bot.description,
-          rating: bot.rating,
-        },
-        event,
-        actor,
-        move,
-        result,
-        fen: gameRef.current?.fen(),
-      });
-
-      if (dialogueRequestIdRef.current !== requestId) return;
-      if (text) {
-        setBotMessage(text);
-        return;
-      }
-    } catch (error) {
-      console.warn('[ChessGame] Dialogue request failed:', error);
-      if (dialogueRequestIdRef.current !== requestId) return;
-    }
-
-    if (fallbackCategory) {
-      setBotMessage(getRandomQuote(bot, fallbackCategory));
-    }
-  }, [isPassAndPlay]);
-
   useEffect(() => {
     if (!game) return;
 
@@ -659,6 +608,57 @@ function ChessGame(
       console.error('🔴 Failed to save game:', error);
     }
   }, [game, gameId, moveHistory, isOnline, user, playerColor, isPassAndPlay]);
+
+  const requestBotDialogue = useCallback(async ({
+    event,
+    actor = 'bot',
+    move = null,
+    result = null,
+    botOverride = null,
+    fallbackCategory = null,
+    placeholder = null,
+  }) => {
+    if (isPassAndPlay) return;
+
+    const bot = botOverride || selectedBotRef.current;
+    if (!bot || bot.id === 'pass') return;
+
+    const requestId = ++dialogueRequestIdRef.current;
+
+    if (placeholder) {
+      setBotMessage(placeholder);
+    }
+
+    try {
+      const text = await getBotDialogue({
+        bot: {
+          id: bot.id,
+          name: bot.name,
+          personality: bot.personality,
+          description: bot.description,
+          rating: bot.rating,
+        },
+        event,
+        actor,
+        move,
+        result,
+        fen: gameRef.current?.fen(),
+      });
+
+      if (dialogueRequestIdRef.current !== requestId) return;
+      if (text) {
+        setBotMessage(text);
+        return;
+      }
+    } catch (error) {
+      console.warn('[ChessGame] Dialogue request failed:', error);
+      if (dialogueRequestIdRef.current !== requestId) return;
+    }
+
+    if (fallbackCategory) {
+      setBotMessage(getRandomQuote(bot, fallbackCategory));
+    }
+  }, [isPassAndPlay]);
 
   // Save game to database when it ends
   useEffect(() => {
