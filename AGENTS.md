@@ -24,6 +24,7 @@
 
 ## Commit & Pull Request Guidelines
 - Write imperative, descriptive commits (e.g., `feat: add Socket.IO matchmaking cleanup`).
+- For every edit or change, create a git commit and push it to the remote.
 - Branch naming: `feature/<short-desc>` or `fix/<short-desc>`; default branch protection unknown—run `npm run build` and `npm test` before opening PRs.
 - PRs should summarize scope, note test results, and link issues; include screenshots for UI changes when possible.
 
