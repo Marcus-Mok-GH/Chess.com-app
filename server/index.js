@@ -31,6 +31,8 @@ const databaseUrl = process.env.DATABASE_URL
 const hasDatabase = Boolean(databaseUrl);
 if (!hasDatabase) {
   console.warn('[Server] WARNING: DATABASE_URL (or POSTGRES_URL) not set. Database features will be disabled.');
+} else {
+  console.log('[Server] Database URL detected.');
 }
 
 const __filename = fileURLToPath(import.meta.url);
