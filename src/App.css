@@ -835,6 +835,32 @@ body {
   flex-shrink: 0;
 }
 
+.pass-play-banner {
+  background: #262421;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 10px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pass-play-title {
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #9e9b98;
+  font-weight: 700;
+}
+
+.pass-play-players {
+  font-size: 0.9rem;
+  color: #fff;
+  font-weight: 700;
+}
+
 .game-status {
   font-size: 0.875rem;
   font-weight: 700;
@@ -1785,7 +1811,8 @@ body {
   }
   
   .game-controls .bot-display-wrapper,
-  .game-controls .player-info {
+  .game-controls .player-info,
+  .game-controls .pass-play-banner {
     display: none;
   }
   

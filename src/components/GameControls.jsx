@@ -17,13 +17,29 @@ export default function GameControls({
   showHints = true,
   canAnalyze = true,
   canReview = false,
+  gameMode = 'bot',
+  whitePlayerName,
+  blackPlayerName,
+  resignedColor,
 }) {
+  const isPassAndPlay = gameMode === 'pass';
+  const getSideLabel = (color) => {
+    if (!isPassAndPlay) {
+      return color === 'w' ? 'White' : 'Black';
+    }
+    const name = color === 'w' ? whitePlayerName : blackPlayerName;
+    const safeName = (name || (color === 'w' ? 'White' : 'Black')).trim() || (color === 'w' ? 'White' : 'Black');
+    return `${safeName} (${color === 'w' ? 'White' : 'Black'})`;
+  };
+
   const getStatusMessage = () => {
     if (gameStatus === 'resigned') {
+      const resignedSide = resignedColor || playerColor;
+      const winnerSide = resignedSide === 'w' ? 'b' : 'w';
       return (
         <>
-          <ChessPieceIcon piece="K" color={playerColor === 'w' ? 'b' : 'w'} size={20} />
-          {' '}{playerColor === 'w' ? 'Black' : 'White'} wins by resignation!
+          <ChessPieceIcon piece="K" color={winnerSide} size={20} />
+          {' '}{getSideLabel(winnerSide)} wins by resignation!
         </>
       );
     }
@@ -31,7 +47,7 @@ export default function GameControls({
       return (
         <>
           <ChessPieceIcon piece="K" color={turn === 'w' ? 'b' : 'w'} size={20} />
-          {' '}{turn === 'w' ? 'Black' : 'White'} wins by checkmate!
+          {' '}{getSideLabel(turn === 'w' ? 'b' : 'w')} wins by checkmate!
         </>
       );
     }
@@ -41,14 +57,14 @@ export default function GameControls({
       return (
         <>
           <ChessPieceIcon piece="K" color={turn} size={20} />
-          {' '}{turn === 'w' ? 'White' : 'Black'} is in check!
+          {' '}{getSideLabel(turn)} is in check!
         </>
       );
     }
     return (
       <>
         <ChessPieceIcon piece="K" color={turn} size={20} />
-        {' '}{turn === 'w' ? "White's" : "Black's"} turn
+        {' '}{getSideLabel(turn)} to move
       </>
     );
   };
@@ -64,32 +80,43 @@ export default function GameControls({
 
   return (
     <div className="game-controls">
-      <div className="bot-display-wrapper">
-        <div className="bot-display" style={{ '--bot-color': selectedBot.color }}>
-          <div className="bot-avatar-large">{selectedBot.avatar}</div>
-          <div className="bot-details">
-            <span className="bot-name-large">{selectedBot.name}</span>
-            <span className="bot-rating-badge">Rating: {selectedBot.rating}</span>
+      {!isPassAndPlay ? (
+        <div className="bot-display-wrapper">
+          <div className="bot-display" style={{ '--bot-color': selectedBot.color }}>
+            <div className="bot-avatar-large">{selectedBot.avatar}</div>
+            <div className="bot-details">
+              <span className="bot-name-large">{selectedBot.name}</span>
+              <span className="bot-rating-badge">Rating: {selectedBot.rating}</span>
+            </div>
           </div>
-        </div>
 
-        {botMessage && (
-          <div className="bot-message">
-            <span className="bot-quote">"{botMessage}"</span>
-          </div>
-        )}
-      </div>
+          {botMessage && (
+            <div className="bot-message">
+              <span className="bot-quote">"{botMessage}"</span>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="pass-play-banner">
+          <span className="pass-play-title">Pass &amp; Play</span>
+          <span className="pass-play-players">
+            {getSideLabel('w')} vs {getSideLabel('b')}
+          </span>
+        </div>
+      )}
 
       <div className={`game-status ${getStatusClass()}`}>
         {getStatusMessage()}
-        {isThinking && <span className="thinking">{selectedBot.name} is thinking...</span>}
+        {!isPassAndPlay && isThinking && <span className="thinking">{selectedBot.name} is thinking...</span>}
       </div>
 
-      <div className="player-info">
-        <span className="player-badge">
-          You play as: <ChessPieceIcon piece="K" color={playerColor} size={18} /> {playerColor === 'w' ? 'White' : 'Black'}
-        </span>
-      </div>
+      {!isPassAndPlay && (
+        <div className="player-info">
+          <span className="player-badge">
+            You play as: <ChessPieceIcon piece="K" color={playerColor} size={18} /> {playerColor === 'w' ? 'White' : 'Black'}
+          </span>
+        </div>
+      )}
 
       <div className="control-buttons">
         <button onClick={onNewGame} className="btn btn-primary">

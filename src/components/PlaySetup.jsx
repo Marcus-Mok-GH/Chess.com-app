@@ -10,42 +10,148 @@ export default function PlaySetup({
   playerColor,
   onSelectColor,
   onStart,
+  gameMode = 'bot',
+  onModeChange,
+  whitePlayerName,
+  blackPlayerName,
+  onWhiteNameChange,
+  onBlackNameChange,
+  autoFlip,
+  onAutoFlipChange,
 }) {
-  const canStart = Boolean(selectedBot) && Boolean(playerColor);
+  const isPassAndPlay = gameMode === 'pass';
+  const canStart = isPassAndPlay ? Boolean(playerColor) : Boolean(selectedBot) && Boolean(playerColor);
+  const subtitle = isPassAndPlay
+    ? 'Two players, one device. Pass the move and keep playing.'
+    : 'Choose a bot opponent and your color.';
 
   return (
     <div className="play-setup">
       <div className="play-setup-card">
         <h2 className="play-setup-title">Set up your game</h2>
-        <p className="play-setup-subtitle">Choose a bot opponent and your color.</p>
-
-        <BotSelector
-          selectedBot={selectedBot}
-          onSelectBot={onSelectBot}
-          disabled={false}
-          customElo={customElo}
-          onCustomEloChange={onCustomEloChange}
-        />
+        <p className="play-setup-subtitle">{subtitle}</p>
 
         <div className="play-setup-section">
-          <label className="play-setup-label">Choose your color:</label>
-          <div className="color-choice">
+          <label className="play-setup-label">Game mode:</label>
+          <div className="mode-choice">
             <button
               type="button"
-              className={`color-btn ${playerColor === 'w' ? 'selected' : ''}`}
-              onClick={() => onSelectColor('w')}
+              className={`mode-btn ${gameMode === 'bot' ? 'selected' : ''}`}
+              onClick={() => onModeChange?.('bot')}
             >
-              ♔ White
+              🤖 Vs Bot
             </button>
             <button
               type="button"
-              className={`color-btn ${playerColor === 'b' ? 'selected' : ''}`}
-              onClick={() => onSelectColor('b')}
+              className={`mode-btn ${gameMode === 'pass' ? 'selected' : ''}`}
+              onClick={() => onModeChange?.('pass')}
             >
-              ♚ Black
+              🤝 Pass &amp; Play
             </button>
           </div>
         </div>
+
+        {!isPassAndPlay && (
+          <>
+            <BotSelector
+              selectedBot={selectedBot}
+              onSelectBot={onSelectBot}
+              disabled={false}
+              customElo={customElo}
+              onCustomEloChange={onCustomEloChange}
+            />
+
+            <div className="play-setup-section">
+              <label className="play-setup-label">Choose your color:</label>
+              <div className="color-choice">
+                <button
+                  type="button"
+                  className={`color-btn ${playerColor === 'w' ? 'selected' : ''}`}
+                  onClick={() => onSelectColor('w')}
+                >
+                  ♔ White
+                </button>
+                <button
+                  type="button"
+                  className={`color-btn ${playerColor === 'b' ? 'selected' : ''}`}
+                  onClick={() => onSelectColor('b')}
+                >
+                  ♚ Black
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {isPassAndPlay && (
+          <>
+            <div className="play-setup-section">
+              <label className="play-setup-label">Player names:</label>
+              <div className="player-name-grid">
+                <div className="name-field">
+                  <span className="name-label">White</span>
+                  <input
+                    type="text"
+                    className="name-input"
+                    placeholder="White player"
+                    value={whitePlayerName}
+                    onChange={(event) => onWhiteNameChange?.(event.target.value)}
+                  />
+                </div>
+                <div className="name-field">
+                  <span className="name-label">Black</span>
+                  <input
+                    type="text"
+                    className="name-input"
+                    placeholder="Black player"
+                    value={blackPlayerName}
+                    onChange={(event) => onBlackNameChange?.(event.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="play-setup-section">
+              <label className="play-setup-label">Starting view:</label>
+              <div className="color-choice">
+                <button
+                  type="button"
+                  className={`color-btn ${playerColor === 'w' ? 'selected' : ''}`}
+                  onClick={() => onSelectColor('w')}
+                >
+                  ♔ White at bottom
+                </button>
+                <button
+                  type="button"
+                  className={`color-btn ${playerColor === 'b' ? 'selected' : ''}`}
+                  onClick={() => onSelectColor('b')}
+                >
+                  ♚ Black at bottom
+                </button>
+              </div>
+            </div>
+
+            <div className="play-setup-section">
+              <label className="play-setup-label">Auto flip board:</label>
+              <div className="mode-choice">
+                <button
+                  type="button"
+                  className={`mode-btn ${autoFlip ? 'selected' : ''}`}
+                  onClick={() => onAutoFlipChange?.(true)}
+                >
+                  On
+                </button>
+                <button
+                  type="button"
+                  className={`mode-btn ${!autoFlip ? 'selected' : ''}`}
+                  onClick={() => onAutoFlipChange?.(false)}
+                >
+                  Off
+                </button>
+              </div>
+            </div>
+          </>
+        )}
 
         <div className="play-setup-actions">
           <button

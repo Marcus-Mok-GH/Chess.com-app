@@ -18,7 +18,11 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
   const { user, isOnline } = useUser();
 
   const [phase, setPhase] = useState(initialGameId ? 'game' : 'setup');
+  const [gameMode, setGameMode] = useState(initialSetup?.gameMode || 'bot');
   const [playerColor, setPlayerColor] = useState(initialSetup?.playerColor || 'w');
+  const [whitePlayerName, setWhitePlayerName] = useState(initialSetup?.whitePlayerName || 'White');
+  const [blackPlayerName, setBlackPlayerName] = useState(initialSetup?.blackPlayerName || 'Black');
+  const [autoFlipBoard, setAutoFlipBoard] = useState(initialSetup?.autoFlipBoard ?? true);
   const [customElo, setCustomElo] = useState(initialSetup?.customElo ?? 1000);
   const [selectedBot, setSelectedBot] = useState(() => initialSetup?.selectedBot || BOTS.find((b) => b.id === 'nelson') || BOTS[0]);
 
@@ -40,12 +44,17 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
   async function handleStart() {
     if (!user) {
       const gameId = initialGameId || generateGameId();
-      navigate(`/game/${gameId}?mode=local`, {
+      const passParam = gameMode === 'pass' ? '&variant=pass' : '';
+      navigate(`/game/${gameId}?mode=local${passParam}`, {
         replace: Boolean(initialGameId),
         state: {
           selectedBot,
           customElo,
           playerColor,
+          gameMode,
+          whitePlayerName,
+          blackPlayerName,
+          autoFlipBoard,
         },
       });
 
@@ -53,7 +62,7 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
       return;
     }
 
-    if (!isOnline) {
+    if (!isOnline && gameMode === 'bot') {
       window.alert('You are offline. Game progress will not be saved.');
     }
 
@@ -63,7 +72,7 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
     const botName = selectedBot.id === 'custom' ? `Custom Bot (${customElo})` : selectedBot.name;
     const botElo = selectedBot.id === 'custom' ? customElo : selectedBot.rating;
 
-    if (isOnline) {
+    if (isOnline && gameMode === 'bot') {
       try {
         await api.createLocalGame({
           gameCode: gameId,
@@ -78,12 +87,17 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
       }
     }
 
-    navigate(`/game/${gameId}?mode=local`, {
+    const passParam = gameMode === 'pass' ? '&variant=pass' : '';
+    navigate(`/game/${gameId}?mode=local${passParam}`, {
       replace: Boolean(initialGameId),
       state: {
         selectedBot,
         customElo,
         playerColor,
+        gameMode,
+        whitePlayerName,
+        blackPlayerName,
+        autoFlipBoard,
       },
     });
 
@@ -137,6 +151,14 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
           playerColor={playerColor}
           onSelectColor={setPlayerColor}
           onStart={handleStart}
+          gameMode={gameMode}
+          onModeChange={setGameMode}
+          whitePlayerName={whitePlayerName}
+          blackPlayerName={blackPlayerName}
+          onWhiteNameChange={setWhitePlayerName}
+          onBlackNameChange={setBlackPlayerName}
+          autoFlip={autoFlipBoard}
+          onAutoFlipChange={setAutoFlipBoard}
         />
       ) : (
         <>
@@ -147,6 +169,12 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
             initialCustomElo={customElo}
             initialBoardOrientation={boardOrientation}
             initialPlayerColor={playerColor}
+            gameMode={gameMode}
+            passAndPlayConfig={{
+              whitePlayerName,
+              blackPlayerName,
+              autoFlipBoard,
+            }}
             onUiStateChange={setUiState}
           />
           <GameBottomBar

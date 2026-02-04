@@ -99,6 +99,42 @@
   letter-spacing: 0.03em;
 }
 
+/* Mode Choice */
+.mode-choice {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.mode-btn {
+  border: 1px solid var(--color-border-default);
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  padding: 14px 12px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+}
+
+.mode-btn:hover {
+  background: var(--color-bg-hover);
+  border-color: var(--color-border-hover);
+  transform: translateY(-2px);
+}
+
+.mode-btn.selected {
+  border-color: var(--color-accent-primary);
+  background: var(--color-accent-muted);
+  box-shadow: 0 0 0 2px var(--color-accent-muted);
+}
+
 /* Color Choice */
 .color-choice {
   display: grid;
@@ -135,6 +171,51 @@
   box-shadow: 0 0 0 2px var(--color-accent-muted);
 }
 
+/* Player Names */
+.player-name-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.name-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.name-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.name-input {
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-size: 0.95rem;
+  font-weight: 500;
+  min-height: 48px;
+  transition: all var(--transition-fast);
+}
+
+.name-input:focus {
+  outline: none;
+  border-color: var(--color-accent-primary);
+  background: var(--color-bg-hover);
+}
+
+.name-input::placeholder {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
 /* Actions */
 .play-setup-actions {
   display: flex;
@@ -168,6 +249,14 @@
   opacity: 0.4;
   cursor: not-allowed;
   background: var(--color-bg-elevated);
+}
+
+@media (max-width: 640px) {
+  .mode-choice,
+  .color-choice,
+  .player-name-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Bot Selector */

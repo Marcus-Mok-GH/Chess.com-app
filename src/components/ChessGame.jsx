@@ -40,6 +40,8 @@ function ChessGame(
     initialCustomElo,
     initialBoardOrientation,
     initialPlayerColor,
+    gameMode = 'bot',
+    passAndPlayConfig = {},
     onUiStateChange,
     initialGameId,
   },
@@ -47,6 +49,21 @@ function ChessGame(
 ) {
   const { user, isOnline } = useUser();
   const { settings } = useSettings();
+  const isPassAndPlay = gameMode === 'pass';
+  const passConfig = passAndPlayConfig || {};
+  const whitePlayerName = (passConfig.whitePlayerName || 'White').trim() || 'White';
+  const blackPlayerName = (passConfig.blackPlayerName || 'Black').trim() || 'Black';
+  const autoFlipBoard = passConfig.autoFlipBoard ?? true;
+
+  const PASS_AND_PLAY_BOT = useMemo(() => ({
+    id: 'pass',
+    name: 'Pass & Play',
+    rating: 'Local',
+    avatar: '🤝',
+    color: '#5d9cec',
+    personality: 'Two-player local match',
+    isCoach: false,
+  }), []);
   
   // Initialize state with error handling
   const [game, setGame] = useState(() => {
@@ -62,6 +79,9 @@ function ChessGame(
   const [playerColor, setPlayerColor] = useState(initialPlayerColor || 'w');
   const [selectedBot, setSelectedBot] = useState(() => {
     try {
+      if (isPassAndPlay) {
+        return PASS_AND_PLAY_BOT;
+      }
       return (
         initialSelectedBot ||
         BOTS.find((b) => b.id === 'nelson') ||
@@ -69,7 +89,7 @@ function ChessGame(
       );
     } catch (error) {
       console.error('Failed to initialize bot:', error);
-      return null;
+      return PASS_AND_PLAY_BOT;
     }
   });
   const [customElo, setCustomElo] = useState(initialCustomElo ?? 1000);
@@ -87,6 +107,7 @@ function ChessGame(
   const [coachingTip, setCoachingTip] = useState(null);
   const [isCoachingLoading, setIsCoachingLoading] = useState(false);
   const [hasResigned, setHasResigned] = useState(false);
+  const [resignedColor, setResignedColor] = useState(null);
   const [showVictory, setShowVictory] = useState(false);
   const gameRef = useRef(game);
   const selectedBotRef = useRef(selectedBot);
@@ -136,8 +157,9 @@ function ChessGame(
     const isCheckmate = game.isCheckmate();
     const winner = isCheckmate ? (game.turn() === 'w' ? 'b' : 'w') : null;
     const didPlayerWin = isCheckmate && winner === playerColor;
+    const shouldShowVictory = isPassAndPlay ? isCheckmate : didPlayerWin;
 
-    if (!didPlayerWin) {
+    if (!shouldShowVictory) {
       setShowVictory(false);
       return;
     }
@@ -153,7 +175,7 @@ function ChessGame(
       clearTimeout(victoryTimeoutRef.current);
     }
     victoryTimeoutRef.current = setTimeout(() => setShowVictory(false), 2200);
-  }, [game, playerColor]);
+  }, [game, playerColor, isPassAndPlay]);
 
   useEffect(() => {
     selectedBotRef.current = selectedBot;
@@ -164,6 +186,7 @@ function ChessGame(
   }, [customElo]);
 
   useEffect(() => {
+    if (isPassAndPlay) return;
     if (hasLoadedPersistedState || !initialGameId) return;
 
     let isMounted = true;
@@ -212,7 +235,7 @@ function ChessGame(
     return () => {
       isMounted = false;
     };
-  }, [gameId, hasLoadedPersistedState, initialGameId, user]);
+  }, [gameId, hasLoadedPersistedState, initialGameId, user, isPassAndPlay]);
 
   // Initialize web worker
   useEffect(() => {
@@ -225,21 +248,24 @@ function ChessGame(
   }, []);
 
   useEffect(() => {
+    if (isPassAndPlay) return;
     if (moveHistory.length === 0 && selectedBot) {
       setBotMessage(getRandomQuote(selectedBot, 'start'));
     }
-  }, [selectedBot, moveHistory.length]);
+  }, [selectedBot, moveHistory.length, isPassAndPlay]);
 
   useEffect(() => {
     if (!onUiStateChange) return;
+    const minUndoMoves = isPassAndPlay ? 1 : 2;
     onUiStateChange({
       isThinking,
-      canUndo: moveHistory.length >= 2,
+      canUndo: moveHistory.length >= minUndoMoves,
       gameStatus: getGameStatus,
     });
-  }, [isThinking, moveHistory.length, getGameStatus, onUiStateChange]);
+  }, [isThinking, moveHistory.length, getGameStatus, onUiStateChange, isPassAndPlay]);
 
   useEffect(() => {
+    if (isPassAndPlay) return;
     if (!initialGameId || !hasLoadedPersistedState || !game) return;
     if (suppressPersistRef.current) {
       suppressPersistRef.current = false;
@@ -290,7 +316,7 @@ function ChessGame(
         clearTimeout(persistTimeoutRef.current);
       }
     };
-  }, [boardOrientation, game, gameId, hasLoadedPersistedState, initialGameId, isOnline, moveHistory, playerColor, user]);
+  }, [boardOrientation, game, gameId, hasLoadedPersistedState, initialGameId, isOnline, moveHistory, playerColor, user, isPassAndPlay]);
 
   // Function to trigger piece animations
   const triggerAnimation = useCallback((moveData, gameCopy) => {
@@ -392,6 +418,7 @@ function ChessGame(
   }, [game]);
 
   const makeAIMove = useCallback(() => {
+    if (isPassAndPlay) return;
     if (gameRef.current.isGameOver() || !workerRef.current || isThinking) return;
 
     setIsThinking(true);
@@ -476,9 +503,10 @@ function ChessGame(
       },
       debug: settingsRef.current.debugMode,
     });
-  }, [triggerAnimation, isThinking]);
+  }, [triggerAnimation, isThinking, isPassAndPlay]);
 
   useEffect(() => {
+    if (isPassAndPlay) return;
     if (game.turn() !== playerColor && !game.isGameOver() && !isThinking) {
       const timer = setTimeout(() => {
         // Double-check conditions before making AI move
@@ -488,9 +516,16 @@ function ChessGame(
       }, 50);
       return () => clearTimeout(timer);
     }
-  }, [game, playerColor, isThinking, makeAIMove]);
+  }, [game, playerColor, isThinking, makeAIMove, isPassAndPlay]);
+
+  useEffect(() => {
+    if (!isPassAndPlay || !autoFlipBoard || !game) return;
+    const nextOrientation = game.turn() === 'w' ? 'white' : 'black';
+    setBoardOrientation((prev) => (prev === nextOrientation ? prev : nextOrientation));
+  }, [game, isPassAndPlay, autoFlipBoard]);
 
   const saveGameToDatabase = useCallback(async (reason, winner) => {
+    if (isPassAndPlay) return;
     if (!isOnline || !user) return; // Only save if online and logged in
 
     try {
@@ -529,7 +564,7 @@ function ChessGame(
     } catch (error) {
       console.error('🔴 Failed to save game:', error);
     }
-  }, [game, gameId, moveHistory, isOnline, user, playerColor]);
+  }, [game, gameId, moveHistory, isOnline, user, playerColor, isPassAndPlay]);
 
   // Save game to database when it ends
   useEffect(() => {
@@ -548,7 +583,7 @@ function ChessGame(
 
   // Get coaching feedback after player move (only for Coach bot)
   const requestCoachingFeedback = useCallback(async (fenBefore, move, history) => {
-    if (!selectedBotRef.current.isCoach) return;
+    if (isPassAndPlay || !selectedBotRef.current.isCoach) return;
     
     setIsCoachingLoading(true);
     setBotMessage('Analyzing your move...');
@@ -566,7 +601,7 @@ function ChessGame(
     } finally {
       setIsCoachingLoading(false);
     }
-  }, []);
+  }, [isPassAndPlay]);
 
   const resolvePromotion = useCallback((from, to, pieceType) => {
     const isPawn = pieceType === 'p';
@@ -589,7 +624,8 @@ function ChessGame(
 
   const onSquareClick = useCallback(
     (square) => {
-      if (game.turn() !== playerColor || isThinking || game.isGameOver()) return;
+      const activeColor = game.turn();
+      if ((!isPassAndPlay && activeColor !== playerColor) || isThinking || game.isGameOver()) return;
 
       const piece = game.get(square);
 
@@ -633,15 +669,17 @@ function ChessGame(
             setSelectedSquare(null);
             setPossibleMoves([]);
 
-            const bot = selectedBotRef.current;
-            if (gameCopy.isCheckmate()) {
-              setBotMessage(getRandomQuote(bot, 'lose'));
-            } else if (gameCopy.isDraw()) {
-              setBotMessage(getRandomQuote(bot, 'draw'));
-            } else if (move.captured) {
-              setBotMessage(getRandomQuote(bot, 'capture'));
-            } else if (Math.random() < 0.2) {
-              setBotMessage(getRandomQuote(bot, 'goodMove'));
+            if (!isPassAndPlay) {
+              const bot = selectedBotRef.current;
+              if (gameCopy.isCheckmate()) {
+                setBotMessage(getRandomQuote(bot, 'lose'));
+              } else if (gameCopy.isDraw()) {
+                setBotMessage(getRandomQuote(bot, 'draw'));
+              } else if (move.captured) {
+                setBotMessage(getRandomQuote(bot, 'capture'));
+              } else if (Math.random() < 0.2) {
+                setBotMessage(getRandomQuote(bot, 'goodMove'));
+              }
             }
 
             if (move.captured) {
@@ -661,7 +699,8 @@ function ChessGame(
         }
       }
 
-      if (piece && piece.color === playerColor) {
+      const selectableColor = isPassAndPlay ? activeColor : playerColor;
+      if (piece && piece.color === selectableColor) {
         setSelectedSquare(square);
         const moves = game.moves({ square, verbose: true });
         setPossibleMoves(moves.map((m) => m.to));
@@ -670,12 +709,12 @@ function ChessGame(
         setPossibleMoves([]);
       }
     },
-    [game, playerColor, selectedSquare, isThinking, triggerAnimation, requestCoachingFeedback, resolvePromotion, moveHistory]
+    [game, playerColor, selectedSquare, isThinking, triggerAnimation, requestCoachingFeedback, resolvePromotion, moveHistory, isPassAndPlay]
   );
 
   const onPieceDrop = useCallback(
     (sourceSquare, targetSquare) => {
-      if (game.turn() !== playerColor || isThinking || game.isGameOver()) {
+      if ((!isPassAndPlay && game.turn() !== playerColor) || isThinking || game.isGameOver()) {
         return false;
       }
 
@@ -710,15 +749,17 @@ function ChessGame(
         setSelectedSquare(null);
         setPossibleMoves([]);
 
-        const bot = selectedBotRef.current;
-        if (gameCopy.isCheckmate()) {
-          setBotMessage(getRandomQuote(bot, 'lose'));
-        } else if (gameCopy.isDraw()) {
-          setBotMessage(getRandomQuote(bot, 'draw'));
-        } else if (move.captured) {
-          setBotMessage(getRandomQuote(bot, 'capture'));
-        } else if (Math.random() < 0.2) {
-          setBotMessage(getRandomQuote(bot, 'goodMove'));
+        if (!isPassAndPlay) {
+          const bot = selectedBotRef.current;
+          if (gameCopy.isCheckmate()) {
+            setBotMessage(getRandomQuote(bot, 'lose'));
+          } else if (gameCopy.isDraw()) {
+            setBotMessage(getRandomQuote(bot, 'draw'));
+          } else if (move.captured) {
+            setBotMessage(getRandomQuote(bot, 'capture'));
+          } else if (Math.random() < 0.2) {
+            setBotMessage(getRandomQuote(bot, 'goodMove'));
+          }
         }
 
         if (move.captured) {
@@ -737,7 +778,7 @@ function ChessGame(
 
       return true;
     },
-    [game, playerColor, isThinking, triggerAnimation, requestCoachingFeedback, resolvePromotion, moveHistory]
+    [game, playerColor, isThinking, triggerAnimation, requestCoachingFeedback, resolvePromotion, moveHistory, isPassAndPlay]
   );
 
   const handleNewGame = useCallback(() => {
@@ -750,42 +791,59 @@ function ChessGame(
     setSelectedSquare(null);
     setPossibleMoves([]);
     setIsThinking(false);
-    setBotMessage(getRandomQuote(selectedBot, 'start'));
+    if (!isPassAndPlay) {
+      setBotMessage(getRandomQuote(selectedBot, 'start'));
+    } else {
+      setBotMessage('');
+    }
     setCoachingTip(null);
     setHasResigned(false);
+    setResignedColor(null);
     setHasLoadedPersistedState(true);
-  }, [gameId, selectedBot]);
+  }, [gameId, selectedBot, isPassAndPlay]);
 
   const handleResign = useCallback(() => {
     if (hasResigned || game.isGameOver()) return;
+    const resigningColor = isPassAndPlay ? game.turn() : playerColor;
+    const winnerColor = resigningColor === 'w' ? 'black' : 'white';
     setHasResigned(true);
-    setBotMessage(getRandomQuote(selectedBot, 'win'));
+    setResignedColor(resigningColor);
+    if (!isPassAndPlay) {
+      setBotMessage(getRandomQuote(selectedBot, 'win'));
+    } else {
+      setBotMessage('');
+    }
     // Save game to database
-    saveGameToDatabase('resigned', selectedBot.name === 'You' ? 'black' : 'white');
-  }, [hasResigned, game, selectedBot, saveGameToDatabase]);
+    saveGameToDatabase('resigned', winnerColor);
+  }, [hasResigned, game, selectedBot, saveGameToDatabase, playerColor, isPassAndPlay]);
 
   const handleUndo = useCallback(() => {
     const gameCopy = buildGameFromHistory(moveHistory, game.fen());
-    gameCopy.undo();
-    gameCopy.undo();
+    const undoCount = isPassAndPlay ? 1 : 2;
+    for (let i = 0; i < undoCount; i++) {
+      gameCopy.undo();
+    }
     setGame(gameCopy);
     setMoveHistory(gameCopy.history({ verbose: true }));
     setSelectedSquare(null);
     setPossibleMoves([]);
-  }, [game, moveHistory]);
+  }, [game, moveHistory, isPassAndPlay]);
 
   const handleFlipBoard = useCallback(() => {
     const newOrientation = boardOrientation === 'white' ? 'black' : 'white';
     setBoardOrientation(newOrientation);
-    // When board is oriented for white, player plays white (at bottom)
-    // When board is oriented for black, player plays black (at bottom)
-    setPlayerColor(newOrientation === 'white' ? 'w' : 'b');
-  }, [boardOrientation]);
+    if (!isPassAndPlay) {
+      // When board is oriented for white, player plays white (at bottom)
+      // When board is oriented for black, player plays black (at bottom)
+      setPlayerColor(newOrientation === 'white' ? 'w' : 'b');
+    }
+  }, [boardOrientation, isPassAndPlay]);
 
   const handleSelectBot = useCallback((bot) => {
+    if (isPassAndPlay) return;
     setSelectedBot(bot);
     setBotMessage(getRandomQuote(bot, 'start'));
-  }, []);
+  }, [isPassAndPlay]);
 
   const handleCustomEloChange = useCallback((newElo) => {
     setCustomElo(newElo);
@@ -892,13 +950,26 @@ function ChessGame(
     };
   }
 
-  const topPlayer = boardOrientation === 'white' 
-    ? { name: selectedBot?.id === 'custom' ? `Custom Bot (${customElo})` : selectedBot?.name, avatar: selectedBot?.avatar, rating: selectedBot?.id === 'custom' ? customElo : selectedBot?.rating, isBot: true, color: 'b', botColor: selectedBot?.color, isCoach: selectedBot?.isCoach }
-    : { name: 'You', avatar: '👤', rating: '???', isBot: false, color: 'w', isCoach: false };
+  const botPlayer = { 
+    name: selectedBot?.id === 'custom' ? `Custom Bot (${customElo})` : selectedBot?.name, 
+    avatar: selectedBot?.avatar, 
+    rating: selectedBot?.id === 'custom' ? customElo : selectedBot?.rating, 
+    isBot: true, 
+    color: 'b', 
+    botColor: selectedBot?.color, 
+    isCoach: selectedBot?.isCoach 
+  };
+  const humanPlayer = { name: 'You', avatar: '👤', rating: '???', isBot: false, color: 'w', isCoach: false };
+  const passWhitePlayer = { name: whitePlayerName, avatar: '👤', rating: 'Local', isBot: false, color: 'w', isCoach: false };
+  const passBlackPlayer = { name: blackPlayerName, avatar: '👤', rating: 'Local', isBot: false, color: 'b', isCoach: false };
+
+  const topPlayer = isPassAndPlay
+    ? (boardOrientation === 'white' ? passBlackPlayer : passWhitePlayer)
+    : (boardOrientation === 'white' ? botPlayer : humanPlayer);
   
-  const bottomPlayer = boardOrientation === 'white'
-    ? { name: 'You', avatar: '👤', rating: '???', isBot: false, color: 'w', isCoach: false }
-    : { name: selectedBot?.id === 'custom' ? `Custom Bot (${customElo})` : selectedBot?.name, avatar: selectedBot?.avatar, rating: selectedBot?.id === 'custom' ? customElo : selectedBot?.rating, isBot: true, color: 'b', botColor: selectedBot?.color, isCoach: selectedBot?.isCoach };
+  const bottomPlayer = isPassAndPlay
+    ? (boardOrientation === 'white' ? passWhitePlayer : passBlackPlayer)
+    : (boardOrientation === 'white' ? humanPlayer : botPlayer);
 
   const canReview = getGameStatus === 'checkmate' || getGameStatus === 'resigned';
 
@@ -954,13 +1025,15 @@ function ChessGame(
             <div className="sidebar-header">
               <span className="game-id-label" title="Game ID">Game {gameId}</span>
             </div>
-            <BotSelector
-              selectedBot={selectedBot}
-              onSelectBot={handleSelectBot}
-              disabled={isThinking}
-              customElo={customElo}
-              onCustomEloChange={handleCustomEloChange}
-            />
+            {!isPassAndPlay && (
+              <BotSelector
+                selectedBot={selectedBot}
+                onSelectBot={handleSelectBot}
+                disabled={isThinking}
+                customElo={customElo}
+                onCustomEloChange={handleCustomEloChange}
+              />
+            )}
             <GameControls
               gameStatus={getGameStatus}
               turn={game.turn()}
@@ -973,14 +1046,18 @@ function ChessGame(
               onGetHint={handleGetHint}
               onResign={handleResign}
               isThinking={isThinking}
-              canUndo={moveHistory.length >= 2}
+              canUndo={moveHistory.length >= (isPassAndPlay ? 1 : 2)}
               onReview={handleReview}
               showHints={settings.showHints}
               canAnalyze={Boolean(user)}
               canReview={canReview}
+              gameMode={gameMode}
+              whitePlayerName={whitePlayerName}
+              blackPlayerName={blackPlayerName}
+              resignedColor={resignedColor}
             />
 
-            {selectedBot.isCoach && (
+            {!isPassAndPlay && selectedBot.isCoach && (
               <CoachingTip
                 tip={coachingTip}
                 isLoading={isCoachingLoading}

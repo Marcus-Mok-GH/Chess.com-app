@@ -9,12 +9,18 @@ export default function Game() {
   const [searchParams] = useSearchParams();
 
   const mode = (searchParams.get('mode') || '').toLowerCase();
+  const variant = (searchParams.get('variant') || '').toLowerCase();
 
   if (mode === 'local') {
+    const stateSetup = location.state || {};
+    const initialSetup = {
+      ...stateSetup,
+      ...(variant === 'pass' ? { gameMode: 'pass' } : {}),
+    };
     return (
       <Play
         initialGameId={gameId}
-        initialSetup={location.state || null}
+        initialSetup={Object.keys(initialSetup).length ? initialSetup : null}
       />
     );
   }
