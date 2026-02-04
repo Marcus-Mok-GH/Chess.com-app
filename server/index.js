@@ -23,9 +23,13 @@ import usersRouter from './routes/users.js';
 import coachRouter from './routes/coach.js';
 
 // Validate environment variables
-const hasDatabase = Boolean(process.env.DATABASE_URL);
+const databaseUrl = process.env.DATABASE_URL
+  || process.env.POSTGRES_URL
+  || process.env.POSTGRES_URL_NON_POOLING
+  || process.env.POSTGRES_PRISMA_URL;
+const hasDatabase = Boolean(databaseUrl);
 if (!hasDatabase) {
-  console.warn('[Server] WARNING: DATABASE_URL not set. Database features will be disabled.');
+  console.warn('[Server] WARNING: DATABASE_URL (or POSTGRES_URL) not set. Database features will be disabled.');
 }
 
 const __filename = fileURLToPath(import.meta.url);
@@ -206,7 +210,7 @@ async function start() {
     }
   } else {
     setDatabaseReady(false);
-    console.warn('[Server] Skipping database initialization. DATABASE_URL is not set.');
+    console.warn('[Server] Skipping database initialization. DATABASE_URL (or POSTGRES_URL) is not set.');
   }
 
   if (!isServerless) {
