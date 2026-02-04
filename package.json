@@ -50,6 +50,7 @@
   "type": "module",
   "dependencies": {
     "@anthropic-ai/sandbox-runtime": "^0.0.34",
+    "@neondatabase/serverless": "^1.0.2",
     "@sourcegraph/amp": "^0.0.1769949290-gbb0479",
     "bcryptjs": "^3.0.3",
     "chess.js": "^1.4.0",
@@ -59,7 +60,7 @@
     "dotenv": "^17.2.3",
     "express": "^4.22.1",
     "next": "^16.1.6",
-    "opencode-ai": "1.1.49",
+    "opencode-ai": "1.1.51",
     "pg": "^8.17.2",
     "playwright": "^1.58.1",
     "puter": "^1.0.0",

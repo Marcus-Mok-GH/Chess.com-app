@@ -1,4 +1,6 @@
 import pg from 'pg';
+import { Pool as NeonPool, neonConfig } from '@neondatabase/serverless';
+import ws from 'ws';
 
 const { Pool } = pg;
 
@@ -36,7 +38,14 @@ if (dbHost) {
   console.log(`[DB] Connecting to ${dbHost} (IPv4 preferred)${sourceLabel}`);
 }
 
-const pool = new Pool({
+const useNeonServerless = Boolean(process.env.VERCEL || process.env.NEON_PROJECT_ID);
+if (useNeonServerless) {
+  neonConfig.webSocketConstructor = ws;
+}
+
+const PoolImpl = useNeonServerless ? NeonPool : Pool;
+
+const pool = new PoolImpl({
   connectionString,
   ssl: isProduction ? { rejectUnauthorized: false } : false,
   connectionTimeoutMillis: isProduction ? 20000 : 10000,
