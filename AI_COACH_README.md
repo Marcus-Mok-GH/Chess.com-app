@@ -1,110 +1,162 @@
-# AI Coach Integration with Mistral AI
+# AI Coach Integration with Puter.js v2
 
-This document describes the AI coach functionality integrated into the chess application using Mistral AI (model: `mistral-large-latest`) through the server API.
+This document describes the AI coach functionality integrated into the chess application using Puter.js v2 and Claude Sonnet 4.5 (with extended thinking capabilities).
 
 ## Overview
 
-The AI coach provides:
-- Move-by-move feedback
-- Explanations for the coach's moves
-- Full game analysis and reviews
+The AI coach provides comprehensive chess game analysis including:
+- Opening analysis
+- Tactical and strategic insights
+- Mistake identification and improvement suggestions
+- Endgame assessment
+- Overall verdict
 
 ## Architecture
 
 ### Components
 - `src/components/GameAnalysis.jsx` - Main AI coach interface
-- `src/engine/coach/coachAI.js` - Client API wrapper for coach endpoints
-- `server/routes/coach.js` - Mistral AI integration and prompt logic
-- `public/test-coach.html` - Manual testing interface for coach endpoints
+- `public/test-puter.html` - Testing interface for Puter.js integration
 
 ### Dependencies
-- Mistral AI API (`https://api.mistral.ai/v1/chat/completions`)
-- Express + Fetch on the server
-- React (Vite client)
+- Puter.js v2 (loaded from CDN)
+- Claude Sonnet 4.5 Thinking model
+- React with TypeScript
 
 ## Implementation Details
 
-### Server Integration
-The server calls Mistral AI with a system prompt and task-specific instructions.
-Key configuration lives in `server/routes/coach.js`:
-- `COACH_MODEL = 'mistral-large-latest'`
-- Requires `MISTRAL_API_KEY`
+### Loading Puter.js
+Puter.js is loaded via CDN in `index.html`:
+```html
+<script src="https://js.puter.com/v2/"></script>
+```
 
-### Endpoints
-All endpoints are mounted at `/api/coach`:
-- `GET /status` - Health check, returns availability + model
-- `POST /feedback` - Player move feedback
-- `POST /explain` - Explanation for coach's move
-- `POST /analyze` - Game analysis with per-move reviews
-  - Send `stream: true` in the request body to enable SSE streaming
+### Initialization Check
+The component continuously checks for Puter.js availability:
+- Uses `useEffect` to monitor `window.puter`
+- Shows loading state while connecting
+- Handles connection timeouts gracefully
 
-### Client Usage
-The UI calls the endpoints through `src/engine/coach/coachAI.js`:
-- `isCoachAIAvailable()`
-- `getCoachingFeedback(fen, move, history)`
-- `explainCoachMove(fenBefore, move, fenAfter)`
-- `analyzeGame(moveHistory, result, gameId)`
-  - Pass a streaming callback as the last argument to enable token streaming
+### API Usage
+```javascript
+const response = await window.puter.ai.chat(messages, {
+  model: 'claude-sonnet-4-5',
+  stream: true
+});
+```
+
+### Error Handling
+- Network errors
+- Permission issues
+- Model availability
+- Stream interruptions
+- Connection timeouts
 
 ## Testing
 
-### Manual Test Page
-Open the test page at:
+### Development Test Page
+Access the test page at:
 ```
-http://localhost:5173/test-coach.html
+http://localhost:5173/test-puter.html
 ```
 
 ### Test Features
-1. **Move Feedback** - Provide FEN + move for quick coaching
-2. **Explain Coach Move** - Explain a move with before/after FENs
-3. **Game Analysis** - Submit SAN/UCI move history for full review
-4. **Status Check** - Confirms Mistral API availability
+1. **Sample Game Analysis** - Pre-loaded chess moves for testing
+2. **Quick Chat Test** - Basic AI interaction test
+3. **Status Monitoring** - Real-time Puter.js connection status
+4. **Error Simulation** - Various error scenarios
+
+### Testing Flow
+1. Open test page in browser
+2. Wait for "Puter.js is ready" status
+3. Test with sample moves or custom input
+4. Verify streaming responses
+5. Test error scenarios
+
+## Usage in Application
+
+### Accessing AI Coach
+1. Complete a chess game (vs Computer or Online)
+2. Click "Analysis" button in game controls
+3. Wait for AI coach to initialize
+4. Click "Start Analysis"
+5. View streaming analysis results
+
+### Analysis Content
+The AI coach provides:
+1. **Opening Analysis** - Opening identification and player evaluation
+2. **Critical Moments** - 3-5 key positions with insights
+3. **Mistakes & Improvements** - Error identification with suggestions
+4. **Endgame Assessment** - Endgame technique evaluation
+5. **Overall Verdict** - Game summary and winner determination
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Coach unavailable**
-   - Ensure `MISTRAL_API_KEY` is configured on the server
-   - Check `/api/coach/status` response
+1. **Puter.js not loading**
+   - Check internet connection
+   - Verify CDN accessibility
+   - Clear browser cache
+   - Check console for errors
 
-2. **API errors (401/403/429)**
-   - Verify key validity and quota
-   - Confirm billing/limits on the Mistral account
+2. **AI model unavailable**
+   - Try again later
+   - Check Puter.js status
+   - Verify API quota limits
 
-3. **Network failures**
-   - Check server connectivity to `api.mistral.ai`
-   - Inspect server logs for detailed error output
+3. **Stream interruptions**
+   - Analysis may be partial
+   - Try re-analyzing
+   - Check network stability
 
-### Debug Tips
-- Server logs include `[Coach]` tags for errors
-- Use the test page to isolate API vs UI issues
+4. **Permission errors**
+   - Ensure cookies are enabled
+   - Check site permissions
+   - Try incognito mode
+
+### Debug Commands
+Open browser console and check:
+```javascript
+// Check Puter.js status
+console.log(window.puter);
+
+// Check AI availability
+console.log(window.puter?.ai?.chat);
+
+// Test basic connection
+window.puter?.ai?.chat("Hello").then(console.log);
+```
 
 ## Environment Variables
 
-Required:
-- `MISTRAL_API_KEY` - Mistral API key used by the server
+No special environment variables required for Puter.js integration. The service uses the public CDN.
 
 ## Security Considerations
 
-- API calls are server-side; the key is never exposed to the client
-- Game data is sent to Mistral for analysis
+- All AI processing happens client-side
+- No game data sent to external servers
+- Uses public API endpoint
+- No authentication required
 
 ## Performance
 
-- Feedback and explanations stream for faster UX
-- Token usage scales with move count for game analysis
+- Streamed responses for better UX
+- Efficient chunk processing
+- Minimal memory usage
+- Handles long analyses gracefully
 
 ## Future Enhancements
 
-- [ ] Streaming parsing for structured analysis output
-- [ ] Analysis depth controls
-- [ ] Position-specific deep dives
+- [ ] Multiple AI model options
+- [ ] Analysis depth settings
+- [ ] Position-specific analysis
 - [ ] Opening repertoire suggestions
+- [ ] Tactical puzzle generation
 
 ## Support
 
-For AI coach issues:
-1. Check `/api/coach/status`
-2. Use `/test-coach.html` to validate endpoints
-3. Inspect server logs for Mistral API errors
+For issues with Puter.js integration:
+1. Check test page at `/test-puter.html`
+2. Verify browser console for errors
+3. Check Puter.js status dashboard
+4. Review network connectivity

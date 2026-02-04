@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react'
+import { useEffect, Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom'
 import { UserProvider, useUser } from './contexts/UserContext'
 import { SettingsProvider } from './contexts/SettingsContext'
@@ -111,6 +111,43 @@ function AppHeader() {
   )
 }
 
+// Puter.js initialization check
+function PuterCheck() {
+  useEffect(() => {
+    // Only run in browser environment
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const checkPuter = () => {
+      try {
+        if (window.puter && window.puter.ai) {
+          console.log('✅ Puter.js loaded successfully');
+          console.log('   Available models: https://developer.puter.com/ai/models/');
+          return true;
+        }
+      } catch (error) {
+        // Silently ignore - Puter.js is optional
+      }
+      return false;
+    };
+
+    // Check immediately
+    if (!checkPuter()) {
+      // Check again after a delay
+      const timer = setTimeout(() => {
+        if (!checkPuter() && import.meta.env.DEV) {
+          console.warn('⚠️ Puter.js not loaded. AI features will be unavailable.');
+        }
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  return null;
+}
+
 function ProtectedRoute({ children, guestRedirect }) {
   const { isLoggedIn, isLoading } = useUser();
 
@@ -146,6 +183,7 @@ function RouteFallback() {
 export default function App() {
   return (
     <>
+      <PuterCheck />
       <ErrorBoundary>
         <UserProvider>
           <SettingsProvider>

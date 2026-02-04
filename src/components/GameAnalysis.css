@@ -206,7 +206,8 @@
   border-color: #4a9eff;
 }
 
-.coach-note {
+.coach-note,
+.puter-note {
   font-size: 0.8rem;
   color: var(--neutral-600);
   margin-top: var(--space-4);

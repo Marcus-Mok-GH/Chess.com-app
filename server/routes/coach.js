@@ -49,99 +49,6 @@ async function callMistral(messages, options = {}) {
   return response;
 }
 
-function initSse(res) {
-  res.status(200);
-  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-cache, no-transform');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
-  if (typeof res.flushHeaders === 'function') {
-    res.flushHeaders();
-  }
-}
-
-function sendSse(res, data, event = null) {
-  if (event) {
-    res.write(`event: ${event}\n`);
-  }
-  const payload = typeof data === 'string' ? data : JSON.stringify(data);
-  res.write(`data: ${payload}\n\n`);
-}
-
-async function streamMistralToClient(mistralResponse, res) {
-  initSse(res);
-
-  const reader = mistralResponse.body?.getReader();
-  if (!reader) {
-    sendSse(res, { error: 'Streaming unavailable' }, 'error');
-    res.end();
-    return '';
-  }
-
-  const decoder = new TextDecoder();
-  let buffer = '';
-  let fullText = '';
-  let closed = false;
-
-  const handleClose = () => {
-    closed = true;
-    reader.cancel().catch(() => {});
-  };
-
-  res.on('close', handleClose);
-
-  try {
-    while (!closed) {
-      const { value, done } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split(/\r?\n/);
-      buffer = lines.pop() || '';
-
-      for (const rawLine of lines) {
-        const line = rawLine.trim();
-        if (!line || !line.startsWith('data:')) {
-          continue;
-        }
-
-        const data = line.slice(5).trim();
-        if (data === '[DONE]') {
-          sendSse(res, '[DONE]', 'done');
-          res.end();
-          return fullText;
-        }
-
-        try {
-          const payload = JSON.parse(data);
-          const delta = payload?.choices?.[0]?.delta?.content
-            || payload?.choices?.[0]?.message?.content
-            || '';
-
-          if (delta) {
-            fullText += delta;
-            sendSse(res, { delta });
-          }
-        } catch (error) {
-          // Ignore malformed SSE chunks
-        }
-      }
-    }
-  } catch (error) {
-    if (!closed) {
-      sendSse(res, { error: error?.message || 'Stream error' }, 'error');
-      res.end();
-    }
-    return fullText;
-  } finally {
-    res.off('close', handleClose);
-  }
-
-  sendSse(res, '[DONE]', 'done');
-  res.end();
-  return fullText;
-}
-
 function extractJson(content) {
   const trimmed = content?.trim();
   if (!trimmed) return null;
@@ -236,7 +143,7 @@ function normalizeMoveHistoryPayload(raw) {
 // Get coaching feedback for a player's move
 router.post('/feedback', async (req, res) => {
   try {
-    const { fen, playerMove, moveHistory, stream } = req.body;
+    const { fen, playerMove, moveHistory } = req.body;
 
     if (!fen || !playerMove) {
       return errorResponse(res, 400, 'Missing required fields: fen, playerMove');
@@ -263,15 +170,9 @@ Be concise and supportive. No greetings or sign-offs.`
       }
     ];
 
-    if (stream) {
-      const response = await callMistral(messages, { stream: true });
-      await streamMistralToClient(response, res);
-      return;
-    }
-
     const response = await callMistral(messages);
     const data = await response.json();
-
+    
     const text = data.choices?.[0]?.message?.content || '';
     res.json({ feedback: text });
   } catch (error) {
@@ -283,7 +184,7 @@ Be concise and supportive. No greetings or sign-offs.`
 // Get explanation for the coach's move
 router.post('/explain', async (req, res) => {
   try {
-    const { fenBefore, move, fenAfter, stream } = req.body;
+    const { fenBefore, move, fenAfter } = req.body;
 
     if (!fenBefore || !move) {
       return errorResponse(res, 400, 'Missing required fields: fenBefore, move');
@@ -303,15 +204,9 @@ Think through why this move is strong, then explain it in 2-3 sentences. Focus o
       }
     ];
 
-    if (stream) {
-      const response = await callMistral(messages, { stream: true });
-      await streamMistralToClient(response, res);
-      return;
-    }
-
     const response = await callMistral(messages);
     const data = await response.json();
-
+    
     const text = data.choices?.[0]?.message?.content || '';
     res.json({ explanation: text });
   } catch (error) {
@@ -323,7 +218,7 @@ Think through why this move is strong, then explain it in 2-3 sentences. Focus o
 // Analyze a complete game
 router.post('/analyze', async (req, res) => {
   try {
-    const { moveHistory: rawMoveHistory, result: rawResult, gameId, stream } = req.body;
+    const { moveHistory: rawMoveHistory, result: rawResult, gameId } = req.body;
     let moveHistory = normalizeMoveHistoryPayload(rawMoveHistory);
     let result = rawResult;
 
@@ -413,16 +308,9 @@ Rules:
 
     const moveCount = sanMoves.length;
     const maxTokens = Math.min(2000, Math.max(600, 120 + moveCount * 30));
-
-    if (stream) {
-      const response = await callMistral(messages, { stream: true, maxTokens });
-      await streamMistralToClient(response, res);
-      return;
-    }
-
     const response = await callMistral(messages, { maxTokens });
     const data = await response.json();
-
+    
     const text = data.choices?.[0]?.message?.content || '';
     const parsed = extractJson(text);
 

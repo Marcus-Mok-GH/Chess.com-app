@@ -1,81 +1,9 @@
 import { useState, useEffect } from 'react';
 import { analyzeGame, isCoachAIAvailable } from '../engine/coach/coachAI';
-import { toSanHistory } from '../engine/game/moveHistory';
 import './GameAnalysis.css';
-
-function extractJson(content) {
-  const trimmed = content?.trim();
-  if (!trimmed) return null;
-
-  try {
-    return JSON.parse(trimmed);
-  } catch {
-    const arrayStart = trimmed.indexOf('[');
-    const arrayEnd = trimmed.lastIndexOf(']');
-    if (arrayStart !== -1 && arrayEnd !== -1 && arrayEnd > arrayStart) {
-      try {
-        return JSON.parse(trimmed.slice(arrayStart, arrayEnd + 1));
-      } catch {
-        // fallthrough
-      }
-    }
-
-    const objStart = trimmed.indexOf('{');
-    const objEnd = trimmed.lastIndexOf('}');
-    if (objStart !== -1 && objEnd !== -1 && objEnd > objStart) {
-      try {
-        return JSON.parse(trimmed.slice(objStart, objEnd + 1));
-      } catch {
-        // fallthrough
-      }
-    }
-  }
-
-  return null;
-}
-
-function normalizeMoveReviews(rawMoves, moveHistory) {
-  const sanMoves = toSanHistory(moveHistory);
-  return rawMoves.map((entry, index) => {
-    const color = entry?.color === 'black' || index % 2 === 1 ? 'black' : 'white';
-    const moveNumber = Number.isFinite(entry?.moveNumber)
-      ? entry.moveNumber
-      : Math.floor(index / 2) + 1;
-    const ply = Number.isFinite(entry?.ply) ? entry.ply : index + 1;
-    const san = entry?.san || sanMoves[index] || '';
-    const review = entry?.review || entry?.comment || entry?.analysis || '';
-
-    return {
-      ply,
-      moveNumber,
-      color,
-      san,
-      review
-    };
-  });
-}
-
-function parseStreamingAnalysis(text, moveHistory) {
-  const parsed = extractJson(text);
-  if (!parsed) return null;
-
-  if (Array.isArray(parsed?.moves)) {
-    return {
-      ...parsed,
-      moves: normalizeMoveReviews(parsed.moves, moveHistory)
-    };
-  }
-
-  if (Array.isArray(parsed)) {
-    return { format: 'move_review', moves: normalizeMoveReviews(parsed, moveHistory) };
-  }
-
-  return null;
-}
 
 export default function GameAnalysis({ moveHistory, gameId = null, onClose, variant = 'modal' }) {
   const [analysis, setAnalysis] = useState(null);
-  const [analysisDraft, setAnalysisDraft] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -104,30 +32,15 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
 
     setIsAnalyzing(true);
     setAnalysis(null);
-    setAnalysisDraft('');
     
     try {
-      const result = await analyzeGame(moveHistory, null, gameId, (fullText) => {
-        setAnalysisDraft(fullText);
-      });
-
-      if (!result) {
+      const result = await analyzeGame(moveHistory, null, gameId);
+      
+      if (result) {
+        setAnalysis(result);
+      } else {
         setAnalysis('Error: Failed to get analysis. Please try again.');
-        return;
       }
-
-      if (typeof result === 'string') {
-        const parsed = parseStreamingAnalysis(result, moveHistory);
-        if (parsed) {
-          setAnalysis(parsed);
-          setAnalysisDraft('');
-        } else {
-          setAnalysis(result);
-        }
-        return;
-      }
-
-      setAnalysis(result);
     } catch (error) {
       console.error('Analysis error:', error);
       let errorMessage = 'Error: ';
@@ -145,8 +58,6 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
       setIsAnalyzing(false);
     }
   };
-
-  const displayedAnalysis = analysis ?? (analysisDraft ? analysisDraft : null);
 
   const moveReviews = Array.isArray(analysis)
     ? analysis
@@ -181,13 +92,13 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
           )}
         </div>
       )}
-      {isAnalyzing && !displayedAnalysis && (
+      {isAnalyzing && (
         <div className="analysis-loading">
           <div className="spinner"></div>
           <p>AI is analyzing your game...</p>
         </div>
       )}
-      {displayedAnalysis && (
+      {analysis && (
         <div className="analysis-result">
           {summary && (
             <div className="analysis-summary">
@@ -218,7 +129,7 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
               })}
             </div>
           ) : (
-            <div className="analysis-text">{displayedAnalysis}</div>
+            <div className="analysis-text">{analysis}</div>
           )}
           {!isAnalyzing && (
             <button onClick={runAnalysis} className="btn btn-secondary">
