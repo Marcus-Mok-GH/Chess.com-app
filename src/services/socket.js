@@ -12,18 +12,36 @@ function resolveSocketConfig() {
     ? import.meta.env.VITE_SOCKET_PATH
     : process.env?.VITE_SOCKET_PATH;
 
-  // If someone set VITE_SOCKET_URL="/socket.io" (common mistake), treat it as the path.
-  const inferredPath = typeof urlEnv === 'string' && urlEnv.startsWith('/') ? urlEnv : null;
+  const normalizedUrlEnv = typeof urlEnv === 'string' ? urlEnv.trim() : '';
+  let inferredPath = null;
+  let inferredBase = null;
+
+  if (normalizedUrlEnv) {
+    if (normalizedUrlEnv.startsWith('/')) {
+      inferredPath = normalizedUrlEnv;
+    } else {
+      try {
+        const parsed = new URL(normalizedUrlEnv);
+        inferredBase = parsed.origin;
+        if (parsed.pathname && parsed.pathname !== '/') {
+          inferredPath = parsed.pathname;
+        }
+      } catch (error) {
+        // Ignore parse errors and fall back to raw env values.
+      }
+    }
+  }
+
   const socketPath = (pathEnv || inferredPath || '/socket.io').toString();
 
   // Determine base URL (host + protocol), never include the socket.io path here.
   let baseUrl;
-  const hasCustomUrl = typeof urlEnv === 'string' && urlEnv.length > 0 && !urlEnv.startsWith('/');
+  const hasCustomUrl = normalizedUrlEnv.length > 0 && !normalizedUrlEnv.startsWith('/');
   const looksLikeLocalhost = hasCustomUrl && /localhost|127\.0\.0\.1/i.test(urlEnv);
   const isLocalPage = isBrowser && /localhost|127\.0\.0\.1/i.test(window.location.hostname);
 
   if (hasCustomUrl && !(isBrowser && looksLikeLocalhost && !isLocalPage)) {
-    baseUrl = urlEnv;
+    baseUrl = inferredBase || normalizedUrlEnv;
   } else if (isBrowser) {
     // In development, use window.location.origin to go through Vite's proxy
     // This avoids CORS/WebSocket issues when connecting cross-origin
