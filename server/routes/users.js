@@ -1,27 +1,9 @@
 import express from 'express';
 import { query } from '../db.js';
-import { isDatabaseReady } from '../db/status.js';
 import { errorResponse, handleRouteError } from '../middleware/errors.js';
 
 const router = express.Router();
-const hasDatabase = Boolean(
-  process.env.DATABASE_URL
-    || process.env.DATABASE_URL_UNPOOLED
-    || process.env.POSTGRES_URL
-    || process.env.POSTGRES_URL_NON_POOLING
-    || process.env.POSTGRES_PRISMA_URL
-);
-
-// Guard all user routes when database is not configured or unavailable.
-router.use((req, res, next) => {
-  if (!hasDatabase) {
-    return errorResponse(res, 503, 'Database not configured. Set DATABASE_URL (or POSTGRES_URL) in your deployment environment.');
-  }
-  if (!isDatabaseReady()) {
-    return errorResponse(res, 503, 'Database unavailable. Check DATABASE_URL/POSTGRES_URL connectivity.');
-  }
-  return next();
-});
+// Database readiness is enforced globally in server/index.js.
 
 // Login/Register - creates user if doesn't exist, returns user data
 router.post('/login', async (req, res) => {

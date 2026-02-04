@@ -15,7 +15,8 @@ if (shouldLoadEnv) {
 }
 
 import { initDatabase, cleanupStaleMatchmakingEntries, cleanupOldActiveGames } from './db.js';
-import { setDatabaseReady, isDatabaseReady } from './db/status.js';
+import { setDatabaseReady, isDatabaseReady, ensureDatabaseReady } from './db/status.js';
+import { errorResponse } from './middleware/errors.js';
 import { registerSocketHandlers } from './socket/index.js';
 import matchmakingRouter from './routes/matchmaking.js';
 import gamesRouter from './routes/games.js';
@@ -113,6 +114,23 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Ensure the database is ready before handling API routes (skip health).
+app.use('/api', async (req, res, next) => {
+  if (req.path === '/health') {
+    return next();
+  }
+  if (!hasDatabase) {
+    return errorResponse(res, 503, 'Database not configured. Set DATABASE_URL (or POSTGRES_URL) in your deployment environment.');
+  }
+  if (!isDatabaseReady()) {
+    const ready = await ensureDatabaseReady(initDatabase);
+    if (!ready) {
+      return errorResponse(res, 503, 'Database unavailable. Check DATABASE_URL/POSTGRES_URL connectivity.');
+    }
+  }
+  return next();
+});
 
 // API Routes
 // Vercel serverless functions strip the "/api" prefix from req.url. To keep
