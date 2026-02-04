@@ -2,9 +2,8 @@ import { getPool, shouldClosePool } from './pool.js';
 
 export async function initDatabase() {
   const pool = getPool();
-  const client = await pool.connect();
   try {
-    await client.query(`
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         username VARCHAR(20) UNIQUE NOT NULL,
@@ -18,7 +17,7 @@ export async function initDatabase() {
       )
     `);
 
-    await client.query(`
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS games (
         id SERIAL PRIMARY KEY,
         game_code VARCHAR(10) UNIQUE NOT NULL,
@@ -36,7 +35,7 @@ export async function initDatabase() {
       )
     `);
 
-    await client.query(`
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS user_settings (
         user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
         settings JSONB DEFAULT '{}'::jsonb,
@@ -44,19 +43,19 @@ export async function initDatabase() {
       )
     `);
 
-    await client.query(`
+    await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)
     `);
 
-    await client.query(`
+    await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_games_code ON games(game_code)
     `);
 
-    await client.query(`
+    await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id)
     `);
 
-    await client.query(`
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS matchmaking_queue (
         id SERIAL PRIMARY KEY,
         socket_id VARCHAR(100) NOT NULL,
@@ -69,15 +68,15 @@ export async function initDatabase() {
       )
     `);
 
-    await client.query(`
+    await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_matchmaking_player_id ON matchmaking_queue(player_id)
     `);
 
-    await client.query(`
+    await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_matchmaking_elo ON matchmaking_queue(elo)
     `);
 
-    await client.query(`
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS active_games (
         id SERIAL PRIMARY KEY,
         game_id VARCHAR(20) UNIQUE NOT NULL,
@@ -98,7 +97,7 @@ export async function initDatabase() {
       )
     `);
 
-    await client.query(`
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS match_moves (
         game_id VARCHAR(20) NOT NULL,
         username VARCHAR(20) NOT NULL REFERENCES users(username) ON DELETE CASCADE,
@@ -109,19 +108,19 @@ export async function initDatabase() {
       )
     `);
 
-    await client.query(`
+    await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_active_games_game_id ON active_games(game_id)
     `);
 
-    await client.query(`
+    await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_active_games_status ON active_games(status)
     `);
 
-    await client.query(`
+    await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_match_moves_game_id ON match_moves(game_id)
     `);
 
-    await client.query(`
+    await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_match_moves_username ON match_moves(username)
     `);
 
@@ -130,7 +129,6 @@ export async function initDatabase() {
     console.error('Error initializing database:', error);
     throw error;
   } finally {
-    client.release();
     if (shouldClosePool) {
       await pool.end();
     }
