@@ -7,12 +7,15 @@ const router = Router();
 const MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
 const COACH_MODEL = 'magistral-medium-latest';
 
-const SYSTEM_PROMPT = `You are an expert chess coach with deep strategic knowledge. Think carefully about each position before responding. Analyze the position thoroughly, considering:
-- Tactical threats and opportunities
-- Positional factors (piece activity, pawn structure, king safety)
-- Strategic plans for both sides
+const SYSTEM_PROMPT = `You are an expert chess coach with deep strategic knowledge. Take a moment to reason silently before responding.
 
-Provide insightful, educational feedback that helps the student improve their chess understanding.`;
+Use a disciplined analysis process:
+- Scan for forcing tactics first (checks, captures, threats) and verify any tactics are legal.
+- Evaluate king safety, material balance, piece activity, pawn structure, space, and coordination.
+- Identify the best plans for both sides and compare candidate moves.
+- Prefer concrete, correct advice over speculative ideas; if unsure, say so briefly.
+
+Provide insightful, educational feedback that helps the student improve their chess understanding. Output only the final coaching response, concise and supportive.`;
 
 async function callMistral(messages, options = {}) {
   const apiKey = process.env.MISTRAL_API_KEY;
@@ -185,12 +188,14 @@ Position (FEN before move): ${fen}
 Move history: ${moves}
 Last move: ${playerMove}
 
-Think through the position carefully, then give brief, encouraging feedback (2-3 sentences max). Focus on:
+Think through the position carefully (internally). First scan for forcing tactics (checks, captures, threats), then evaluate king safety, material, piece activity, pawn structure, and plans for both sides. Compare candidate improvements.
+
+Then give brief, encouraging feedback (2-3 sentences max). Focus on:
 - If it's a good move, explain why briefly
 - If there was a better move, gently suggest it
 - Mention any tactical or positional concept they should notice
 
-Be concise and supportive. No greetings or sign-offs.`
+Be concise and supportive. No greetings or sign-offs. Do not show your analysis, only the final coaching response.`
       }
     ];
 
@@ -224,7 +229,9 @@ Position before: ${fenBefore}
 Move played: ${move}
 Position after: ${fenAfter || 'N/A'}
 
-Think through why this move is strong, then explain it in 2-3 sentences. Focus on the main idea - is it developing a piece, controlling the center, creating a threat, defending, or setting up a tactic? Be educational but concise.`
+Think through why this move is strong (internally). First check for immediate tactics, then identify the main strategic purpose.
+
+Explain it in 2-3 sentences. Focus on the main idea - is it developing a piece, controlling the center, creating a threat, defending, or setting up a tactic? Be educational but concise. Do not show your analysis, only the final explanation.`
       }
     ];
 
@@ -308,7 +315,9 @@ router.post('/analyze', async (req, res) => {
 Moves: ${moves}
 Result: ${result || 'Unknown'}
 
-For EACH move, write 1-2 concise sentences of feedback, using the previous moves as context.
+For EACH move, think briefly (internally). Scan for tactics first, then evaluate positional factors and plans. Use the previous moves as context.
+
+Write 1-2 concise sentences of feedback for each move.
 Focus on why the move is good or questionable, and mention tactical or positional ideas.
 
 Return ONLY valid JSON. Output a JSON array with one object per move:
@@ -326,7 +335,8 @@ Rules:
 - The array length must match the number of moves.
 - Use "white" for odd plies and "black" for even plies.
 - Keep each review under 30 words.
-- No extra commentary, no markdown, no code fences.`
+- No extra commentary, no markdown, no code fences.
+- Do not show your analysis, only the final JSON output.`
       }
     ];
 
