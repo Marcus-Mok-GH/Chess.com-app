@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import ChessGame from '../components/ChessGame';
 import { useSettings } from '../contexts/SettingsContext';
@@ -12,21 +12,61 @@ import api from '../services/api';
 
 import './Play.css';
 
+const PASS_PLAY_STORAGE_KEY = 'pass_play_settings_v1';
+const DEFAULT_PASS_PLAY_SETTINGS = {
+  whitePlayerName: 'White',
+  blackPlayerName: 'Black',
+  autoFlipBoard: true,
+};
+
 export default function Play({ initialGameId = null, initialSetup = null }) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { settings } = useSettings();
   const { user, isOnline } = useUser();
+  const modeParam = (searchParams.get('mode') || '').toLowerCase();
+
+  const storedPassPlaySettings = useMemo(() => {
+    if (typeof window === 'undefined') return DEFAULT_PASS_PLAY_SETTINGS;
+    try {
+      const raw = window.localStorage.getItem(PASS_PLAY_STORAGE_KEY);
+      if (!raw) return DEFAULT_PASS_PLAY_SETTINGS;
+      const parsed = JSON.parse(raw);
+      return { ...DEFAULT_PASS_PLAY_SETTINGS, ...(parsed || {}) };
+    } catch (error) {
+      console.warn('[Play] Failed to load pass-and-play settings:', error);
+      return DEFAULT_PASS_PLAY_SETTINGS;
+    }
+  }, []);
+
+  const resolvedSetup = initialSetup || (modeParam === 'pass' ? { gameMode: 'pass' } : null);
 
   const [phase, setPhase] = useState(initialGameId ? 'game' : 'setup');
-  const [gameMode, setGameMode] = useState(initialSetup?.gameMode || 'bot');
-  const [playerColor, setPlayerColor] = useState(initialSetup?.playerColor || 'w');
-  const [whitePlayerName, setWhitePlayerName] = useState(initialSetup?.whitePlayerName || 'White');
-  const [blackPlayerName, setBlackPlayerName] = useState(initialSetup?.blackPlayerName || 'Black');
-  const [autoFlipBoard, setAutoFlipBoard] = useState(initialSetup?.autoFlipBoard ?? true);
-  const [customElo, setCustomElo] = useState(initialSetup?.customElo ?? 1000);
-  const [selectedBot, setSelectedBot] = useState(() => initialSetup?.selectedBot || BOTS.find((b) => b.id === 'nelson') || BOTS[0]);
+  const [gameMode, setGameMode] = useState(resolvedSetup?.gameMode || 'bot');
+  const [playerColor, setPlayerColor] = useState(resolvedSetup?.playerColor || 'w');
+  const [whitePlayerName, setWhitePlayerName] = useState(resolvedSetup?.whitePlayerName || storedPassPlaySettings.whitePlayerName);
+  const [blackPlayerName, setBlackPlayerName] = useState(resolvedSetup?.blackPlayerName || storedPassPlaySettings.blackPlayerName);
+  const [autoFlipBoard, setAutoFlipBoard] = useState(resolvedSetup?.autoFlipBoard ?? storedPassPlaySettings.autoFlipBoard);
+  const [customElo, setCustomElo] = useState(resolvedSetup?.customElo ?? 1000);
+  const [selectedBot, setSelectedBot] = useState(() => resolvedSetup?.selectedBot || BOTS.find((b) => b.id === 'nelson') || BOTS[0]);
 
   const boardOrientation = useMemo(() => (playerColor === 'w' ? 'white' : 'black'), [playerColor]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(
+        PASS_PLAY_STORAGE_KEY,
+        JSON.stringify({
+          whitePlayerName,
+          blackPlayerName,
+          autoFlipBoard,
+        }),
+      );
+    } catch (error) {
+      console.warn('[Play] Failed to persist pass-and-play settings:', error);
+    }
+  }, [whitePlayerName, blackPlayerName, autoFlipBoard]);
 
   useEffect(() => {
     const shouldHideNav = phase === 'game';
@@ -110,7 +150,8 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
   function handleSetup() {
     // Back to bot selection. We also reset the URL back to /play.
     setPhase('setup');
-    navigate('/play', { replace: true });
+    const modeParam = gameMode === 'pass' ? '?mode=pass' : '';
+    navigate(`/play${modeParam}`, { replace: true });
   }
 
   function handleNewGame() {

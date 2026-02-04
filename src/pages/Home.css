@@ -399,6 +399,15 @@
   background: rgba(127, 166, 80, 0.18);
 }
 
+.action-card.pass-play-card .action-icon {
+  background: linear-gradient(160deg, rgba(93, 156, 236, 0.28), rgba(45, 46, 50, 0.9));
+  border-color: rgba(93, 156, 236, 0.35);
+}
+
+.action-card.pass-play-card:hover {
+  border-color: rgba(93, 156, 236, 0.45);
+}
+
 .action-info h3 {
   font-size: 1.0625rem;
   font-weight: 700;

@@ -115,6 +115,17 @@ export default function Home() {
             </button>
 
             <button 
+              className="action-card pass-play-card"
+              onClick={() => navigate('/play?mode=pass')}
+            >
+              <div className="action-icon">🤝</div>
+              <div className="action-content">
+                <h3>Pass &amp; Play</h3>
+                <p>Two players, one device. Perfect for couch battles</p>
+              </div>
+            </button>
+
+            <button 
               className="action-card play-online-card"
               onClick={() => navigate('/online')}
               disabled={!isOnline}
