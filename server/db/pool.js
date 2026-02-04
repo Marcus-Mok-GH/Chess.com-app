@@ -52,7 +52,17 @@ const poolConfig = {
 
 let didLog = false;
 function logConnectionTarget() {
-  if (didLog || !dbHost) return;
+  if (didLog) return;
+  if (!connectionString) {
+    console.warn('[DB] No database URL found in environment variables.');
+    didLog = true;
+    return;
+  }
+  if (!dbHost) {
+    console.warn('[DB] Database URL is set but could not parse host.');
+    didLog = true;
+    return;
+  }
   const sourceLabel = connectionSource ? ` via ${connectionSource}` : '';
   console.log(`[DB] Connecting to ${dbHost} (IPv4 preferred)${sourceLabel}`);
   didLog = true;
