@@ -15,6 +15,7 @@ if (shouldLoadEnv) {
 }
 
 import { initDatabase, cleanupStaleMatchmakingEntries, cleanupOldActiveGames } from './db.js';
+import { setDatabaseReady, isDatabaseReady } from './db/status.js';
 import { registerSocketHandlers } from './socket/index.js';
 import matchmakingRouter from './routes/matchmaking.js';
 import gamesRouter from './routes/games.js';
@@ -39,12 +40,13 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/api/health', (req, res) => {
+  const dbStatus = hasDatabase ? (isDatabaseReady() ? 'connected' : 'error') : 'disabled';
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     service: 'backend',
     api: 'ready',
-    database: hasDatabase ? 'connected' : 'disabled'
+    database: dbStatus
   });
 });
 
@@ -184,8 +186,8 @@ if (!isServerless) {
 }
 
 async function start() {
-  try {
-    if (hasDatabase) {
+  if (hasDatabase) {
+    try {
       // Set a timeout for database initialization
       await Promise.race([
         initDatabase(),
@@ -193,22 +195,27 @@ async function start() {
           setTimeout(() => reject(new Error('Database connection timeout after 15s')), 15000)
         )
       ]);
+      setDatabaseReady(true);
       console.log('[Server] Database initialized successfully');
-    } else {
-      console.warn('[Server] Skipping database initialization. DATABASE_URL is not set.');
+    } catch (error) {
+      setDatabaseReady(false);
+      console.error('[Server] Database initialization failed:', error.message);
+      if (!isServerless) {
+        process.exit(1);
+      }
     }
+  } else {
+    setDatabaseReady(false);
+    console.warn('[Server] Skipping database initialization. DATABASE_URL is not set.');
+  }
 
-    if (!isServerless) {
-      httpServer.listen(PORT, '0.0.0.0', () => {
-        console.log(`Server running on port ${PORT}`);
-        if (isProduction) {
-          console.log(`Serving app from: ${distPath}`);
-        }
-      });
-    }
-  } catch (error) {
-    console.error('[Server] Failed to start:', error.message);
-    process.exit(1);
+  if (!isServerless) {
+    httpServer.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on port ${PORT}`);
+      if (isProduction) {
+        console.log(`Serving app from: ${distPath}`);
+      }
+    });
   }
 }
 
