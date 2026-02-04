@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom'
 import { UserProvider, useUser } from './contexts/UserContext'
 import { SettingsProvider } from './contexts/SettingsContext'
@@ -6,16 +6,16 @@ import { FeedbackPanel } from './components/FeedbackPanel'
 import ErrorBoundary from './components/ErrorBoundary'
 import UserBadge from './components/UserBadge'
 import GuestBlocked from './components/GuestBlocked'
-import Landing from './pages/Landing'
-import Home from './pages/Home'
-import Play from './pages/Play'
-import OnlinePlay from './pages/OnlinePlay'
-import Analysis from './pages/Analysis'
-import Login from './pages/Login'
-import GameHistory from './pages/GameHistory'
-import Game from './pages/Game'
-import Settings from './pages/Settings'
 import './App.css'
+
+const Home = lazy(() => import('./pages/Home'))
+const Play = lazy(() => import('./pages/Play'))
+const OnlinePlay = lazy(() => import('./pages/OnlinePlay'))
+const Analysis = lazy(() => import('./pages/Analysis'))
+const Login = lazy(() => import('./pages/Login'))
+const GameHistory = lazy(() => import('./pages/GameHistory'))
+const Game = lazy(() => import('./pages/Game'))
+const Settings = lazy(() => import('./pages/Settings'))
 
 function getTitle(path) {
   if (path.startsWith('/online/') || path.startsWith('/game/')) return 'Online Play'
@@ -171,6 +171,15 @@ function ProtectedRoute({ children, guestRedirect }) {
   return children;
 }
 
+function RouteFallback() {
+  return (
+    <div className="loading-screen">
+      <div className="spinner"></div>
+      <p>Loading...</p>
+    </div>
+  )
+}
+
 export default function App() {
   return (
     <>
@@ -179,45 +188,47 @@ export default function App() {
         <UserProvider>
           <SettingsProvider>
             <BrowserRouter>
-              <div className="app">
-                <Routes>
-                  <Route path="/" element={<Navigate to="/login" replace />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/home" element={
-                    <ProtectedRoute>
-                      <><AppHeader /><Home /></>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/play" element={
-                    <ProtectedRoute>
-                      <><AppHeader /><Play /></>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/online" element={<><AppHeader /><OnlinePlay /></>} />
-                  <Route path="/online/:gameId" element={<><AppHeader /><OnlinePlay /></>} />
-                  <Route path="/game/:gameId" element={
-                    <ProtectedRoute>
-                      <><AppHeader /><Game /></>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/analysis/:gameId?" element={
-                    <ProtectedRoute>
-                      <><AppHeader /><Analysis /></>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/history" element={
-                    <ProtectedRoute>
-                      <><AppHeader /><GameHistory /></>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/settings" element={
-                    <ProtectedRoute>
-                      <><AppHeader /><Settings /></>
-                    </ProtectedRoute>
-                  } />
-                </Routes>
-              </div>
-              <FeedbackPanel />
+              <Suspense fallback={<RouteFallback />}>
+                <div className="app">
+                  <Routes>
+                    <Route path="/" element={<Navigate to="/login" replace />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/home" element={
+                      <ProtectedRoute>
+                        <><AppHeader /><Home /></>
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/play" element={
+                      <ProtectedRoute>
+                        <><AppHeader /><Play /></>
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/online" element={<><AppHeader /><OnlinePlay /></>} />
+                    <Route path="/online/:gameId" element={<><AppHeader /><OnlinePlay /></>} />
+                    <Route path="/game/:gameId" element={
+                      <ProtectedRoute>
+                        <><AppHeader /><Game /></>
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/analysis/:gameId?" element={
+                      <ProtectedRoute>
+                        <><AppHeader /><Analysis /></>
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/history" element={
+                      <ProtectedRoute>
+                        <><AppHeader /><GameHistory /></>
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/settings" element={
+                      <ProtectedRoute>
+                        <><AppHeader /><Settings /></>
+                      </ProtectedRoute>
+                    } />
+                  </Routes>
+                </div>
+                <FeedbackPanel />
+              </Suspense>
             </BrowserRouter>
           </SettingsProvider>
         </UserProvider>

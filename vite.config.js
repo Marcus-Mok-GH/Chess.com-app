@@ -9,9 +9,9 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
+          'vendor': ['react', 'react-dom', 'react-router-dom'],
           'chess': ['chess.js', 'react-chessboard'],
-          'socket': ['socket.io-client', 'ws'],
-          'stockfish': ['stockfish.js']
+          'socket': ['socket.io-client', 'ws']
         }
       }
     }
