@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { analyzeGame, isCoachAIAvailable } from '../engine/coach/coachAI';
 import { toSanHistory } from '../engine/game/moveHistory';
 import './GameAnalysis.css';
@@ -34,8 +34,7 @@ function extractJson(content) {
   return null;
 }
 
-function normalizeMoveReviews(rawMoves, moveHistory) {
-  const sanMoves = toSanHistory(moveHistory);
+function normalizeMoveReviews(rawMoves, sanMoves) {
   return rawMoves.map((entry, index) => {
     const color = entry?.color === 'black' || index % 2 === 1 ? 'black' : 'white';
     const moveNumber = Number.isFinite(entry?.moveNumber)
@@ -55,19 +54,86 @@ function normalizeMoveReviews(rawMoves, moveHistory) {
   });
 }
 
-function parseStreamingAnalysis(text, moveHistory) {
+function parsePartialMoveReviews(text, sanMoves) {
+  if (!text) return null;
+
+  const arrayStart = text.indexOf('[');
+  if (arrayStart === -1) return null;
+
+  const slice = text.slice(arrayStart);
+  const rawMoves = [];
+  let inString = false;
+  let escape = false;
+  let braceDepth = 0;
+  let objStart = -1;
+
+  for (let i = 0; i < slice.length; i += 1) {
+    const ch = slice[i];
+
+    if (escape) {
+      escape = false;
+      continue;
+    }
+
+    if (ch === '\\') {
+      escape = true;
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+
+    if (inString) continue;
+
+    if (ch === '{') {
+      if (braceDepth === 0) {
+        objStart = i;
+      }
+      braceDepth += 1;
+      continue;
+    }
+
+    if (ch === '}') {
+      if (braceDepth > 0) {
+        braceDepth -= 1;
+        if (braceDepth === 0 && objStart !== -1) {
+          const objText = slice.slice(objStart, i + 1);
+          objStart = -1;
+          try {
+            const parsed = JSON.parse(objText);
+            rawMoves.push(parsed);
+          } catch {
+            // ignore incomplete or invalid objects
+          }
+        }
+      }
+      continue;
+    }
+
+    if (ch === ']' && braceDepth === 0) {
+      break;
+    }
+  }
+
+  if (rawMoves.length === 0) return null;
+  return normalizeMoveReviews(rawMoves, sanMoves);
+}
+
+function parseStreamingAnalysis(text, sanMoves) {
   const parsed = extractJson(text);
   if (!parsed) return null;
 
   if (Array.isArray(parsed?.moves)) {
     return {
       ...parsed,
-      moves: normalizeMoveReviews(parsed.moves, moveHistory)
+      moves: normalizeMoveReviews(parsed.moves, sanMoves)
     };
   }
 
   if (Array.isArray(parsed)) {
-    return { format: 'move_review', moves: normalizeMoveReviews(parsed, moveHistory) };
+    return { format: 'move_review', moves: normalizeMoveReviews(parsed, sanMoves) };
   }
 
   return null;
@@ -80,6 +146,7 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
   const [isReady, setIsReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const isInline = variant === 'inline';
+  const sanMoves = useMemo(() => toSanHistory(moveHistory), [moveHistory]);
 
   useEffect(() => {
     async function checkAvailability() {
@@ -109,6 +176,10 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
     try {
       const result = await analyzeGame(moveHistory, null, gameId, (fullText) => {
         setAnalysisDraft(fullText);
+        const partialMoves = parsePartialMoveReviews(fullText, sanMoves);
+        if (partialMoves) {
+          setAnalysis({ format: 'move_review', moves: partialMoves });
+        }
       });
 
       if (!result) {
@@ -117,7 +188,7 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
       }
 
       if (typeof result === 'string') {
-        const parsed = parseStreamingAnalysis(result, moveHistory);
+        const parsed = parseStreamingAnalysis(result, sanMoves);
         if (parsed) {
           setAnalysis(parsed);
           setAnalysisDraft('');
