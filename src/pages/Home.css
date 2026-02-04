@@ -11,7 +11,9 @@
     linear-gradient(180deg, #17181c 0%, #1b1d21 45%, #141519 100%);
   padding-bottom: 80px;
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .home-page::before,

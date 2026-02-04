@@ -14,7 +14,9 @@
   /* Ensure visibility - prevent content from collapsing */
   height: auto;
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .analysis-page::before,
