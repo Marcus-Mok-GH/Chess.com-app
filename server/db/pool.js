@@ -10,12 +10,26 @@ const connectionString = process.env.DATABASE_URL
 
 const isProduction = process.env.NODE_ENV === 'production';
 
+let dbHost = null;
+try {
+  if (connectionString) {
+    dbHost = new URL(connectionString).hostname;
+  }
+} catch {
+  // ignore parsing errors; avoid logging secrets
+}
+
+if (dbHost) {
+  console.log(`[DB] Connecting to ${dbHost} (IPv4 preferred)`);
+}
+
 const pool = new Pool({
   connectionString,
   ssl: isProduction ? { rejectUnauthorized: false } : false,
   connectionTimeoutMillis: isProduction ? 20000 : 10000,
   idleTimeoutMillis: 30000,
-  max: 10
+  max: 10,
+  family: 4
 });
 
 export default pool;
