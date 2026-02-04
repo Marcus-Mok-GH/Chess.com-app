@@ -29,7 +29,8 @@ export async function ensureDatabaseReady(initFn) {
   try {
     await initPromise;
     return databaseReady;
-  } catch {
+  } catch (error) {
+    console.error('[DB] Initialization failed in ensureDatabaseReady:', error?.message || error);
     return false;
   }
 }
