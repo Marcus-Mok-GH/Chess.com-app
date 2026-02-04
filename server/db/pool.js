@@ -2,11 +2,23 @@ import pg from 'pg';
 
 const { Pool } = pg;
 
-const connectionString = process.env.DATABASE_URL
-  || process.env.DATABASE_URL_UNPOOLED
-  || process.env.POSTGRES_URL_NON_POOLING
-  || process.env.POSTGRES_PRISMA_URL
-  || process.env.POSTGRES_URL;
+const connectionCandidates = [
+  ['DATABASE_URL', process.env.DATABASE_URL],
+  ['DATABASE_URL_UNPOOLED', process.env.DATABASE_URL_UNPOOLED],
+  ['POSTGRES_URL_NON_POOLING', process.env.POSTGRES_URL_NON_POOLING],
+  ['POSTGRES_PRISMA_URL', process.env.POSTGRES_PRISMA_URL],
+  ['POSTGRES_URL', process.env.POSTGRES_URL]
+];
+
+let connectionSource = null;
+let connectionString = null;
+for (const [key, value] of connectionCandidates) {
+  if (value) {
+    connectionSource = key;
+    connectionString = value;
+    break;
+  }
+}
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -20,7 +32,8 @@ try {
 }
 
 if (dbHost) {
-  console.log(`[DB] Connecting to ${dbHost} (IPv4 preferred)`);
+  const sourceLabel = connectionSource ? ` via ${connectionSource}` : '';
+  console.log(`[DB] Connecting to ${dbHost} (IPv4 preferred)${sourceLabel}`);
 }
 
 const pool = new Pool({
