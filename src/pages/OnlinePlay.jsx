@@ -10,6 +10,7 @@ import api from '../services/api';
 import './OnlinePlay.css';
 
 export default function OnlinePlay() {
+  const GAME_CODE_LENGTH = 8;
   const [searchParams] = useSearchParams();
   const { gameId: routeGameId } = useParams();
   const navigate = useNavigate();
@@ -103,11 +104,12 @@ export default function OnlinePlay() {
 
     const codeFromUrl = searchParams.get('code');
     if (codeFromUrl) {
-      setJoinCode(codeFromUrl.toUpperCase());
+      const normalized = codeFromUrl.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, GAME_CODE_LENGTH);
+      setJoinCode(normalized);
       setGameMode('friendly');
       setView('lobby');
     }
-  }, [routeGameId, searchParams]);
+  }, [routeGameId, searchParams, GAME_CODE_LENGTH]);
 
   const startMatchmaking = useCallback(() => {
     // Socket may still be connecting; queue the request instead of erroring.
@@ -420,10 +422,14 @@ export default function OnlinePlay() {
 
   const handleJoinGame = useCallback(async () => {
     setError('');
-    const code = joinCode.trim().toUpperCase();
+    const code = joinCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
 
     if (!code) {
       setError('Please enter a game code');
+      return;
+    }
+    if (code.length !== GAME_CODE_LENGTH) {
+      setError(`Game codes are ${GAME_CODE_LENGTH} characters.`);
       return;
     }
 
@@ -450,7 +456,7 @@ export default function OnlinePlay() {
       console.error('[OnlinePlay] Failed to join online game:', error);
       setError('Game not found or already started.');
     }
-  }, [joinCode, isLoggedIn, user]);
+  }, [joinCode, isLoggedIn, user, GAME_CODE_LENGTH]);
 
   const handleCopyLink = useCallback(() => {
     const link = `${window.location.origin}/online?code=${gameId}`;
@@ -715,10 +721,13 @@ export default function OnlinePlay() {
                 <input
                   type="text"
                   className="join-input"
-                  placeholder="Enter game code"
+                  placeholder={`Enter ${GAME_CODE_LENGTH}-char code`}
                   value={joinCode}
-                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                  maxLength={6}
+                  onChange={(e) => {
+                    const normalized = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, GAME_CODE_LENGTH);
+                    setJoinCode(normalized);
+                  }}
+                  maxLength={GAME_CODE_LENGTH}
                 />
                 <button className="btn btn-secondary btn-large" onClick={handleJoinGame}>
                   🚀 Join Game
