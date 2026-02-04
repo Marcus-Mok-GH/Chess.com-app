@@ -102,10 +102,21 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // API Routes
-app.use('/api/users', usersRouter);
-app.use('/api/matchmaking', matchmakingRouter);
-app.use('/api/games', gamesRouter);
-app.use('/api/coach', coachRouter);
+// Vercel serverless functions strip the "/api" prefix from req.url. To keep
+// routes working both locally (with "/api") and on Vercel (without it),
+// mount the routers on both prefixes when running serverless.
+const apiPrefixes = isServerless ? ['', '/api'] : ['/api'];
+const mountApi = (pathPrefix, router) => {
+  apiPrefixes.forEach((prefix) => {
+    const fullPath = `${prefix}${pathPrefix}` || '/';
+    app.use(fullPath, router);
+  });
+};
+
+mountApi('/users', usersRouter);
+mountApi('/matchmaking', matchmakingRouter);
+mountApi('/games', gamesRouter);
+mountApi('/coach', coachRouter);
 
 // Serve static files from Vite dist directory
 const distPath = path.join(__dirname, '../dist');

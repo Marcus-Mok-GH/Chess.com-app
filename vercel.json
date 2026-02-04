@@ -5,6 +5,11 @@
   "installCommand": "npm install",
   "framework": null,
   "outputDirectory": "dist",
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "nodejs20.x"
+    }
+  },
   "regions": ["iad1"],
   "rewrites": [
     {
