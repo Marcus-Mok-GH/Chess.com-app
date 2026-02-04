@@ -12,7 +12,7 @@ import DebugPanel from './DebugPanel';
 import AnimatedPiece from './AnimatedPiece';
 import CoachingTip from './CoachingTip';
 import { BOTS, getRandomQuote, createCustomBot } from '../engine/bots/bots';
-import { getCoachingFeedback, getBotDialogue } from '../engine/coach/coachAI';
+import { getCoachingFeedback, explainCoachMove } from '../engine/coach/coachAI';
 import { generateGameId } from '../engine/game/gameId';
 import { normalizeMoveHistory, toSanHistory, toStoredMoveHistory, buildGameFromHistory } from '../engine/game/moveHistory';
 import { useUser } from '../contexts/UserContext';
@@ -116,7 +116,6 @@ function ChessGame(
   const moveHistoryRef = useRef(moveHistory);
   const victoryTimeoutRef = useRef(null);
   const lastVictoryKeyRef = useRef(null);
-  const dialogueRequestIdRef = useRef(0);
 
   const workerRef = useRef(null);
   const animationIdRef = useRef(0);
@@ -251,14 +250,9 @@ function ChessGame(
   useEffect(() => {
     if (isPassAndPlay) return;
     if (moveHistory.length === 0 && selectedBot) {
-      requestBotDialogue({
-        event: 'start',
-        actor: 'bot',
-        botOverride: selectedBot,
-        fallbackCategory: 'start'
-      });
+      setBotMessage(getRandomQuote(selectedBot, 'start'));
     }
-  }, [selectedBot, moveHistory.length, isPassAndPlay, requestBotDialogue]);
+  }, [selectedBot, moveHistory.length, isPassAndPlay]);
 
   useEffect(() => {
     if (!onUiStateChange) return;
@@ -438,13 +432,7 @@ function ChessGame(
     const fen = gameRef.current.fen();
 
     // Show thinking message
-    requestBotDialogue({
-      event: 'thinking',
-      actor: 'bot',
-      botOverride: bot,
-      fallbackCategory: 'thinking',
-      placeholder: `${bot.name} is thinking...`
-    });
+    setBotMessage(getRandomQuote(bot, 'thinking'));
 
     // Define message handler to avoid multiple handlers
     const handleMessage = (e) => {
@@ -481,47 +469,16 @@ function ChessGame(
             }
 
             if (newGame.isCheckmate()) {
-              requestBotDialogue({
-                event: 'win',
-                actor: 'bot',
-                result: 'win',
-                move: moveResult?.san,
-                botOverride: bot,
-                fallbackCategory: 'win'
-              });
+              setBotMessage(getRandomQuote(bot, 'win'));
             } else if (newGame.isDraw()) {
-              requestBotDialogue({
-                event: 'draw',
-                actor: 'bot',
-                result: 'draw',
-                move: moveResult?.san,
-                botOverride: bot,
-                fallbackCategory: 'draw'
-              });
+              setBotMessage(getRandomQuote(bot, 'draw'));
             } else if (newGame.inCheck()) {
-              requestBotDialogue({
-                event: 'check',
-                actor: 'bot',
-                move: moveResult?.san,
-                botOverride: bot,
-                fallbackCategory: 'check'
-              });
+              setBotMessage(getRandomQuote(bot, 'check'));
             } else if (moveResult.captured) {
-              requestBotDialogue({
-                event: 'capture',
-                actor: 'bot',
-                move: moveResult?.san,
-                botOverride: bot,
-                fallbackCategory: 'capture'
-              });
+              setBotMessage(getRandomQuote(bot, 'capture'));
             } else if (Math.random() < 0.15) {
-              requestBotDialogue({
-                event: 'move',
-                actor: 'bot',
-                move: moveResult?.san,
-                botOverride: bot,
-                fallbackCategory: 'goodMove'
-              });
+              const categories = ['thinking', 'blunder', 'goodMove'];
+              setBotMessage(getRandomQuote(bot, categories[Math.floor(Math.random() * categories.length)]));
             }
           }, 50);
         }
@@ -546,7 +503,7 @@ function ChessGame(
       },
       debug: settingsRef.current.debugMode,
     });
-  }, [triggerAnimation, isThinking, isPassAndPlay, requestBotDialogue]);
+  }, [triggerAnimation, isThinking, isPassAndPlay]);
 
   useEffect(() => {
     if (isPassAndPlay) return;
@@ -608,57 +565,6 @@ function ChessGame(
       console.error('🔴 Failed to save game:', error);
     }
   }, [game, gameId, moveHistory, isOnline, user, playerColor, isPassAndPlay]);
-
-  const requestBotDialogue = useCallback(async ({
-    event,
-    actor = 'bot',
-    move = null,
-    result = null,
-    botOverride = null,
-    fallbackCategory = null,
-    placeholder = null,
-  }) => {
-    if (isPassAndPlay) return;
-
-    const bot = botOverride || selectedBotRef.current;
-    if (!bot || bot.id === 'pass') return;
-
-    const requestId = ++dialogueRequestIdRef.current;
-
-    if (placeholder) {
-      setBotMessage(placeholder);
-    }
-
-    try {
-      const text = await getBotDialogue({
-        bot: {
-          id: bot.id,
-          name: bot.name,
-          personality: bot.personality,
-          description: bot.description,
-          rating: bot.rating,
-        },
-        event,
-        actor,
-        move,
-        result,
-        fen: gameRef.current?.fen(),
-      });
-
-      if (dialogueRequestIdRef.current !== requestId) return;
-      if (text) {
-        setBotMessage(text);
-        return;
-      }
-    } catch (error) {
-      console.warn('[ChessGame] Dialogue request failed:', error);
-      if (dialogueRequestIdRef.current !== requestId) return;
-    }
-
-    if (fallbackCategory) {
-      setBotMessage(getRandomQuote(bot, fallbackCategory));
-    }
-  }, [isPassAndPlay]);
 
   // Save game to database when it ends
   useEffect(() => {
@@ -763,42 +669,16 @@ function ChessGame(
             setSelectedSquare(null);
             setPossibleMoves([]);
 
-            if (!isPassAndPlay && !selectedBotRef.current.isCoach) {
+            if (!isPassAndPlay) {
               const bot = selectedBotRef.current;
               if (gameCopy.isCheckmate()) {
-                requestBotDialogue({
-                  event: 'lose',
-                  actor: 'player',
-                  result: 'loss',
-                  move: move.san,
-                  botOverride: bot,
-                  fallbackCategory: 'lose'
-                });
+                setBotMessage(getRandomQuote(bot, 'lose'));
               } else if (gameCopy.isDraw()) {
-                requestBotDialogue({
-                  event: 'draw',
-                  actor: 'player',
-                  result: 'draw',
-                  move: move.san,
-                  botOverride: bot,
-                  fallbackCategory: 'draw'
-                });
+                setBotMessage(getRandomQuote(bot, 'draw'));
               } else if (move.captured) {
-                requestBotDialogue({
-                  event: 'capture',
-                  actor: 'player',
-                  move: move.san,
-                  botOverride: bot,
-                  fallbackCategory: 'captured'
-                });
+                setBotMessage(getRandomQuote(bot, 'capture'));
               } else if (Math.random() < 0.2) {
-                requestBotDialogue({
-                  event: 'good_move',
-                  actor: 'player',
-                  move: move.san,
-                  botOverride: bot,
-                  fallbackCategory: 'goodMove'
-                });
+                setBotMessage(getRandomQuote(bot, 'goodMove'));
               }
             }
 
@@ -829,7 +709,7 @@ function ChessGame(
         setPossibleMoves([]);
       }
     },
-    [game, playerColor, selectedSquare, isThinking, triggerAnimation, requestCoachingFeedback, resolvePromotion, moveHistory, isPassAndPlay, requestBotDialogue]
+    [game, playerColor, selectedSquare, isThinking, triggerAnimation, requestCoachingFeedback, resolvePromotion, moveHistory, isPassAndPlay]
   );
 
   const onPieceDrop = useCallback(
@@ -869,42 +749,16 @@ function ChessGame(
         setSelectedSquare(null);
         setPossibleMoves([]);
 
-        if (!isPassAndPlay && !selectedBotRef.current.isCoach) {
+        if (!isPassAndPlay) {
           const bot = selectedBotRef.current;
           if (gameCopy.isCheckmate()) {
-            requestBotDialogue({
-              event: 'lose',
-              actor: 'player',
-              result: 'loss',
-              move: move.san,
-              botOverride: bot,
-              fallbackCategory: 'lose'
-            });
+            setBotMessage(getRandomQuote(bot, 'lose'));
           } else if (gameCopy.isDraw()) {
-            requestBotDialogue({
-              event: 'draw',
-              actor: 'player',
-              result: 'draw',
-              move: move.san,
-              botOverride: bot,
-              fallbackCategory: 'draw'
-            });
+            setBotMessage(getRandomQuote(bot, 'draw'));
           } else if (move.captured) {
-            requestBotDialogue({
-              event: 'capture',
-              actor: 'player',
-              move: move.san,
-              botOverride: bot,
-              fallbackCategory: 'captured'
-            });
+            setBotMessage(getRandomQuote(bot, 'capture'));
           } else if (Math.random() < 0.2) {
-            requestBotDialogue({
-              event: 'good_move',
-              actor: 'player',
-              move: move.san,
-              botOverride: bot,
-              fallbackCategory: 'goodMove'
-            });
+            setBotMessage(getRandomQuote(bot, 'goodMove'));
           }
         }
 
@@ -924,7 +778,7 @@ function ChessGame(
 
       return true;
     },
-    [game, playerColor, isThinking, triggerAnimation, requestCoachingFeedback, resolvePromotion, moveHistory, isPassAndPlay, requestBotDialogue]
+    [game, playerColor, isThinking, triggerAnimation, requestCoachingFeedback, resolvePromotion, moveHistory, isPassAndPlay]
   );
 
   const handleNewGame = useCallback(() => {
@@ -938,12 +792,7 @@ function ChessGame(
     setPossibleMoves([]);
     setIsThinking(false);
     if (!isPassAndPlay) {
-      requestBotDialogue({
-        event: 'start',
-        actor: 'bot',
-        botOverride: selectedBot,
-        fallbackCategory: 'start'
-      });
+      setBotMessage(getRandomQuote(selectedBot, 'start'));
     } else {
       setBotMessage('');
     }
@@ -951,7 +800,7 @@ function ChessGame(
     setHasResigned(false);
     setResignedColor(null);
     setHasLoadedPersistedState(true);
-  }, [gameId, selectedBot, isPassAndPlay, requestBotDialogue]);
+  }, [gameId, selectedBot, isPassAndPlay]);
 
   const handleResign = useCallback(() => {
     if (hasResigned || game.isGameOver()) return;
@@ -960,19 +809,13 @@ function ChessGame(
     setHasResigned(true);
     setResignedColor(resigningColor);
     if (!isPassAndPlay) {
-      requestBotDialogue({
-        event: 'win',
-        actor: 'bot',
-        result: 'win',
-        botOverride: selectedBot,
-        fallbackCategory: 'win'
-      });
+      setBotMessage(getRandomQuote(selectedBot, 'win'));
     } else {
       setBotMessage('');
     }
     // Save game to database
     saveGameToDatabase('resigned', winnerColor);
-  }, [hasResigned, game, selectedBot, saveGameToDatabase, playerColor, isPassAndPlay, requestBotDialogue]);
+  }, [hasResigned, game, selectedBot, saveGameToDatabase, playerColor, isPassAndPlay]);
 
   const handleUndo = useCallback(() => {
     const gameCopy = buildGameFromHistory(moveHistory, game.fen());
@@ -999,13 +842,8 @@ function ChessGame(
   const handleSelectBot = useCallback((bot) => {
     if (isPassAndPlay) return;
     setSelectedBot(bot);
-    requestBotDialogue({
-      event: 'start',
-      actor: 'bot',
-      botOverride: bot,
-      fallbackCategory: 'start'
-    });
-  }, [isPassAndPlay, requestBotDialogue]);
+    setBotMessage(getRandomQuote(bot, 'start'));
+  }, [isPassAndPlay]);
 
   const handleCustomEloChange = useCallback((newElo) => {
     setCustomElo(newElo);
