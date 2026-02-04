@@ -11,6 +11,7 @@ import PlayerBar from './PlayerBar';
 import DebugPanel from './DebugPanel';
 import AnimatedPiece from './AnimatedPiece';
 import CoachingTip from './CoachingTip';
+import AIDialogueDrawer from './AIDialogueDrawer';
 import { BOTS, getRandomQuote, createCustomBot } from '../engine/bots/bots';
 import { getCoachingFeedback, explainCoachMove } from '../engine/coach/coachAI';
 import { generateGameId } from '../engine/game/gameId';
@@ -99,6 +100,7 @@ function ChessGame(
   const [selectedSquare, setSelectedSquare] = useState(null);
   const [botMessage, setBotMessage] = useState('');
   const [hintMove, setHintMove] = useState(null);
+  const [isDialogueOpen, setIsDialogueOpen] = useState(false);
   const [gameId, setGameId] = useState(() => (initialGameId ? String(initialGameId).toUpperCase() : generateGameId()));
   const [hasLoadedPersistedState, setHasLoadedPersistedState] = useState(false);
   const navigate = useNavigate();
@@ -136,6 +138,11 @@ function ChessGame(
   useEffect(() => {
     settingsRef.current = settings;
   }, [settings]);
+
+  useEffect(() => {
+    if (!botMessage) return;
+    setIsDialogueOpen(true);
+  }, [botMessage]);
 
   useEffect(() => () => {
     if (victoryTimeoutRef.current) {
@@ -1066,6 +1073,17 @@ function ChessGame(
             )}
             <MoveHistory history={moveHistory} />
           </div>
+          <AIDialogueDrawer
+            message={botMessage}
+            isOpen={isDialogueOpen}
+            onToggle={() => setIsDialogueOpen((prev) => !prev)}
+            onClose={() => {
+              setIsDialogueOpen(false);
+            }}
+            isLoading={isThinking || isCoachingLoading}
+            title={selectedBot?.name || 'AI'}
+            avatar={selectedBot?.avatar || '🤖'}
+          />
       </div>
 
     </div>
