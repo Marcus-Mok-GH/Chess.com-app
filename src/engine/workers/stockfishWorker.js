@@ -4,6 +4,7 @@ let engine = null;
 let engineReady = false;
 let pendingCallback = null;
 let collectedMoves = [];
+
 function initEngine() {
   if (engine) return Promise.resolve(engine);
   
