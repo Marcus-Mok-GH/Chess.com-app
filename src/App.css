@@ -1723,6 +1723,24 @@ body {
   .sidebar {
     width: 280px;
   }
+
+  .online-chess-game .sidebar {
+    display: none;
+  }
+
+  .online-chess-game .game-container {
+    max-width: none;
+    justify-content: center;
+  }
+
+  .online-chess-game .board-section {
+    max-width: none;
+  }
+
+  .online-chess-game .board-wrapper {
+    width: min(100%, 92vw, calc(var(--game-viewport) - 140px));
+    max-width: 720px;
+  }
   
   .bot-grid {
     grid-template-columns: repeat(3, 1fr);
