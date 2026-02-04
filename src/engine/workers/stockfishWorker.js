@@ -4,6 +4,8 @@ let engine = null;
 let engineReady = false;
 let pendingCallback = null;
 let collectedMoves = [];
+let pendingAnalysis = null;
+let lastInfo = null;
 
 function initEngine() {
   if (engine) return Promise.resolve(engine);
@@ -26,42 +28,66 @@ function initEngine() {
         return;
       }
       
-      // Collect Multi-PV analysis lines
       if (line.includes(' pv ')) {
         const depthMatch = line.match(/depth (\d+)/);
         const scoreMatch = line.match(/score cp (-?\d+)/);
         const mateMatch = line.match(/score mate (-?\d+)/);
-        const pvMatch = line.match(/ pv ([a-h][1-8][a-h][1-8][qrbnQRBN]?)/);
-        
+        const pvMatch = line.match(/ pv ([a-h][1-8][a-h][1-8][qrbnQRBN]?)(?:\s.*)?/);
+
         if (pvMatch) {
           const move = pvMatch[1];
           let score = 0;
+          let mate = null;
           if (scoreMatch) {
             score = parseInt(scoreMatch[1]);
           } else if (mateMatch) {
-            score = parseInt(mateMatch[1]) > 0 ? 100000 : -100000;
+            mate = parseInt(mateMatch[1]);
+            score = mate > 0 ? 100000 : -100000;
           }
           const depth = depthMatch ? parseInt(depthMatch[1]) : 0;
-          
-          // Update or add move
-          const existing = collectedMoves.find(m => m.move === move);
-          if (existing) {
-            if (depth >= existing.depth) {
-              existing.score = score;
-              existing.depth = depth;
+
+          if (!lastInfo || depth >= lastInfo.depth) {
+            lastInfo = {
+              depth,
+              score,
+              mate,
+              pv: line.split(' pv ')[1] || ''
+            };
+          }
+
+          if (!pendingAnalysis) {
+            const existing = collectedMoves.find(m => m.move === move);
+            if (existing) {
+              if (depth >= existing.depth) {
+                existing.score = score;
+                existing.depth = depth;
+              }
+            } else {
+              collectedMoves.push({ move, score, depth });
             }
-          } else {
-            collectedMoves.push({ move, score, depth });
           }
         }
       }
       
-      // Search complete
       if (line.startsWith('bestmove')) {
         const match = line.match(/bestmove ([a-h][1-8][a-h][1-8][qrbnQRBN]?)/);
-        if (match && pendingCallback) {
-          const bestMove = match[1];
-          // Ensure best move is in our list
+        if (!match) return;
+
+        const bestMove = match[1];
+
+        if (pendingAnalysis) {
+          pendingAnalysis({
+            bestMove,
+            score: lastInfo?.score ?? 0,
+            mate: lastInfo?.mate ?? null,
+            depth: lastInfo?.depth ?? 0,
+            pv: lastInfo?.pv ?? ''
+          });
+          pendingAnalysis = null;
+          return;
+        }
+
+        if (pendingCallback) {
           if (!collectedMoves.find(m => m.move === bestMove)) {
             collectedMoves.unshift({ move: bestMove, score: 0, depth: 0 });
           }
@@ -216,12 +242,28 @@ async function findBestMove(fen, bot, debug) {
   });
 }
 
+async function analyzePosition(fen, depth = 12) {
+  await initEngine();
+  lastInfo = null;
+
+  return new Promise((resolve) => {
+    pendingAnalysis = (result) => {
+      resolve({ type: 'analysis', ...result });
+    };
+
+    engine.postMessage('ucinewgame');
+    engine.postMessage(`position fen ${fen}`);
+    engine.postMessage('setoption name MultiPV value 1');
+    engine.postMessage(`go depth ${Math.min(Math.max(depth, 6), 18)}`);
+  });
+}
+
 // Flag to prevent concurrent searches
 let isSearching = false;
 
 // Web Worker message handler
 self.onmessage = async function(e) {
-  const { fen, bot, debug } = e.data;
+  const { fen, bot, debug, action, depth } = e.data;
 
   // Skip if already searching to prevent conflicts
   if (isSearching) {
@@ -232,19 +274,27 @@ self.onmessage = async function(e) {
   isSearching = true;
 
   try {
-    const result = await findBestMove(fen, bot, debug);
-    self.postMessage(result);
+    if (action === 'analyze') {
+      const result = await analyzePosition(fen, depth);
+      self.postMessage(result);
+    } else {
+      const result = await findBestMove(fen, bot, debug);
+      self.postMessage(result);
+    }
   } catch (err) {
     console.error('Worker error:', err);
-    // Fallback to random legal move
-    const game = new Chess(fen);
-    const moves = game.moves();
-    if (moves.length > 0) {
-      self.postMessage({
-        type: 'result',
-        bestMove: moves[Math.floor(Math.random() * moves.length)],
-        debugInfo: debug ? { error: err.message } : null
-      });
+    if (action === 'analyze') {
+      self.postMessage({ type: 'analysis', bestMove: null, score: 0, mate: null, depth: 0, pv: '', error: true });
+    } else {
+      const game = new Chess(fen);
+      const moves = game.moves();
+      if (moves.length > 0) {
+        self.postMessage({
+          type: 'result',
+          bestMove: moves[Math.floor(Math.random() * moves.length)],
+          debugInfo: debug ? { error: err.message } : null
+        });
+      }
     }
   } finally {
     isSearching = false;
