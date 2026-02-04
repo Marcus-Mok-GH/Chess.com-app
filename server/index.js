@@ -24,9 +24,10 @@ import coachRouter from './routes/coach.js';
 
 // Validate environment variables
 const databaseUrl = process.env.DATABASE_URL
-  || process.env.POSTGRES_URL
+  || process.env.DATABASE_URL_UNPOOLED
   || process.env.POSTGRES_URL_NON_POOLING
-  || process.env.POSTGRES_PRISMA_URL;
+  || process.env.POSTGRES_PRISMA_URL
+  || process.env.POSTGRES_URL;
 const hasDatabase = Boolean(databaseUrl);
 if (!hasDatabase) {
   console.warn('[Server] WARNING: DATABASE_URL (or POSTGRES_URL) not set. Database features will be disabled.');
@@ -193,10 +194,11 @@ async function start() {
   if (hasDatabase) {
     try {
       // Set a timeout for database initialization
+      const timeoutMs = isServerless ? 30000 : 15000;
       await Promise.race([
         initDatabase(),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Database connection timeout after 15s')), 15000)
+          setTimeout(() => reject(new Error(`Database connection timeout after ${timeoutMs / 1000}s`)), timeoutMs)
         )
       ]);
       setDatabaseReady(true);
