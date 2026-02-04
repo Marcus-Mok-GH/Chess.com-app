@@ -12,7 +12,9 @@ build/
 *.log
 
 # Environment files (except template)
-.env*.local
+.env
+.env.*
+!.env.example
 
 # IDE
 .vscode/

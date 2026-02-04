@@ -7,8 +7,12 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { config } from 'dotenv';
 
-// Load environment variables first
-config();
+// Load local environment variables only in non-production environments.
+// On Vercel, rely on project env vars instead of bundled .env files.
+const shouldLoadEnv = process.env.NODE_ENV !== 'production' && !process.env.VERCEL;
+if (shouldLoadEnv) {
+  config();
+}
 
 import { initDatabase, cleanupStaleMatchmakingEntries, cleanupOldActiveGames } from './db.js';
 import { registerSocketHandlers } from './socket/index.js';
