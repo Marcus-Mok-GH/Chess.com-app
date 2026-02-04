@@ -605,7 +605,7 @@ body {
   width: 340px;
   flex-shrink: 0;
   min-width: 0;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .sidebar-header {
@@ -1792,6 +1792,7 @@ body {
     gap: 8px;
     height: auto;
     max-height: none;
+    overflow: visible;
   }
   
   .sidebar-header {

@@ -7,6 +7,11 @@
   overflow-wrap: anywhere;
 }
 
+.coaching-tip-content {
+  max-height: 220px;
+  overflow-y: auto;
+}
+
 .coaching-tip-header {
   display: flex;
   align-items: center;
