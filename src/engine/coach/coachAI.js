@@ -245,3 +245,45 @@ export async function analyzeGame(moveHistory, result, gameId = null, onStream =
     return null;
   }
 }
+
+/**
+ * Get short dialogue lines for bot reactions
+ */
+export async function getBotDialogue(payload, onStream = null) {
+  try {
+    const wantsStream = typeof onStream === 'function';
+    const response = await fetch(`${API_BASE_URL}/coach/dialogue`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(wantsStream ? { 'Accept': 'text/event-stream' } : {})
+      },
+      body: JSON.stringify({
+        ...payload,
+        stream: wantsStream
+      })
+    });
+
+    if (!response.ok) {
+      console.error('[CoachAI] Dialogue request failed:', response.status);
+      return null;
+    }
+
+    if (wantsStream) {
+      const fullText = await consumeCoachStream(response, (delta, fullText) => {
+        onStream?.(fullText, delta);
+      });
+      return fullText || null;
+    }
+
+    const data = await response.json();
+    return data.text || null;
+  } catch (error) {
+    if (isNetworkError(error)) {
+      console.error('[CoachAI] Dialogue network error:', error.message);
+      return null;
+    }
+    console.error('[CoachAI] Dialogue error:', error);
+    return null;
+  }
+}

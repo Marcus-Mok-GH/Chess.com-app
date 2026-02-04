@@ -37,6 +37,8 @@ All endpoints are mounted at `/api/coach`:
 - `POST /explain` - Explanation for coach's move
 - `POST /analyze` - Game analysis with per-move reviews
   - Send `stream: true` in the request body to enable SSE streaming
+- `POST /dialogue` - Short bot dialogue lines (persona-aware)
+  - Send `stream: true` in the request body to enable SSE streaming
 
 ### Client Usage
 The UI calls the endpoints through `src/engine/coach/coachAI.js`:
@@ -45,6 +47,7 @@ The UI calls the endpoints through `src/engine/coach/coachAI.js`:
 - `explainCoachMove(fenBefore, move, fenAfter)`
 - `analyzeGame(moveHistory, result, gameId)`
   - Pass a streaming callback as the last argument to enable token streaming
+- `getBotDialogue(payload)`
 
 ## Testing
 

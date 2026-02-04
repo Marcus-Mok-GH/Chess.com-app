@@ -14,6 +14,8 @@ const SYSTEM_PROMPT = `You are an expert chess coach with deep strategic knowled
 
 Provide insightful, educational feedback that helps the student improve their chess understanding.`;
 
+const DIALOGUE_SYSTEM_PROMPT = `You are a chess opponent speaking directly to the player. Stay in character based on the bot persona provided. Keep responses short, clear, and within 20 words. Do not use emojis, quotes, or markdown. Avoid toxic or insulting language.`;
+
 async function callMistral(messages, options = {}) {
   const apiKey = process.env.MISTRAL_API_KEY;
   const {
@@ -140,6 +142,13 @@ async function streamMistralToClient(mistralResponse, res) {
   sendSse(res, '[DONE]', 'done');
   res.end();
   return fullText;
+}
+
+function cleanDialogueText(text) {
+  if (!text) return '';
+  let cleaned = text.replace(/\s+/g, ' ').trim();
+  cleaned = cleaned.replace(/^["“”']+/, '').replace(/["“”']+$/, '');
+  return cleaned;
 }
 
 function extractJson(content) {
@@ -458,6 +467,67 @@ Rules:
   } catch (error) {
     console.error('[Coach] Analyze error:', error);
     return handleRouteError(res, error, 'Failed to analyze game');
+  }
+});
+
+// Generate short bot dialogue lines
+router.post('/dialogue', async (req, res) => {
+  try {
+    const { bot, event, actor, move, result, fen, stream } = req.body;
+
+    if (!bot?.name || !event) {
+      return errorResponse(res, 400, 'Missing required fields: bot.name, event');
+    }
+
+    const moveText = typeof move === 'string'
+      ? move
+      : move?.san || move?.uci || '';
+
+    const personaLines = [
+      `Bot name: ${bot.name}`,
+      bot.personality ? `Personality: ${bot.personality}` : null,
+      bot.description ? `Description: ${bot.description}` : null,
+      bot.rating ? `Rating: ${bot.rating}` : null,
+      bot.id ? `Bot id: ${bot.id}` : null
+    ].filter(Boolean);
+
+    const contextLines = [
+      `Event: ${event}`,
+      actor ? `Actor: ${actor}` : null,
+      result ? `Result: ${result}` : null,
+      moveText ? `Move: ${moveText}` : null,
+      fen ? `FEN: ${fen}` : null
+    ].filter(Boolean);
+
+    const messages = [
+      { role: 'system', content: DIALOGUE_SYSTEM_PROMPT },
+      {
+        role: 'user',
+        content: `Use the persona below to respond to the event.\n\n${personaLines.join('\n')}\n\n${contextLines.join('\n')}\n\nReply with a single sentence under 20 words.`
+      }
+    ];
+
+    if (stream) {
+      const response = await callMistral(messages, {
+        stream: true,
+        maxTokens: 80,
+        temperature: 0.7
+      });
+      await streamMistralToClient(response, res);
+      return;
+    }
+
+    const response = await callMistral(messages, {
+      maxTokens: 80,
+      temperature: 0.7
+    });
+    const data = await response.json();
+    const text = cleanDialogueText(data.choices?.[0]?.message?.content || '');
+
+    res.json({ text });
+  } catch (error) {
+    console.error('[Coach] Dialogue error:', error);
+    return handleRouteError(res, error, 'Failed to generate dialogue');
   }
 });
 
