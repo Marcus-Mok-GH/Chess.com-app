@@ -4,17 +4,46 @@ let engine = null;
 let engineReady = false;
 let pendingCallback = null;
 let collectedMoves = [];
+let engineInitPromise = null;
+const ENGINE_INIT_TIMEOUT_MS = 4000;
+
+function resetEngine() {
+  if (engine) {
+    try {
+      engine.terminate();
+    } catch {
+      // ignore
+    }
+  }
+  engine = null;
+  engineReady = false;
+  engineInitPromise = null;
+}
 
 function initEngine() {
-  if (engine) return Promise.resolve(engine);
-  
-  return new Promise((resolve) => {
+  if (engine && engineReady) return Promise.resolve(engine);
+  if (engineInitPromise) return engineInitPromise;
+
+  engineInitPromise = new Promise((resolve, reject) => {
     // Load stockfish from public folder as a web worker
     const wasmSupported = typeof WebAssembly === 'object' && 
       WebAssembly.validate(Uint8Array.of(0x0, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00));
     
     const stockfishPath = wasmSupported ? '/stockfish.wasm.js' : '/stockfish.js';
-    engine = new Worker(stockfishPath);
+    try {
+      engine = new Worker(stockfishPath);
+    } catch (error) {
+      resetEngine();
+      reject(error);
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      if (!engineReady) {
+        resetEngine();
+        reject(new Error('Stockfish init timeout'));
+      }
+    }, ENGINE_INIT_TIMEOUT_MS);
     
     engine.onmessage = (e) => {
       const line = typeof e.data === 'string' ? e.data : String(e.data);
@@ -22,6 +51,7 @@ function initEngine() {
       // Engine is ready
       if (line === 'uciok') {
         engineReady = true;
+        clearTimeout(timeoutId);
         resolve(engine);
         return;
       }
@@ -73,11 +103,16 @@ function initEngine() {
     
     engine.onerror = (err) => {
       console.error('Stockfish error:', err);
+      clearTimeout(timeoutId);
+      resetEngine();
+      reject(err);
     };
     
     // Initialize UCI protocol
     engine.postMessage('uci');
   });
+
+  return engineInitPromise;
 }
 
 function getSearchParams(bot) {
