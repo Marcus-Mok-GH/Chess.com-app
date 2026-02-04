@@ -194,6 +194,7 @@ async function start() {
   if (hasDatabase) {
     try {
       // Set a timeout for database initialization
+      console.log('[Server] Initializing database...');
       const timeoutMs = isServerless ? 30000 : 15000;
       await Promise.race([
         initDatabase(),
