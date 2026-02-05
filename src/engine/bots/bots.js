@@ -11,10 +11,11 @@ export const BOTS = [
     blunderChance: 0.08,
     missedTacticsChance: 0.12,
     personality: 'Teaching assistant',
-    description: 'AI-powered coach that explains moves and helps you improve',
+    description: 'Adaptive and postive player, will tone down when in a better position, and will be more aggressive when in a losing position.',
     isCoach: true,
     playStyle: {
       aggression: 0.5,
+      adaptive: true,
       materialistic: 0.6,
       tactical: 0.7,
       positional: 0.8,

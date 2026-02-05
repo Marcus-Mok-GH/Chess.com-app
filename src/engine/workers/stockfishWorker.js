@@ -151,6 +151,7 @@ function selectMove(bestMove, candidates, bot, game) {
 
   // Apply personality-based selection for intermediate bots
   if (bot.playStyle && candidates.length > 1) {
+    const dynamicAggression = getDynamicAggression(bot, candidates);
     const scored = candidates.map(c => {
       let bonus = 0;
       const m = c.move;
@@ -161,9 +162,9 @@ function selectMove(bestMove, candidates, bot, game) {
 
         if (moveObj) {
           // Aggressive bots prefer captures and checks
-          if (bot.playStyle.aggression) {
-            if (moveObj.captured) bonus += bot.playStyle.aggression * 20;
-            if (tempGame.inCheck()) bonus += bot.playStyle.aggression * 15;
+          if (dynamicAggression) {
+            if (moveObj.captured) bonus += dynamicAggression * 20;
+            if (tempGame.inCheck()) bonus += dynamicAggression * 15;
           }
 
           // Queen-active bots prefer queen moves
@@ -200,6 +201,25 @@ function selectMove(bestMove, candidates, bot, game) {
   }
 
   return bestMove;
+}
+
+function getDynamicAggression(bot, candidates) {
+  const baseAggression = bot.playStyle?.aggression ?? 0;
+  if (!bot.playStyle?.adaptive) {
+    return baseAggression;
+  }
+
+  const bestScore = candidates[0]?.score ?? 0;
+
+  if (bestScore <= -80) {
+    return Math.min(baseAggression + 0.35, 1);
+  }
+
+  if (bestScore >= 80) {
+    return Math.max(baseAggression - 0.35, 0);
+  }
+
+  return baseAggression;
 }
 
 async function findBestMove(fen, bot, debug) {
