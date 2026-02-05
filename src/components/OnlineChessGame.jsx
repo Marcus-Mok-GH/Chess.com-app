@@ -47,6 +47,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
   const [opponentStatus, setOpponentStatus] = useState('connected');
   const [incomingReaction, setIncomingReaction] = useState(null);
   const [gameStatus, setGameStatus] = useState('playing');
+  const [isLoadingGame, setIsLoadingGame] = useState(true);
   const [whitePlayer, setWhitePlayer] = useState({ name: 'White', elo: null });
   const navigate = useNavigate();
   const [blackPlayer, setBlackPlayer] = useState({ name: 'Black', elo: null });
@@ -143,6 +144,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
       setGame(chess);
       setMoveHistory(normalizedHistory);
       setGameStatus(data.status);
+      setIsLoadingGame(false);
       
       // Set player info
       if (data.whitePlayer) {
@@ -834,6 +836,32 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
       return 'Game in progress';
     }
   };
+
+  if (isLoadingGame) {
+    return (
+      <div className="online-chess-game">
+        <div className="game-container" style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          minHeight: '400px'
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ 
+              width: '48px', 
+              height: '48px', 
+              border: '4px solid rgba(127, 166, 80, 0.3)',
+              borderTopColor: 'var(--color-accent-primary)',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+              margin: '0 auto 16px'
+            }} />
+            <p style={{ color: 'var(--color-text-secondary)' }}>Loading game...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="online-chess-game">
