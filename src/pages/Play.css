@@ -4,7 +4,7 @@
 
 .play-page {
   min-height: 100vh;
-  background: var(--color-bg-primary);
+  background: transparent;
   display: flex;
   flex-direction: column;
 }
