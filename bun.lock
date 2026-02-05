@@ -6,7 +6,7 @@
       "dependencies": {
         "@anthropic-ai/sandbox-runtime": "^0.0.34",
         "@neondatabase/serverless": "^1.0.2",
-        "@openai/codex": "^0.96.0",
+        "@openai/codex": "^0.97.0",
         "@sourcegraph/amp": "^0.0.1769949290-gbb0479",
         "bcryptjs": "^3.0.3",
         "chess.js": "^1.4.0",
@@ -337,7 +337,7 @@
 
     "@npmcli/move-file": ["@npmcli/move-file@1.1.2", "", { "dependencies": { "mkdirp": "^1.0.4", "rimraf": "^3.0.2" } }, "sha512-1SUf/Cg2GzGDyaf15aR9St9TWlb+XvbZXWpDx8YKs7MLzMH/BCeopv+y9vzrzgkfykCGuWOlSu3mZhj2+FQcrg=="],
 
-    "@openai/codex": ["@openai/codex@0.96.0", "", { "bin": { "codex": "bin/codex.js" } }, "sha512-rc6+UGvRPIy53j5Ta7tBd0Vv+UcbzD8+5y6aqmuTArTFNDoZJblc3Pvror3IQDpaBpRyQtJGd0NbA9Did57LyA=="],
+    "@openai/codex": ["@openai/codex@0.97.0", "", { "bin": { "codex": "bin/codex.js" } }, "sha512-3bG0SFuC5nEQd5CZuIj4qV/6QyAb9mpQPKJKYNAo7NptFNifCI+hcP4a+/zjy+hNndvnvuylkCoj+BWDXq+cIA=="],
 
     "@opentelemetry/api": ["@opentelemetry/api@1.9.0", "", {}, "sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg=="],
 

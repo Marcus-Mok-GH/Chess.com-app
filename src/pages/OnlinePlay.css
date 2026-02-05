@@ -44,6 +44,17 @@
   background: radial-gradient(circle, rgba(93, 156, 236, 0.22), transparent 70%);
 }
 
+/* Remove decorative backgrounds when playing */
+.online-play-page.playing {
+  background: var(--color-bg-primary);
+}
+
+.online-play-page.playing::before,
+.online-play-page.playing::after {
+  display: none;
+}
+
+
 .guest-banner {
   background: rgba(240, 185, 11, 0.12);
   border-bottom: 1px solid rgba(240, 185, 11, 0.25);
