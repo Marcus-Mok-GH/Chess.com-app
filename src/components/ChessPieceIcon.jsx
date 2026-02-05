@@ -14,6 +14,7 @@ const PIECE_IMAGE_PATHS = {
 };
 
 export default function ChessPieceIcon({ piece, color, size = 24, className = '' }) {
+  if (!piece || typeof piece !== 'string') return null;
   const normalizedColor = color === 'w' || color === 'white' ? 'w' : 'b';
   const key = `${normalizedColor}${piece.toUpperCase()}`;
   const src = PIECE_IMAGE_PATHS[key];

@@ -13,7 +13,8 @@ export default function PlayerBar({
   isCoach = false
 }) {
   const pieceValues = { p: 1, n: 3, b: 3, r: 5, q: 9 };
-  const materialDiff = capturedPieces.reduce((sum, p) => sum + (pieceValues[p] || 0), 0);
+  const safeCapturedPieces = Array.isArray(capturedPieces) ? capturedPieces : [];
+  const materialDiff = safeCapturedPieces.reduce((sum, p) => sum + (pieceValues[p] || 0), 0);
   const capturedColor = color === 'w' ? 'b' : 'w';
 
   return (
@@ -31,7 +32,7 @@ export default function PlayerBar({
         </div>
       )}
       <div className="captured-pieces">
-        {capturedPieces.map((piece, i) => (
+        {safeCapturedPieces.map((piece, i) => (
           <span key={i} className="captured-piece">
             <ChessPieceIcon piece={piece} color={capturedColor} size={16} />
           </span>
