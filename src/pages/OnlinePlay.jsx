@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
 import OnlineChessGame from '../components/OnlineChessGame';
 import { useSettings } from '../contexts/SettingsContext';
 import { playMatchFoundSound } from '../utils/sound';
@@ -17,6 +17,7 @@ export default function OnlinePlay() {
   const [searchParams] = useSearchParams();
   const { gameId: routeGameId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { settings } = useSettings();
   const { user, isLoggedIn } = useUser();
   const isGuest = !isLoggedIn;
@@ -56,6 +57,21 @@ export default function OnlinePlay() {
       return null;
     }
   }, []);
+
+  const readRouteStateSession = useCallback((normalizedGameId) => {
+    if (!location?.state) return null;
+    const stateSession = location.state?.gameSession || location.state;
+    if (!stateSession?.gameId) return null;
+    const stateGameId = stateSession.gameId.toString().toUpperCase();
+    if (stateGameId !== normalizedGameId) return null;
+    return {
+      gameId: stateSession.gameId,
+      playerId: stateSession.playerId ?? null,
+      playerColor: stateSession.playerColor ?? null,
+      opponentInfo: stateSession.opponentInfo ?? null,
+      gameMode: stateSession.gameMode ?? null,
+    };
+  }, [location]);
 
   const persistGameSession = useCallback((session) => {
     const nextSession = {
@@ -114,17 +130,25 @@ export default function OnlinePlay() {
     if (routeGameId) {
       const normalizedGameId = routeGameId.toUpperCase();
       const storedSession = readGameSession();
+      const routeStateSession = readRouteStateSession(normalizedGameId);
+      const resolvedSession = storedSession?.gameId?.toUpperCase() === normalizedGameId
+        ? storedSession
+        : routeStateSession;
       setGameId(normalizedGameId);
 
-      if (storedSession?.gameId?.toUpperCase() === normalizedGameId) {
-        setPlayerId(storedSession.playerId || null);
-        setPlayerColor(storedSession.playerColor || null);
-        setOpponentInfo(storedSession.opponentInfo || null);
-        setGameMode(storedSession.gameMode || null);
+      if (resolvedSession) {
+        setPlayerId(resolvedSession.playerId || null);
+        setPlayerColor(resolvedSession.playerColor || null);
+        setOpponentInfo(resolvedSession.opponentInfo || null);
+        setGameMode(resolvedSession.gameMode || null);
+        persistGameSession(resolvedSession);
+        setError('');
       } else {
         setPlayerId(null);
         setPlayerColor(null);
         setOpponentInfo(null);
+        setGameMode(null);
+        setError('Unable to restore match data. Please return to Online and rejoin.');
       }
 
       setView('playing');
@@ -138,7 +162,7 @@ export default function OnlinePlay() {
       setGameMode('friendly');
       setView('lobby');
     }
-  }, [routeGameId, searchParams, GAME_CODE_LENGTH, readGameSession]);
+  }, [routeGameId, searchParams, GAME_CODE_LENGTH, readGameSession, readRouteStateSession, persistGameSession]);
 
   const clearMatchmakingTimers = useCallback(() => {
     if (searchTimeInterval.current) {
@@ -295,7 +319,18 @@ export default function OnlinePlay() {
       
       // Transition to playing
       setIsWaiting(false);
-      navigate(`/game/${matchedGameId}`, { replace: true });
+      navigate(`/game/${matchedGameId}`, {
+        replace: true,
+        state: {
+          gameSession: {
+            gameId: matchedGameId,
+            playerId: yourId,
+            playerColor: yourColor,
+            opponentInfo: opponent,
+            gameMode: 'ranked',
+          }
+        }
+      });
       
       console.log('[OnlinePlay] Match setup complete:', {
         gameId: matchedGameId,
@@ -842,7 +877,32 @@ export default function OnlinePlay() {
         </div>
       )}
 
-      {view === 'playing' && (
+      {view === 'playing' && (!playerId || !playerColor) && (
+        <div className="waiting-container">
+          <div className="waiting-content">
+            <div className="waiting-animation">
+              <div className="search-grid">
+                <span className="grid-cell cell-1"></span>
+                <span className="grid-cell cell-2"></span>
+                <span className="grid-cell cell-3"></span>
+                <span className="grid-cell cell-4"></span>
+              </div>
+              <div className="waiting-icon">
+                <img src="/custom-pieces/wK.svg" alt="" />
+              </div>
+            </div>
+
+            <h2>Restoring Match</h2>
+            <p className="waiting-desc">Syncing your session details...</p>
+            {error && <div className="error-message">{error}</div>}
+            <button className="btn btn-ghost" onClick={() => navigate('/online')}>
+              ← Back to Online
+            </button>
+          </div>
+        </div>
+      )}
+
+      {view === 'playing' && playerId && playerColor && (
         <OnlineChessGame
           gameId={gameId}
           playerId={playerId}
