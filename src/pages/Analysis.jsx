@@ -10,21 +10,17 @@ import './Analysis.css';
 
 function getPositionAtMove(history, moveIndex) {
   const game = new Chess();
-  const moves = normalizeMoveHistory(history);
-  const sanMoves = toSanHistory(moves);
-  
-  for (let i = 0; i < moveIndex && i < sanMoves.length; i++) {
+  const sanMoves = toSanHistory(history);
+
+  for (let i = 0; i < moveIndex && i < sanMoves.length; i += 1) {
     try {
       const ok = game.move(sanMoves[i]);
-      if (!ok) {
-        console.warn(`[Analysis] Invalid move at index ${i}: "${sanMoves[i]}"`);
-        break;
-      }
+      if (!ok) break;
     } catch (error) {
-      console.error(`[Analysis] Error applying move at index ${i}: "${sanMoves[i]}"`, error);
       break;
     }
   }
+
   return game;
 }
 
@@ -33,39 +29,15 @@ export default function Analysis() {
   const { gameId: gameIdParam } = useParams();
   const { state } = useLocation();
   const { settings } = useSettings();
-  
-  // Ensure moveHistory is always a valid array - handle null, undefined, or non-array values
+
   const rawMoveHistory = state?.moveHistory;
   const [moveHistory, setMoveHistory] = useState(normalizeMoveHistory(rawMoveHistory));
   const [initialMoveIndex, setInitialMoveIndex] = useState(null);
-  const gameId = gameIdParam ?? null;
   const [boardOrientation, setBoardOrientation] = useState('white');
   const [activeTab, setActiveTab] = useState('report');
   const [loadError, setLoadError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-
-  // Debug logging on mount and when data changes
-  useEffect(() => {
-    console.log('[Analysis] Page loaded with:', {
-      gameId,
-      hasState: !!state,
-      rawMoveHistoryType: typeof rawMoveHistory,
-      rawMoveHistoryIsArray: Array.isArray(rawMoveHistory),
-      rawMoveHistoryLength: rawMoveHistory?.length,
-      moveHistoryLength: moveHistory.length,
-      firstMove: moveHistory[0],
-      lastMove: moveHistory[moveHistory.length - 1],
-    });
-    
-    // Check for potential issues
-    if (gameId && moveHistory.length === 0) {
-      console.warn('[Analysis] Game ID present but no move history - game may not have been saved correctly');
-    }
-    
-    if (rawMoveHistory && !Array.isArray(rawMoveHistory)) {
-      console.error('[Analysis] moveHistory is not an array:', rawMoveHistory);
-    }
-  }, [gameId, state, rawMoveHistory, moveHistory]);
+  const gameId = gameIdParam ?? null;
 
   useEffect(() => {
     if (moveHistory.length > 0 || !gameId) return;
@@ -75,19 +47,20 @@ export default function Analysis() {
       setIsLoading(true);
       try {
         const match = await api.getGameByCode(gameId);
+        if (!isMounted) return;
+
         if (match) {
           const normalized = normalizeMoveHistory(match.move_history);
-          if (isMounted) {
-            setMoveHistory(normalized);
-            if (match.fen) {
-              const tempGame = new Chess();
-              const loaded = tempGame.load(match.fen);
-              if (loaded) {
-                setInitialMoveIndex(tempGame.history().length);
-              }
+          setMoveHistory(normalized);
+
+          if (match.fen) {
+            const tempGame = new Chess();
+            const loaded = tempGame.load(match.fen);
+            if (loaded) {
+              setInitialMoveIndex(tempGame.history().length);
             }
           }
-        } else if (isMounted) {
+        } else {
           setLoadError('Game not found in history');
         }
       } catch (error) {
@@ -109,7 +82,6 @@ export default function Analysis() {
   }, [gameId, moveHistory.length]);
 
   const sanMoves = useMemo(() => toSanHistory(moveHistory), [moveHistory]);
-
   const [moveIndex, setMoveIndex] = useState(0);
 
   useEffect(() => {
@@ -147,22 +119,16 @@ export default function Analysis() {
     };
   }, [position, moveIndex, sanMoves.length]);
 
+  const normalizedMoveHistory = useMemo(() => toDetailedMoveHistory(moveHistory), [moveHistory]);
+  const hasGame = moveHistory.length > 0 || gameId;
+
   const handleBack = useCallback(() => {
     navigate(-1);
   }, [navigate]);
 
   const handleSquareClick = useCallback(() => {}, []);
+  const handlePieceDrop = useCallback(() => false, []);
 
-  const handlePieceDrop = useCallback(() => false);
-
-  const normalizedMoveHistory = useMemo(
-    () => toDetailedMoveHistory(moveHistory),
-    [moveHistory]
-  );
-
-  const hasGame = moveHistory.length > 0 || gameId;
-
-  // Show error state if there was a problem loading the data
   if (loadError) {
     return (
       <div className="analysis-page">

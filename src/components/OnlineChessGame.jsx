@@ -1,45 +1,108 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ChessBoard from './ChessBoard';
 import { Chess } from 'chess.js';
-import { useSettings } from '../contexts/SettingsContext';
-import { playSoundEffect } from '../utils/sound';
-import { haptics } from '../utils/haptics';
+import ChessBoard from './ChessBoard';
 import MoveHistory from './MoveHistory';
-import { normalizeMoveHistory, toStoredMoveHistory, buildGameFromHistory } from '../engine/game/moveHistory';
 import PlayerBar from './PlayerBar';
 import AnimatedPiece from './AnimatedPiece';
 import ChessPieceIcon from './ChessPieceIcon';
-import socketService from '../services/socket';
 import ConfirmDialog from './ConfirmDialog';
 import PromotionDialog from './PromotionDialog';
+import { useSettings } from '../contexts/SettingsContext';
+import { playSoundEffect } from '../utils/sound';
+import { haptics } from '../utils/haptics';
+import { normalizeMoveHistory, toStoredMoveHistory, buildGameFromHistory } from '../engine/game/moveHistory';
+import socketService from '../services/socket';
+
+const REACTIONS = ['👍', '👏', '🤔', '😮', '🎉', '😅'];
+
+function safeNewGame(fen) {
+  try {
+    return fen ? new Chess(fen) : new Chess();
+  } catch (error) {
+    console.error('[OnlineChessGame] Failed to create game:', error);
+    return null;
+  }
+}
+
+function safeBuildGame(history, fallbackFen) {
+  try {
+    return buildGameFromHistory(history, fallbackFen);
+  } catch (error) {
+    console.error('[OnlineChessGame] Failed to rebuild game:', error);
+    return safeNewGame();
+  }
+}
 
 function findKingSquare(game, color) {
+  if (!game || typeof game.board !== 'function') return null;
   try {
-    if (!game || typeof game.board !== 'function') return null;
     const board = game.board();
-    if (!board || !Array.isArray(board)) return null;
-    for (let row = 0; row < 8; row++) {
-      const rowData = board[row];
-      if (!Array.isArray(rowData)) continue;
-      for (let col = 0; col < 8; col++) {
-        const piece = rowData[col];
+    for (let row = 0; row < 8; row += 1) {
+      for (let col = 0; col < 8; col += 1) {
+        const piece = board[row][col];
         if (piece && piece.type === 'k' && piece.color === color) {
           return String.fromCharCode(97 + col) + (8 - row);
         }
       }
     }
-  } catch (e) {
+  } catch (error) {
     return null;
   }
   return null;
 }
 
-const REACTIONS = ['👍', '👏', '🤔', '😮', '🎉', '😅'];
+function getCapturedPieces(game) {
+  const initial = { w: { p: 8, n: 2, b: 2, r: 2, q: 1 }, b: { p: 8, n: 2, b: 2, r: 2, q: 1 } };
+  const current = { w: { p: 0, n: 0, b: 0, r: 0, q: 0 }, b: { p: 0, n: 0, b: 0, r: 0, q: 0 } };
+
+  if (!game || typeof game.board !== 'function') {
+    return { w: [], b: [] };
+  }
+
+  try {
+    const board = game.board();
+    for (const row of board) {
+      for (const piece of row) {
+        if (piece && piece.type !== 'k') {
+          current[piece.color][piece.type] += 1;
+        }
+      }
+    }
+
+    const captured = { w: [], b: [] };
+    for (const color of ['w', 'b']) {
+      for (const piece of ['q', 'r', 'b', 'n', 'p']) {
+        const diff = initial[color][piece] - current[color][piece];
+        for (let i = 0; i < diff; i += 1) {
+          captured[color].push(piece);
+        }
+      }
+    }
+    return captured;
+  } catch (error) {
+    return { w: [], b: [] };
+  }
+}
+
+function getBoardStatus(game) {
+  if (!game || typeof game.isCheckmate !== 'function') return 'playing';
+  try {
+    if (game.isCheckmate()) return 'checkmate';
+    if (game.isStalemate()) return 'stalemate';
+    if (game.isDraw()) return 'draw';
+    if (game.inCheck()) return 'check';
+  } catch (error) {
+    return 'playing';
+  }
+  return 'playing';
+}
 
 export default function OnlineChessGame({ gameId, playerId, playerColor, opponentInfo, onLeave, currentUserInfo }) {
   const { settings } = useSettings();
-  const [game, setGame] = useState(new Chess());
+  const navigate = useNavigate();
+
+  const [game, setGame] = useState(() => safeNewGame());
   const [moveHistory, setMoveHistory] = useState([]);
   const [selectedSquare, setSelectedSquare] = useState(null);
   const [possibleMoves, setPossibleMoves] = useState([]);
@@ -49,7 +112,6 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
   const [gameStatus, setGameStatus] = useState('playing');
   const [isLoadingGame, setIsLoadingGame] = useState(true);
   const [whitePlayer, setWhitePlayer] = useState({ name: 'White', elo: null });
-  const navigate = useNavigate();
   const [blackPlayer, setBlackPlayer] = useState({ name: 'Black', elo: null });
   const [eloChange, setEloChange] = useState(null);
   const [drawOffered, setDrawOffered] = useState(false);
@@ -64,46 +126,17 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
   const [isConfirmMoveOpen, setIsConfirmMoveOpen] = useState(false);
   const [isResignConfirmOpen, setIsResignConfirmOpen] = useState(false);
   const [isPromotionOpen, setIsPromotionOpen] = useState(false);
-  const moveErrorTimeoutRef = useRef(null);
-  const victoryTimeoutRef = useRef(null);
-  const lastVictoryKeyRef = useRef(null);
 
   const gameRef = useRef(game);
   const settingsRef = useRef(settings);
   const animationIdRef = useRef(0);
+  const moveErrorTimeoutRef = useRef(null);
+  const victoryTimeoutRef = useRef(null);
+  const lastVictoryKeyRef = useRef(null);
+  const reactionTimeoutRef = useRef(null);
+
   const colorCode = playerColor === 'white' ? 'w' : 'b';
   const boardOrientation = playerColor;
-
-  const triggerMoveHaptics = useCallback((moveData, nextGame) => {
-    if (!moveData || !nextGame) return;
-
-    if (nextGame.isCheckmate()) {
-      const winnerColor = nextGame.turn() === 'w' ? 'b' : 'w';
-      if (winnerColor === colorCode) {
-        haptics.win();
-      } else {
-        haptics.lose();
-      }
-      return;
-    }
-
-    if (nextGame.isDraw()) {
-      haptics.draw();
-      return;
-    }
-
-    if (nextGame.inCheck()) {
-      haptics.check();
-      return;
-    }
-
-    if (moveData.captured) {
-      haptics.capture();
-      return;
-    }
-
-    haptics.move();
-  }, [colorCode]);
 
   useEffect(() => {
     gameRef.current = game;
@@ -120,13 +153,43 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     if (victoryTimeoutRef.current) {
       clearTimeout(victoryTimeoutRef.current);
     }
+    if (reactionTimeoutRef.current) {
+      clearTimeout(reactionTimeoutRef.current);
+    }
   }, []);
 
-  // Set up socket event listeners for game
+  const triggerMoveHaptics = useCallback((moveData, nextGame) => {
+    if (!moveData || !nextGame) return;
+    try {
+      if (nextGame.isCheckmate()) {
+        const winnerColor = nextGame.turn() === 'w' ? 'b' : 'w';
+        if (winnerColor === colorCode) {
+          haptics.win();
+        } else {
+          haptics.lose();
+        }
+        return;
+      }
+      if (nextGame.isDraw()) {
+        haptics.draw();
+        return;
+      }
+      if (nextGame.inCheck()) {
+        haptics.check();
+        return;
+      }
+      if (moveData.captured) {
+        haptics.capture();
+        return;
+      }
+      haptics.move();
+    } catch (error) {
+      // Ignore
+    }
+  }, [colorCode]);
+
   useEffect(() => {
     if (!gameId || !playerId) return;
-
-    console.log('[OnlineChessGame] Setting up socket listeners for game:', gameId);
 
     const attemptJoin = () => {
       if (socketService.isConnected) {
@@ -134,55 +197,42 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
       }
     };
 
-    // Join the game room (or retry after reconnect)
     attemptJoin();
 
     const handleGameState = (data) => {
-      console.log('[OnlineChessGame] Received game state:', data);
       const normalizedHistory = normalizeMoveHistory(data.moveHistory);
-      const chess = buildGameFromHistory(normalizedHistory, data.fen);
+      const chess = safeBuildGame(normalizedHistory, data.fen);
       setGame(chess);
       setMoveHistory(normalizedHistory);
-      setGameStatus(data.status);
+      setGameStatus(data.status || 'playing');
       setIsLoadingGame(false);
-      
-      // Set player info
+
       if (data.whitePlayer) {
-        setWhitePlayer({
-          name: data.whitePlayer,
-          elo: data.whiteElo || null
-        });
+        setWhitePlayer({ name: data.whitePlayer, elo: data.whiteElo || null });
       }
       if (data.blackPlayer) {
-        setBlackPlayer({
-          name: data.blackPlayer,
-          elo: data.blackElo || null
-        });
+        setBlackPlayer({ name: data.blackPlayer, elo: data.blackElo || null });
       }
     };
 
     const handleMoveMade = (data) => {
-      console.log('[OnlineChessGame] Move made:', data);
-      if (data.playerId !== playerId) {
-        const normalizedHistory = normalizeMoveHistory(data.moveHistory);
-        const chess = buildGameFromHistory(normalizedHistory, data.fen);
-        setGame(chess);
-        setMoveHistory(normalizedHistory);
-        const verboseHistory = chess.history({ verbose: true });
-        const lastMove = verboseHistory[verboseHistory.length - 1];
-        if (lastMove) {
-          triggerMoveHaptics(lastMove, chess);
-        }
+      if (data.playerId === playerId) return;
+      const normalizedHistory = normalizeMoveHistory(data.moveHistory);
+      const chess = safeBuildGame(normalizedHistory, data.fen);
+      setGame(chess);
+      setMoveHistory(normalizedHistory);
+
+      const verboseHistory = chess.history({ verbose: true });
+      const lastMove = verboseHistory[verboseHistory.length - 1];
+      if (lastMove) {
+        triggerMoveHaptics(lastMove, chess);
       }
     };
 
     const handleGameEnded = (data) => {
-      console.log('[OnlineChessGame] Game ended:', data);
       setGameStatus('ended');
       setEndReason(data.reason || null);
       setWinner(data.result || null);
-      
-      // Capture resignation details if available
       if (data.resignedPlayerName) {
         setResignedPlayerName(data.resignedPlayerName);
       }
@@ -206,52 +256,54 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
       }
     };
 
-    const handlePlayerJoined = (data) => {
-      console.log('[OnlineChessGame] Player joined:', data);
+    const handlePlayerJoined = () => {
       setOpponentStatus('connected');
     };
 
     const handlePlayerLeft = (data) => {
-      console.log('[OnlineChessGame] Player left:', data);
       if (data.playerId !== playerId) {
         setOpponentStatus('disconnected');
       }
     };
 
-    const handleOpponentDisconnected = (data) => {
-      console.log('[OnlineChessGame] Opponent disconnected:', data);
+    const handleOpponentDisconnected = () => {
       setOpponentStatus('disconnected');
     };
 
     const handleChatMessage = (data) => {
-      console.log('[OnlineChessGame] Chat message:', data);
-      // Could show chat messages
+      if (!data || data.playerId === playerId) return;
+      if (REACTIONS.includes(data.message)) {
+        setIncomingReaction(data.message);
+        if (reactionTimeoutRef.current) {
+          clearTimeout(reactionTimeoutRef.current);
+        }
+        reactionTimeoutRef.current = setTimeout(() => setIncomingReaction(null), 2000);
+      }
     };
 
     const handleEloUpdated = (data) => {
-      console.log('[OnlineChessGame] ELO updated:', data);
       setEloChange(data.change);
     };
 
     const handleDrawOffered = (data) => {
-      console.log('[OnlineChessGame] Draw offered:', data);
       if (data.offeredBy !== playerId) {
         setDrawOffered(true);
         setDrawOfferedBy(data.offeredBy);
       }
     };
 
-    const handleDrawDeclined = (data) => {
-      console.log('[OnlineChessGame] Draw declined:', data);
+    const handleDrawDeclined = () => {
       setDrawOffered(false);
       setDrawOfferedBy(null);
     };
 
     const handleMoveError = (data) => {
-      console.error('[OnlineChessGame] Move error:', data);
       setMoveError(data.message || 'An error occurred while making your move');
-      haptics.illegal();
-      // Clear error after 5 seconds
+      try {
+        haptics.illegal();
+      } catch (error) {
+        // Ignore
+      }
       if (moveErrorTimeoutRef.current) {
         clearTimeout(moveErrorTimeoutRef.current);
       }
@@ -264,7 +316,6 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
       }
     };
 
-    // Subscribe to socket events
     socketService.on('game_state', handleGameState);
     socketService.on('move_made', handleMoveMade);
     socketService.on('game_ended', handleGameEnded);
@@ -279,7 +330,6 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     socketService.on('connection_status', handleConnectionStatus);
 
     return () => {
-      // Unsubscribe from socket events
       socketService.off('game_state', handleGameState);
       socketService.off('move_made', handleMoveMade);
       socketService.off('game_ended', handleGameEnded);
@@ -292,57 +342,35 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
       socketService.off('draw_declined', handleDrawDeclined);
       socketService.off('move_error', handleMoveError);
       socketService.off('connection_status', handleConnectionStatus);
-      
-      // Leave the game room
       socketService.leaveGame(gameId, playerId);
     };
   }, [gameId, playerId, triggerMoveHaptics, colorCode]);
 
-  // Set player info when received
   useEffect(() => {
-    // Set opponent info
     if (opponentInfo) {
       const opponentName = opponentInfo.name || 'Opponent';
       const opponentElo = opponentInfo.elo || null;
       if (playerColor === 'white') {
-        setBlackPlayer({
-          name: opponentName,
-          elo: opponentElo
-        });
+        setBlackPlayer({ name: opponentName, elo: opponentElo });
       } else {
-        setWhitePlayer({
-          name: opponentName,
-          elo: opponentElo
-        });
+        setWhitePlayer({ name: opponentName, elo: opponentElo });
       }
     }
 
-    // Set current user info
     if (currentUserInfo) {
       const userName = currentUserInfo.name || currentUserInfo.username || 'You';
       const userElo = currentUserInfo.elo || null;
       if (playerColor === 'white') {
-        setWhitePlayer({
-          name: userName,
-          elo: userElo
-        });
+        setWhitePlayer({ name: userName, elo: userElo });
       } else {
-        setBlackPlayer({
-          name: userName,
-          elo: userElo
-        });
+        setBlackPlayer({ name: userName, elo: userElo });
       }
     }
   }, [opponentInfo, playerColor, currentUserInfo]);
 
   useEffect(() => {
-    if (endReason !== 'checkmate' || !winner || !playerColor) {
-      return;
-    }
-
-    if (winner !== playerColor) {
-      return;
-    }
+    if (endReason !== 'checkmate' || !winner || !playerColor) return;
+    if (winner !== playerColor) return;
 
     const victoryKey = `${gameId}-${winner}-${endReason}`;
     if (lastVictoryKeyRef.current === victoryKey) {
@@ -357,18 +385,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     victoryTimeoutRef.current = setTimeout(() => setShowVictory(false), 2200);
   }, [endReason, winner, playerColor, gameId]);
 
-  const getGameStatusText = useMemo(() => {
-    if (!game || typeof game.isCheckmate !== 'function') return 'playing';
-    try {
-      if (game.isCheckmate()) return 'checkmate';
-      if (game.isStalemate()) return 'stalemate';
-      if (game.isDraw()) return 'draw';
-      if (game.inCheck()) return 'check';
-      return 'playing';
-    } catch (e) {
-      return 'playing';
-    }
-  }, [game]);
+  const boardStatus = useMemo(() => getBoardStatus(game), [game]);
 
   const triggerAnimation = useCallback((moveData) => {
     const animations = [];
@@ -433,127 +450,85 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     setAnimatingPieces((prev) => prev.filter((anim) => anim.id !== animationId));
   }, []);
 
-  const capturedPieces = useMemo(() => {
-    const initial = { w: { p: 8, n: 2, b: 2, r: 2, q: 1 }, b: { p: 8, n: 2, b: 2, r: 2, q: 1 } };
-    const current = { w: { p: 0, n: 0, b: 0, r: 0, q: 0 }, b: { p: 0, n: 0, b: 0, r: 0, q: 0 } };
-
-    try {
-      if (!game || typeof game.board !== 'function') {
-        return { w: [], b: [] };
-      }
-      const board = game.board();
-      if (!board || !Array.isArray(board)) {
-        return { w: [], b: [] };
-      }
-      for (const row of board) {
-        if (!Array.isArray(row)) continue;
-        for (const piece of row) {
-          if (piece && piece.type !== 'k') {
-            current[piece.color][piece.type]++;
-          }
-        }
-      }
-
-      const captured = { w: [], b: [] };
-      for (const color of ['w', 'b']) {
-        for (const piece of ['q', 'r', 'b', 'n', 'p']) {
-          const diff = initial[color][piece] - current[color][piece];
-          for (let i = 0; i < diff; i++) {
-            captured[color].push(piece);
-          }
-        }
-      }
-      return captured;
-    } catch (e) {
-      return { w: [], b: [] };
-    }
-  }, [game]);
-
   const getPromotionInfo = useCallback((from, to) => {
-    try {
-      if (!game || typeof game.get !== 'function') {
-        return { requires: false, promotion: null };
-      }
-      const piece = game.get(from);
-      if (!piece || piece.type !== 'p') return { requires: false, promotion: null };
-
-      const promotionRank = (from[1] === '7' && to[1] === '8') || (from[1] === '2' && to[1] === '1');
-      if (!promotionRank) return { requires: false, promotion: null };
-
-      if (settingsRef.current.autoQueen) {
-        return { requires: true, promotion: 'q' };
-      }
-
-      return { requires: true, promotion: null };
-    } catch (e) {
+    if (!gameRef.current || typeof gameRef.current.get !== 'function') {
       return { requires: false, promotion: null };
     }
-  }, [game]);
+    const piece = gameRef.current.get(from);
+    if (!piece || piece.type !== 'p') return { requires: false, promotion: null };
+
+    const promotionRank = (from[1] === '7' && to[1] === '8') || (from[1] === '2' && to[1] === '1');
+    if (!promotionRank) return { requires: false, promotion: null };
+
+    if (settingsRef.current.autoQueen) {
+      return { requires: true, promotion: 'q' };
+    }
+
+    return { requires: true, promotion: null };
+  }, []);
 
   const applyMove = useCallback((from, to, promotion) => {
-    try {
-      if (!game || typeof game.fen !== 'function') return false;
-      const gameCopy = buildGameFromHistory(moveHistory, game.fen());
-      const move = gameCopy.move({
-        from,
-        to,
-        promotion: promotion || 'q',
-      });
+    if (!gameRef.current) return false;
 
-      if (!move) return false;
+    const history = moveHistory || [];
+    const nextGame = safeBuildGame(history, gameRef.current.fen());
+    const move = nextGame.move({
+      from,
+      to,
+      promotion: promotion || 'q',
+    });
+
+    if (!move) return false;
 
     triggerAnimation(move);
 
     setTimeout(() => {
-      setGame(gameCopy);
-      setMoveHistory(gameCopy.history({ verbose: true }));
+      setGame(nextGame);
+      setMoveHistory(nextGame.history({ verbose: true }));
       setSelectedSquare(null);
       setPossibleMoves([]);
-      
-      // Send move to server via socket
+
       socketService.makeMove(
         gameId,
-        gameCopy.fen(),
+        nextGame.fen(),
         {
           from: move.from,
           to: move.to,
           promotion: move.promotion,
           san: move.san,
         },
-        toStoredMoveHistory(gameCopy.history({ verbose: true })),
-        playerId
+        toStoredMoveHistory(nextGame.history({ verbose: true })),
+        playerId,
       );
 
-      if (move.captured) {
-        playSoundEffect(settingsRef.current, { type: 'capture' });
-      } else {
-        playSoundEffect(settingsRef.current, { type: 'move' });
+      try {
+        if (move.captured) {
+          playSoundEffect(settingsRef.current, { type: 'capture' });
+        } else {
+          playSoundEffect(settingsRef.current, { type: 'move' });
+        }
+        if (nextGame.inCheck()) {
+          playSoundEffect(settingsRef.current, { type: 'check' });
+        }
+      } catch (error) {
+        // Ignore sound errors
       }
 
-      if (gameCopy.inCheck()) {
-        playSoundEffect(settingsRef.current, { type: 'check' });
-      }
+      triggerMoveHaptics(move, nextGame);
 
-      triggerMoveHaptics(move, gameCopy);
-
-      if (gameCopy.isGameOver()) {
-        handleGameOver(gameCopy);
+      if (nextGame.isGameOver()) {
+        handleGameOver(nextGame);
       }
     }, 50);
 
     return true;
-    } catch (e) {
-      console.error('[OnlineChessGame] Error applying move:', e);
-      return false;
-    }
-  }, [game, moveHistory, triggerAnimation, triggerMoveHaptics, gameId, playerId]);
+  }, [gameId, moveHistory, playerId, triggerAnimation, triggerMoveHaptics]);
 
   const queueMove = useCallback((from, to) => {
-    try {
-      const promotionInfo = getPromotionInfo(from, to);
-      if (!game || typeof game.get !== 'function') return false;
-      const movingPiece = game.get(from);
-      const moveColor = movingPiece?.color || colorCode;
+    const promotionInfo = getPromotionInfo(from, to);
+    const movingPiece = gameRef.current?.get(from);
+    const moveColor = movingPiece?.color || colorCode;
+
     setSelectedSquare(null);
     setPossibleMoves([]);
 
@@ -572,11 +547,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     }
 
     return applyMove(from, to, promotion);
-    } catch (e) {
-      console.error('[OnlineChessGame] Error in queueMove:', e);
-      return false;
-    }
-  }, [applyMove, getPromotionInfo, game, colorCode]);
+  }, [applyMove, colorCode, getPromotionInfo]);
 
   const handlePromotionSelect = useCallback((choice) => {
     if (!pendingMove) return;
@@ -591,7 +562,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
 
     setPendingMove(null);
     applyMove(nextMove.from, nextMove.to, nextMove.promotion);
-  }, [pendingMove, applyMove]);
+  }, [applyMove, pendingMove]);
 
   const handleConfirmMove = useCallback(() => {
     if (!pendingMove) {
@@ -603,7 +574,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     setIsConfirmMoveOpen(false);
     setPendingMove(null);
     applyMove(from, to, promotion);
-  }, [pendingMove, applyMove]);
+  }, [applyMove, pendingMove]);
 
   const handleCancelPendingMove = useCallback(() => {
     setIsConfirmMoveOpen(false);
@@ -613,91 +584,72 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     setPossibleMoves([]);
   }, []);
 
-  const onSquareClick = useCallback(
-    (square) => {
-      try {
-        if (!game || typeof game.turn !== 'function') return;
-        if (game.turn() !== colorCode || game.isGameOver() || gameStatus !== 'playing') {
-          return;
-        }
+  const onSquareClick = useCallback((square) => {
+    if (!gameRef.current) return;
+    if (gameRef.current.turn() !== colorCode || gameRef.current.isGameOver() || gameStatus !== 'playing') {
+      return;
+    }
 
-        const piece = game.get(square);
+    const piece = gameRef.current.get(square);
 
-      if (selectedSquare) {
-        if (square === selectedSquare) {
-          setSelectedSquare(null);
-          setPossibleMoves([]);
-          return;
-        }
-
-        const legalMoves = game.moves({ square: selectedSquare, verbose: true }) || [];
-        const isLegalTarget = legalMoves.some((move) => move.to === square);
-        if (isLegalTarget) {
-          queueMove(selectedSquare, square);
-          return;
-        }
-      }
-
-      if (piece && piece.color === colorCode) {
-        setSelectedSquare(square);
-        const moves = game.moves({ square, verbose: true }) || [];
-        setPossibleMoves(moves.map((m) => m.to));
-      } else {
+    if (selectedSquare) {
+      if (square === selectedSquare) {
         setSelectedSquare(null);
         setPossibleMoves([]);
+        return;
       }
-      } catch (e) {
-        console.error('[OnlineChessGame] Error in onSquareClick:', e);
+
+      const legalMoves = gameRef.current.moves({ square: selectedSquare, verbose: true }) || [];
+      const isLegalTarget = legalMoves.some((move) => move.to === square);
+      if (isLegalTarget) {
+        queueMove(selectedSquare, square);
+        return;
       }
-    },
-    [game, colorCode, selectedSquare, gameStatus, queueMove]
-  );
+    }
 
-  const onPieceDrop = useCallback(
-    (sourceSquare, targetSquare) => {
-      try {
-        if (!game || typeof game.turn !== 'function') return false;
-        if (game.turn() !== colorCode || game.isGameOver() || gameStatus !== 'playing') {
-          return false;
-        }
+    if (piece && piece.color === colorCode) {
+      setSelectedSquare(square);
+      const moves = gameRef.current.moves({ square, verbose: true }) || [];
+      setPossibleMoves(moves.map((move) => move.to));
+    } else {
+      setSelectedSquare(null);
+      setPossibleMoves([]);
+    }
+  }, [colorCode, gameStatus, queueMove, selectedSquare]);
 
-        const legalMoves = game.moves({ square: sourceSquare, verbose: true }) || [];
-        const isLegalTarget = legalMoves.some((move) => move.to === targetSquare);
-        if (!isLegalTarget) return false;
+  const onPieceDrop = useCallback((sourceSquare, targetSquare) => {
+    if (!gameRef.current) return false;
+    if (gameRef.current.turn() !== colorCode || gameRef.current.isGameOver() || gameStatus !== 'playing') {
+      return false;
+    }
 
-        queueMove(sourceSquare, targetSquare);
-        return true;
-      } catch (e) {
-        console.error('[OnlineChessGame] Error in onPieceDrop:', e);
-        return false;
-      }
-    },
-    [game, colorCode, gameStatus, queueMove]
-  );
+    const legalMoves = gameRef.current.moves({ square: sourceSquare, verbose: true }) || [];
+    const isLegalTarget = legalMoves.some((move) => move.to === targetSquare);
+    if (!isLegalTarget) return false;
+
+    queueMove(sourceSquare, targetSquare);
+    return true;
+  }, [colorCode, gameStatus, queueMove]);
 
   const handleGameOver = (chessGame) => {
-    try {
-      if (!chessGame || typeof chessGame.isCheckmate !== 'function') return;
-      let result;
-      let reason;
+    if (!chessGame || typeof chessGame.isCheckmate !== 'function') return;
+    let result;
+    let reason;
 
-      if (chessGame.isCheckmate()) {
-        result = chessGame.turn() === 'w' ? 'black' : 'white';
-        reason = 'checkmate';
-      } else if (chessGame.isStalemate()) {
-        result = 'draw';
-        reason = 'stalemate';
-      } else if (chessGame.isDraw()) {
-        result = 'draw';
-        reason = 'draw';
-      } else {
-        return; // Not actually over
-      }
-
-      socketService.endGame(gameId, result, reason);
-    } catch (e) {
-      console.error('[OnlineChessGame] Error in handleGameOver:', e);
+    if (chessGame.isCheckmate()) {
+      result = chessGame.turn() === 'w' ? 'black' : 'white';
+      reason = 'checkmate';
+    } else if (chessGame.isStalemate()) {
+      result = 'draw';
+      reason = 'stalemate';
+    } else if (chessGame.isDraw()) {
+      result = 'draw';
+      reason = 'draw';
+    } else {
+      return;
     }
+
+    socketService.endGame(gameId, result, reason);
   };
 
   const handleResign = () => {
@@ -706,7 +658,11 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
 
   const confirmResign = () => {
     setIsResignConfirmOpen(false);
-    haptics.lose();
+    try {
+      haptics.lose();
+    } catch (error) {
+      // Ignore
+    }
     socketService.resignGame(gameId, playerId);
   };
 
@@ -720,56 +676,48 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     setDrawOfferedBy(null);
   };
 
-  const handleSendReaction = useCallback(
-    (reaction) => {
-      socketService.sendMessage(gameId, playerId, reaction);
-    },
-    [gameId, playerId]
-  );
+  const handleSendReaction = useCallback((reaction) => {
+    socketService.sendMessage(gameId, playerId, reaction);
+  }, [gameId, playerId]);
 
-  const customSquareStyles = {};
+  const customSquareStyles = useMemo(() => {
+    const styles = {};
 
-  try {
     if (settings.highlightMoves) {
       if (selectedSquare) {
-        customSquareStyles[selectedSquare] = {
-          backgroundColor: 'rgba(255, 255, 0, 0.4)',
-        };
+        styles[selectedSquare] = { backgroundColor: 'rgba(255, 255, 0, 0.4)' };
       }
 
-      if (game && typeof game.get === 'function') {
-        possibleMoves.forEach((square) => {
-          const piece = game.get(square);
-          customSquareStyles[square] = {
+      if (gameRef.current) {
+        for (const square of possibleMoves) {
+          const piece = gameRef.current.get(square);
+          styles[square] = {
             background: piece
               ? 'radial-gradient(circle, rgba(255, 0, 0, 0.4) 85%, transparent 85%)'
               : 'radial-gradient(circle, rgba(0, 0, 0, 0.2) 25%, transparent 25%)',
             borderRadius: '50%',
           };
-        });
+        }
       }
     }
 
-    if (game && typeof game.inCheck === 'function' && game.inCheck()) {
-      const kingSquare = findKingSquare(game, game.turn());
+    if (gameRef.current?.inCheck?.()) {
+      const kingSquare = findKingSquare(gameRef.current, gameRef.current.turn());
       if (kingSquare) {
-        customSquareStyles[kingSquare] = {
-          backgroundColor: 'rgba(255, 0, 0, 0.5)',
-        };
+        styles[kingSquare] = { backgroundColor: 'rgba(255, 0, 0, 0.5)' };
       }
     }
-  } catch (e) {
-    console.error('[OnlineChessGame] Error building square styles:', e);
-  }
 
+    return styles;
+  }, [possibleMoves, selectedSquare, settings.highlightMoves]);
+
+  const capturedPieces = useMemo(() => getCapturedPieces(game), [game]);
   const isMyTurn = game && typeof game.turn === 'function' ? game.turn() === colorCode : false;
-  const status = getGameStatusText;
-  const canReview = status === 'checkmate'
+  const canReview = boardStatus === 'checkmate'
     || endReason === 'resignation'
     || (gameStatus === 'ended' && winner && winner !== 'draw');
   const isBoardInteractive = gameStatus === 'playing';
 
-  // Top player is opponent, bottom is us
   const topPlayer = boardOrientation === 'white'
     ? { name: blackPlayer.name || 'Black', avatar: '👤', rating: blackPlayer.elo || '???', isBot: false, color: 'b' }
     : { name: whitePlayer.name || 'White', avatar: '👤', rating: whitePlayer.elo || '???', isBot: false, color: 'w' };
@@ -779,84 +727,100 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     : { name: blackPlayer.name || 'Black', avatar: '👤', rating: blackPlayer.elo || '???', isBot: false, color: 'b' };
 
   const getStatusMessage = () => {
-    try {
-      if (gameStatus === 'ended') {
-        if (endReason === 'resignation') {
-          const winnerColor = winner === 'white' ? 'w' : 'b';
-          const didIWin = winner === playerColor;
-          const displayWinnerName = winnerPlayerName || (winner === 'white' ? 'White' : 'Black');
-          const displayResignedName = resignedPlayerName || (winner === 'white' ? 'Black' : 'White');
-          
-          if (didIWin) {
-            return (
-              <>
-                <ChessPieceIcon piece="K" color={winnerColor} size={20} /> 🎉 You win! {displayResignedName} resigned
-              </>
-            );
-          } else {
-            return (
-              <>
-                <ChessPieceIcon piece="K" color={winnerColor} size={20} /> You resigned. {displayWinnerName} wins!
-              </>
-            );
-          }
+    if (gameStatus === 'ended') {
+      if (endReason === 'resignation') {
+        const winnerColor = winner === 'white' ? 'w' : 'b';
+        const didIWin = winner === playerColor;
+        const displayWinnerName = winnerPlayerName || (winner === 'white' ? 'White' : 'Black');
+        const displayResignedName = resignedPlayerName || (winner === 'white' ? 'Black' : 'White');
+
+        if (didIWin) {
+          return (
+            <>
+              <ChessPieceIcon piece="K" color={winnerColor} size={20} /> 🎉 You win! {displayResignedName} resigned
+            </>
+          );
         }
-        if (opponentStatus === 'disconnected') {
-          return '🚪 Opponent disconnected';
-        }
-        if (winner === 'draw') {
-          return '½-½ Draw!';
-        }
-      }
-      if (status === 'checkmate') {
-        if (!game || typeof game.turn !== 'function') return 'Checkmate!';
-        const checkmateWinner = game.turn() === 'w' ? 'Black' : 'White';
-        const winnerColor = game.turn() === 'w' ? 'b' : 'w';
-        const didIWin = (game.turn() === 'w' ? 'black' : 'white') === playerColor;
+
         return (
           <>
-            <ChessPieceIcon piece="K" color={winnerColor} size={20} /> {didIWin ? '🎉 You win by checkmate!' : `${checkmateWinner} wins by checkmate!`}
+            <ChessPieceIcon piece="K" color={winnerColor} size={20} /> You resigned. {displayWinnerName} wins!
           </>
         );
       }
-      if (status === 'stalemate') return '½-½ Stalemate!';
-      if (status === 'draw') return '½-½ Draw!';
-      if (status === 'check') {
-        if (!game || typeof game.turn !== 'function') return 'Check!';
-        return (
-          <>
-            <ChessPieceIcon piece="K" color={game.turn()} size={20} /> {game.turn() === 'w' ? 'White' : 'Black'} is in check!
-          </>
-        );
+      if (opponentStatus === 'disconnected') {
+        return '🚪 Opponent disconnected';
       }
-      if (isMyTurn) return '🎯 Your turn';
-      return "⏳ Opponent's turn";
-    } catch (e) {
-      console.error('[OnlineChessGame] Error in getStatusMessage:', e);
-      return 'Game in progress';
+      if (winner === 'draw') {
+        return '½-½ Draw!';
+      }
     }
+
+    if (boardStatus === 'checkmate') {
+      if (!game || typeof game.turn !== 'function') return 'Checkmate!';
+      const winnerColor = game.turn() === 'w' ? 'b' : 'w';
+      const didIWin = (game.turn() === 'w' ? 'black' : 'white') === playerColor;
+      return (
+        <>
+          <ChessPieceIcon piece="K" color={winnerColor} size={20} /> {didIWin ? '🎉 You win by checkmate!' : 'Checkmate!'}
+        </>
+      );
+    }
+
+    if (boardStatus === 'stalemate') return '½-½ Stalemate!';
+    if (boardStatus === 'draw') return '½-½ Draw!';
+    if (boardStatus === 'check') {
+      if (!game || typeof game.turn !== 'function') return 'Check!';
+      return (
+        <>
+          <ChessPieceIcon piece="K" color={game.turn()} size={20} /> {game.turn() === 'w' ? 'White' : 'Black'} is in check!
+        </>
+      );
+    }
+    if (isMyTurn) return '🎯 Your turn';
+    return "⏳ Opponent's turn";
   };
 
   if (isLoadingGame) {
     return (
       <div className="online-chess-game">
-        <div className="game-container" style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          minHeight: '400px'
-        }}>
+        <div
+          className="game-container"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '400px',
+          }}
+        >
           <div style={{ textAlign: 'center' }}>
-            <div style={{ 
-              width: '48px', 
-              height: '48px', 
-              border: '4px solid rgba(127, 166, 80, 0.3)',
-              borderTopColor: 'var(--color-accent-primary)',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-              margin: '0 auto 16px'
-            }} />
+            <div
+              style={{
+                width: '48px',
+                height: '48px',
+                border: '4px solid rgba(127, 166, 80, 0.3)',
+                borderTopColor: 'var(--color-accent-primary)',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite',
+                margin: '0 auto 16px',
+              }}
+            />
             <p style={{ color: 'var(--color-text-secondary)' }}>Loading game...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!game) {
+    return (
+      <div className="online-chess-game">
+        <div className="game-container" style={{ minHeight: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ textAlign: 'center' }}>
+            <h2>Unable to load game</h2>
+            <button type="button" className="btn btn-primary" onClick={onLeave}>
+              Back to Online
+            </button>
           </div>
         </div>
       </div>
@@ -869,7 +833,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
         <div className="board-section">
           <PlayerBar
             {...topPlayer}
-            isActive={game && typeof game.turn === 'function' ? game.turn() === (boardOrientation === 'white' ? 'b' : 'w') : false}
+            isActive={game.turn() === (boardOrientation === 'white' ? 'b' : 'w')}
             capturedPieces={capturedPieces[topPlayer.color === 'w' ? 'b' : 'w']}
           />
           <div className="board-wrapper">
@@ -906,7 +870,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
           </div>
           <PlayerBar
             {...bottomPlayer}
-            isActive={game && typeof game.turn === 'function' ? game.turn() === (boardOrientation === 'white' ? 'w' : 'b') : false}
+            isActive={game.turn() === (boardOrientation === 'white' ? 'w' : 'b')}
             capturedPieces={capturedPieces[bottomPlayer.color === 'w' ? 'b' : 'w']}
           />
         </div>
@@ -940,8 +904,8 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
                 </div>
                 {endReason === 'resignation' && (
                   <div className="result-reason">
-                    {winner === playerColor 
-                      ? `${resignedPlayerName || 'Opponent'} resigned` 
+                    {winner === playerColor
+                      ? `${resignedPlayerName || 'Opponent'} resigned`
                       : 'You resigned'}
                   </div>
                 )}
@@ -956,7 +920,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
                 )}
               </div>
             )}
-            <div className={`status-message ${status}`}>{getStatusMessage()}</div>
+            <div className={`status-message ${boardStatus}`}>{getStatusMessage()}</div>
             <div className="player-color">
               You play as: <ChessPieceIcon piece="K" color={playerColor === 'white' ? 'w' : 'b'} size={18} /> {playerColor === 'white' ? 'White' : 'Black'}
             </div>

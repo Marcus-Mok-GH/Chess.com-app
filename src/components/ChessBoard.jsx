@@ -1,5 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useMemo, useState } from 'react';
+import { Chess } from 'chess.js';
 import { ChessPiece } from './ChessPieces';
+
+const EMPTY_BOARD = Array.from({ length: 8 }, () => Array(8).fill(null));
 
 function getSquareColor(row, col) {
   return (row + col) % 2 === 0 ? 'light' : 'dark';
@@ -9,10 +12,37 @@ function getSquareName(row, col) {
   return String.fromCharCode(97 + col) + (8 - row);
 }
 
-function squareToCoords(square) {
-  const col = square.charCodeAt(0) - 97;
-  const row = 8 - parseInt(square[1]);
-  return { row, col };
+function resolveBoard(position) {
+  if (!position) {
+    return { board: EMPTY_BOARD, valid: false };
+  }
+
+  if (typeof position.board === 'function' && typeof position.fen === 'function') {
+    try {
+      const board = position.board();
+      if (Array.isArray(board) && board.length === 8) {
+        return { board, valid: true };
+      }
+    } catch (error) {
+      console.error('[ChessBoard] Failed to read board from position:', error);
+    }
+    return { board: EMPTY_BOARD, valid: false };
+  }
+
+  if (typeof position === 'string') {
+    try {
+      const game = new Chess(position);
+      const board = game.board();
+      if (Array.isArray(board) && board.length === 8) {
+        return { board, valid: true };
+      }
+    } catch (error) {
+      console.error('[ChessBoard] Failed to parse FEN:', error);
+    }
+  }
+
+  console.error('[ChessBoard] Invalid position prop:', position);
+  return { board: EMPTY_BOARD, valid: false };
 }
 
 export default function ChessBoard({
@@ -25,144 +55,75 @@ export default function ChessBoard({
   boardTheme = 'green',
   isInteractive = true,
 }) {
-  const [draggedFrom, setDraggedFrom] = useState(null);
-  const [animatingPiece, setAnimatingPiece] = useState(null);
-  const prevPositionRef = useRef(null);
+  const [dragOrigin, setDragOrigin] = useState(null);
 
-  // Validate position prop
-  if (!position || typeof position.board !== 'function' || typeof position.fen !== 'function') {
-    console.error('[ChessBoard] Invalid position prop:', position);
-    return (
-      <div className={`chess-board theme-${boardTheme}`} style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        background: '#262421',
-        color: '#ff6b6b',
-        fontSize: '14px',
-        padding: '20px',
-        textAlign: 'center'
-      }}>
-        ⚠️ Error: Invalid chess position data
-      </div>
-    );
-  }
-
-  let board;
-  let currentFen;
-  
-  try {
-    board = position.board();
-    currentFen = position.fen();
-  } catch (error) {
-    console.error('[ChessBoard] Error getting board/fen:', error);
-    return (
-      <div className={`chess-board theme-${boardTheme}`} style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        background: '#262421',
-        color: '#ff6b6b',
-        fontSize: '14px',
-        padding: '20px',
-        textAlign: 'center'
-      }}>
-        ⚠️ Error loading chess position
-      </div>
-    );
-  }
+  const { board, valid } = useMemo(() => resolveBoard(position), [position]);
   const isFlipped = boardOrientation === 'black';
 
-  useEffect(() => {
-    const history = position.history({ verbose: true });
-    const lastMove = history[history.length - 1];
-
-    if (lastMove && prevPositionRef.current !== currentFen) {
-      setAnimatingPiece({
-        square: lastMove.to,
-        startX: 0,
-        startY: 0,
-      });
-
-      const timer = setTimeout(() => setAnimatingPiece(null), 200);
-      prevPositionRef.current = currentFen;
-      return () => clearTimeout(timer);
+  const handleDragStart = (event, square, piece) => {
+    if (!isInteractive || !piece) return;
+    setDragOrigin(square);
+    try {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', square);
+    } catch (error) {
+      // Ignore drag data errors (Safari, etc.)
     }
-
-    prevPositionRef.current = currentFen;
-  }, [currentFen, position]);
-
-  useEffect(() => {
-    if (!isInteractive && draggedFrom) {
-      setDraggedFrom(null);
-    }
-  }, [isInteractive, draggedFrom]);
-
-  const handleDragStart = (e, row, col, piece) => {
-    if (!isInteractive) return;
-    if (!piece) return;
-    const square = getSquareName(row, col);
-    setDraggedFrom(square);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', square);
-  };
-
-  const handleDragOver = (e) => {
-    if (!isInteractive) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const handleDrop = (e, row, col) => {
-    if (!isInteractive) return;
-    e.preventDefault();
-    const targetSquare = getSquareName(row, col);
-    if (draggedFrom && draggedFrom !== targetSquare) {
-      onPieceDrop(draggedFrom, targetSquare);
-    }
-    setDraggedFrom(null);
   };
 
   const handleDragEnd = () => {
     if (!isInteractive) return;
-    setDraggedFrom(null);
+    setDragOrigin(null);
   };
 
-  const handleClick = (row, col) => {
+  const handleDragOver = (event) => {
     if (!isInteractive) return;
-    const square = getSquareName(row, col);
-    onSquareClick(square);
+    event.preventDefault();
+    try {
+      event.dataTransfer.dropEffect = 'move';
+    } catch (error) {
+      // Ignore
+    }
+  };
+
+  const handleDrop = (event, square) => {
+    if (!isInteractive) return;
+    event.preventDefault();
+    const fromSquare = dragOrigin || event.dataTransfer?.getData('text/plain');
+    if (fromSquare && fromSquare !== square) {
+      onPieceDrop?.(fromSquare, square);
+    }
+    setDragOrigin(null);
+  };
+
+  const handleClick = (square) => {
+    if (!isInteractive) return;
+    onSquareClick?.(square);
   };
 
   const renderSquare = (row, col) => {
     const actualRow = isFlipped ? 7 - row : row;
     const actualCol = isFlipped ? 7 - col : col;
-    const piece = board[actualRow][actualCol];
     const squareName = getSquareName(actualRow, actualCol);
     const squareColor = getSquareColor(actualRow, actualCol);
+    const piece = board?.[actualRow]?.[actualCol] || null;
     const customStyle = customSquareStyles[squareName] || {};
-    
-    const isAnimating = animatingPiece && animatingPiece.square === squareName;
-    const animationStyle = isAnimating ? {
-      transition: 'transform 0.2s ease',
-    } : {};
 
     return (
       <div
         key={`${row}-${col}`}
         className={`chess-square ${squareColor}`}
         style={customStyle}
-        onClick={() => handleClick(actualRow, actualCol)}
+        onClick={() => handleClick(squareName)}
         onDragOver={handleDragOver}
-        onDrop={(e) => handleDrop(e, actualRow, actualCol)}
+        onDrop={(event) => handleDrop(event, squareName)}
       >
         {piece && (
           <div
-            className={`chess-piece-wrapper ${isAnimating ? 'animating' : ''}`}
+            className="chess-piece-wrapper"
             draggable={isInteractive}
-            onDragStart={(e) => handleDragStart(e, actualRow, actualCol, piece)}
+            onDragStart={(event) => handleDragStart(event, squareName, piece)}
             onDragEnd={handleDragEnd}
-            style={animationStyle}
           >
             <ChessPiece piece={piece} />
           </div>
@@ -180,9 +141,9 @@ export default function ChessBoard({
   };
 
   const rows = [];
-  for (let row = 0; row < 8; row++) {
+  for (let row = 0; row < 8; row += 1) {
     const squares = [];
-    for (let col = 0; col < 8; col++) {
+    for (let col = 0; col < 8; col += 1) {
       squares.push(renderSquare(row, col));
     }
     rows.push(
@@ -193,8 +154,29 @@ export default function ChessBoard({
   }
 
   return (
-    <div className={`chess-board theme-${boardTheme}`}>
+    <div
+      className={`chess-board theme-${boardTheme}`}
+      style={valid ? undefined : { position: 'relative' }}
+    >
       {rows}
+      {!valid && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(0, 0, 0, 0.6)',
+            color: '#fff',
+            fontSize: '0.9rem',
+            textAlign: 'center',
+            padding: '12px',
+          }}
+        >
+          Unable to render this position.
+        </div>
+      )}
     </div>
   );
 }
