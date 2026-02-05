@@ -1,3 +1,5 @@
+import { createUUID } from '../../utils/uuid';
+
 const memoryStore = {
   playerId: null,
   playerName: null,
@@ -7,7 +9,7 @@ const CHANNEL_NAME = 'chess_matchmaking_sync';
 
 // Session-specific player ID for matchmaking (so multiple tabs can have different IDs)
 // Generate it immediately with a timestamp to ensure uniqueness
-let sessionPlayerId = `${crypto.randomUUID()}_${Date.now()}`;
+let sessionPlayerId = `${createUUID()}_${Date.now()}`;
 console.log('[Matchmaking] Module loaded with session ID:', sessionPlayerId);
 
 const DEFAULT_ELO = 1200;
@@ -96,7 +98,7 @@ export function getPlayerId() {
 
 export function getPersistentPlayerId() {
   if (!memoryStore.playerId) {
-    memoryStore.playerId = crypto.randomUUID();
+    memoryStore.playerId = createUUID();
   }
   return memoryStore.playerId;
 }

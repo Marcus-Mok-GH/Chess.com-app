@@ -1,3 +1,5 @@
+import { createUUID } from '../../utils/uuid';
+
 const CHANNEL_NAME = 'chess_online_sync';
 
 const memoryStore = {
@@ -47,7 +49,7 @@ export function generateGameId() {
 
 export function createGame(creatorColor = 'white', gameMode = 'friendly', creatorElo = null, customGameId = null, creatorName = null) {
   const gameId = customGameId || generateGameId();
-  const playerId = crypto.randomUUID();
+  const playerId = createUUID();
   const now = Date.now();
 
   const game = {
@@ -92,7 +94,7 @@ export function joinGame(gameId, opponentElo = null, opponentName = null) {
     return { error: 'Game already started or ended' };
   }
 
-  const playerId = crypto.randomUUID();
+  const playerId = createUUID();
   const color = game.creatorColor === 'white' ? 'black' : 'white';
 
   game.opponentId = playerId;
@@ -198,7 +200,7 @@ export function sendChatMessage(gameId, playerId, message) {
   }
 
   const chatMessage = {
-    id: crypto.randomUUID(),
+    id: createUUID(),
     playerId,
     message,
     timestamp: Date.now(),

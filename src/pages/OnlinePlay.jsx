@@ -7,6 +7,7 @@ import LoginModal from '../components/LoginModal';
 import { useUser } from '../contexts/UserContext';
 import socketService from '../services/socket';
 import api from '../services/api';
+import { createUUID } from '../utils/uuid';
 import './OnlinePlay.css';
 
 const GAME_SESSION_STORAGE_KEY = 'online_game_session';
@@ -41,11 +42,7 @@ export default function OnlinePlay() {
   const [playersInQueue, setPlayersInQueue] = useState('--');
   
   const searchTimeInterval = useRef(null);
-  const matchmakingSessionId = useRef(
-    typeof crypto !== 'undefined'
-      ? crypto.randomUUID()
-      : `${Date.now()}_${Math.random().toString(36).slice(2)}`
-  );
+  const matchmakingSessionId = useRef(createUUID());
   const gameSessionRef = useRef({ gameId: null, playerId: null, playerColor: null, opponentInfo: null, gameMode: null });
 
   const readGameSession = useCallback(() => {
