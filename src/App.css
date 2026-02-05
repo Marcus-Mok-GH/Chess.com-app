@@ -360,7 +360,7 @@ body {
   min-width: 280px;
   border-radius: 8px;
   overflow: hidden;
-  background: #769656;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1202,7 +1202,7 @@ body {
 }
 
 .lobby-container {
-  background: #262421;
+  background: transparent;
   border-radius: 8px;
   padding: 28px;
   width: 100%;
