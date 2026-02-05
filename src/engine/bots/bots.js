@@ -11,7 +11,7 @@ export const BOTS = [
     blunderChance: 0.08,
     missedTacticsChance: 0.12,
     personality: 'Teaching assistant',
-    description: 'Adaptive and postive player, will tone down when in a better position, and will be more aggressive when in a losing position.',
+    description: 'Adaptive coach: calmer when ahead, sharper when behind.',
     isCoach: true,
     playStyle: {
       aggression: 0.5,
