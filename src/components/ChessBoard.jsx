@@ -23,6 +23,7 @@ export default function ChessBoard({
   customSquareStyles = {},
   showCoordinates = true,
   boardTheme = 'green',
+  isInteractive = true,
 }) {
   const [draggedFrom, setDraggedFrom] = useState(null);
   const [animatingPiece, setAnimatingPiece] = useState(null);
@@ -91,7 +92,14 @@ export default function ChessBoard({
     prevPositionRef.current = currentFen;
   }, [currentFen, position]);
 
+  useEffect(() => {
+    if (!isInteractive && draggedFrom) {
+      setDraggedFrom(null);
+    }
+  }, [isInteractive, draggedFrom]);
+
   const handleDragStart = (e, row, col, piece) => {
+    if (!isInteractive) return;
     if (!piece) return;
     const square = getSquareName(row, col);
     setDraggedFrom(square);
@@ -100,11 +108,13 @@ export default function ChessBoard({
   };
 
   const handleDragOver = (e) => {
+    if (!isInteractive) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
   };
 
   const handleDrop = (e, row, col) => {
+    if (!isInteractive) return;
     e.preventDefault();
     const targetSquare = getSquareName(row, col);
     if (draggedFrom && draggedFrom !== targetSquare) {
@@ -114,10 +124,12 @@ export default function ChessBoard({
   };
 
   const handleDragEnd = () => {
+    if (!isInteractive) return;
     setDraggedFrom(null);
   };
 
   const handleClick = (row, col) => {
+    if (!isInteractive) return;
     const square = getSquareName(row, col);
     onSquareClick(square);
   };
@@ -147,7 +159,7 @@ export default function ChessBoard({
         {piece && (
           <div
             className={`chess-piece-wrapper ${isAnimating ? 'animating' : ''}`}
-            draggable
+            draggable={isInteractive}
             onDragStart={(e) => handleDragStart(e, actualRow, actualCol, piece)}
             onDragEnd={handleDragEnd}
             style={animationStyle}
@@ -186,4 +198,3 @@ export default function ChessBoard({
     </div>
   );
 }
-

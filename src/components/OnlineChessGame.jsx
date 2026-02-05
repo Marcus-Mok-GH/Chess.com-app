@@ -602,6 +602,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
   const canReview = status === 'checkmate'
     || endReason === 'resignation'
     || (gameStatus === 'ended' && winner && winner !== 'draw');
+  const isBoardInteractive = gameStatus === 'playing';
 
   // Top player is opponent, bottom is us
   const topPlayer = boardOrientation === 'white'
@@ -670,6 +671,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
               customSquareStyles={customSquareStyles}
               showCoordinates={settings.showCoordinates}
               boardTheme={settings.boardTheme}
+              isInteractive={isBoardInteractive}
             />
             {animatingPieces.map((anim) => (
               <AnimatedPiece

@@ -815,6 +815,8 @@ function ChessGame(
     const winnerColor = resigningColor === 'w' ? 'black' : 'white';
     setHasResigned(true);
     setResignedColor(resigningColor);
+    setSelectedSquare(null);
+    setPossibleMoves([]);
     if (!isPassAndPlay) {
       setBotMessage(getRandomQuote(selectedBot, 'win'));
     } else {
@@ -979,6 +981,7 @@ function ChessGame(
     : (boardOrientation === 'white' ? humanPlayer : botPlayer);
 
   const canReview = getGameStatus === 'checkmate' || getGameStatus === 'resigned';
+  const isBoardInteractive = !hasResigned && !game.isGameOver();
 
   return (
     <div className="chess-game">
@@ -999,6 +1002,7 @@ function ChessGame(
                 customSquareStyles={customSquareStyles}
                 showCoordinates={settings.showCoordinates}
                 boardTheme={settings.boardTheme}
+                isInteractive={isBoardInteractive}
               />
               {animatingPieces.map((anim) => (
                 <AnimatedPiece
