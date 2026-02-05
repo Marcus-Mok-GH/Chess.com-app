@@ -176,6 +176,19 @@ npx @claude-flow/cli@latest daemon start
 npx @claude-flow/cli@latest doctor --fix
 ```
 
+## Claude Delegator (Codex) Setup
+
+```bash
+npm install -g @openai/codex
+codex login
+```
+
+- `/plugin marketplace add jarrodwatts/claude-delegator`
+- `/plugin install claude-delegator`
+- `/claude-delegator:setup`
+
+Project MCP config already includes a `codex` server entry that runs `codex -m gpt-5.2-codex mcp-server`.
+
 ## Claude Code vs CLI Tools
 
 - Claude Code's Task tool handles ALL execution: agents, file ops, code generation, git
