@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Chess } from 'chess.js';
 import StockfishWorker from '../engine/workers/stockfishWorker.js?worker';
 import { toSanHistory } from '../engine/game/moveHistory';
@@ -9,6 +9,7 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
   const [isReviewing, setIsReviewing] = useState(false);
   const [reviewError, setReviewError] = useState(null);
   const workerRef = useRef(null);
+  const hasStartedRef = useRef(false);
   const isInline = variant === 'inline';
 
   const sanMoves = useMemo(() => toSanHistory(moveHistory), [moveHistory]);
@@ -143,14 +144,18 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
     }
   };
 
+  useEffect(() => {
+    if (hasStartedRef.current) return;
+    if (!sanMoves.length) return;
+    hasStartedRef.current = true;
+    runReview();
+  }, [sanMoves.length]);
+
   const content = (
     <div className="analysis-content">
       {!review && !isReviewing && (
         <div className="analysis-start">
-          <p>Generate a Chess.com style Game Review</p>
-          <button onClick={runReview} className="btn btn-primary">
-            🧠 Start Review
-          </button>
+          <p>Generating a Chess.com style Game Review...</p>
           {reviewError && <p className="analysis-error">{reviewError}</p>}
         </div>
       )}
