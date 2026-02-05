@@ -45,6 +45,8 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
   const [drawOfferedBy, setDrawOfferedBy] = useState(null);
   const [endReason, setEndReason] = useState(null);
   const [winner, setWinner] = useState(null);
+  const [resignedPlayerName, setResignedPlayerName] = useState(null);
+  const [winnerPlayerName, setWinnerPlayerName] = useState(null);
   const [moveError, setMoveError] = useState('');
   const [showVictory, setShowVictory] = useState(false);
   const moveErrorTimeoutRef = useRef(null);
@@ -163,6 +165,14 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
       setGameStatus('ended');
       setEndReason(data.reason || null);
       setWinner(data.result || null);
+      
+      // Capture resignation details if available
+      if (data.resignedPlayerName) {
+        setResignedPlayerName(data.resignedPlayerName);
+      }
+      if (data.winnerPlayerName) {
+        setWinnerPlayerName(data.winnerPlayerName);
+      }
 
       const reason = data?.reason || '';
       const skipHaptic = ['checkmate', 'stalemate', 'draw'].includes(reason);
@@ -674,13 +684,24 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
   const getStatusMessage = () => {
     if (gameStatus === 'ended') {
       if (endReason === 'resignation') {
-        const winnerName = winner === 'white' ? 'White' : 'Black';
         const winnerColor = winner === 'white' ? 'w' : 'b';
-        return (
-          <>
-            <ChessPieceIcon piece="K" color={winnerColor} size={20} /> {winnerName} wins by resignation!
-          </>
-        );
+        const didIWin = winner === playerColor;
+        const displayWinnerName = winnerPlayerName || (winner === 'white' ? 'White' : 'Black');
+        const displayResignedName = resignedPlayerName || (winner === 'white' ? 'Black' : 'White');
+        
+        if (didIWin) {
+          return (
+            <>
+              <ChessPieceIcon piece="K" color={winnerColor} size={20} /> 🎉 You win! {displayResignedName} resigned
+            </>
+          );
+        } else {
+          return (
+            <>
+              <ChessPieceIcon piece="K" color={winnerColor} size={20} /> You resigned. {displayWinnerName} wins!
+            </>
+          );
+        }
       }
       if (opponentStatus === 'disconnected') {
         return '🚪 Opponent disconnected';
@@ -692,9 +713,10 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     if (status === 'checkmate') {
       const checkmateWinner = game.turn() === 'w' ? 'Black' : 'White';
       const winnerColor = game.turn() === 'w' ? 'b' : 'w';
+      const didIWin = (game.turn() === 'w' ? 'black' : 'white') === playerColor;
       return (
         <>
-          <ChessPieceIcon piece="K" color={winnerColor} size={20} /> {checkmateWinner} wins by checkmate!
+          <ChessPieceIcon piece="K" color={winnerColor} size={20} /> {didIWin ? '🎉 You win by checkmate!' : `${checkmateWinner} wins by checkmate!`}
         </>
       );
     }
@@ -770,8 +792,9 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
               <span>Opponent {opponentStatus}</span>
             </div>
             {eloChange !== null && (
-              <div className="elo-change">
-                Rating: {eloChange > 0 ? '+' : ''}{eloChange}
+              <div className={`elo-change ${eloChange > 0 ? 'elo-gain' : eloChange < 0 ? 'elo-loss' : 'elo-neutral'}`}>
+                <span className="elo-label">Rating Change:</span>
+                <span className="elo-value">{eloChange > 0 ? '+' : ''}{eloChange}</span>
               </div>
             )}
           </div>
@@ -779,6 +802,29 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
           <div className="game-status-panel">
             {moveError && (
               <div className="error-message">{moveError}</div>
+            )}
+            {gameStatus === 'ended' && (
+              <div className={`game-result-panel ${winner === playerColor ? 'victory' : winner === 'draw' ? '' : 'defeat'}`}>
+                <div className={`result-title ${winner === playerColor ? 'victory' : winner === 'draw' ? 'draw' : 'defeat'}`}>
+                  {winner === playerColor ? '🎉 Victory!' : winner === 'draw' ? '🤝 Draw' : '😔 Defeat'}
+                </div>
+                {endReason === 'resignation' && (
+                  <div className="result-reason">
+                    {winner === playerColor 
+                      ? `${resignedPlayerName || 'Opponent'} resigned` 
+                      : 'You resigned'}
+                  </div>
+                )}
+                {endReason === 'checkmate' && (
+                  <div className="result-reason">Checkmate</div>
+                )}
+                {eloChange !== null && (
+                  <div className={`elo-change ${eloChange > 0 ? 'elo-gain' : eloChange < 0 ? 'elo-loss' : 'elo-neutral'}`}>
+                    <span className="elo-label">Rating:</span>
+                    <span className="elo-value">{eloChange > 0 ? '+' : ''}{eloChange}</span>
+                  </div>
+                )}
+              </div>
             )}
             <div className={`status-message ${status}`}>{getStatusMessage()}</div>
             <div className="player-color">

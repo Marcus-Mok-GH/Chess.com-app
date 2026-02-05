@@ -592,8 +592,12 @@ export function setupGameHandlers(io, socket) {
       return;
     }
 
-    // Determine winner based on who resigned
-    const winner = game.white_player_id === playerId ? 'black' : 'white';
+    // Determine winner and loser based on who resigned
+    const isWhiteResigning = game.white_player_id === playerId;
+    const winner = isWhiteResigning ? 'black' : 'white';
+    const resignedBy = isWhiteResigning ? 'white' : 'black';
+    const resignedPlayerName = isWhiteResigning ? game.white_player_name : game.black_player_name;
+    const winnerPlayerName = isWhiteResigning ? game.black_player_name : game.white_player_name;
 
     await service.endGame(gameId, winner);
 
@@ -601,6 +605,17 @@ export function setupGameHandlers(io, socket) {
       gameId,
       result: winner,
       reason: 'resignation',
+      resignedBy,
+      resignedPlayerName,
+      winnerPlayerName,
+      whitePlayer: {
+        name: game.white_player_name,
+        elo: game.white_elo
+      },
+      blackPlayer: {
+        name: game.black_player_name,
+        elo: game.black_elo
+      },
       timestamp: Date.now()
     });
   });

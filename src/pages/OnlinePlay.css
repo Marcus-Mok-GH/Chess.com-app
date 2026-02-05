@@ -874,6 +874,119 @@
   color: var(--color-text-secondary);
 }
 
+/* ========================================
+   ELO CHANGE DISPLAY
+   ======================================== */
+
+.elo-change {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  animation: eloFadeIn 0.4s ease-out;
+}
+
+.elo-change .elo-label {
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.elo-change .elo-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.elo-change.elo-gain {
+  background: linear-gradient(135deg, rgba(127, 166, 80, 0.2), rgba(127, 166, 80, 0.1));
+  border: 1px solid rgba(127, 166, 80, 0.4);
+}
+
+.elo-change.elo-gain .elo-value {
+  color: #7fa650;
+}
+
+.elo-change.elo-loss {
+  background: linear-gradient(135deg, rgba(255, 107, 107, 0.2), rgba(255, 107, 107, 0.1));
+  border: 1px solid rgba(255, 107, 107, 0.4);
+}
+
+.elo-change.elo-loss .elo-value {
+  color: #ff6b6b;
+}
+
+.elo-change.elo-neutral {
+  background: linear-gradient(135deg, rgba(158, 155, 152, 0.2), rgba(158, 155, 152, 0.1));
+  border: 1px solid rgba(158, 155, 152, 0.4);
+}
+
+.elo-change.elo-neutral .elo-value {
+  color: #9e9b98;
+}
+
+@keyframes eloFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Game Result Panel for ended games */
+.game-result-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, rgba(38, 36, 33, 0.9), rgba(30, 28, 25, 0.95));
+  border-radius: 12px;
+  border: 1px solid rgba(127, 166, 80, 0.3);
+}
+
+.game-result-panel.victory {
+  border-color: rgba(127, 166, 80, 0.5);
+  background: linear-gradient(135deg, rgba(127, 166, 80, 0.15), rgba(38, 36, 33, 0.9));
+}
+
+.game-result-panel.defeat {
+  border-color: rgba(255, 107, 107, 0.4);
+  background: linear-gradient(135deg, rgba(255, 107, 107, 0.1), rgba(38, 36, 33, 0.9));
+}
+
+.result-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.result-title.victory {
+  color: #7fa650;
+}
+
+.result-title.defeat {
+  color: #ff6b6b;
+}
+
+.result-title.draw {
+  color: #9e9b98;
+}
+
+.result-reason {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
 /* Responsive */
 @media (max-width: 600px) {
   .lobby-content {
