@@ -329,7 +329,7 @@ body {
 }
 
 .online-chess-game {
-  background: transparent;
+  background: var(--color-bg-primary);
 }
 
 .game-container {
