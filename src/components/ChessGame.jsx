@@ -793,7 +793,7 @@ function ChessGame(
           return;
         }
 
-        const legalMoves = game.moves({ square: selectedSquare, verbose: true });
+        const legalMoves = game.moves({ square: selectedSquare, verbose: true }) || [];
         const isLegalTarget = legalMoves.some((move) => move.to === square);
         if (isLegalTarget) {
           queueMove(selectedSquare, square);
@@ -804,7 +804,7 @@ function ChessGame(
       const selectableColor = isPassAndPlay ? activeColor : playerColor;
       if (piece && piece.color === selectableColor) {
         setSelectedSquare(square);
-        const moves = game.moves({ square, verbose: true });
+        const moves = game.moves({ square, verbose: true }) || [];
         setPossibleMoves(moves.map((m) => m.to));
       } else {
         setSelectedSquare(null);
@@ -820,7 +820,7 @@ function ChessGame(
         return false;
       }
 
-      const legalMoves = game.moves({ square: sourceSquare, verbose: true });
+      const legalMoves = game.moves({ square: sourceSquare, verbose: true }) || [];
       const isLegalTarget = legalMoves.some((move) => move.to === targetSquare);
       if (!isLegalTarget) return false;
 

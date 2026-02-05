@@ -583,7 +583,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
           return;
         }
 
-        const legalMoves = game.moves({ square: selectedSquare, verbose: true });
+        const legalMoves = game.moves({ square: selectedSquare, verbose: true }) || [];
         const isLegalTarget = legalMoves.some((move) => move.to === square);
         if (isLegalTarget) {
           queueMove(selectedSquare, square);
@@ -593,7 +593,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
 
       if (piece && piece.color === colorCode) {
         setSelectedSquare(square);
-        const moves = game.moves({ square, verbose: true });
+        const moves = game.moves({ square, verbose: true }) || [];
         setPossibleMoves(moves.map((m) => m.to));
       } else {
         setSelectedSquare(null);
@@ -609,7 +609,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
         return false;
       }
 
-      const legalMoves = game.moves({ square: sourceSquare, verbose: true });
+      const legalMoves = game.moves({ square: sourceSquare, verbose: true }) || [];
       const isLegalTarget = legalMoves.some((move) => move.to === targetSquare);
       if (!isLegalTarget) return false;
 
