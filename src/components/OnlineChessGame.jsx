@@ -15,14 +15,22 @@ import ConfirmDialog from './ConfirmDialog';
 import PromotionDialog from './PromotionDialog';
 
 function findKingSquare(game, color) {
-  const board = game.board();
-  for (let row = 0; row < 8; row++) {
-    for (let col = 0; col < 8; col++) {
-      const piece = board[row][col];
-      if (piece && piece.type === 'k' && piece.color === color) {
-        return String.fromCharCode(97 + col) + (8 - row);
+  try {
+    if (!game || typeof game.board !== 'function') return null;
+    const board = game.board();
+    if (!board || !Array.isArray(board)) return null;
+    for (let row = 0; row < 8; row++) {
+      const rowData = board[row];
+      if (!Array.isArray(rowData)) continue;
+      for (let col = 0; col < 8; col++) {
+        const piece = rowData[col];
+        if (piece && piece.type === 'k' && piece.color === color) {
+          return String.fromCharCode(97 + col) + (8 - row);
+        }
       }
     }
+  } catch (e) {
+    return null;
   }
   return null;
 }
@@ -348,11 +356,16 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
   }, [endReason, winner, playerColor, gameId]);
 
   const getGameStatusText = useMemo(() => {
-    if (game.isCheckmate()) return 'checkmate';
-    if (game.isStalemate()) return 'stalemate';
-    if (game.isDraw()) return 'draw';
-    if (game.inCheck()) return 'check';
-    return 'playing';
+    if (!game || typeof game.isCheckmate !== 'function') return 'playing';
+    try {
+      if (game.isCheckmate()) return 'checkmate';
+      if (game.isStalemate()) return 'stalemate';
+      if (game.isDraw()) return 'draw';
+      if (game.inCheck()) return 'check';
+      return 'playing';
+    } catch (e) {
+      return 'playing';
+    }
   }, [game]);
 
   const triggerAnimation = useCallback((moveData) => {
@@ -422,50 +435,70 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     const initial = { w: { p: 8, n: 2, b: 2, r: 2, q: 1 }, b: { p: 8, n: 2, b: 2, r: 2, q: 1 } };
     const current = { w: { p: 0, n: 0, b: 0, r: 0, q: 0 }, b: { p: 0, n: 0, b: 0, r: 0, q: 0 } };
 
-    const board = game.board();
-    for (const row of board) {
-      for (const piece of row) {
-        if (piece && piece.type !== 'k') {
-          current[piece.color][piece.type]++;
+    try {
+      if (!game || typeof game.board !== 'function') {
+        return { w: [], b: [] };
+      }
+      const board = game.board();
+      if (!board || !Array.isArray(board)) {
+        return { w: [], b: [] };
+      }
+      for (const row of board) {
+        if (!Array.isArray(row)) continue;
+        for (const piece of row) {
+          if (piece && piece.type !== 'k') {
+            current[piece.color][piece.type]++;
+          }
         }
       }
-    }
 
-    const captured = { w: [], b: [] };
-    for (const color of ['w', 'b']) {
-      for (const piece of ['q', 'r', 'b', 'n', 'p']) {
-        const diff = initial[color][piece] - current[color][piece];
-        for (let i = 0; i < diff; i++) {
-          captured[color].push(piece);
+      const captured = { w: [], b: [] };
+      for (const color of ['w', 'b']) {
+        for (const piece of ['q', 'r', 'b', 'n', 'p']) {
+          const diff = initial[color][piece] - current[color][piece];
+          for (let i = 0; i < diff; i++) {
+            captured[color].push(piece);
+          }
         }
       }
+      return captured;
+    } catch (e) {
+      return { w: [], b: [] };
     }
-    return captured;
   }, [game]);
 
   const getPromotionInfo = useCallback((from, to) => {
-    const piece = game.get(from);
-    if (!piece || piece.type !== 'p') return { requires: false, promotion: null };
+    try {
+      if (!game || typeof game.get !== 'function') {
+        return { requires: false, promotion: null };
+      }
+      const piece = game.get(from);
+      if (!piece || piece.type !== 'p') return { requires: false, promotion: null };
 
-    const promotionRank = (from[1] === '7' && to[1] === '8') || (from[1] === '2' && to[1] === '1');
-    if (!promotionRank) return { requires: false, promotion: null };
+      const promotionRank = (from[1] === '7' && to[1] === '8') || (from[1] === '2' && to[1] === '1');
+      if (!promotionRank) return { requires: false, promotion: null };
 
-    if (settingsRef.current.autoQueen) {
-      return { requires: true, promotion: 'q' };
+      if (settingsRef.current.autoQueen) {
+        return { requires: true, promotion: 'q' };
+      }
+
+      return { requires: true, promotion: null };
+    } catch (e) {
+      return { requires: false, promotion: null };
     }
-
-    return { requires: true, promotion: null };
   }, [game]);
 
   const applyMove = useCallback((from, to, promotion) => {
-    const gameCopy = buildGameFromHistory(moveHistory, game.fen());
-    const move = gameCopy.move({
-      from,
-      to,
-      promotion: promotion || 'q',
-    });
+    try {
+      if (!game || typeof game.fen !== 'function') return false;
+      const gameCopy = buildGameFromHistory(moveHistory, game.fen());
+      const move = gameCopy.move({
+        from,
+        to,
+        promotion: promotion || 'q',
+      });
 
-    if (!move) return false;
+      if (!move) return false;
 
     triggerAnimation(move);
 
@@ -507,12 +540,18 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     }, 50);
 
     return true;
+    } catch (e) {
+      console.error('[OnlineChessGame] Error applying move:', e);
+      return false;
+    }
   }, [game, moveHistory, triggerAnimation, triggerMoveHaptics, gameId, playerId]);
 
   const queueMove = useCallback((from, to) => {
-    const promotionInfo = getPromotionInfo(from, to);
-    const movingPiece = game.get(from);
-    const moveColor = movingPiece?.color || colorCode;
+    try {
+      const promotionInfo = getPromotionInfo(from, to);
+      if (!game || typeof game.get !== 'function') return false;
+      const movingPiece = game.get(from);
+      const moveColor = movingPiece?.color || colorCode;
     setSelectedSquare(null);
     setPossibleMoves([]);
 
@@ -531,6 +570,10 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     }
 
     return applyMove(from, to, promotion);
+    } catch (e) {
+      console.error('[OnlineChessGame] Error in queueMove:', e);
+      return false;
+    }
   }, [applyMove, getPromotionInfo, game, colorCode]);
 
   const handlePromotionSelect = useCallback((choice) => {
@@ -570,11 +613,13 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
 
   const onSquareClick = useCallback(
     (square) => {
-      if (game.turn() !== colorCode || game.isGameOver() || gameStatus !== 'playing') {
-        return;
-      }
+      try {
+        if (!game || typeof game.turn !== 'function') return;
+        if (game.turn() !== colorCode || game.isGameOver() || gameStatus !== 'playing') {
+          return;
+        }
 
-      const piece = game.get(square);
+        const piece = game.get(square);
 
       if (selectedSquare) {
         if (square === selectedSquare) {
@@ -599,44 +644,58 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
         setSelectedSquare(null);
         setPossibleMoves([]);
       }
+      } catch (e) {
+        console.error('[OnlineChessGame] Error in onSquareClick:', e);
+      }
     },
     [game, colorCode, selectedSquare, gameStatus, queueMove]
   );
 
   const onPieceDrop = useCallback(
     (sourceSquare, targetSquare) => {
-      if (game.turn() !== colorCode || game.isGameOver() || gameStatus !== 'playing') {
+      try {
+        if (!game || typeof game.turn !== 'function') return false;
+        if (game.turn() !== colorCode || game.isGameOver() || gameStatus !== 'playing') {
+          return false;
+        }
+
+        const legalMoves = game.moves({ square: sourceSquare, verbose: true }) || [];
+        const isLegalTarget = legalMoves.some((move) => move.to === targetSquare);
+        if (!isLegalTarget) return false;
+
+        queueMove(sourceSquare, targetSquare);
+        return true;
+      } catch (e) {
+        console.error('[OnlineChessGame] Error in onPieceDrop:', e);
         return false;
       }
-
-      const legalMoves = game.moves({ square: sourceSquare, verbose: true }) || [];
-      const isLegalTarget = legalMoves.some((move) => move.to === targetSquare);
-      if (!isLegalTarget) return false;
-
-      queueMove(sourceSquare, targetSquare);
-      return true;
     },
     [game, colorCode, gameStatus, queueMove]
   );
 
   const handleGameOver = (chessGame) => {
-    let result;
-    let reason;
+    try {
+      if (!chessGame || typeof chessGame.isCheckmate !== 'function') return;
+      let result;
+      let reason;
 
-    if (chessGame.isCheckmate()) {
-      result = chessGame.turn() === 'w' ? 'black' : 'white';
-      reason = 'checkmate';
-    } else if (chessGame.isStalemate()) {
-      result = 'draw';
-      reason = 'stalemate';
-    } else if (chessGame.isDraw()) {
-      result = 'draw';
-      reason = 'draw';
-    } else {
-      return; // Not actually over
+      if (chessGame.isCheckmate()) {
+        result = chessGame.turn() === 'w' ? 'black' : 'white';
+        reason = 'checkmate';
+      } else if (chessGame.isStalemate()) {
+        result = 'draw';
+        reason = 'stalemate';
+      } else if (chessGame.isDraw()) {
+        result = 'draw';
+        reason = 'draw';
+      } else {
+        return; // Not actually over
+      }
+
+      socketService.endGame(gameId, result, reason);
+    } catch (e) {
+      console.error('[OnlineChessGame] Error in handleGameOver:', e);
     }
-
-    socketService.endGame(gameId, result, reason);
   };
 
   const handleResign = () => {
@@ -668,34 +727,40 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
 
   const customSquareStyles = {};
 
-  if (settings.highlightMoves) {
-    if (selectedSquare) {
-      customSquareStyles[selectedSquare] = {
-        backgroundColor: 'rgba(255, 255, 0, 0.4)',
-      };
+  try {
+    if (settings.highlightMoves) {
+      if (selectedSquare) {
+        customSquareStyles[selectedSquare] = {
+          backgroundColor: 'rgba(255, 255, 0, 0.4)',
+        };
+      }
+
+      if (game && typeof game.get === 'function') {
+        possibleMoves.forEach((square) => {
+          const piece = game.get(square);
+          customSquareStyles[square] = {
+            background: piece
+              ? 'radial-gradient(circle, rgba(255, 0, 0, 0.4) 85%, transparent 85%)'
+              : 'radial-gradient(circle, rgba(0, 0, 0, 0.2) 25%, transparent 25%)',
+            borderRadius: '50%',
+          };
+        });
+      }
     }
 
-    possibleMoves.forEach((square) => {
-      const piece = game.get(square);
-      customSquareStyles[square] = {
-        background: piece
-          ? 'radial-gradient(circle, rgba(255, 0, 0, 0.4) 85%, transparent 85%)'
-          : 'radial-gradient(circle, rgba(0, 0, 0, 0.2) 25%, transparent 25%)',
-        borderRadius: '50%',
-      };
-    });
-  }
-
-  if (game.inCheck()) {
-    const kingSquare = findKingSquare(game, game.turn());
-    if (kingSquare) {
-      customSquareStyles[kingSquare] = {
-        backgroundColor: 'rgba(255, 0, 0, 0.5)',
-      };
+    if (game && typeof game.inCheck === 'function' && game.inCheck()) {
+      const kingSquare = findKingSquare(game, game.turn());
+      if (kingSquare) {
+        customSquareStyles[kingSquare] = {
+          backgroundColor: 'rgba(255, 0, 0, 0.5)',
+        };
+      }
     }
+  } catch (e) {
+    console.error('[OnlineChessGame] Error building square styles:', e);
   }
 
-  const isMyTurn = game.turn() === colorCode;
+  const isMyTurn = game && typeof game.turn === 'function' ? game.turn() === colorCode : false;
   const status = getGameStatusText;
   const canReview = status === 'checkmate'
     || endReason === 'resignation'
@@ -712,55 +777,62 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     : { name: blackPlayer.name || 'Black', avatar: '👤', rating: blackPlayer.elo || '???', isBot: false, color: 'b' };
 
   const getStatusMessage = () => {
-    if (gameStatus === 'ended') {
-      if (endReason === 'resignation') {
-        const winnerColor = winner === 'white' ? 'w' : 'b';
-        const didIWin = winner === playerColor;
-        const displayWinnerName = winnerPlayerName || (winner === 'white' ? 'White' : 'Black');
-        const displayResignedName = resignedPlayerName || (winner === 'white' ? 'Black' : 'White');
-        
-        if (didIWin) {
-          return (
-            <>
-              <ChessPieceIcon piece="K" color={winnerColor} size={20} /> 🎉 You win! {displayResignedName} resigned
-            </>
-          );
-        } else {
-          return (
-            <>
-              <ChessPieceIcon piece="K" color={winnerColor} size={20} /> You resigned. {displayWinnerName} wins!
-            </>
-          );
+    try {
+      if (gameStatus === 'ended') {
+        if (endReason === 'resignation') {
+          const winnerColor = winner === 'white' ? 'w' : 'b';
+          const didIWin = winner === playerColor;
+          const displayWinnerName = winnerPlayerName || (winner === 'white' ? 'White' : 'Black');
+          const displayResignedName = resignedPlayerName || (winner === 'white' ? 'Black' : 'White');
+          
+          if (didIWin) {
+            return (
+              <>
+                <ChessPieceIcon piece="K" color={winnerColor} size={20} /> 🎉 You win! {displayResignedName} resigned
+              </>
+            );
+          } else {
+            return (
+              <>
+                <ChessPieceIcon piece="K" color={winnerColor} size={20} /> You resigned. {displayWinnerName} wins!
+              </>
+            );
+          }
+        }
+        if (opponentStatus === 'disconnected') {
+          return '🚪 Opponent disconnected';
+        }
+        if (winner === 'draw') {
+          return '½-½ Draw!';
         }
       }
-      if (opponentStatus === 'disconnected') {
-        return '🚪 Opponent disconnected';
+      if (status === 'checkmate') {
+        if (!game || typeof game.turn !== 'function') return 'Checkmate!';
+        const checkmateWinner = game.turn() === 'w' ? 'Black' : 'White';
+        const winnerColor = game.turn() === 'w' ? 'b' : 'w';
+        const didIWin = (game.turn() === 'w' ? 'black' : 'white') === playerColor;
+        return (
+          <>
+            <ChessPieceIcon piece="K" color={winnerColor} size={20} /> {didIWin ? '🎉 You win by checkmate!' : `${checkmateWinner} wins by checkmate!`}
+          </>
+        );
       }
-      if (winner === 'draw') {
-        return '½-½ Draw!';
+      if (status === 'stalemate') return '½-½ Stalemate!';
+      if (status === 'draw') return '½-½ Draw!';
+      if (status === 'check') {
+        if (!game || typeof game.turn !== 'function') return 'Check!';
+        return (
+          <>
+            <ChessPieceIcon piece="K" color={game.turn()} size={20} /> {game.turn() === 'w' ? 'White' : 'Black'} is in check!
+          </>
+        );
       }
+      if (isMyTurn) return '🎯 Your turn';
+      return "⏳ Opponent's turn";
+    } catch (e) {
+      console.error('[OnlineChessGame] Error in getStatusMessage:', e);
+      return 'Game in progress';
     }
-    if (status === 'checkmate') {
-      const checkmateWinner = game.turn() === 'w' ? 'Black' : 'White';
-      const winnerColor = game.turn() === 'w' ? 'b' : 'w';
-      const didIWin = (game.turn() === 'w' ? 'black' : 'white') === playerColor;
-      return (
-        <>
-          <ChessPieceIcon piece="K" color={winnerColor} size={20} /> {didIWin ? '🎉 You win by checkmate!' : `${checkmateWinner} wins by checkmate!`}
-        </>
-      );
-    }
-    if (status === 'stalemate') return '½-½ Stalemate!';
-    if (status === 'draw') return '½-½ Draw!';
-    if (status === 'check') {
-      return (
-        <>
-          <ChessPieceIcon piece="K" color={game.turn()} size={20} /> {game.turn() === 'w' ? 'White' : 'Black'} is in check!
-        </>
-      );
-    }
-    if (isMyTurn) return '🎯 Your turn';
-    return "⏳ Opponent's turn";
   };
 
   return (
@@ -769,7 +841,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
         <div className="board-section">
           <PlayerBar
             {...topPlayer}
-            isActive={game.turn() === (boardOrientation === 'white' ? 'b' : 'w')}
+            isActive={game && typeof game.turn === 'function' ? game.turn() === (boardOrientation === 'white' ? 'b' : 'w') : false}
             capturedPieces={capturedPieces[topPlayer.color === 'w' ? 'b' : 'w']}
           />
           <div className="board-wrapper">
@@ -806,7 +878,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
           </div>
           <PlayerBar
             {...bottomPlayer}
-            isActive={game.turn() === (boardOrientation === 'white' ? 'w' : 'b')}
+            isActive={game && typeof game.turn === 'function' ? game.turn() === (boardOrientation === 'white' ? 'w' : 'b') : false}
             capturedPieces={capturedPieces[bottomPlayer.color === 'w' ? 'b' : 'w']}
           />
         </div>
