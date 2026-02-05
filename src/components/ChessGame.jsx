@@ -13,6 +13,8 @@ import DebugPanel from './DebugPanel';
 import AnimatedPiece from './AnimatedPiece';
 import CoachingTip from './CoachingTip';
 import AIDialogueDrawer from './AIDialogueDrawer';
+import ConfirmDialog from './ConfirmDialog';
+import PromotionDialog from './PromotionDialog';
 import { BOTS, getRandomQuote, createCustomBot } from '../engine/bots/bots';
 import { getCoachingFeedback, explainCoachMove } from '../engine/coach/coachAI';
 import { generateGameId } from '../engine/game/gameId';
@@ -112,6 +114,10 @@ function ChessGame(
   const [hasResigned, setHasResigned] = useState(false);
   const [resignedColor, setResignedColor] = useState(null);
   const [showVictory, setShowVictory] = useState(false);
+  const [pendingMove, setPendingMove] = useState(null);
+  const [isConfirmMoveOpen, setIsConfirmMoveOpen] = useState(false);
+  const [isResignConfirmOpen, setIsResignConfirmOpen] = useState(false);
+  const [isPromotionOpen, setIsPromotionOpen] = useState(false);
   const gameRef = useRef(game);
   const selectedBotRef = useRef(selectedBot);
   const customEloRef = useRef(customElo);
@@ -617,23 +623,128 @@ function ChessGame(
     }
   }, [isPassAndPlay]);
 
-  const resolvePromotion = useCallback((from, to, pieceType) => {
-    const isPawn = pieceType === 'p';
-    if (!isPawn) return null;
+  const getPromotionInfo = useCallback((from, to) => {
+    const piece = game.get(from);
+    if (!piece || piece.type !== 'p') return { requires: false, promotion: null };
 
     const promotionRank = (from[1] === '7' && to[1] === '8') || (from[1] === '2' && to[1] === '1');
-    if (!promotionRank) return null;
+    if (!promotionRank) return { requires: false, promotion: null };
 
     if (settingsRef.current.autoQueen) {
-      return 'q';
+      return { requires: true, promotion: 'q' };
     }
 
-    const selection = window.prompt('Promote to (q, r, b, n):', 'q');
-    const choice = (selection || 'q').toLowerCase();
-    if (['q', 'r', 'b', 'n'].includes(choice)) {
-      return choice;
+    return { requires: true, promotion: null };
+  }, [game]);
+
+  const applyMove = useCallback((from, to, promotion) => {
+    const fenBefore = game.fen();
+    const gameCopy = buildGameFromHistory(moveHistory, fenBefore);
+    const move = gameCopy.move({
+      from,
+      to,
+      promotion: promotion || 'q',
+    });
+
+    if (!move) return false;
+
+    triggerAnimation(move, gameCopy);
+
+    setTimeout(() => {
+      setGame(gameCopy);
+      const nextHistory = [...moveHistory, move];
+      setMoveHistory(nextHistory);
+      setSelectedSquare(null);
+      setPossibleMoves([]);
+
+      if (!isPassAndPlay) {
+        const bot = selectedBotRef.current;
+        if (gameCopy.isCheckmate()) {
+          setBotMessage(getRandomQuote(bot, 'lose'));
+        } else if (gameCopy.isDraw()) {
+          setBotMessage(getRandomQuote(bot, 'draw'));
+        } else if (move.captured) {
+          setBotMessage(getRandomQuote(bot, 'capture'));
+        } else if (Math.random() < 0.2) {
+          setBotMessage(getRandomQuote(bot, 'goodMove'));
+        }
+      }
+
+      if (move.captured) {
+        playSoundEffect(settingsRef.current, { type: 'capture' });
+      } else {
+        playSoundEffect(settingsRef.current, { type: 'move' });
+      }
+
+      if (gameCopy.inCheck()) {
+        playSoundEffect(settingsRef.current, { type: 'check' });
+      }
+
+      triggerMoveHaptics(move, gameCopy);
+
+      requestCoachingFeedback(fenBefore, move.san, nextHistory);
+    }, 50);
+
+    return true;
+  }, [game, moveHistory, triggerAnimation, requestCoachingFeedback, isPassAndPlay, triggerMoveHaptics]);
+
+  const queueMove = useCallback((from, to) => {
+    const promotionInfo = getPromotionInfo(from, to);
+    const movingPiece = game.get(from);
+    const moveColor = movingPiece?.color || playerColor;
+    setSelectedSquare(null);
+    setPossibleMoves([]);
+
+    if (promotionInfo.requires && !promotionInfo.promotion) {
+      setPendingMove({ from, to, color: moveColor });
+      setIsPromotionOpen(true);
+      return true;
     }
-    return 'q';
+
+    const promotion = promotionInfo.promotion;
+
+    if (settingsRef.current.confirmMoves) {
+      setPendingMove({ from, to, promotion, color: moveColor });
+      setIsConfirmMoveOpen(true);
+      return true;
+    }
+
+    return applyMove(from, to, promotion);
+  }, [applyMove, getPromotionInfo, game, playerColor]);
+
+  const handlePromotionSelect = useCallback((choice) => {
+    if (!pendingMove) return;
+    const nextMove = { ...pendingMove, promotion: choice };
+    setIsPromotionOpen(false);
+
+    if (settingsRef.current.confirmMoves) {
+      setPendingMove(nextMove);
+      setIsConfirmMoveOpen(true);
+      return;
+    }
+
+    setPendingMove(null);
+    applyMove(nextMove.from, nextMove.to, nextMove.promotion);
+  }, [pendingMove, applyMove]);
+
+  const handleConfirmMove = useCallback(() => {
+    if (!pendingMove) {
+      setIsConfirmMoveOpen(false);
+      return;
+    }
+
+    const { from, to, promotion } = pendingMove;
+    setIsConfirmMoveOpen(false);
+    setPendingMove(null);
+    applyMove(from, to, promotion);
+  }, [pendingMove, applyMove]);
+
+  const handleCancelPendingMove = useCallback(() => {
+    setIsConfirmMoveOpen(false);
+    setIsPromotionOpen(false);
+    setPendingMove(null);
+    setSelectedSquare(null);
+    setPossibleMoves([]);
   }, []);
 
   const triggerMoveHaptics = useCallback((moveData, nextGame) => {
@@ -682,66 +793,10 @@ function ChessGame(
           return;
         }
 
-        const promotion = resolvePromotion(selectedSquare, square, game.get(selectedSquare)?.type);
-        if (settingsRef.current.confirmMoves) {
-          const proceed = window.confirm('Make this move?');
-          if (!proceed) {
-            setSelectedSquare(null);
-            setPossibleMoves([]);
-            return;
-          }
-        }
-
-        const moveAttempt = {
-          from: selectedSquare,
-          to: square,
-          promotion: promotion || 'q',
-        };
-
-        const gameCopy = buildGameFromHistory(moveHistory, game.fen());
-        const move = gameCopy.move(moveAttempt);
-
-        if (move) {
-          const fenBefore = game.fen();
-          // Trigger animation before updating state
-          triggerAnimation(move, gameCopy);
-
-          // Delay state update to allow animation to start
-          setTimeout(() => {
-            setGame(gameCopy);
-            const nextHistory = [...moveHistory, move];
-            setMoveHistory(nextHistory);
-            setSelectedSquare(null);
-            setPossibleMoves([]);
-
-            if (!isPassAndPlay) {
-              const bot = selectedBotRef.current;
-              if (gameCopy.isCheckmate()) {
-                setBotMessage(getRandomQuote(bot, 'lose'));
-              } else if (gameCopy.isDraw()) {
-                setBotMessage(getRandomQuote(bot, 'draw'));
-              } else if (move.captured) {
-                setBotMessage(getRandomQuote(bot, 'capture'));
-              } else if (Math.random() < 0.2) {
-                setBotMessage(getRandomQuote(bot, 'goodMove'));
-              }
-            }
-
-            if (move.captured) {
-              playSoundEffect(settingsRef.current, { type: 'capture' });
-            } else {
-              playSoundEffect(settingsRef.current, { type: 'move' });
-            }
-
-            if (gameCopy.inCheck()) {
-              playSoundEffect(settingsRef.current, { type: 'check' });
-            }
-
-            triggerMoveHaptics(move, gameCopy);
-
-            // Request coaching feedback for Coach bot
-            requestCoachingFeedback(fenBefore, move.san, nextHistory);
-          }, 50);
+        const legalMoves = game.moves({ square: selectedSquare, verbose: true });
+        const isLegalTarget = legalMoves.some((move) => move.to === square);
+        if (isLegalTarget) {
+          queueMove(selectedSquare, square);
           return;
         }
       }
@@ -756,7 +811,7 @@ function ChessGame(
         setPossibleMoves([]);
       }
     },
-    [game, playerColor, selectedSquare, isThinking, triggerAnimation, requestCoachingFeedback, resolvePromotion, moveHistory, isPassAndPlay, triggerMoveHaptics]
+    [game, playerColor, selectedSquare, isThinking, queueMove, isPassAndPlay]
   );
 
   const onPieceDrop = useCallback(
@@ -765,69 +820,14 @@ function ChessGame(
         return false;
       }
 
-      const fenBefore = game.fen();
-      const gameCopy = buildGameFromHistory(moveHistory, fenBefore);
-      const promotion = resolvePromotion(sourceSquare, targetSquare, game.get(sourceSquare)?.type);
-      if (settingsRef.current.confirmMoves) {
-        const proceed = window.confirm('Make this move?');
-        if (!proceed) {
-          setSelectedSquare(null);
-          setPossibleMoves([]);
-          return false;
-        }
-      }
+      const legalMoves = game.moves({ square: sourceSquare, verbose: true });
+      const isLegalTarget = legalMoves.some((move) => move.to === targetSquare);
+      if (!isLegalTarget) return false;
 
-      const move = gameCopy.move({
-        from: sourceSquare,
-        to: targetSquare,
-        promotion: promotion || 'q',
-      });
-
-      if (move === null) return false;
-
-      // Trigger animation before updating state
-      triggerAnimation(move, gameCopy);
-
-      // Delay state update to allow animation to start
-      setTimeout(() => {
-        setGame(gameCopy);
-        const nextHistory = [...moveHistory, move];
-        setMoveHistory(nextHistory);
-        setSelectedSquare(null);
-        setPossibleMoves([]);
-
-        if (!isPassAndPlay) {
-          const bot = selectedBotRef.current;
-          if (gameCopy.isCheckmate()) {
-            setBotMessage(getRandomQuote(bot, 'lose'));
-          } else if (gameCopy.isDraw()) {
-            setBotMessage(getRandomQuote(bot, 'draw'));
-          } else if (move.captured) {
-            setBotMessage(getRandomQuote(bot, 'capture'));
-          } else if (Math.random() < 0.2) {
-            setBotMessage(getRandomQuote(bot, 'goodMove'));
-          }
-        }
-
-        if (move.captured) {
-          playSoundEffect(settingsRef.current, { type: 'capture' });
-        } else {
-          playSoundEffect(settingsRef.current, { type: 'move' });
-        }
-
-        if (gameCopy.inCheck()) {
-          playSoundEffect(settingsRef.current, { type: 'check' });
-        }
-
-        triggerMoveHaptics(move, gameCopy);
-
-        // Request coaching feedback for Coach bot
-        requestCoachingFeedback(fenBefore, move.san, nextHistory);
-      }, 50);
-
+      queueMove(sourceSquare, targetSquare);
       return true;
     },
-    [game, playerColor, isThinking, triggerAnimation, requestCoachingFeedback, resolvePromotion, moveHistory, isPassAndPlay, triggerMoveHaptics]
+    [game, playerColor, isThinking, queueMove, isPassAndPlay]
   );
 
   const handleNewGame = useCallback(() => {
@@ -853,6 +853,11 @@ function ChessGame(
 
   const handleResign = useCallback(() => {
     if (hasResigned || game.isGameOver()) return;
+    setIsResignConfirmOpen(true);
+  }, [hasResigned, game]);
+
+  const confirmResign = useCallback(() => {
+    if (hasResigned || game.isGameOver()) return;
     const resigningColor = isPassAndPlay ? game.turn() : playerColor;
     const winnerColor = resigningColor === 'w' ? 'black' : 'white';
     haptics.lose();
@@ -867,6 +872,7 @@ function ChessGame(
     }
     // Save game to database
     saveGameToDatabase('resigned', winnerColor);
+    setIsResignConfirmOpen(false);
   }, [hasResigned, game, selectedBot, saveGameToDatabase, playerColor, isPassAndPlay]);
 
   const handleUndo = useCallback(() => {
@@ -1180,6 +1186,28 @@ function ChessGame(
             isLoading={isThinking || isCoachingLoading}
             title={selectedBot?.name || 'AI'}
             avatar={selectedBot?.avatar || '🤖'}
+          />
+          <ConfirmDialog
+            open={isConfirmMoveOpen}
+            title="Confirm Move"
+            message="Make this move?"
+            confirmLabel="Move"
+            onConfirm={handleConfirmMove}
+            onCancel={handleCancelPendingMove}
+          />
+          <PromotionDialog
+            open={isPromotionOpen}
+            color={pendingMove?.color || playerColor}
+            onSelect={handlePromotionSelect}
+            onCancel={handleCancelPendingMove}
+          />
+          <ConfirmDialog
+            open={isResignConfirmOpen}
+            title="Confirm Resign"
+            message="Are you sure you want to resign? This will count as a loss."
+            confirmLabel="Resign"
+            onConfirm={confirmResign}
+            onCancel={() => setIsResignConfirmOpen(false)}
           />
       </div>
 

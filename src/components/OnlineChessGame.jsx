@@ -11,6 +11,8 @@ import PlayerBar from './PlayerBar';
 import AnimatedPiece from './AnimatedPiece';
 import ChessPieceIcon from './ChessPieceIcon';
 import socketService from '../services/socket';
+import ConfirmDialog from './ConfirmDialog';
+import PromotionDialog from './PromotionDialog';
 
 function findKingSquare(game, color) {
   const board = game.board();
@@ -49,6 +51,10 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
   const [winnerPlayerName, setWinnerPlayerName] = useState(null);
   const [moveError, setMoveError] = useState('');
   const [showVictory, setShowVictory] = useState(false);
+  const [pendingMove, setPendingMove] = useState(null);
+  const [isConfirmMoveOpen, setIsConfirmMoveOpen] = useState(false);
+  const [isResignConfirmOpen, setIsResignConfirmOpen] = useState(false);
+  const [isPromotionOpen, setIsPromotionOpen] = useState(false);
   const moveErrorTimeoutRef = useRef(null);
   const victoryTimeoutRef = useRef(null);
   const lastVictoryKeyRef = useRef(null);
@@ -433,21 +439,129 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     return captured;
   }, [game]);
 
-  const resolvePromotion = useCallback((from, to, pieceType) => {
-    if (pieceType !== 'p') return null;
+  const getPromotionInfo = useCallback((from, to) => {
+    const piece = game.get(from);
+    if (!piece || piece.type !== 'p') return { requires: false, promotion: null };
+
     const promotionRank = (from[1] === '7' && to[1] === '8') || (from[1] === '2' && to[1] === '1');
-    if (!promotionRank) return null;
+    if (!promotionRank) return { requires: false, promotion: null };
 
     if (settingsRef.current.autoQueen) {
-      return 'q';
+      return { requires: true, promotion: 'q' };
     }
 
-    const selection = window.prompt('Promote to (q, r, b, n):', 'q');
-    const choice = (selection || 'q').toLowerCase();
-    if (['q', 'r', 'b', 'n'].includes(choice)) {
-      return choice;
+    return { requires: true, promotion: null };
+  }, [game]);
+
+  const applyMove = useCallback((from, to, promotion) => {
+    const gameCopy = buildGameFromHistory(moveHistory, game.fen());
+    const move = gameCopy.move({
+      from,
+      to,
+      promotion: promotion || 'q',
+    });
+
+    if (!move) return false;
+
+    triggerAnimation(move);
+
+    setTimeout(() => {
+      setGame(gameCopy);
+      setMoveHistory(gameCopy.history({ verbose: true }));
+      setSelectedSquare(null);
+      setPossibleMoves([]);
+      
+      // Send move to server via socket
+      socketService.makeMove(
+        gameId,
+        gameCopy.fen(),
+        {
+          from: move.from,
+          to: move.to,
+          promotion: move.promotion,
+          san: move.san,
+        },
+        toStoredMoveHistory(gameCopy.history({ verbose: true })),
+        playerId
+      );
+
+      if (move.captured) {
+        playSoundEffect(settingsRef.current, { type: 'capture' });
+      } else {
+        playSoundEffect(settingsRef.current, { type: 'move' });
+      }
+
+      if (gameCopy.inCheck()) {
+        playSoundEffect(settingsRef.current, { type: 'check' });
+      }
+
+      triggerMoveHaptics(move, gameCopy);
+
+      if (gameCopy.isGameOver()) {
+        handleGameOver(gameCopy);
+      }
+    }, 50);
+
+    return true;
+  }, [game, moveHistory, triggerAnimation, triggerMoveHaptics, gameId, playerId]);
+
+  const queueMove = useCallback((from, to) => {
+    const promotionInfo = getPromotionInfo(from, to);
+    const movingPiece = game.get(from);
+    const moveColor = movingPiece?.color || colorCode;
+    setSelectedSquare(null);
+    setPossibleMoves([]);
+
+    if (promotionInfo.requires && !promotionInfo.promotion) {
+      setPendingMove({ from, to, color: moveColor });
+      setIsPromotionOpen(true);
+      return true;
     }
-    return 'q';
+
+    const promotion = promotionInfo.promotion;
+
+    if (settingsRef.current.confirmMoves) {
+      setPendingMove({ from, to, promotion, color: moveColor });
+      setIsConfirmMoveOpen(true);
+      return true;
+    }
+
+    return applyMove(from, to, promotion);
+  }, [applyMove, getPromotionInfo, game, colorCode]);
+
+  const handlePromotionSelect = useCallback((choice) => {
+    if (!pendingMove) return;
+    const nextMove = { ...pendingMove, promotion: choice };
+    setIsPromotionOpen(false);
+
+    if (settingsRef.current.confirmMoves) {
+      setPendingMove(nextMove);
+      setIsConfirmMoveOpen(true);
+      return;
+    }
+
+    setPendingMove(null);
+    applyMove(nextMove.from, nextMove.to, nextMove.promotion);
+  }, [pendingMove, applyMove]);
+
+  const handleConfirmMove = useCallback(() => {
+    if (!pendingMove) {
+      setIsConfirmMoveOpen(false);
+      return;
+    }
+
+    const { from, to, promotion } = pendingMove;
+    setIsConfirmMoveOpen(false);
+    setPendingMove(null);
+    applyMove(from, to, promotion);
+  }, [pendingMove, applyMove]);
+
+  const handleCancelPendingMove = useCallback(() => {
+    setIsConfirmMoveOpen(false);
+    setIsPromotionOpen(false);
+    setPendingMove(null);
+    setSelectedSquare(null);
+    setPossibleMoves([]);
   }, []);
 
   const onSquareClick = useCallback(
@@ -465,64 +579,10 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
           return;
         }
 
-        const promotion = resolvePromotion(selectedSquare, square, game.get(selectedSquare)?.type);
-        if (settingsRef.current.confirmMoves) {
-          const proceed = window.confirm('Make this move?');
-          if (!proceed) {
-            setSelectedSquare(null);
-            setPossibleMoves([]);
-            return;
-          }
-        }
-
-        const moveAttempt = {
-          from: selectedSquare,
-          to: square,
-          promotion: promotion || 'q',
-        };
-
-        const gameCopy = buildGameFromHistory(moveHistory, game.fen());
-        const move = gameCopy.move(moveAttempt);
-
-        if (move) {
-          triggerAnimation(move);
-
-          setTimeout(() => {
-            setGame(gameCopy);
-            setMoveHistory(gameCopy.history({ verbose: true }));
-            setSelectedSquare(null);
-            setPossibleMoves([]);
-            
-            // Send move to server via socket
-            socketService.makeMove(
-              gameId,
-              gameCopy.fen(),
-              {
-                from: move.from,
-                to: move.to,
-                promotion: move.promotion,
-                san: move.san,
-              },
-              toStoredMoveHistory(gameCopy.history({ verbose: true })),
-              playerId
-            );
-
-            if (move.captured) {
-              playSoundEffect(settingsRef.current, { type: 'capture' });
-            } else {
-              playSoundEffect(settingsRef.current, { type: 'move' });
-            }
-
-            if (gameCopy.inCheck()) {
-              playSoundEffect(settingsRef.current, { type: 'check' });
-            }
-
-            triggerMoveHaptics(move, gameCopy);
-
-            if (gameCopy.isGameOver()) {
-              handleGameOver(gameCopy);
-            }
-          }, 50);
+        const legalMoves = game.moves({ square: selectedSquare, verbose: true });
+        const isLegalTarget = legalMoves.some((move) => move.to === square);
+        if (isLegalTarget) {
+          queueMove(selectedSquare, square);
           return;
         }
       }
@@ -536,7 +596,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
         setPossibleMoves([]);
       }
     },
-    [game, colorCode, selectedSquare, gameId, playerId, gameStatus, triggerAnimation, resolvePromotion, moveHistory, triggerMoveHaptics]
+    [game, colorCode, selectedSquare, gameStatus, queueMove]
   );
 
   const onPieceDrop = useCallback(
@@ -545,67 +605,14 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
         return false;
       }
 
-      const gameCopy = buildGameFromHistory(moveHistory, game.fen());
-      const promotion = resolvePromotion(sourceSquare, targetSquare, game.get(sourceSquare)?.type);
-      if (settingsRef.current.confirmMoves) {
-        const proceed = window.confirm('Make this move?');
-        if (!proceed) {
-          setSelectedSquare(null);
-          setPossibleMoves([]);
-          return false;
-        }
-      }
+      const legalMoves = game.moves({ square: sourceSquare, verbose: true });
+      const isLegalTarget = legalMoves.some((move) => move.to === targetSquare);
+      if (!isLegalTarget) return false;
 
-      const move = gameCopy.move({
-        from: sourceSquare,
-        to: targetSquare,
-        promotion: promotion || 'q',
-      });
-
-      if (move === null) return false;
-
-      triggerAnimation(move);
-
-      setTimeout(() => {
-        setGame(gameCopy);
-        setMoveHistory(gameCopy.history({ verbose: true }));
-        setSelectedSquare(null);
-        setPossibleMoves([]);
-        
-        // Send move to server via socket
-        socketService.makeMove(
-          gameId,
-          gameCopy.fen(),
-          {
-            from: move.from,
-            to: move.to,
-            promotion: move.promotion,
-            san: move.san,
-          },
-          toStoredMoveHistory(gameCopy.history({ verbose: true })),
-          playerId
-        );
-
-        if (move.captured) {
-          playSoundEffect(settingsRef.current, { type: 'capture' });
-        } else {
-          playSoundEffect(settingsRef.current, { type: 'move' });
-        }
-
-        if (gameCopy.inCheck()) {
-          playSoundEffect(settingsRef.current, { type: 'check' });
-        }
-
-        triggerMoveHaptics(move, gameCopy);
-
-        if (gameCopy.isGameOver()) {
-          handleGameOver(gameCopy);
-        }
-      }, 50);
-
+      queueMove(sourceSquare, targetSquare);
       return true;
     },
-    [game, colorCode, gameId, playerId, gameStatus, triggerAnimation, resolvePromotion, moveHistory, triggerMoveHaptics]
+    [game, colorCode, gameStatus, queueMove]
   );
 
   const handleGameOver = (chessGame) => {
@@ -629,10 +636,13 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
   };
 
   const handleResign = () => {
-    if (window.confirm('Are you sure you want to resign? This will count as a loss.')) {
-      haptics.lose();
-      socketService.resignGame(gameId, playerId);
-    }
+    setIsResignConfirmOpen(true);
+  };
+
+  const confirmResign = () => {
+    setIsResignConfirmOpen(false);
+    haptics.lose();
+    socketService.resignGame(gameId, playerId);
   };
 
   const handleOfferDraw = () => {
@@ -904,6 +914,28 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
         </div>
       </div>
 
+      <ConfirmDialog
+        open={isConfirmMoveOpen}
+        title="Confirm Move"
+        message="Make this move?"
+        confirmLabel="Move"
+        onConfirm={handleConfirmMove}
+        onCancel={handleCancelPendingMove}
+      />
+      <PromotionDialog
+        open={isPromotionOpen}
+        color={pendingMove?.color || colorCode}
+        onSelect={handlePromotionSelect}
+        onCancel={handleCancelPendingMove}
+      />
+      <ConfirmDialog
+        open={isResignConfirmOpen}
+        title="Confirm Resign"
+        message="Are you sure you want to resign? This will count as a loss."
+        confirmLabel="Resign"
+        onConfirm={confirmResign}
+        onCancel={() => setIsResignConfirmOpen(false)}
+      />
     </div>
   );
 }
