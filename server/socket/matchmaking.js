@@ -6,6 +6,8 @@ const ELO_RANGE_RELAXATION_TIME = 10000; // 10 seconds
 const MATCHMAKING_INTERVAL_MS = 2000;
 const MATCHMAKING_BATCH_SIZE = 200;
 const MATCHMAKING_IDLE_BACKOFF = 10000;
+const MATCHMAKING_STALE_INTERVAL = "2 minutes";
+const GAME_ID_RETRY_LIMIT = 5;
 
 // Matchmaking service class
 class MatchmakingService {
@@ -13,6 +15,7 @@ class MatchmakingService {
     this.io = io;
     this.matchmakingInterval = null;
     this.matchmakingDelay = MATCHMAKING_INTERVAL_MS;
+    this.isProcessing = false;
     this.startMatchmakingLoop();
   }
 
@@ -40,12 +43,31 @@ class MatchmakingService {
     }
   }
 
+  isSocketActive(socketId) {
+    if (!socketId) return false;
+    return Boolean(this.io?.sockets?.sockets?.get(socketId));
+  }
+
+  generateGameId() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let gameId = '';
+    for (let i = 0; i < 6; i++) {
+      gameId += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return gameId;
+  }
+
   async processMatchmaking() {
+    if (this.isProcessing) {
+      return;
+    }
+    this.isProcessing = true;
+
     try {
       // Get all players in queue, ordered by joined_at
       const result = await query(
         `SELECT * FROM matchmaking_queue
-         WHERE last_heartbeat > NOW() - INTERVAL '2 minutes'
+         WHERE last_heartbeat > NOW() - INTERVAL '${MATCHMAKING_STALE_INTERVAL}'
          ORDER BY joined_at ASC
          LIMIT $1`,
         [MATCHMAKING_BATCH_SIZE]
@@ -58,11 +80,18 @@ class MatchmakingService {
       }
 
       const matched = new Set();
+      const stale = new Set();
 
       for (let i = 0; i < queue.length; i++) {
         if (matched.has(queue[i].id)) continue;
 
         const player1 = queue[i];
+        if (!this.isSocketActive(player1.socket_id)) {
+          stale.add(player1.id);
+          continue;
+        }
+
+        const player1Elo = Number.isFinite(player1.elo) ? player1.elo : DEFAULT_ELO;
         const waitTime = Date.now() - new Date(player1.joined_at).getTime();
         const eloRange = waitTime > ELO_RANGE_RELAXATION_TIME ? Infinity : ELO_RANGE_INITIAL;
 
@@ -74,7 +103,13 @@ class MatchmakingService {
           if (matched.has(queue[j].id)) continue;
 
           const player2 = queue[j];
-          const eloDiff = Math.abs(player1.elo - player2.elo);
+          if (!this.isSocketActive(player2.socket_id)) {
+            stale.add(player2.id);
+            continue;
+          }
+
+          const player2Elo = Number.isFinite(player2.elo) ? player2.elo : DEFAULT_ELO;
+          const eloDiff = Math.abs(player1Elo - player2Elo);
 
           // Check if both want ranked matches
           if (player1.is_ranked !== player2.is_ranked) continue;
@@ -86,104 +121,128 @@ class MatchmakingService {
         }
 
         if (bestMatch) {
-          matched.add(player1.id);
-          matched.add(bestMatch.id);
-          await this.createMatch(player1, bestMatch);
+          const matchCreated = await this.createMatch(player1, bestMatch);
+          if (matchCreated) {
+            matched.add(player1.id);
+            matched.add(bestMatch.id);
+          }
         }
       }
 
       // Remove matched players from queue
-      if (matched.size > 0) {
-        const ids = Array.from(matched);
+      const idsToRemove = new Set([...matched, ...stale]);
+      if (idsToRemove.size > 0) {
+        const ids = Array.from(idsToRemove);
         await query(
           `DELETE FROM matchmaking_queue WHERE id = ANY($1)`,
           [ids]
         );
-        this.updateMatchmakingInterval(true);
+        this.updateMatchmakingInterval(matched.size > 0);
       } else {
         this.updateMatchmakingInterval(false);
       }
     } catch (error) {
       console.error('[Matchmaking] Error processing queue:', error);
       this.updateMatchmakingInterval(false);
+    } finally {
+      this.isProcessing = false;
     }
   }
 
   async createMatch(player1, player2) {
     try {
-      // Generate a unique game ID
-      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      let gameId = '';
-      for (let i = 0; i < 6; i++) {
-        gameId += chars[Math.floor(Math.random() * chars.length)];
+      if (!this.isSocketActive(player1.socket_id) || !this.isSocketActive(player2.socket_id)) {
+        return false;
       }
 
-      // Randomly assign colors
-      const isPlayer1White = Math.random() < 0.5;
-      
-      // Create active game in database
-      await query(
-        `INSERT INTO active_games (
-          game_id, 
-          white_player_id, black_player_id,
-          white_socket_id, black_socket_id,
-          white_player_name, black_player_name,
-          white_elo, black_elo,
-          status, game_mode
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-        [
-          gameId,
-          isPlayer1White ? player1.player_id : player2.player_id,
-          isPlayer1White ? player2.player_id : player1.player_id,
-          isPlayer1White ? player1.socket_id : player2.socket_id,
-          isPlayer1White ? player2.socket_id : player1.socket_id,
-          isPlayer1White ? player1.player_name : player2.player_name,
-          isPlayer1White ? player2.player_name : player1.player_name,
-          isPlayer1White ? player1.elo : player2.elo,
-          isPlayer1White ? player2.elo : player1.elo,
-          'playing',
-          player1.is_ranked ? 'ranked' : 'friendly'
-        ]
-      );
+      // Generate a unique game ID
+      let gameId = this.generateGameId();
+      let created = false;
+      let attempt = 0;
 
-      // Notify both players
-      const matchData = {
-        gameId,
-        gameMode: player1.is_ranked ? 'ranked' : 'friendly',
-        players: {
-          white: {
-            id: isPlayer1White ? player1.player_id : player2.player_id,
-            name: isPlayer1White ? player1.player_name : player2.player_name,
-            elo: isPlayer1White ? player1.elo : player2.elo
-          },
-          black: {
-            id: isPlayer1White ? player2.player_id : player1.player_id,
-            name: isPlayer1White ? player2.player_name : player1.player_name,
-            elo: isPlayer1White ? player2.elo : player1.elo
+      while (!created && attempt < GAME_ID_RETRY_LIMIT) {
+        attempt += 1;
+        try {
+          // Randomly assign colors
+          const isPlayer1White = Math.random() < 0.5;
+          
+          // Create active game in database
+          await query(
+            `INSERT INTO active_games (
+              game_id, 
+              white_player_id, black_player_id,
+              white_socket_id, black_socket_id,
+              white_player_name, black_player_name,
+              white_elo, black_elo,
+              status, game_mode
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+            [
+              gameId,
+              isPlayer1White ? player1.player_id : player2.player_id,
+              isPlayer1White ? player2.player_id : player1.player_id,
+              isPlayer1White ? player1.socket_id : player2.socket_id,
+              isPlayer1White ? player2.socket_id : player1.socket_id,
+              isPlayer1White ? player1.player_name : player2.player_name,
+              isPlayer1White ? player2.player_name : player1.player_name,
+              isPlayer1White ? player1.elo : player2.elo,
+              isPlayer1White ? player2.elo : player1.elo,
+              'playing',
+              player1.is_ranked ? 'ranked' : 'friendly'
+            ]
+          );
+
+          created = true;
+
+          // Notify both players
+          const matchData = {
+            gameId,
+            gameMode: player1.is_ranked ? 'ranked' : 'friendly',
+            players: {
+              white: {
+                id: isPlayer1White ? player1.player_id : player2.player_id,
+                name: isPlayer1White ? player1.player_name : player2.player_name,
+                elo: isPlayer1White ? player1.elo : player2.elo
+              },
+              black: {
+                id: isPlayer1White ? player2.player_id : player1.player_id,
+                name: isPlayer1White ? player2.player_name : player1.player_name,
+                elo: isPlayer1White ? player2.elo : player1.elo
+              }
+            }
+          };
+
+          this.io.to(player1.socket_id).emit('match_found', {
+            ...matchData,
+            yourColor: isPlayer1White ? 'white' : 'black',
+            yourId: player1.player_id
+          });
+
+          this.io.to(player2.socket_id).emit('match_found', {
+            ...matchData,
+            yourColor: isPlayer1White ? 'black' : 'white',
+            yourId: player2.player_id
+          });
+
+          console.log(`[Matchmaking] Created match ${gameId} between ${player1.player_name} (${player1.elo}) and ${player2.player_name} (${player2.elo})`);
+        } catch (error) {
+          if (error?.code === '23505') {
+            gameId = this.generateGameId();
+            continue;
           }
+          throw error;
         }
-      };
+      }
 
-      this.io.to(player1.socket_id).emit('match_found', {
-        ...matchData,
-        yourColor: isPlayer1White ? 'white' : 'black',
-        yourId: player1.player_id
-      });
-
-      this.io.to(player2.socket_id).emit('match_found', {
-        ...matchData,
-        yourColor: isPlayer1White ? 'black' : 'white',
-        yourId: player2.player_id
-      });
-
-      console.log(`[Matchmaking] Created match ${gameId} between ${player1.player_name} (${player1.elo}) and ${player2.player_name} (${player2.elo})`);
+      return created;
     } catch (error) {
       console.error('[Matchmaking] Error creating match:', error);
+      return false;
     }
   }
 
   async joinQueue(socketId, playerId, playerName, elo, isRanked = true) {
     try {
+      const resolvedElo = Number.isFinite(elo) ? elo : DEFAULT_ELO;
       // Remove any existing entry for this socket or player to avoid duplicates on reconnect
       await query(
         'DELETE FROM matchmaking_queue WHERE socket_id = $1 OR player_id = $2',
@@ -194,10 +253,10 @@ class MatchmakingService {
       await query(
         `INSERT INTO matchmaking_queue (socket_id, player_id, player_name, elo, is_ranked)
          VALUES ($1, $2, $3, $4, $5)`,
-        [socketId, playerId, playerName, elo || DEFAULT_ELO, isRanked]
+        [socketId, playerId, playerName, resolvedElo, isRanked]
       );
 
-      console.log(`[Matchmaking] Player ${playerName} (${elo}) joined queue`);
+      console.log(`[Matchmaking] Player ${playerName} (${resolvedElo}) joined queue`);
       return true;
     } catch (error) {
       console.error('[Matchmaking] Error joining queue:', error);
@@ -235,7 +294,10 @@ class MatchmakingService {
 
   async getQueueStatus() {
     try {
-      const result = await query('SELECT COUNT(*) as count FROM matchmaking_queue');
+      const result = await query(
+        `SELECT COUNT(*) as count FROM matchmaking_queue
+         WHERE last_heartbeat > NOW() - INTERVAL '${MATCHMAKING_STALE_INTERVAL}'`
+      );
       return parseInt(result.rows[0].count, 10);
     } catch (error) {
       console.error('[Matchmaking] Error getting queue status:', error);
@@ -254,6 +316,7 @@ class MatchmakingService {
           COUNT(*) FILTER (WHERE elo BETWEEN 1500 AND 2000) as range_1500_2000,
           COUNT(*) FILTER (WHERE elo >= 2000) as above_2000
         FROM matchmaking_queue
+        WHERE last_heartbeat > NOW() - INTERVAL '${MATCHMAKING_STALE_INTERVAL}'
       `);
       
       return {
@@ -316,7 +379,10 @@ export function setupMatchmakingHandlers(io, socket) {
       return;
     }
 
-    if (typeof elo !== 'number' || elo < 0 || elo > 4000) {
+    const parsedElo = Number(elo);
+    const resolvedElo = Number.isFinite(parsedElo) ? parsedElo : DEFAULT_ELO;
+
+    if (resolvedElo < 0 || resolvedElo > 4000) {
       socket.emit('matchmaking_status', {
         inQueue: false,
         message: 'Invalid ELO rating'
@@ -370,7 +436,7 @@ export function setupMatchmakingHandlers(io, socket) {
       socket.id,
       playerId,
       trimmedName,
-      elo,
+      resolvedElo,
       isRanked
     );
 

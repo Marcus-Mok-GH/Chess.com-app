@@ -7,7 +7,10 @@ const router = express.Router();
 // Get queue status
 router.get('/status', async (req, res) => {
   try {
-    const result = await query('SELECT COUNT(*) as count FROM matchmaking_queue');
+    const result = await query(
+      `SELECT COUNT(*) as count FROM matchmaking_queue
+       WHERE last_heartbeat > NOW() - INTERVAL '2 minutes'`
+    );
     res.json({ playersInQueue: parseInt(result.rows[0].count, 10) });
   } catch (error) {
     handleRouteError(res, error, 'Failed to get queue status');
@@ -25,6 +28,7 @@ router.get('/details', async (req, res) => {
         COUNT(*) FILTER (WHERE elo BETWEEN 1500 AND 2000) as range_1500_2000,
         COUNT(*) FILTER (WHERE elo >= 2000) as above_2000
       FROM matchmaking_queue
+      WHERE last_heartbeat > NOW() - INTERVAL '2 minutes'
     `);
 
     res.json({

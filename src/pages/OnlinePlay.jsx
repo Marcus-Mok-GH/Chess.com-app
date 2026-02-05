@@ -78,6 +78,7 @@ export default function OnlinePlay() {
     }
   }, []);
   const heartbeatInterval = useRef(null);
+  const queueUpdateIntervalRef = useRef(null);
   const pendingMatchmakingRef = useRef(false);
 
   // Connect to socket on mount
@@ -143,6 +144,7 @@ export default function OnlinePlay() {
   }, [routeGameId, searchParams, GAME_CODE_LENGTH, readGameSession]);
 
   const startMatchmaking = useCallback(() => {
+    clearMatchmakingTimers();
     // Socket may still be connecting; queue the request instead of erroring.
     if (!socketService.isConnected) {
       console.warn('[OnlinePlay] Socket not connected. Deferring matchmaking until connected.');
@@ -168,7 +170,10 @@ export default function OnlinePlay() {
     }
 
     // Get player info from user context if logged in.
-    const currentElo = user.elo;
+    const rawElo = Number(user.elo);
+    const currentElo = Number.isFinite(rawElo)
+      ? Math.min(4000, Math.max(0, rawElo))
+      : 1200;
     const currentName = user.username;
     const playerId = `user_${user.id}_${matchmakingSessionId.current}`;
     
@@ -202,16 +207,10 @@ export default function OnlinePlay() {
     }, 20000);
     
     // Update queue details every 5 seconds
-    const queueUpdateInterval = setInterval(() => {
+    queueUpdateIntervalRef.current = setInterval(() => {
       socketService.getQueueDetails();
     }, 5000);
-    
-    return () => {
-      clearInterval(searchTimeInterval.current);
-      clearInterval(heartbeatInterval.current);
-      clearInterval(queueUpdateInterval);
-    };
-  }, [isLoggedIn, user]);
+  }, [isLoggedIn, user, clearMatchmakingTimers]);
 
   const clearMatchmakingTimers = useCallback(() => {
     if (searchTimeInterval.current) {
@@ -221,6 +220,10 @@ export default function OnlinePlay() {
     if (heartbeatInterval.current) {
       clearInterval(heartbeatInterval.current);
       heartbeatInterval.current = null;
+    }
+    if (queueUpdateIntervalRef.current) {
+      clearInterval(queueUpdateIntervalRef.current);
+      queueUpdateIntervalRef.current = null;
     }
   }, []);
 
