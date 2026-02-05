@@ -317,7 +317,7 @@ body {
   gap: 16px;
   overflow: hidden;
   min-height: 0;
-  background: var(--color-bg-primary);
+  background: transparent;
   --game-viewport: 100vh;
 }
 
@@ -329,7 +329,7 @@ body {
 }
 
 .online-chess-game {
-  background: var(--color-bg-primary);
+  background: transparent;
 }
 
 .game-container {
