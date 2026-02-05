@@ -625,14 +625,14 @@ export default function OnlinePlay() {
           <div className="match-found-content">
             <h2 className="match-found-title">MATCH FOUND!</h2>
             <p className="match-found-subtitle">Get ready to play!</p>
-            
+
             <div className="opponent-preview">
               <div className="opponent-avatar">
-                {foundOpponent.name.charAt(0).toUpperCase()}
+                {(foundOpponent.name || 'O').charAt(0).toUpperCase()}
               </div>
               <div className="opponent-info">
-                <div className="opponent-name">{foundOpponent.name}</div>
-                <div className="opponent-rating">Rating: {foundOpponent.elo}</div>
+                <div className="opponent-name">{foundOpponent.name || 'Opponent'}</div>
+                <div className="opponent-rating">Rating: {foundOpponent.elo || '???'}</div>
               </div>
             </div>
           </div>

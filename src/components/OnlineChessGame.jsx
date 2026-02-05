@@ -140,13 +140,13 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
       if (data.whitePlayer) {
         setWhitePlayer({
           name: data.whitePlayer,
-          elo: data.whiteElo
+          elo: data.whiteElo || null
         });
       }
       if (data.blackPlayer) {
         setBlackPlayer({
           name: data.blackPlayer,
-          elo: data.blackElo
+          elo: data.blackElo || null
         });
       }
     };
@@ -292,30 +292,34 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
   useEffect(() => {
     // Set opponent info
     if (opponentInfo) {
+      const opponentName = opponentInfo.name || 'Opponent';
+      const opponentElo = opponentInfo.elo || null;
       if (playerColor === 'white') {
         setBlackPlayer({
-          name: opponentInfo.name,
-          elo: opponentInfo.elo
+          name: opponentName,
+          elo: opponentElo
         });
       } else {
         setWhitePlayer({
-          name: opponentInfo.name,
-          elo: opponentInfo.elo
+          name: opponentName,
+          elo: opponentElo
         });
       }
     }
-    
+
     // Set current user info
     if (currentUserInfo) {
+      const userName = currentUserInfo.name || currentUserInfo.username || 'You';
+      const userElo = currentUserInfo.elo || null;
       if (playerColor === 'white') {
         setWhitePlayer({
-          name: currentUserInfo.name || currentUserInfo.username,
-          elo: currentUserInfo.elo
+          name: userName,
+          elo: userElo
         });
       } else {
         setBlackPlayer({
-          name: currentUserInfo.name || currentUserInfo.username,
-          elo: currentUserInfo.elo
+          name: userName,
+          elo: userElo
         });
       }
     }
@@ -700,12 +704,12 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
 
   // Top player is opponent, bottom is us
   const topPlayer = boardOrientation === 'white'
-    ? { name: blackPlayer.name, avatar: '👤', rating: blackPlayer.elo || '???', isBot: false, color: 'b' }
-    : { name: whitePlayer.name, avatar: '👤', rating: whitePlayer.elo || '???', isBot: false, color: 'w' };
+    ? { name: blackPlayer.name || 'Black', avatar: '👤', rating: blackPlayer.elo || '???', isBot: false, color: 'b' }
+    : { name: whitePlayer.name || 'White', avatar: '👤', rating: whitePlayer.elo || '???', isBot: false, color: 'w' };
 
   const bottomPlayer = boardOrientation === 'white'
-    ? { name: whitePlayer.name, avatar: '👤', rating: whitePlayer.elo || '???', isBot: false, color: 'w' }
-    : { name: blackPlayer.name, avatar: '👤', rating: blackPlayer.elo || '???', isBot: false, color: 'b' };
+    ? { name: whitePlayer.name || 'White', avatar: '👤', rating: whitePlayer.elo || '???', isBot: false, color: 'w' }
+    : { name: blackPlayer.name || 'Black', avatar: '👤', rating: blackPlayer.elo || '???', isBot: false, color: 'b' };
 
   const getStatusMessage = () => {
     if (gameStatus === 'ended') {
