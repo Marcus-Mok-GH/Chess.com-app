@@ -27,7 +27,7 @@ function findKingSquare(game, color) {
 
 const REACTIONS = ['👍', '👏', '🤔', '😮', '🎉', '😅'];
 
-export default function OnlineChessGame({ gameId, playerId, playerColor, opponentInfo, onLeave }) {
+export default function OnlineChessGame({ gameId, playerId, playerColor, opponentInfo, onLeave, currentUserInfo }) {
   const { settings } = useSettings();
   const [game, setGame] = useState(new Chess());
   const [moveHistory, setMoveHistory] = useState([]);
@@ -282,8 +282,9 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     };
   }, [gameId, playerId, triggerMoveHaptics, colorCode]);
 
-  // Set opponent info when received
+  // Set player info when received
   useEffect(() => {
+    // Set opponent info
     if (opponentInfo) {
       if (playerColor === 'white') {
         setBlackPlayer({
@@ -297,7 +298,22 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
         });
       }
     }
-  }, [opponentInfo, playerColor]);
+    
+    // Set current user info
+    if (currentUserInfo) {
+      if (playerColor === 'white') {
+        setWhitePlayer({
+          name: currentUserInfo.name || currentUserInfo.username,
+          elo: currentUserInfo.elo
+        });
+      } else {
+        setBlackPlayer({
+          name: currentUserInfo.name || currentUserInfo.username,
+          elo: currentUserInfo.elo
+        });
+      }
+    }
+  }, [opponentInfo, playerColor, currentUserInfo]);
 
   useEffect(() => {
     if (endReason !== 'checkmate' || !winner || !playerColor) {

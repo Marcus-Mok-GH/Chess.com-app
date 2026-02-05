@@ -849,6 +849,7 @@ export default function OnlinePlay() {
           playerColor={playerColor}
           opponentInfo={opponentInfo}
           onLeave={handleLeaveGame}
+          currentUserInfo={user ? { name: user.username, elo: user.elo } : null}
         />
       )}
 
