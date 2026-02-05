@@ -1092,6 +1092,8 @@ body {
   cursor: pointer;
   -webkit-user-select: none;
   user-select: none;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
 }
 
 .chess-square.light {
@@ -2196,4 +2198,255 @@ body {
 /* App container padding for fixed bottom nav */
 .app {
   padding-bottom: calc(70px + env(safe-area-inset-bottom));
+}
+
+/* ========================================
+   MOBILE TOUCH OPTIMIZATIONS
+   ======================================== */
+
+/* Prevent unwanted gestures on interactive elements */
+.chess-board,
+.board-wrapper {
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+}
+
+/* Touch feedback for interactive elements */
+.btn,
+.nav-tab,
+.bot-card,
+.gbb-btn,
+.control-btn {
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  transition: transform 0.1s ease, background 0.15s ease, opacity 0.15s ease;
+}
+
+.btn:active,
+.nav-tab:active,
+.bot-card:active,
+.gbb-btn:active,
+.control-btn:active {
+  transform: scale(0.96);
+  opacity: 0.9;
+}
+
+/* Touch active state for visual feedback */
+.touch-active {
+  transform: scale(0.96) !important;
+  opacity: 0.85 !important;
+}
+
+/* Improved touch targets - ensure minimum 44px on mobile */
+@media (max-width: 768px) {
+  .btn,
+  .nav-tab,
+  .gbb-btn,
+  .control-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Larger touch areas for chess pieces */
+  .chess-piece-wrapper {
+    padding: 2px;
+    touch-action: none;
+  }
+  
+  /* Better scroll behavior on mobile */
+  .sidebar,
+  .move-history,
+  .game-history-list {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+}
+
+/* Prevent text selection during touch interactions */
+.chess-game,
+.online-chess-game,
+.game-controls,
+.game-bottom-bar {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Smooth scrolling for touch devices */
+@media (pointer: coarse) {
+  * {
+    scroll-behavior: smooth;
+  }
+  
+  .sidebar,
+  .move-history {
+    scroll-snap-type: y proximity;
+  }
+}
+
+/* Disable hover effects on touch devices to prevent sticky states */
+@media (hover: none) and (pointer: coarse) {
+  .btn:hover,
+  .nav-tab:hover,
+  .bot-card:hover,
+  .gbb-btn:hover {
+    transform: none;
+    background: inherit;
+  }
+  
+  .nav-tab.active:hover {
+    background: linear-gradient(180deg, rgba(127, 166, 80, 0.9), rgba(102, 139, 60, 0.95));
+  }
+}
+
+/* Fix iOS momentum scrolling issues */
+@supports (-webkit-touch-callout: none) {
+  .chess-game,
+  .online-chess-game {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Fix for iOS safe area in landscape */
+  @media screen and (orientation: landscape) {
+    .bottom-nav {
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+    }
+    
+    .game-bottom-bar {
+      padding-left: calc(12px + env(safe-area-inset-left));
+      padding-right: calc(12px + env(safe-area-inset-right));
+    }
+  }
+}
+
+/* ========================================
+   LANDSCAPE MODE OPTIMIZATIONS
+   ======================================== */
+
+@media screen and (orientation: landscape) and (max-height: 500px) {
+  .app-header {
+    height: 40px;
+    padding: 0 12px;
+  }
+  
+  .page-title {
+    font-size: 0.85rem;
+  }
+  
+  .chess-game,
+  .online-chess-game {
+    padding: 4px 8px;
+    gap: 4px;
+  }
+  
+  .game-container {
+    flex-direction: row;
+    gap: 8px;
+  }
+  
+  .board-section {
+    flex: 0 0 auto;
+  }
+  
+  .board-wrapper {
+    width: min(calc(100vh - 100px), calc(100vw - 300px), 400px);
+    min-height: 200px;
+    min-width: 200px;
+  }
+  
+  .player-bar {
+    padding: 4px 8px;
+    height: 36px;
+  }
+  
+  .player-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 1rem;
+  }
+  
+  .sidebar {
+    flex-direction: column;
+    width: auto;
+    min-width: 180px;
+    max-width: 280px;
+    max-height: calc(100vh - 60px);
+    overflow-y: auto;
+  }
+  
+  .sidebar-panel {
+    flex: none;
+    width: 100%;
+  }
+  
+  .move-history {
+    max-height: 100px;
+  }
+  
+  .bottom-nav {
+    padding: 4px 0;
+    padding-bottom: calc(4px + env(safe-area-inset-bottom));
+  }
+  
+  .nav-tab {
+    padding: 4px 8px;
+    min-height: 40px;
+  }
+  
+  .nav-icon {
+    font-size: 1rem;
+  }
+  
+  .nav-label {
+    font-size: 0.7rem;
+  }
+  
+  .app {
+    padding-bottom: calc(50px + env(safe-area-inset-bottom));
+  }
+}
+
+/* Very small landscape screens (e.g., iPhone SE landscape) */
+@media screen and (orientation: landscape) and (max-height: 400px) {
+  .app-header {
+    display: none;
+  }
+  
+  .board-wrapper {
+    width: min(calc(100vh - 60px), calc(100vw - 250px), 320px);
+    min-height: 180px;
+    min-width: 180px;
+  }
+  
+  .sidebar {
+    min-width: 150px;
+  }
+  
+  .bottom-nav {
+    flex-direction: column;
+    width: auto;
+    height: 100%;
+    left: auto;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    padding: env(safe-area-inset-top) 4px env(safe-area-inset-bottom) 4px;
+  }
+  
+  .nav-content {
+    flex-direction: column;
+    height: 100%;
+    padding: 4px 0;
+  }
+  
+  .nav-tab {
+    flex: 1;
+    min-height: 0;
+    padding: 4px;
+  }
+  
+  .app {
+    padding-bottom: 0;
+    padding-right: calc(60px + env(safe-area-inset-right));
+  }
 }

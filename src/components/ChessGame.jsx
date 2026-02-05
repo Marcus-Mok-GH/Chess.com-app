@@ -124,6 +124,8 @@ function ChessGame(
   const animationIdRef = useRef(0);
   const persistTimeoutRef = useRef(null);
   const suppressPersistRef = useRef(false);
+  const boardWrapperRef = useRef(null);
+  const touchStartRef = useRef({ x: 0, y: 0, time: 0 });
 
   // Define getGameStatus early so it can be used in useEffect
   const getGameStatus = useMemo(() => {
@@ -944,6 +946,56 @@ function ChessGame(
     [handleNewGame, handleUndo, handleFlipBoard, handleGetHint, handleResign, handleReview, getGameStatus],
   );
 
+  // Mobile swipe gestures on board wrapper
+  useEffect(() => {
+    const element = boardWrapperRef.current;
+    if (!element) return;
+
+    const SWIPE_THRESHOLD = 60;
+    const SWIPE_TIMEOUT = 300;
+    const RESTRAINT = 100;
+
+    const handleTouchStart = (e) => {
+      const touch = e.touches[0];
+      touchStartRef.current = {
+        x: touch.clientX,
+        y: touch.clientY,
+        time: Date.now(),
+      };
+    };
+
+    const handleTouchEnd = (e) => {
+      const touch = e.changedTouches[0];
+      const distX = touch.clientX - touchStartRef.current.x;
+      const distY = touch.clientY - touchStartRef.current.y;
+      const elapsed = Date.now() - touchStartRef.current.time;
+
+      // Check if valid horizontal swipe
+      if (elapsed <= SWIPE_TIMEOUT && Math.abs(distX) >= SWIPE_THRESHOLD && Math.abs(distY) <= RESTRAINT) {
+        if (distX > 0) {
+          // Swipe right - undo move
+          const minMoves = isPassAndPlay ? 1 : 2;
+          if (moveHistoryRef.current.length >= minMoves && !isThinking) {
+            haptics.swipe();
+            handleUndo();
+          }
+        } else {
+          // Swipe left - flip board
+          haptics.swipe();
+          handleFlipBoard();
+        }
+      }
+    };
+
+    element.addEventListener('touchstart', handleTouchStart, { passive: true });
+    element.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+    return () => {
+      element.removeEventListener('touchstart', handleTouchStart);
+      element.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [handleUndo, handleFlipBoard, isThinking, isPassAndPlay]);
+
   // Safety check - if game failed to initialize, show error
   if (!game) {
     return (
@@ -1034,7 +1086,7 @@ function ChessGame(
               capturedPieces={capturedPieces[topPlayer.color === 'w' ? 'b' : 'w']}
               botMessage={topPlayer.isBot ? botMessage : null}
             />
-            <div className="board-wrapper">
+            <div className="board-wrapper" ref={boardWrapperRef}>
               <ChessBoard
                 position={game}
                 onPieceDrop={onPieceDrop}
