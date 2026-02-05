@@ -1,4 +1,29 @@
-const MATCH_SOUND_URL = '/sounds/match-found.mp3';
+const SOUND_URLS = {
+  match: '/sounds/match-found.mp3',
+  move: '/sounds/move.wav',
+  capture: '/sounds/capture.wav',
+  check: '/sounds/check.wav',
+};
+
+const soundCache = new Map();
+
+function getAudioElement(url) {
+  if (!url) return null;
+  if (!soundCache.has(url)) {
+    const audio = new Audio(url);
+    audio.preload = 'auto';
+    soundCache.set(url, audio);
+  }
+  return soundCache.get(url);
+}
+
+function playAudio(url, volume) {
+  const baseAudio = getAudioElement(url);
+  if (!baseAudio) return;
+  const audio = baseAudio.cloneNode(true);
+  audio.volume = volume;
+  audio.play().catch(() => {});
+}
 
 export function canPlaySound(settings) {
   if (!settings) return false;
@@ -14,45 +39,12 @@ export function playSoundEffect(settings, { type, volumeOverride } = {}) {
     : Math.max(0, Math.min(1, (settings.soundVolume ?? 100) / 100));
 
   if (type === 'match') {
-    const audio = new Audio(MATCH_SOUND_URL);
-    audio.volume = volume;
-    audio.play().catch(() => {});
+    playAudio(SOUND_URLS.match, volume);
     return;
   }
 
-  try {
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-
-    oscillator.type = 'sine';
-
-    switch (type) {
-      case 'capture':
-        oscillator.frequency.setValueAtTime(520, audioContext.currentTime);
-        oscillator.frequency.exponentialRampToValueAtTime(220, audioContext.currentTime + 0.15);
-        break;
-      case 'check':
-        oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
-        oscillator.frequency.exponentialRampToValueAtTime(660, audioContext.currentTime + 0.2);
-        break;
-      case 'move':
-      default:
-        oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
-        oscillator.frequency.exponentialRampToValueAtTime(520, audioContext.currentTime + 0.1);
-        break;
-    }
-
-    gainNode.gain.setValueAtTime(Math.max(0.001, volume * 0.15), audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.2);
-
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    oscillator.start();
-    oscillator.stop(audioContext.currentTime + 0.22);
-  } catch (error) {
-    if (type === 'match') return;
-  }
+  const url = SOUND_URLS[type] || SOUND_URLS.move;
+  playAudio(url, volume);
 }
 
 export function playMatchFoundSound(settings) {
