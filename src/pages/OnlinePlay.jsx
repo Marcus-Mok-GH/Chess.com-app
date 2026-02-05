@@ -143,15 +143,15 @@ export default function OnlinePlay() {
         setGameMode(resolvedSession.gameMode || null);
         persistGameSession(resolvedSession);
         setError('');
+        setView('playing');
       } else {
         setPlayerId(null);
         setPlayerColor(null);
         setOpponentInfo(null);
         setGameMode(null);
         setError('Unable to restore match data. Please return to Online and rejoin.');
+        setView('mode-select');
       }
-
-      setView('playing');
       return;
     }
 
