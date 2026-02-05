@@ -57,6 +57,37 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
   const colorCode = playerColor === 'white' ? 'w' : 'b';
   const boardOrientation = playerColor;
 
+  const triggerMoveHaptics = useCallback((moveData, nextGame) => {
+    if (!moveData || !nextGame) return;
+
+    if (nextGame.isCheckmate()) {
+      const winnerColor = nextGame.turn() === 'w' ? 'b' : 'w';
+      if (winnerColor === colorCode) {
+        haptics.win();
+      } else {
+        haptics.lose();
+      }
+      return;
+    }
+
+    if (nextGame.isDraw()) {
+      haptics.draw();
+      return;
+    }
+
+    if (nextGame.inCheck()) {
+      haptics.check();
+      return;
+    }
+
+    if (moveData.captured) {
+      haptics.capture();
+      return;
+    }
+
+    haptics.move();
+  }, [colorCode]);
+
   useEffect(() => {
     gameRef.current = game;
   }, [game]);
@@ -392,37 +423,6 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     }
     return 'q';
   }, []);
-
-  const triggerMoveHaptics = useCallback((moveData, nextGame) => {
-    if (!moveData || !nextGame) return;
-
-    if (nextGame.isCheckmate()) {
-      const winnerColor = nextGame.turn() === 'w' ? 'b' : 'w';
-      if (winnerColor === colorCode) {
-        haptics.win();
-      } else {
-        haptics.lose();
-      }
-      return;
-    }
-
-    if (nextGame.isDraw()) {
-      haptics.draw();
-      return;
-    }
-
-    if (nextGame.inCheck()) {
-      haptics.check();
-      return;
-    }
-
-    if (moveData.captured) {
-      haptics.capture();
-      return;
-    }
-
-    haptics.move();
-  }, [colorCode]);
 
   const onSquareClick = useCallback(
     (square) => {

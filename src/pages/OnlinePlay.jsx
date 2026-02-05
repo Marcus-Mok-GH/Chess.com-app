@@ -140,6 +140,21 @@ export default function OnlinePlay() {
     }
   }, [routeGameId, searchParams, GAME_CODE_LENGTH, readGameSession]);
 
+  const clearMatchmakingTimers = useCallback(() => {
+    if (searchTimeInterval.current) {
+      clearInterval(searchTimeInterval.current);
+      searchTimeInterval.current = null;
+    }
+    if (heartbeatInterval.current) {
+      clearInterval(heartbeatInterval.current);
+      heartbeatInterval.current = null;
+    }
+    if (queueUpdateIntervalRef.current) {
+      clearInterval(queueUpdateIntervalRef.current);
+      queueUpdateIntervalRef.current = null;
+    }
+  }, []);
+
   const startMatchmaking = useCallback(() => {
     clearMatchmakingTimers();
     // Socket may still be connecting; queue the request instead of erroring.
@@ -208,21 +223,6 @@ export default function OnlinePlay() {
       socketService.getQueueDetails();
     }, 5000);
   }, [isLoggedIn, user, clearMatchmakingTimers]);
-
-  const clearMatchmakingTimers = useCallback(() => {
-    if (searchTimeInterval.current) {
-      clearInterval(searchTimeInterval.current);
-      searchTimeInterval.current = null;
-    }
-    if (heartbeatInterval.current) {
-      clearInterval(heartbeatInterval.current);
-      heartbeatInterval.current = null;
-    }
-    if (queueUpdateIntervalRef.current) {
-      clearInterval(queueUpdateIntervalRef.current);
-      queueUpdateIntervalRef.current = null;
-    }
-  }, []);
 
   const handleCancelMatchmaking = useCallback(() => {
     clearMatchmakingTimers();
