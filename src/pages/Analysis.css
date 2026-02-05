@@ -2,6 +2,7 @@
 
 .analysis-page {
   min-height: calc(100vh - 56px - 70px);
+  min-height: calc(100svh - 56px - 70px);
   min-height: calc(100dvh - 56px - 70px);
   background:
     radial-gradient(circle at 12% -10%, rgba(127, 166, 80, 0.2), transparent 45%),

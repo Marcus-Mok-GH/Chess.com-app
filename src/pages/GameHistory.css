@@ -1,5 +1,7 @@
 .game-history-page {
   min-height: 100vh;
+  min-height: 100svh;
+  min-height: 100dvh;
   background: #302e2b;
   color: #dcddde;
   padding: 24px;

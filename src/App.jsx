@@ -35,7 +35,7 @@ function AppHeader() {
     <>
       {/* Top header (simplified) */}
       <header className="app-header">
-        <div className="header-content">
+        <div className="app-header-content">
           <Link to={isLoggedIn ? "/home" : "/login"} className="app-logo">
             ♟️ Chess
           </Link>

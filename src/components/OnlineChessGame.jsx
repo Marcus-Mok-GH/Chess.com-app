@@ -716,6 +716,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
   const canReview = boardStatus === 'checkmate'
     || endReason === 'resignation'
     || (gameStatus === 'ended' && winner && winner !== 'draw');
+  const canOfferDraw = gameStatus === 'playing';
   const isBoardInteractive = gameStatus === 'playing';
 
   const topPlayer = boardOrientation === 'white'
@@ -980,6 +981,60 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
             </button>
           </div>
         </div>
+      </div>
+
+      <div className="online-mobile-actions" role="region" aria-label="Online game actions">
+        {drawOffered ? (
+          <>
+            <button
+              onClick={() => handleRespondDraw(true)}
+              className="mobile-action-btn primary"
+              disabled={!canOfferDraw}
+            >
+              <span className="mobile-action-icon">✅</span>
+              <span className="mobile-action-label">Accept</span>
+            </button>
+            <button
+              onClick={() => handleRespondDraw(false)}
+              className="mobile-action-btn danger"
+              disabled={!canOfferDraw}
+            >
+              <span className="mobile-action-icon">❌</span>
+              <span className="mobile-action-label">Decline</span>
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={handleOfferDraw}
+              className="mobile-action-btn secondary"
+              disabled={!canOfferDraw || drawOffered}
+            >
+              <span className="mobile-action-icon">🤝</span>
+              <span className="mobile-action-label">Draw</span>
+            </button>
+            <button
+              onClick={handleResign}
+              className="mobile-action-btn danger"
+              disabled={!canOfferDraw}
+            >
+              <span className="mobile-action-icon">🏳️</span>
+              <span className="mobile-action-label">Resign</span>
+            </button>
+          </>
+        )}
+        <button
+          onClick={() => navigate(`/analysis/${gameId}`, { state: { moveHistory } })}
+          className="mobile-action-btn primary"
+          disabled={!canReview}
+        >
+          <span className="mobile-action-icon">🧠</span>
+          <span className="mobile-action-label">Review</span>
+        </button>
+        <button onClick={onLeave} className="mobile-action-btn danger">
+          <span className="mobile-action-icon">🚪</span>
+          <span className="mobile-action-label">Leave</span>
+        </button>
       </div>
 
       <ConfirmDialog

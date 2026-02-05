@@ -2,12 +2,16 @@
 
 .feedback-trigger-wrapper {
   position: fixed;
-  bottom: 20px;
+  bottom: calc(20px + var(--bottom-nav-height) + env(safe-area-inset-bottom));
   right: 20px;
   display: flex;
   align-items: center;
   gap: 0;
   z-index: 1800; /* UI layer - feedback trigger button */
+}
+
+.hide-bottom-nav .feedback-trigger-wrapper {
+  display: none;
 }
 
 .feedback-trigger {
@@ -293,7 +297,7 @@
 /* Mobile - bottom sheet */
 @media (max-width: 480px) {
   .feedback-trigger-wrapper {
-    bottom: 16px;
+    bottom: calc(16px + var(--bottom-nav-height) + env(safe-area-inset-bottom));
     right: 16px;
   }
 

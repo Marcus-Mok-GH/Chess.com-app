@@ -4,6 +4,8 @@
 
 .landing {
   min-height: 100vh;
+  min-height: 100svh;
+  min-height: 100dvh;
   background:
     radial-gradient(circle at 12% -10%, rgba(127, 166, 80, 0.22), transparent 45%),
     radial-gradient(circle at 85% 10%, rgba(240, 185, 11, 0.16), transparent 40%),
