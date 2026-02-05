@@ -4,6 +4,7 @@ import ChessBoard from './ChessBoard';
 import { Chess } from 'chess.js';
 import { useSettings } from '../contexts/SettingsContext';
 import { playSoundEffect } from '../utils/sound';
+import { haptics } from '../utils/haptics';
 import MoveHistory from './MoveHistory';
 import GameControls from './GameControls';
 import BotSelector from './BotSelector';
@@ -475,6 +476,10 @@ function ChessGame(
               setMoveHistory([...history, moveResult]);
             }
 
+            if (moveResult) {
+              triggerMoveHaptics(moveResult, newGame);
+            }
+
             if (newGame.isCheckmate()) {
               setBotMessage(getRandomQuote(bot, 'win'));
             } else if (newGame.isDraw()) {
@@ -510,7 +515,7 @@ function ChessGame(
       },
       debug: settingsRef.current.debugMode,
     });
-  }, [triggerAnimation, isThinking, isPassAndPlay]);
+  }, [triggerAnimation, isThinking, isPassAndPlay, triggerMoveHaptics]);
 
   useEffect(() => {
     if (isPassAndPlay) return;
@@ -629,6 +634,37 @@ function ChessGame(
     return 'q';
   }, []);
 
+  const triggerMoveHaptics = useCallback((moveData, nextGame) => {
+    if (!moveData || !nextGame) return;
+
+    if (nextGame.isCheckmate()) {
+      const winnerColor = nextGame.turn() === 'w' ? 'b' : 'w';
+      if (isPassAndPlay || winnerColor === playerColor) {
+        haptics.win();
+      } else {
+        haptics.lose();
+      }
+      return;
+    }
+
+    if (nextGame.isDraw()) {
+      haptics.draw();
+      return;
+    }
+
+    if (nextGame.inCheck()) {
+      haptics.check();
+      return;
+    }
+
+    if (moveData.captured) {
+      haptics.capture();
+      return;
+    }
+
+    haptics.move();
+  }, [playerColor, isPassAndPlay]);
+
   const onSquareClick = useCallback(
     (square) => {
       const activeColor = game.turn();
@@ -645,7 +681,7 @@ function ChessGame(
         }
 
         const promotion = resolvePromotion(selectedSquare, square, game.get(selectedSquare)?.type);
-        if (promotion === null && game.get(selectedSquare)?.type === 'p' && settingsRef.current.confirmMoves) {
+        if (settingsRef.current.confirmMoves) {
           const proceed = window.confirm('Make this move?');
           if (!proceed) {
             setSelectedSquare(null);
@@ -699,6 +735,8 @@ function ChessGame(
               playSoundEffect(settingsRef.current, { type: 'check' });
             }
 
+            triggerMoveHaptics(move, gameCopy);
+
             // Request coaching feedback for Coach bot
             requestCoachingFeedback(fenBefore, move.san, nextHistory);
           }, 50);
@@ -716,7 +754,7 @@ function ChessGame(
         setPossibleMoves([]);
       }
     },
-    [game, playerColor, selectedSquare, isThinking, triggerAnimation, requestCoachingFeedback, resolvePromotion, moveHistory, isPassAndPlay]
+    [game, playerColor, selectedSquare, isThinking, triggerAnimation, requestCoachingFeedback, resolvePromotion, moveHistory, isPassAndPlay, triggerMoveHaptics]
   );
 
   const onPieceDrop = useCallback(
@@ -728,7 +766,7 @@ function ChessGame(
       const fenBefore = game.fen();
       const gameCopy = buildGameFromHistory(moveHistory, fenBefore);
       const promotion = resolvePromotion(sourceSquare, targetSquare, game.get(sourceSquare)?.type);
-      if (promotion === null && game.get(sourceSquare)?.type === 'p' && settingsRef.current.confirmMoves) {
+      if (settingsRef.current.confirmMoves) {
         const proceed = window.confirm('Make this move?');
         if (!proceed) {
           setSelectedSquare(null);
@@ -779,13 +817,15 @@ function ChessGame(
           playSoundEffect(settingsRef.current, { type: 'check' });
         }
 
+        triggerMoveHaptics(move, gameCopy);
+
         // Request coaching feedback for Coach bot
         requestCoachingFeedback(fenBefore, move.san, nextHistory);
       }, 50);
 
       return true;
     },
-    [game, playerColor, isThinking, triggerAnimation, requestCoachingFeedback, resolvePromotion, moveHistory, isPassAndPlay]
+    [game, playerColor, isThinking, triggerAnimation, requestCoachingFeedback, resolvePromotion, moveHistory, isPassAndPlay, triggerMoveHaptics]
   );
 
   const handleNewGame = useCallback(() => {
@@ -813,6 +853,7 @@ function ChessGame(
     if (hasResigned || game.isGameOver()) return;
     const resigningColor = isPassAndPlay ? game.turn() : playerColor;
     const winnerColor = resigningColor === 'w' ? 'black' : 'white';
+    haptics.lose();
     setHasResigned(true);
     setResignedColor(resigningColor);
     setSelectedSquare(null);

@@ -4,6 +4,7 @@ import ChessBoard from './ChessBoard';
 import { Chess } from 'chess.js';
 import { useSettings } from '../contexts/SettingsContext';
 import { playSoundEffect } from '../utils/sound';
+import { haptics } from '../utils/haptics';
 import MoveHistory from './MoveHistory';
 import { normalizeMoveHistory, toStoredMoveHistory, buildGameFromHistory } from '../engine/game/moveHistory';
 import PlayerBar from './PlayerBar';
@@ -118,6 +119,11 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
         const chess = buildGameFromHistory(normalizedHistory, data.fen);
         setGame(chess);
         setMoveHistory(normalizedHistory);
+        const verboseHistory = chess.history({ verbose: true });
+        const lastMove = verboseHistory[verboseHistory.length - 1];
+        if (lastMove) {
+          triggerMoveHaptics(lastMove, chess);
+        }
       }
     };
 
@@ -126,6 +132,21 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
       setGameStatus('ended');
       setEndReason(data.reason || null);
       setWinner(data.result || null);
+
+      const reason = data?.reason || '';
+      const skipHaptic = ['checkmate', 'stalemate', 'draw'].includes(reason);
+      if (!skipHaptic) {
+        if (data.result === 'draw') {
+          haptics.draw();
+        } else if (data.result) {
+          const winnerColor = data.result === 'white' ? 'w' : 'b';
+          if (winnerColor === colorCode) {
+            haptics.win();
+          } else {
+            haptics.lose();
+          }
+        }
+      }
     };
 
     const handlePlayerJoined = (data) => {
@@ -172,6 +193,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     const handleMoveError = (data) => {
       console.error('[OnlineChessGame] Move error:', data);
       setMoveError(data.message || 'An error occurred while making your move');
+      haptics.illegal();
       // Clear error after 5 seconds
       if (moveErrorTimeoutRef.current) {
         clearTimeout(moveErrorTimeoutRef.current);
@@ -217,7 +239,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
       // Leave the game room
       socketService.leaveGame(gameId, playerId);
     };
-  }, [gameId, playerId]);
+  }, [gameId, playerId, triggerMoveHaptics, colorCode]);
 
   // Set opponent info when received
   useEffect(() => {
@@ -371,6 +393,37 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     return 'q';
   }, []);
 
+  const triggerMoveHaptics = useCallback((moveData, nextGame) => {
+    if (!moveData || !nextGame) return;
+
+    if (nextGame.isCheckmate()) {
+      const winnerColor = nextGame.turn() === 'w' ? 'b' : 'w';
+      if (winnerColor === colorCode) {
+        haptics.win();
+      } else {
+        haptics.lose();
+      }
+      return;
+    }
+
+    if (nextGame.isDraw()) {
+      haptics.draw();
+      return;
+    }
+
+    if (nextGame.inCheck()) {
+      haptics.check();
+      return;
+    }
+
+    if (moveData.captured) {
+      haptics.capture();
+      return;
+    }
+
+    haptics.move();
+  }, [colorCode]);
+
   const onSquareClick = useCallback(
     (square) => {
       if (game.turn() !== colorCode || game.isGameOver() || gameStatus !== 'playing') {
@@ -387,7 +440,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
         }
 
         const promotion = resolvePromotion(selectedSquare, square, game.get(selectedSquare)?.type);
-        if (promotion === null && game.get(selectedSquare)?.type === 'p' && settingsRef.current.confirmMoves) {
+        if (settingsRef.current.confirmMoves) {
           const proceed = window.confirm('Make this move?');
           if (!proceed) {
             setSelectedSquare(null);
@@ -438,6 +491,8 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
               playSoundEffect(settingsRef.current, { type: 'check' });
             }
 
+            triggerMoveHaptics(move, gameCopy);
+
             if (gameCopy.isGameOver()) {
               handleGameOver(gameCopy);
             }
@@ -455,7 +510,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
         setPossibleMoves([]);
       }
     },
-    [game, colorCode, selectedSquare, gameId, playerId, gameStatus, triggerAnimation, resolvePromotion, moveHistory]
+    [game, colorCode, selectedSquare, gameId, playerId, gameStatus, triggerAnimation, resolvePromotion, moveHistory, triggerMoveHaptics]
   );
 
   const onPieceDrop = useCallback(
@@ -466,7 +521,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
 
       const gameCopy = buildGameFromHistory(moveHistory, game.fen());
       const promotion = resolvePromotion(sourceSquare, targetSquare, game.get(sourceSquare)?.type);
-      if (promotion === null && game.get(sourceSquare)?.type === 'p' && settingsRef.current.confirmMoves) {
+      if (settingsRef.current.confirmMoves) {
         const proceed = window.confirm('Make this move?');
         if (!proceed) {
           setSelectedSquare(null);
@@ -515,6 +570,8 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
           playSoundEffect(settingsRef.current, { type: 'check' });
         }
 
+        triggerMoveHaptics(move, gameCopy);
+
         if (gameCopy.isGameOver()) {
           handleGameOver(gameCopy);
         }
@@ -522,7 +579,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
 
       return true;
     },
-    [game, colorCode, gameId, playerId, gameStatus, triggerAnimation, resolvePromotion, moveHistory]
+    [game, colorCode, gameId, playerId, gameStatus, triggerAnimation, resolvePromotion, moveHistory, triggerMoveHaptics]
   );
 
   const handleGameOver = (chessGame) => {
@@ -547,6 +604,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
 
   const handleResign = () => {
     if (window.confirm('Are you sure you want to resign? This will count as a loss.')) {
+      haptics.lose();
       socketService.resignGame(gameId, playerId);
     }
   };

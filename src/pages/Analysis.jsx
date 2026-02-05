@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Chess } from 'chess.js';
 import ChessBoard from '../components/ChessBoard';
+import { useSettings } from '../contexts/SettingsContext';
 import GameAnalysis from '../components/GameAnalysis';
 import api from '../services/api';
 import { normalizeMoveHistory, toDetailedMoveHistory, toSanHistory } from '../engine/game/moveHistory';
@@ -31,6 +32,7 @@ export default function Analysis() {
   const navigate = useNavigate();
   const { gameId: gameIdParam } = useParams();
   const { state } = useLocation();
+  const { settings } = useSettings();
   
   // Ensure moveHistory is always a valid array - handle null, undefined, or non-array values
   const rawMoveHistory = state?.moveHistory;
@@ -210,6 +212,8 @@ export default function Analysis() {
                 onSquareClick={handleSquareClick}
                 boardOrientation={boardOrientation}
                 customSquareStyles={customSquareStyles}
+                showCoordinates={settings.showCoordinates}
+                boardTheme={settings.boardTheme}
               />
             </div>
             <div className="analysis-board-actions">
