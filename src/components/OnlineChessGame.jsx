@@ -193,13 +193,21 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
 
     const attemptJoin = () => {
       if (socketService.isConnected) {
+        console.log('[OnlineChessGame] Joining game:', { gameId, playerId });
         socketService.joinGame(gameId, playerId);
+      } else {
+        console.warn('[OnlineChessGame] Socket not connected, cannot join game yet');
       }
     };
 
     attemptJoin();
 
     const handleGameState = (data) => {
+      console.log('[OnlineChessGame] Received game_state:', {
+        fen: data.fen,
+        moveCount: data.moveHistory?.length,
+        status: data.status
+      });
       const normalizedHistory = normalizeMoveHistory(data.moveHistory);
       const chess = safeBuildGame(normalizedHistory, data.fen);
       setGame(chess);
