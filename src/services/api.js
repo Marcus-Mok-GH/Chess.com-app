@@ -89,6 +89,13 @@ class ApiService {
     return this.request('/matchmaking/details');
   }
 
+  async submitFeedback({ feedbackType, message, email }) {
+    return this.request('/feedback', {
+      method: 'POST',
+      body: JSON.stringify({ feedbackType, message, email }),
+    });
+  }
+
   // Health check
   async healthCheck() {
     try {

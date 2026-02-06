@@ -22,6 +22,7 @@ import matchmakingRouter from './routes/matchmaking.js';
 import gamesRouter from './routes/games.js';
 import usersRouter from './routes/users.js';
 import coachRouter from './routes/coach.js';
+import feedbackRouter from './routes/feedback.js';
 
 // Validate environment variables
 const databaseUrl = process.env.DATABASE_URL
@@ -148,6 +149,7 @@ mountApi('/users', usersRouter);
 mountApi('/matchmaking', matchmakingRouter);
 mountApi('/games', gamesRouter);
 mountApi('/coach', coachRouter);
+mountApi('/feedback', feedbackRouter);
 
 // Serve static files from Vite dist directory
 const distPath = path.join(__dirname, '../dist');

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import api from '../services/api';
 import './FeedbackPanel.css';
 
 const REAPPEAR_DELAY = 30000; // 30 seconds
@@ -39,22 +40,26 @@ export function FeedbackPanel() {
     if (!message.trim()) return;
 
     setIsSubmitting(true);
-    
-    // Simulate submission (replace with actual API call)
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    console.log('Feedback submitted:', { feedbackType, message, email });
-    
-    setIsSubmitting(false);
-    setSubmitted(true);
-    
-    setTimeout(() => {
-      setIsOpen(false);
-      setSubmitted(false);
-      setMessage('');
-      setEmail('');
-      setFeedbackType('suggestion');
-    }, 2000);
+
+    try {
+      await api.submitFeedback({
+        feedbackType,
+        message: message.trim(),
+        email: email.trim() || null,
+      });
+      setSubmitted(true);
+      setTimeout(() => {
+        setIsOpen(false);
+        setSubmitted(false);
+        setMessage('');
+        setEmail('');
+        setFeedbackType('suggestion');
+      }, 2000);
+    } catch (error) {
+      console.error('[Feedback] Failed to submit feedback:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleKeyDown = (e) => {
