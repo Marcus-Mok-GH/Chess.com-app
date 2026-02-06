@@ -124,6 +124,42 @@ describe('GameService.endGame', () => {
     expect(insertParams[1]).toBe(7);
     expect(insertParams[2]).toBe(8);
   });
+
+  it('updates ELO for friendly online games', async () => {
+    const service = new GameService(createIo());
+
+    const gameRow = {
+      game_id: 'GAME124',
+      white_player_id: 'user_5',
+      black_player_id: 'user_6',
+      white_player_name: 'Alice',
+      black_player_name: 'Bob',
+      result: 'white',
+      fen: 'fen',
+      move_history: ['e4'],
+      game_mode: 'friendly',
+      white_elo: 1200,
+      black_elo: 1300,
+      white_socket_id: 'socket-white',
+      black_socket_id: 'socket-black',
+    };
+
+    query
+      .mockResolvedValueOnce({ rows: [gameRow], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 });
+
+    await service.endGame('GAME124', 'white');
+
+    expect(query).toHaveBeenCalledTimes(4);
+
+    const whiteParams = query.mock.calls[2][1];
+    const blackParams = query.mock.calls[3][1];
+
+    expect(whiteParams[4]).toBe(5);
+    expect(blackParams[4]).toBe(6);
+  });
 });
 
 describe('setupGameHandlers join_game', () => {

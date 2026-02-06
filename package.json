@@ -52,7 +52,7 @@
     "@anthropic-ai/sandbox-runtime": "^0.0.34",
     "@neondatabase/serverless": "^1.0.2",
     "@openai/codex": "^0.96.0",
-    "@sourcegraph/amp": "^0.0.1769949290-gbb0479",
+    "@sourcegraph/amp": "^0.0.1770366910-g1852ef",
     "bcryptjs": "^3.0.3",
     "chess.js": "^1.4.0",
     "claude-flow": "^3.1.0-alpha.3",

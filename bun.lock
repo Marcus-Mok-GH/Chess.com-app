@@ -7,7 +7,7 @@
         "@anthropic-ai/sandbox-runtime": "^0.0.34",
         "@neondatabase/serverless": "^1.0.2",
         "@openai/codex": "^0.96.0",
-        "@sourcegraph/amp": "^0.0.1769949290-gbb0479",
+        "@sourcegraph/amp": "^0.0.1770366910-g1852ef",
         "bcryptjs": "^3.0.3",
         "chess.js": "^1.4.0",
         "claude-flow": "^3.1.0-alpha.3",
@@ -723,7 +723,7 @@
 
     "@socket.io/component-emitter": ["@socket.io/component-emitter@3.1.2", "", {}, "sha512-9BCxFwvbGg/RsZK9tjXd8s4UcwR0MWeFQ1XEKIQVVvAGJyINdrqKMcTRyLoK8Rse1GjzLV9cwjWV1olXRWEXVA=="],
 
-    "@sourcegraph/amp": ["@sourcegraph/amp@0.0.1769949290-gbb0479", "", { "dependencies": { "@napi-rs/keyring": "1.1.9" }, "bin": { "amp": "dist/main.js" } }, "sha512-Bxi8KwGX19NBiTyxU6B7nb5dDbMyXhPyDsqMB9kgOrjcsKnxEXX2ev8GS5zOot5McL+blFoeuvEMG8f3HpgXcw=="],
+    "@sourcegraph/amp": ["@sourcegraph/amp@0.0.1770366910-g1852ef", "", { "dependencies": { "@napi-rs/keyring": "1.1.9" }, "bin": { "amp": "dist/main.js" } }, "sha512-ZXxRYD8u+6/Jh0EXUXYe+tXYO0xyROfrrHFpUALPJUeBjbziyxfQ6MD2hz8mMaAt7wkboEitD5pST2o2q7n+tw=="],
 
     "@standard-schema/spec": ["@standard-schema/spec@1.1.0", "", {}, "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w=="],
 

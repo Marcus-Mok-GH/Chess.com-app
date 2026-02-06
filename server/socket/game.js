@@ -186,10 +186,8 @@ class GameService {
           ]
         );
 
-        if (game.game_mode === 'ranked') {
-          // Update player ELOs
-          await this.updatePlayerElos(game, result);
-        }
+        // Update player ELOs for online games (ranked or friendly).
+        await this.updatePlayerElos(game, result);
       }
 
       return gameResult.rows[0] || null;
