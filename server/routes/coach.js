@@ -171,7 +171,7 @@ function normalizeMoveHistoryPayload(raw) {
 // Get coaching feedback for a player's move
 router.post('/feedback', async (req, res) => {
   try {
-    const { fen, playerMove, moveHistory } = req.body;
+    const { fen, playerMove, moveHistory, stream = false } = req.body;
 
     if (!fen || !playerMove) {
       return errorResponse(res, 400, 'Missing required fields: fen, playerMove');
@@ -200,11 +200,55 @@ Be concise and supportive. No greetings or sign-offs. Do not show your analysis,
       }
     ];
 
-    const response = await callMistral(messages);
-    const data = await response.json();
-    
-    const text = extractMistralText(data.choices?.[0]?.message?.content);
-    res.json({ feedback: text });
+    const response = await callMistral(messages, { stream });
+
+    if (stream) {
+      // Set headers for Server-Sent Events
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              if (data === '[DONE]') {
+                res.write('data: [DONE]\n\n');
+                break;
+              }
+
+              try {
+                const parsed = JSON.parse(data);
+                const delta = parsed.choices?.[0]?.delta?.content;
+                if (delta) {
+                  res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
+                }
+              } catch (e) {
+                // Skip invalid JSON
+              }
+            }
+          }
+        }
+      } finally {
+        res.end();
+      }
+    } else {
+      const data = await response.json();
+      const text = extractMistralText(data.choices?.[0]?.message?.content);
+      res.json({ feedback: text });
+    }
   } catch (error) {
     console.error('[Coach] Feedback error:', error);
     return handleRouteError(res, error, 'Failed to get coaching feedback');
@@ -214,7 +258,7 @@ Be concise and supportive. No greetings or sign-offs. Do not show your analysis,
 // Get explanation for the coach's move
 router.post('/explain', async (req, res) => {
   try {
-    const { fenBefore, move, fenAfter } = req.body;
+    const { fenBefore, move, fenAfter, stream = false } = req.body;
 
     if (!fenBefore || !move) {
       return errorResponse(res, 400, 'Missing required fields: fenBefore, move');
@@ -236,11 +280,55 @@ Explain it in 2-3 sentences. Focus on the main idea - is it developing a piece, 
       }
     ];
 
-    const response = await callMistral(messages);
-    const data = await response.json();
-    
-    const text = extractMistralText(data.choices?.[0]?.message?.content);
-    res.json({ explanation: text });
+    const response = await callMistral(messages, { stream });
+
+    if (stream) {
+      // Set headers for Server-Sent Events
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              if (data === '[DONE]') {
+                res.write('data: [DONE]\n\n');
+                break;
+              }
+
+              try {
+                const parsed = JSON.parse(data);
+                const delta = parsed.choices?.[0]?.delta?.content;
+                if (delta) {
+                  res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
+                }
+              } catch (e) {
+                // Skip invalid JSON
+              }
+            }
+          }
+        }
+      } finally {
+        res.end();
+      }
+    } else {
+      const data = await response.json();
+      const text = extractMistralText(data.choices?.[0]?.message?.content);
+      res.json({ explanation: text });
+    }
   } catch (error) {
     console.error('[Coach] Explain error:', error);
     return handleRouteError(res, error, 'Failed to get move explanation');

@@ -31,10 +31,12 @@ export async function isCoachAIAvailable() {
  */
 export async function getCoachingFeedback(fen, playerMove, moveHistory, onStream = null) {
   try {
+    const enableStream = typeof onStream === 'function';
+    
     const response = await fetch(`${API_BASE_URL}/coach/feedback`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fen, playerMove, moveHistory })
+      body: JSON.stringify({ fen, playerMove, moveHistory, stream: enableStream })
     });
 
     if (!response.ok) {
@@ -42,14 +44,53 @@ export async function getCoachingFeedback(fen, playerMove, moveHistory, onStream
       return null;
     }
 
-    const data = await response.json();
-    const feedback = data.feedback || null;
-    
-    if (onStream && feedback) {
-      onStream(feedback);
+    if (enableStream) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+      let buffer = '';
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6).trim();
+              if (data === '[DONE]') break;
+
+              try {
+                const parsed = JSON.parse(data);
+                if (parsed.content) {
+                  fullText += parsed.content;
+                  onStream(fullText);
+                }
+              } catch (e) {
+                console.warn('[CoachAI] Failed to parse stream data:', e);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('[CoachAI] Stream reading error:', error);
+      }
+
+      return fullText || null;
+    } else {
+      const data = await response.json();
+      const feedback = data.feedback || null;
+      
+      if (onStream && feedback) {
+        onStream(feedback);
+      }
+      
+      return feedback;
     }
-    
-    return feedback;
   } catch (error) {
     if (isNetworkError(error)) {
       console.error('[CoachAI] Feedback network error:', error.message);
@@ -66,10 +107,12 @@ export async function getCoachingFeedback(fen, playerMove, moveHistory, onStream
  */
 export async function explainCoachMove(fenBefore, move, fenAfter, onStream = null) {
   try {
+    const enableStream = typeof onStream === 'function';
+    
     const response = await fetch(`${API_BASE_URL}/coach/explain`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fenBefore, move, fenAfter })
+      body: JSON.stringify({ fenBefore, move, fenAfter, stream: enableStream })
     });
 
     if (!response.ok) {
@@ -77,14 +120,53 @@ export async function explainCoachMove(fenBefore, move, fenAfter, onStream = nul
       return null;
     }
 
-    const data = await response.json();
-    const explanation = data.explanation || null;
-    
-    if (onStream && explanation) {
-      onStream(explanation);
+    if (enableStream) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+      let buffer = '';
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6).trim();
+              if (data === '[DONE]') break;
+
+              try {
+                const parsed = JSON.parse(data);
+                if (parsed.content) {
+                  fullText += parsed.content;
+                  onStream(fullText);
+                }
+              } catch (e) {
+                console.warn('[CoachAI] Failed to parse stream data:', e);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('[CoachAI] Stream reading error:', error);
+      }
+
+      return fullText || null;
+    } else {
+      const data = await response.json();
+      const explanation = data.explanation || null;
+      
+      if (onStream && explanation) {
+        onStream(explanation);
+      }
+      
+      return explanation;
     }
-    
-    return explanation;
   } catch (error) {
     if (isNetworkError(error)) {
       console.error('[CoachAI] Explain network error:', error.message);

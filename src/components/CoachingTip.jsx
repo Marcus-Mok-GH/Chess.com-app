@@ -8,20 +8,20 @@ export default function CoachingTip({ tip, isLoading, onDismiss }) {
       <div className="coaching-tip-header">
         <span className="coaching-tip-icon">🎓</span>
         <span className="coaching-tip-title">Coach's Feedback</span>
-        {tip && (
+        {tip && !isLoading && (
           <button className="coaching-tip-dismiss" onClick={onDismiss}>
             ×
           </button>
         )}
       </div>
       <div className="coaching-tip-content">
-        {isLoading ? (
+        {isLoading && !tip ? (
           <div className="coaching-tip-loading">
             <span className="coaching-spinner"></span>
             Analyzing your move...
           </div>
         ) : (
-          <p>{tip}</p>
+          <p className="coaching-tip-text">{tip}</p>
         )}
       </div>
     </div>
