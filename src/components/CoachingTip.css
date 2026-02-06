@@ -7,11 +7,6 @@
   overflow-wrap: anywhere;
 }
 
-.coaching-tip-content {
-  max-height: 220px;
-  overflow-y: auto;
-}
-
 .coaching-tip-header {
   display: flex;
   align-items: center;
@@ -47,9 +42,30 @@
 }
 
 .coaching-tip-content {
+  max-height: 220px;
+  overflow-y: auto;
   color: #c8e6c9;
   font-size: 0.875rem;
   line-height: 1.5;
+  padding-right: 4px;
+}
+
+.coaching-tip-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.coaching-tip-content::-webkit-scrollbar-track {
+  background: rgba(129, 199, 132, 0.1);
+  border-radius: 4px;
+}
+
+.coaching-tip-content::-webkit-scrollbar-thumb {
+  background: #4CAF50;
+  border-radius: 4px;
+}
+
+.coaching-tip-content::-webkit-scrollbar-thumb:hover {
+  background: #66BB6A;
 }
 
 .coaching-tip-content p {

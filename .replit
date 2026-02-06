@@ -5,7 +5,7 @@ entrypoint = "index.html"
 
 [nix]
 channel = "stable-24_05"
-packages = ["awscli2", "azure-cli", "bubblewrap", "google-cloud-sdk-gce", "ollama", "socat", "unzipNLS", "uv"]
+packages = ["awscli2", "azure-cli", "bubblewrap", "google-cloud-sdk-gce", "ollama", "socat", "unzipNLS", "uv", "bzip2_1_1"]
 
 [unitTest]
 language = "nodejs"
