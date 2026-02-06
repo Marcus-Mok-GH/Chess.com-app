@@ -145,7 +145,7 @@ function ChessGame(
 ) {
   const navigate = useNavigate();
   const { settings } = useSettings();
-  const { user, isOnline } = useUser();
+  const { user, isOnline, updateElo } = useUser();
 
   const isPassAndPlay = gameMode === 'pass';
   const passConfig = passAndPlayConfig || {};
@@ -978,10 +978,22 @@ function ChessGame(
         playerColor: playerColor === 'w' ? 'white' : 'black',
         finalFen: currentGame.fen(),
       });
+
+      if (result !== 'unknown') {
+        let playerResult = 'draw';
+        if (result === 'white') {
+          playerResult = playerColor === 'w' ? 'win' : 'loss';
+        } else if (result === 'black') {
+          playerResult = playerColor === 'b' ? 'win' : 'loss';
+        } else if (result === 'draw') {
+          playerResult = 'draw';
+        }
+        await updateElo(botElo, playerResult);
+      }
     } catch (error) {
       console.error('[ChessGame] Failed to save game:', error);
     }
-  }, [gameId, isOnline, isPassAndPlay, playerColor, user]);
+  }, [gameId, isOnline, isPassAndPlay, playerColor, updateElo, user]);
 
   const handleResign = useCallback(() => {
     if (hasResigned || !gameRef.current || gameRef.current.isGameOver()) return;
