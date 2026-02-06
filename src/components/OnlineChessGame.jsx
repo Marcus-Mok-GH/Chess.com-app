@@ -110,6 +110,8 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
   const [animatingPieces, setAnimatingPieces] = useState([]);
   const [opponentStatus, setOpponentStatus] = useState('connected');
   const [incomingReaction, setIncomingReaction] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
   const [gameStatus, setGameStatus] = useState('playing');
   const [isLoadingGame, setIsLoadingGame] = useState(true);
   const [whitePlayer, setWhitePlayer] = useState({ name: 'White', elo: null });
@@ -135,6 +137,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
   const victoryTimeoutRef = useRef(null);
   const lastVictoryKeyRef = useRef(null);
   const reactionTimeoutRef = useRef(null);
+  const chatEndRef = useRef(null);
 
   const colorCode = playerColor === 'white' ? 'w' : 'b';
   const boardOrientation = playerColor;
@@ -158,6 +161,12 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
       clearTimeout(reactionTimeoutRef.current);
     }
   }, []);
+
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages]);
 
   const triggerMoveHaptics = useCallback((moveData, nextGame) => {
     if (!moveData || !nextGame) return;
@@ -319,14 +328,30 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     };
 
     const handleChatMessage = (data) => {
-      if (!data || data.playerId === playerId) return;
+      if (!data) return;
       if (REACTIONS.includes(data.message)) {
-        setIncomingReaction(data.message);
-        if (reactionTimeoutRef.current) {
-          clearTimeout(reactionTimeoutRef.current);
+        if (data.playerId !== playerId) {
+          setIncomingReaction(data.message);
+          if (reactionTimeoutRef.current) {
+            clearTimeout(reactionTimeoutRef.current);
+          }
+          reactionTimeoutRef.current = setTimeout(() => setIncomingReaction(null), 2000);
         }
-        reactionTimeoutRef.current = setTimeout(() => setIncomingReaction(null), 2000);
+        return;
       }
+
+      if (data.playerId === playerId) return;
+
+      const timestamp = typeof data.timestamp === 'number' ? data.timestamp : Date.now();
+      setChatMessages((prev) => ([
+        ...prev,
+        {
+          id: `${timestamp}-${data.playerId}-${Math.random().toString(36).slice(2, 7)}`,
+          playerId: data.playerId,
+          message: data.message,
+          timestamp,
+        },
+      ]));
     };
 
     const handleEloUpdated = (data) => {
@@ -731,6 +756,24 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     socketService.sendMessage(gameId, playerId, reaction);
   }, [gameId, playerId]);
 
+  const handleSendChat = useCallback(() => {
+    const trimmed = chatInput.trim();
+    if (!trimmed) return;
+
+    const timestamp = Date.now();
+    setChatMessages((prev) => ([
+      ...prev,
+      {
+        id: `${timestamp}-${playerId}-${Math.random().toString(36).slice(2, 7)}`,
+        playerId,
+        message: trimmed,
+        timestamp,
+      },
+    ]));
+    socketService.sendMessage(gameId, playerId, trimmed);
+    setChatInput('');
+  }, [chatInput, gameId, playerId]);
+
   const customSquareStyles = useMemo(() => {
     const styles = {};
 
@@ -975,6 +1018,51 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
             <div className={`status-message ${boardStatus}`}>{getStatusMessage()}</div>
             <div className="player-color">
               You play as: <ChessPieceIcon piece="K" color={playerColor === 'white' ? 'w' : 'b'} size={18} /> {playerColor === 'white' ? 'White' : 'Black'}
+            </div>
+          </div>
+
+          <div className="chat-panel">
+            <span className="chat-label">Chat</span>
+            <div className="chat-messages" role="log" aria-live="polite">
+              {chatMessages.length === 0 && (
+                <div className="chat-empty">No messages yet.</div>
+              )}
+              {chatMessages.map((entry) => {
+                const isSelf = entry.playerId === playerId;
+                const displayName = isSelf
+                  ? (currentUserInfo?.name || currentUserInfo?.username || 'You')
+                  : (opponentInfo?.name || 'Opponent');
+
+                return (
+                  <div
+                    key={entry.id}
+                    className={`chat-message ${isSelf ? 'self' : 'opponent'}`}
+                  >
+                    <span className="chat-sender">{displayName}</span>
+                    <span className="chat-text">{entry.message}</span>
+                  </div>
+                );
+              })}
+              <div ref={chatEndRef} />
+            </div>
+            <div className="chat-input-row">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(event) => setChatInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    handleSendChat();
+                  }
+                }}
+                maxLength={200}
+                placeholder="Type a message..."
+                className="chat-input"
+              />
+              <button className="btn btn-secondary chat-send" onClick={handleSendChat}>
+                Send
+              </button>
             </div>
           </div>
 

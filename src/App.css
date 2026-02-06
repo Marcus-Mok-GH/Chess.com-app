@@ -658,6 +658,7 @@ body {
 .online-game-info,
 .game-status-panel,
 .draw-offer-panel,
+.chat-panel,
 .reactions-panel,
 .online-controls {
   background: #262421;
@@ -811,6 +812,92 @@ body {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #9e9b98;
+}
+
+.chat-panel {
+  gap: 12px;
+}
+
+.chat-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9e9b98;
+}
+
+.chat-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 10px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.chat-empty {
+  font-size: 0.8125rem;
+  color: #9e9b98;
+}
+
+.chat-message {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.25);
+  color: #f5f5f5;
+  font-size: 0.9rem;
+}
+
+.chat-message.self {
+  align-self: flex-end;
+  background: rgba(127, 166, 80, 0.22);
+  border: 1px solid rgba(127, 166, 80, 0.35);
+}
+
+.chat-message.opponent {
+  align-self: flex-start;
+  background: rgba(93, 156, 236, 0.2);
+  border: 1px solid rgba(93, 156, 236, 0.3);
+}
+
+.chat-sender {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #c9c9c9;
+}
+
+.chat-text {
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.chat-input-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.chat-input {
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  padding: 8px 10px;
+  font-size: 0.9rem;
+}
+
+.chat-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.chat-send {
+  padding: 8px 14px;
 }
 
 .reactions-grid {
