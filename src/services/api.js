@@ -208,6 +208,10 @@ class ApiService {
       }),
     });
   }
+
+  async getOnlineGameState(gameCode) {
+    return this.request(`/games/online/state/${encodeURIComponent(gameCode)}`);
+  }
 }
 
 export const api = new ApiService();

@@ -13,6 +13,7 @@ import { playSoundEffect } from '../utils/sound';
 import { haptics } from '../utils/haptics';
 import { normalizeMoveHistory, toStoredMoveHistory, buildGameFromHistory } from '../engine/game/moveHistory';
 import socketService from '../services/socket';
+import api from '../services/api';
 
 const REACTIONS = ['👍', '👏', '🤔', '😮', '🎉', '😅'];
 
@@ -191,10 +192,43 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
   useEffect(() => {
     if (!gameId || !playerId) return;
 
+    let gameStateReceived = false;
+    let fallbackTimeout = null;
+
     const attemptJoin = () => {
       if (socketService.isConnected) {
         console.log('[OnlineChessGame] Joining game:', { gameId, playerId });
         socketService.joinGame(gameId, playerId);
+        
+        fallbackTimeout = setTimeout(async () => {
+          if (!gameStateReceived) {
+            console.warn('[OnlineChessGame] Socket did not respond, loading from database...');
+            try {
+              const gameState = await api.getOnlineGameState(gameId);
+              console.log('[OnlineChessGame] Loaded game state from database:', {
+                fen: gameState.fen,
+                moveCount: gameState.moveHistory?.length
+              });
+              const normalizedHistory = normalizeMoveHistory(gameState.moveHistory);
+              const chess = safeBuildGame(normalizedHistory, gameState.fen);
+              setGame(chess);
+              setMoveHistory(normalizedHistory);
+              setGameStatus(gameState.status || 'playing');
+              setIsLoadingGame(false);
+              
+              if (gameState.whitePlayer) {
+                setWhitePlayer({ name: gameState.whitePlayer, elo: gameState.whiteElo || null });
+              }
+              if (gameState.blackPlayer) {
+                setBlackPlayer({ name: gameState.blackPlayer, elo: gameState.blackElo || null });
+              }
+              gameStateReceived = true;
+            } catch (error) {
+              console.error('[OnlineChessGame] Failed to load game state from database:', error);
+              setIsLoadingGame(false);
+            }
+          }
+        }, 2000);
       } else {
         console.warn('[OnlineChessGame] Socket not connected, cannot join game yet');
       }
@@ -208,6 +242,12 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
         moveCount: data.moveHistory?.length,
         status: data.status
       });
+      gameStateReceived = true;
+      if (fallbackTimeout) {
+        clearTimeout(fallbackTimeout);
+        fallbackTimeout = null;
+      }
+      
       const normalizedHistory = normalizeMoveHistory(data.moveHistory);
       const chess = safeBuildGame(normalizedHistory, data.fen);
       setGame(chess);
@@ -338,6 +378,9 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     socketService.on('connection_status', handleConnectionStatus);
 
     return () => {
+      if (fallbackTimeout) {
+        clearTimeout(fallbackTimeout);
+      }
       socketService.off('game_state', handleGameState);
       socketService.off('move_made', handleMoveMade);
       socketService.off('game_ended', handleGameEnded);
