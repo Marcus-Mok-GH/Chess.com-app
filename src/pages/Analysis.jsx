@@ -123,7 +123,7 @@ export default function Analysis() {
   const hasGame = moveHistory.length > 0 || gameId;
 
   const handleBack = useCallback(() => {
-    navigate(-1);
+    navigate('/home');
   }, [navigate]);
 
   const handleSquareClick = useCallback(() => {}, []);
