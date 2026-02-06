@@ -33,10 +33,10 @@ router.post('/', async (req, res) => {
     }
 
     const resendApiKey = process.env.RESEND_API_KEY;
-    const fromEmail = process.env.RESEND_FROM_EMAIL;
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
     const toEmail = process.env.FEEDBACK_TO_EMAIL || DEFAULT_TO_EMAIL;
 
-    if (!resendApiKey || !fromEmail) {
+    if (!resendApiKey) {
       return errorResponse(res, 503, 'Email service not configured');
     }
 
