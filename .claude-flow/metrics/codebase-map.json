@@ -1,0 +1,11 @@
+{
+  "timestamp": "2026-02-05T23:06:13.916Z",
+  "projectRoot": "/home/runner/workspace",
+  "structure": {
+    "hasPackageJson": true,
+    "hasTsConfig": true,
+    "hasClaudeConfig": true,
+    "hasClaudeFlow": true
+  },
+  "scannedAt": 1770332773916
+}

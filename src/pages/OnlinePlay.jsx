@@ -605,7 +605,7 @@ export default function OnlinePlay() {
   }, []);
 
   return (
-    <div className={`online-play-page ${isGuest ? 'guest' : ''} ${view === 'playing' ? 'playing' : ''}`}>
+    <div className={`online-play-page ${isGuest ? 'guest' : ''}`}>
       {isGuest && (
         <div className="guest-banner" role="status">
           <div className="guest-banner-content">

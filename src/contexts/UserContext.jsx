@@ -156,7 +156,7 @@ export function UserProvider({ children }) {
       persistUser(userData);
       setUser(userData);
 
-      return { success: true, isNewUser: response.isNewUser };
+      return { success: true, isNewUser: response.isNewUser, user: userData };
     } catch (error) {
       console.error('🔴 LOGIN FAILED:', error.message);
       return { error: error.message || 'Failed to sign in. Please try again.' };
@@ -237,6 +237,30 @@ export function UserProvider({ children }) {
     }
   }, [user]);
 
+  const saveOnboardingAnswers = useCallback(async (answers) => {
+    if (!user) return;
+
+    if (!navigator.onLine) {
+      console.warn('[UserContext] Cannot save onboarding answers while offline');
+      return;
+    }
+
+    try {
+      console.log('[UserContext] Saving onboarding answers for:', user.username);
+      await api.updateUserSettings(user.username, {
+        onboarding: {
+          completed: true,
+          completedAt: new Date().toISOString(),
+          answers,
+        },
+      });
+      console.log('✅ ONBOARDING ANSWERS SAVED');
+    } catch (error) {
+      console.error('🔴 SAVE ONBOARDING FAILED:', error.message);
+      throw error;
+    }
+  }, [user]);
+
   const value = {
     user,
     isLoggedIn: !!user,
@@ -246,6 +270,7 @@ export function UserProvider({ children }) {
     logout,
     updateElo,
     refreshUser,
+    saveOnboardingAnswers,
   };
 
   return (
