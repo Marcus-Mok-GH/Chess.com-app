@@ -8,8 +8,10 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
   const [review, setReview] = useState(null);
   const [isReviewing, setIsReviewing] = useState(false);
   const [reviewError, setReviewError] = useState(null);
+  const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, moveIndex: null });
   const workerRef = useRef(null);
   const hasStartedRef = useRef(false);
+  const graphRef = useRef(null);
   const isInline = variant === 'inline';
 
   const sanMoves = useMemo(() => toSanHistory(moveHistory), [moveHistory]);
@@ -151,6 +153,28 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
     runReview();
   }, [sanMoves.length]);
 
+  const handleGraphMouseMove = (e) => {
+    if (!review || !graphRef.current) return;
+    
+    const rect = graphRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const relativeX = x / rect.width;
+    const moveIndex = Math.round(relativeX * (review.graphPoints.length - 1));
+    
+    if (moveIndex >= 0 && moveIndex < review.moveData.length) {
+      setTooltip({
+        visible: true,
+        x: e.clientX,
+        y: e.clientY,
+        moveIndex
+      });
+    }
+  };
+
+  const handleGraphMouseLeave = () => {
+    setTooltip({ visible: false, x: 0, y: 0, moveIndex: null });
+  };
+
   const content = (
     <div className="analysis-content">
       {!review && !isReviewing && (
@@ -184,7 +208,12 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
 
           <section className="review-graph">
             <div className="review-section-title">Game Graph</div>
-            <div className="review-graph-wrap">
+            <div 
+              className="review-graph-wrap" 
+              ref={graphRef}
+              onMouseMove={handleGraphMouseMove}
+              onMouseLeave={handleGraphMouseLeave}
+            >
               <svg viewBox="0 0 100 40" preserveAspectRatio="none">
                 <path
                   d={review.graphPoints.map((point, index) => {
@@ -193,7 +222,35 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
                     return `${index === 0 ? 'M' : 'L'}${x},${y}`;
                   }).join(' ')}
                 />
+                {tooltip.visible && tooltip.moveIndex !== null && (
+                  <circle
+                    cx={(tooltip.moveIndex / Math.max(1, review.graphPoints.length - 1)) * 100}
+                    cy={40 - review.graphPoints[tooltip.moveIndex] * 40}
+                    r="1.5"
+                    fill="#4a9eff"
+                  />
+                )}
               </svg>
+              {tooltip.visible && tooltip.moveIndex !== null && review.moveData[tooltip.moveIndex] && (
+                <div 
+                  className="graph-tooltip"
+                  style={{
+                    left: `${(tooltip.moveIndex / Math.max(1, review.graphPoints.length - 1)) * 100}%`,
+                  }}
+                >
+                  <div className="graph-tooltip-move">
+                    {review.moveData[tooltip.moveIndex].moveNumber}
+                    {review.moveData[tooltip.moveIndex].color === 'black' ? '...' : '.'}{' '}
+                    {review.moveData[tooltip.moveIndex].san}
+                  </div>
+                  <div className={`graph-tooltip-classification ${review.moveData[tooltip.moveIndex].classification.toLowerCase()}`}>
+                    {review.moveData[tooltip.moveIndex].classification}
+                  </div>
+                  <div className="graph-tooltip-loss">
+                    Loss: {review.moveData[tooltip.moveIndex].loss}%
+                  </div>
+                </div>
+              )}
             </div>
           </section>
 

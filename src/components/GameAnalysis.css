@@ -226,6 +226,8 @@
   border-radius: 8px;
   padding: 10px;
   border: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  cursor: crosshair;
 }
 
 .review-graph-wrap svg {
@@ -237,6 +239,57 @@
   fill: none;
   stroke: #7fa650;
   stroke-width: 2;
+}
+
+.graph-tooltip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  transform: translateX(-50%);
+  background: rgba(28, 30, 35, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 8px 12px;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.graph-tooltip-move {
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 4px;
+  font-size: 0.9rem;
+}
+
+.graph-tooltip-classification {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+}
+
+.graph-tooltip-classification.blunder {
+  color: #ff6b6b;
+}
+
+.graph-tooltip-classification.mistake {
+  color: #ff9c5b;
+}
+
+.graph-tooltip-classification.inaccuracy {
+  color: #f2c94c;
+}
+
+.graph-tooltip-classification.good,
+.graph-tooltip-classification.excellent,
+.graph-tooltip-classification.best {
+  color: #7fa650;
+}
+
+.graph-tooltip-loss {
+  color: #c8c8c8;
+  font-size: 0.85rem;
 }
 
 .review-key-moments,
