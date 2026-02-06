@@ -9,6 +9,7 @@ import ChessPieceIcon from './ChessPieceIcon';
 import ConfirmDialog from './ConfirmDialog';
 import PromotionDialog from './PromotionDialog';
 import { useSettings } from '../contexts/SettingsContext';
+import { useUser } from '../contexts/UserContext';
 import { playSoundEffect } from '../utils/sound';
 import { haptics } from '../utils/haptics';
 import { normalizeMoveHistory, toStoredMoveHistory, buildGameFromHistory } from '../engine/game/moveHistory';
@@ -102,6 +103,7 @@ function getBoardStatus(game) {
 export default function OnlineChessGame({ gameId, playerId, playerColor, opponentInfo, onLeave, currentUserInfo }) {
   const { settings } = useSettings();
   const navigate = useNavigate();
+  const { refreshUser } = useUser();
 
   const [game, setGame] = useState(() => safeNewGame());
   const [moveHistory, setMoveHistory] = useState([]);
@@ -356,6 +358,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
 
     const handleEloUpdated = (data) => {
       setEloChange(data.change);
+      refreshUser();
     };
 
     const handleDrawOffered = (data) => {
