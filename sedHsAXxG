@@ -5,12 +5,13 @@ entrypoint = "index.html"
 
 [nix]
 channel = "stable-25_05"
+packages = ["awscli2", "azure-cli", "bubblewrap", "google-cloud-sdk-gce", "ollama", "socat", "unzipNLS", "uv"]
 
 [unitTest]
 language = "nodejs"
 
 [deployment]
-deploymentTarget = "replit"
+deploymentTarget = "autoscale"
 runtime = "nodejs20"
 # Build the frontend first, then run the backend
 build = ["npm", "run", "build"]

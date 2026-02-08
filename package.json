@@ -71,7 +71,7 @@
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
     "stockfish.js": "^10.0.2",
-    "vercel": "^50.9.6",
+    "vercel": "^50.13.2",
     "ws": "^8.19.0"
   }
 }
