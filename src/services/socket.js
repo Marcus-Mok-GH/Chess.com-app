@@ -4,6 +4,10 @@ function resolveSocketConfig() {
   const isBrowser = typeof window !== 'undefined';
   const devDefault = 'http://localhost:3001';
 
+  // Check if running in Vercel/Vite environment
+  const isVercel = import.meta.env?.VERCEL === '1' || window?.location?.hostname?.includes('.vercel.app');
+  const isViteDev = import.meta.env?.DEV;
+
   const urlEnv = isBrowser
     ? (import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_SERVER_URL)
     : (process.env?.VITE_SOCKET_URL || process.env?.VITE_SERVER_URL);
@@ -21,6 +25,16 @@ function resolveSocketConfig() {
   const hasCustomUrl = typeof urlEnv === 'string' && urlEnv.length > 0 && !urlEnv.startsWith('/');
   const looksLikeLocalhost = hasCustomUrl && /localhost|127\.0\.0\.1/i.test(urlEnv);
   const isLocalPage = isBrowser && /localhost|127\.0\.0\.1/i.test(window.location.hostname);
+
+  if (isVercel && !hasCustomUrl) {
+    // Vercel doesn't support WebSocket connections for Socket.IO
+    // Must use external Socket.IO server via VITE_SOCKET_URL env var
+    console.warn('[Socket] Running on Vercel without external Socket.IO server configured.');
+    console.warn('[Socket] Real-time features (matchmaking, online games) will not work.');
+    console.warn('[Socket] To fix: Set VITE_SOCKET_URL environment variable to your external Socket.IO server.');
+    console.warn('[Socket] Example: VITE_SOCKET_URL=https://your-socket-server.railway.app');
+    return { url: null, path: socketPath };
+  }
 
   if (hasCustomUrl && !(isBrowser && looksLikeLocalhost && !isLocalPage)) {
     baseUrl = urlEnv;
@@ -53,6 +67,18 @@ class SocketService {
 
     if (this.isConnecting) {
       console.log('[Socket] Connection already in progress');
+      return Promise.resolve();
+    }
+
+    // Check if Socket.IO is properly configured
+    if (!SOCKET_CONFIG.url) {
+      console.error('[Socket] Socket.IO server URL not configured. Real-time features will not work.');
+      console.error('[Socket] Please set VITE_SOCKET_URL environment variable to your external Socket.IO server.');
+      console.error('[Socket] Example: VITE_SOCKET_URL=https://your-socket-server.railway.app');
+      this.emit('connection_error', { 
+        error: 'Real-time features are not available. This deployment requires an external Socket.IO server.',
+        rawError: 'VITE_SOCKET_URL not configured'
+      });
       return Promise.resolve();
     }
 

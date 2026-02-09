@@ -110,6 +110,12 @@ export default function OnlinePlay() {
   }, [routeGameId, searchParams]);
 
   const startMatchmaking = useCallback(() => {
+    // Check if Socket.IO is configured
+    if (!socketService.socket?.io?.uri && !socketService.socket?.io?.opts?.path) {
+      setError('Real-time matchmaking requires an external Socket.IO server. Please contact the administrator.');
+      return;
+    }
+
     // Socket may still be connecting; queue the request instead of erroring.
     if (!socketService.isConnected) {
       console.warn('[OnlinePlay] Socket not connected. Deferring matchmaking until connected.');

@@ -51,6 +51,7 @@
   "dependencies": {
     "@anthropic-ai/sandbox-runtime": "^0.0.34",
     "@neondatabase/serverless": "^1.0.2",
+    "@openai/codex": "^0.98.0",
     "@sourcegraph/amp": "^0.0.1769949290-gbb0479",
     "bcryptjs": "^3.0.3",
     "chess.js": "^1.4.0",
