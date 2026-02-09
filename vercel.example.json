@@ -1,64 +1,30 @@
 {
-  "version": 2,
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "npm run build",
-  "devCommand": "npm run dev:all",
-  "installCommand": "npm ci",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
   "framework": null,
-  "functions": {
-    "api/**/*.js": {
-      "runtime": "nodejs20.x"
-    }
-  },
-  "regions": ["iad1"],
-  "env": {
-    "NODE_ENV": "production",
-    "DATABASE_URL": "@database_url",
-    "VITE_SOCKET_URL": "https://your-external-socket-server.com"
-  },
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "/server/index.js"
+      "source": "/api/:match*",
+      "destination": "/api/:match*"
     },
     {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": "/"
     }
   ],
-  "headers": [
-    {
-      "source": "/socket.io/:path*",
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        },
-        {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET, POST, PUT, DELETE, OPTIONS"
-        },
-        {
-          "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, no-store, must-revalidate"
-        }
-      ]
-    },
-    {
-      "source": "(.*)",
-      "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "Referrer-Policy",
-          "value": "strict-origin-when-cross-origin"
-        }
-      ]
+  "functions": {
+    "api/**/*.js": {
+      "maxDuration": 30
     }
-  ]
+  },
+  "env": {
+    "DATABASE_URL": "@database-url",
+    "FRONTEND_URL": "@vercel-project-url",
+    "NODE_ENV": "production",
+    "PORT": "3001",
+    "MISTRAL_API_KEY": "@mistral-api-key",
+    "VITE_SOCKET_URL": ""
+  }
 }

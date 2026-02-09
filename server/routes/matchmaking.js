@@ -41,4 +41,151 @@ router.get('/details', async (req, res) => {
   }
 });
 
+// Join matchmaking queue (polling-based)
+router.post('/join', async (req, res) => {
+  try {
+    const { playerId, playerName, elo, isRanked } = req.body;
+
+    if (!playerId || typeof playerId !== 'string') {
+      return res.status(400).json({ success: false, message: 'Invalid player ID' });
+    }
+
+    if (!playerName || typeof playerName !== 'string' || playerName.trim().length < 2) {
+      return res.status(400).json({ success: false, message: 'Invalid player name' });
+    }
+
+    const trimmedName = playerName.trim();
+
+    if (!/^[a-zA-Z0-9_]+$/.test(trimmedName)) {
+      return res.status(400).json({ success: false, message: 'Player name can only contain letters, numbers, and underscores' });
+    }
+
+    if (typeof elo !== 'number' || elo < 0 || elo > 4000) {
+      return res.status(400).json({ success: false, message: 'Invalid ELO rating' });
+    }
+
+    const isRankedValue = typeof isRanked === 'boolean' ? isRanked : true;
+
+    // Check for existing active games
+    const existingGame = await query(
+      `SELECT game_id FROM active_games
+       WHERE white_player_id = $1 OR black_player_id = $1
+       AND status IN ('playing', 'waiting')
+       LIMIT 1`,
+      [playerId]
+    );
+
+    if (existingGame.rowCount > 0) {
+      return res.status(409).json({ success: false, message: 'You are already in an active game.' });
+    }
+
+    // Remove any existing entry for this player to avoid duplicates
+    await query('DELETE FROM matchmaking_queue WHERE player_id = $1', [playerId]);
+
+    // Add to queue
+    await query(
+      `INSERT INTO matchmaking_queue (socket_id, player_id, player_name, elo, is_ranked)
+       VALUES ($1, $2, $3, $4, $5)`,
+      ['polling-' + playerId, playerId, trimmedName, elo || 1200, isRankedValue]
+    );
+
+    console.log(`[Matchmaking/HTTP] Player ${trimmedName} (${elo}) joined queue`);
+    res.json({ success: true, message: 'Joined matchmaking queue' });
+  } catch (error) {
+    handleRouteError(res, error, 'Failed to join matchmaking queue');
+  }
+});
+
+// Leave matchmaking queue (polling-based)
+router.post('/leave', async (req, res) => {
+  try {
+    const { playerId } = req.body;
+
+    if (!playerId) {
+      return res.status(400).json({ success: false, message: 'Player ID required' });
+    }
+
+    await query('DELETE FROM matchmaking_queue WHERE player_id = $1', [playerId]);
+
+    console.log(`[Matchmaking/HTTP] Player left queue`);
+    res.json({ success: true, message: 'Left matchmaking queue' });
+  } catch (error) {
+    handleRouteError(res, error, 'Failed to leave matchmaking queue');
+  }
+});
+
+// Check for match (polling-based)
+router.get('/check-match', async (req, res) => {
+  try {
+    const { playerId } = req.query;
+
+    if (!playerId) {
+      return res.status(400).json({ matchFound: false });
+    }
+
+    // Check if player is in an active game
+    const activeGame = await query(
+      `SELECT game_id, white_player_id, black_player_id, white_player_name, black_player_name,
+              white_elo, black_elo, status
+       FROM active_games
+       WHERE white_player_id = $1 OR black_player_id = $1
+       LIMIT 1`,
+      [playerId]
+    );
+
+    if (activeGame.rowCount === 0) {
+      res.json({ matchFound: false });
+      return;
+    }
+
+    const game = activeGame.rows[0];
+    const isWhite = game.white_player_id === playerId;
+
+    // Remove from queue if still there
+    await query('DELETE FROM matchmaking_queue WHERE player_id = $1', [playerId]);
+
+    res.json({
+      matchFound: true,
+      gameId: game.game_id,
+      yourColor: isWhite ? 'white' : 'black',
+      yourId: playerId,
+      players: {
+        white: {
+          id: game.white_player_id,
+          name: game.white_player_name,
+          elo: game.white_elo
+        },
+        black: {
+          id: game.black_player_id,
+          name: game.black_player_name,
+          elo: game.black_elo
+        }
+      },
+      gameMode: 'ranked'
+    });
+  } catch (error) {
+    handleRouteError(res, error, 'Failed to check for match');
+  }
+});
+
+// Send heartbeat (polling-based)
+router.post('/heartbeat', async (req, res) => {
+  try {
+    const { playerId } = req.body;
+
+    if (!playerId) {
+      return res.status(400).json({ success: false });
+    }
+
+    await query(
+      'UPDATE matchmaking_queue SET last_heartbeat = CURRENT_TIMESTAMP WHERE player_id = $1',
+      [playerId]
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    handleRouteError(res, error, 'Failed to update heartbeat');
+  }
+});
+
 export default router;

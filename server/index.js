@@ -205,12 +205,29 @@ app.use((err, req, res, next) => {
     console.warn('[Server] Example: VITE_SOCKET_URL=https://your-socket-server.railway.app');
   }
 
-// Periodic cleanup
+// Periodic cleanup - also run in serverless mode via cron or external trigger
 if (!isServerless) {
   setInterval(async () => {
     await cleanupStaleMatchmakingEntries();
     await cleanupOldActiveGames();
   }, 60000);
+}
+
+// In serverless mode, run cleanup on each request occasionally
+if (isServerless) {
+  let lastCleanup = 0;
+  const CLEANUP_INTERVAL = 60000; // 1 minute
+  
+  app.use((req, res, next) => {
+    const now = Date.now();
+    if (now - lastCleanup > CLEANUP_INTERVAL) {
+      lastCleanup = now;
+      // Don't await - run in background
+      cleanupStaleMatchmakingEntries().catch(console.error);
+      cleanupOldActiveGames().catch(console.error);
+    }
+    next();
+  });
 }
 
 async function start() {
