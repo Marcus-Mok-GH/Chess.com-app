@@ -58,6 +58,7 @@
     "@anthropic-ai/sandbox-runtime": "^0.0.34",
     "@neondatabase/serverless": "^1.0.2",
     "@openai/codex": "^0.98.0",
+    "@qodo/command": "^0.36.0",
     "@sourcegraph/amp": "^0.0.1770682056-gad6470",
     "bcryptjs": "^3.0.3",
     "chess.js": "^1.4.0",
@@ -80,6 +81,7 @@
     "socket.io-client": "^4.8.3",
     "stockfish.js": "^10.0.2",
     "vercel": "^50.13.2",
-    "ws": "^8.19.0"
+    "ws": "^8.19.0",
+    "yaml-language-server": "^1.19.2"
   }
 }
