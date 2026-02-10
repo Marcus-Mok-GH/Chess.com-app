@@ -105,6 +105,7 @@ class SocketService {
       const connectTimeout = setTimeout(() => {
         console.warn('[Socket] Connection timeout');
         this.isConnecting = false;
+        this.emit('connection_status', { connected: false, reason: 'timeout' });
         resolve(); // Don't reject, just resolve to allow app to continue
       }, 15000);
 
@@ -139,6 +140,7 @@ class SocketService {
           friendlyError = 'Connection blocked. Please refresh the page.';
         }
         this.emit('connection_error', { error: friendlyError, rawError: error.message });
+        this.emit('connection_status', { connected: false, reason: 'error' });
         resolve(); // Don't reject, allow app to continue offline
       });
 

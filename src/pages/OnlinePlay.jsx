@@ -37,6 +37,7 @@ export default function OnlinePlay() {
   const [foundOpponent, setFoundOpponent] = useState(null);
   const [opponentInfo, setOpponentInfo] = useState(null);
   const [playersInQueue, setPlayersInQueue] = useState('--');
+  const [matchmakingTransport, setMatchmakingTransport] = useState('socket');
   
   const searchTimeInterval = useRef(null);
   const matchmakingSessionId = useRef(
@@ -116,9 +117,10 @@ export default function OnlinePlay() {
 
   const startMatchmaking = useCallback(async () => {
     // Check if Socket.IO is configured and connected
-    const usePolling = !socketService.socket?.io?.uri || !socketService.socket?.io?.opts?.path;
+    const usePolling = !socketService.isConnected || !socketService.socket?.io?.uri || !socketService.socket?.io?.opts?.path;
     
     if (usePolling) {
+      setMatchmakingTransport('polling');
       console.log('[OnlinePlay] Using polling-based matchmaking (serverless mode)');
       setGameMode('ranked');
       setError('');
@@ -170,6 +172,8 @@ export default function OnlinePlay() {
         clearInterval(queueUpdateInterval);
       };
     }
+
+    setMatchmakingTransport('socket');
 
     // Socket may still be connecting; queue the request instead of erroring.
     if (!socketService.isConnected) {
@@ -269,6 +273,7 @@ export default function OnlinePlay() {
     setGameMode(null);
     setMatchFound(false);
     setPlayersInQueue('--');
+    setMatchmakingTransport('socket');
   }, [clearMatchmakingTimers, playerId]);
 
   // Set up event listeners for both Socket.IO and polling
@@ -727,6 +732,9 @@ export default function OnlinePlay() {
 
             <h2 className="matchmaking-title">Finding Opponent</h2>
             <p className="waiting-desc">Searching for a player near your rating...</p>
+            {matchmakingTransport === 'polling' && (
+              <p className="waiting-desc">Using polling while real-time matchmaking reconnects.</p>
+            )}
             {error && <p className="waiting-desc error-message">{error}</p>}
             {pendingMatchmakingRef.current && error && (
               <p className="waiting-desc retrying-status">Retrying matchmaking...</p>

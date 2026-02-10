@@ -1,5 +1,6 @@
 import express from 'express';
 import { query } from '../db.js';
+import { processMatchmakingOnce } from '../socket/matchmaking.js';
 import { handleRouteError } from '../middleware/errors.js';
 
 const router = express.Router();
@@ -88,6 +89,8 @@ router.post('/join', async (req, res) => {
        VALUES ($1, $2, $3, $4, $5)`,
       ['polling-' + playerId, playerId, trimmedName, elo || 1200, isRankedValue]
     );
+
+    await processMatchmakingOnce(null);
 
     console.log(`[Matchmaking/HTTP] Player ${trimmedName} (${elo}) joined queue`);
     res.json({ success: true, message: 'Joined matchmaking queue' });
@@ -182,6 +185,8 @@ router.post('/heartbeat', async (req, res) => {
       'UPDATE matchmaking_queue SET last_heartbeat = CURRENT_TIMESTAMP WHERE player_id = $1',
       [playerId]
     );
+
+    await processMatchmakingOnce(null);
 
     res.json({ success: true });
   } catch (error) {

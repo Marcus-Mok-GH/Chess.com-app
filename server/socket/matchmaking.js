@@ -9,14 +9,21 @@ const MATCHMAKING_IDLE_BACKOFF = 10000;
 
 // Matchmaking service class
 class MatchmakingService {
-  constructor(io) {
+  constructor(io, options = {}) {
     this.io = io;
     this.matchmakingInterval = null;
     this.matchmakingDelay = MATCHMAKING_INTERVAL_MS;
-    this.startMatchmakingLoop();
+    this.enableLoop = options.enableLoop !== false;
+    this.isProcessing = false;
+    if (this.enableLoop) {
+      this.startMatchmakingLoop();
+    }
   }
 
   startMatchmakingLoop() {
+    if (!this.enableLoop) {
+      return;
+    }
     if (this.matchmakingInterval) {
       clearInterval(this.matchmakingInterval);
     }
@@ -27,6 +34,9 @@ class MatchmakingService {
   }
 
   updateMatchmakingInterval(hasMatches) {
+    if (!this.enableLoop) {
+      return;
+    }
     const nextDelay = hasMatches ? MATCHMAKING_INTERVAL_MS : MATCHMAKING_IDLE_BACKOFF;
     if (nextDelay === this.matchmakingDelay) return;
     this.matchmakingDelay = nextDelay;
@@ -41,6 +51,9 @@ class MatchmakingService {
   }
 
   async processMatchmaking() {
+    if (this.isProcessing) return;
+    this.isProcessing = true;
+
     try {
       // Get all players in queue, ordered by joined_at
       const result = await query(
@@ -90,9 +103,13 @@ class MatchmakingService {
 
         if (bestMatch) {
           console.log(`[Matchmaking] Pairing found: ${player1.player_name}(${player1.elo}) vs ${bestMatch.player_name}(${bestMatch.elo}), elo diff=${bestEloDiff}, ranked=${player1.is_ranked}`);
-          matched.add(player1.id);
-          matched.add(bestMatch.id);
-          await this.createMatch(player1, bestMatch);
+          
+          if (await this.createMatch(player1, bestMatch)) {
+            matched.add(player1.id);
+            matched.add(bestMatch.id);
+          } else {
+            console.error('[Matchmaking] Failed to create match, skipping removal from queue');
+          }
         }
       }
 
@@ -122,11 +139,20 @@ class MatchmakingService {
     } catch (error) {
       console.error('[Matchmaking] Error processing queue:', error);
       this.updateMatchmakingInterval(false);
+    } finally {
+      this.isProcessing = false;
     }
   }
 
   async createMatch(player1, player2) {
     try {
+      // Verify players are still in queue
+      const check = await query('SELECT count(*) FROM matchmaking_queue WHERE player_id IN ($1, $2)', [player1.player_id, player2.player_id]);
+      if (parseInt(check.rows[0].count) !== 2) {
+        console.warn('[Matchmaking] Players left queue before match creation');
+        return false;
+      }
+
       // Generate a unique game ID
       const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
       let gameId = '';
@@ -187,7 +213,7 @@ class MatchmakingService {
 
       // Only emit to players if their socket_id doesn't start with 'polling-'
       // (polling-based players don't have active socket connections)
-      if (!player1.socket_id.startsWith('polling-')) {
+      if (this.io && !player1.socket_id.startsWith('polling-')) {
         console.log(`[Matchmaking] Emitting match_found to ${player1.player_name} via socket ${player1.socket_id} (color=${isPlayer1White ? 'white' : 'black'})`);
         this.io.to(player1.socket_id).emit('match_found', {
           ...matchData,
@@ -197,7 +223,7 @@ class MatchmakingService {
       } else {
         console.log(`[Matchmaking] ${player1.player_name} is polling-based (${player1.socket_id}), skipping socket emit`);
       }
-      if (!player2.socket_id.startsWith('polling-')) {
+      if (this.io && !player2.socket_id.startsWith('polling-')) {
         console.log(`[Matchmaking] Emitting match_found to ${player2.player_name} via socket ${player2.socket_id} (color=${isPlayer1White ? 'black' : 'white'})`);
         this.io.to(player2.socket_id).emit('match_found', {
           ...matchData,
@@ -209,8 +235,10 @@ class MatchmakingService {
       }
 
       console.log(`[Matchmaking] ✅ Match ${gameId} fully created and events emitted`);
+      return true;
     } catch (error) {
       console.error('[Matchmaking] Error creating match:', error);
+      return false;
     }
   }
 
@@ -230,6 +258,11 @@ class MatchmakingService {
       );
 
       console.log(`[Matchmaking] Player ${playerName} (${elo}) joined queue`);
+      
+      this.updateMatchmakingInterval(true);
+      
+      setImmediate(() => this.processMatchmaking());
+
       return true;
     } catch (error) {
       console.error('[Matchmaking] Error joining queue:', error);
@@ -438,6 +471,11 @@ export function setupMatchmakingHandlers(io, socket) {
     const details = await service.getQueueDetails();
     socket.emit('queue_details', details);
   });
+}
+
+export async function processMatchmakingOnce(io) {
+  const service = new MatchmakingService(io, { enableLoop: false });
+  await service.processMatchmaking();
 }
 
 export { MatchmakingService };
