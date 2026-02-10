@@ -7,6 +7,23 @@ class MatchmakingPollingService {
     this.listeners = new Map();
     this.isPolling = false;
     this.currentPlayerId = null;
+    
+    // Enhanced polling configuration
+    this.pollingConfig = {
+      baseInterval: 2000,      // Base polling interval (2s)
+      maxInterval: 8000,       // Max interval for backoff (8s)
+      backoffFactor: 1.5,      // Exponential backoff factor
+      heartbeatInterval: 15000, // Heartbeat every 15s
+      maxRetries: 5,          // Max retry attempts on failures
+      retryDelay: 2000         // Delay between retries
+    };
+    
+    // State tracking
+    this.retryCount = 0;
+    this.currentInterval = this.pollingConfig.baseInterval;
+    this.lastPollTime = 0;
+    this.consecutiveErrors = 0;
+    this.isPaused = false;
   }
 
   // Event emitter pattern for React components
@@ -108,65 +125,152 @@ class MatchmakingPollingService {
     this.currentPlayerId = null;
   }
 
-  // Start polling for matches
+  // Start polling for matches with adaptive intervals
   startPolling(playerId) {
     if (this.isPolling) {
       this.stopPolling();
     }
 
     this.isPolling = true;
+    this.retryCount = 0;
+    this.currentInterval = this.pollingConfig.baseInterval;
+    this.consecutiveErrors = 0;
     console.log('[MatchmakingPolling] Starting polling for matches...');
 
-    // Poll every 3 seconds
-    this.pollingInterval = setInterval(async () => {
-      if (!this.isPolling) return;
+    // Poll with adaptive intervals
+    const pollLoop = async () => {
+      if (!this.isPolling || this.isPaused) return;
 
       try {
-        const response = await fetch(`/api/matchmaking/check-match?playerId=${encodeURIComponent(playerId)}`);
+        const response = await fetch(
+          `/api/matchmaking/check-match?playerId=${encodeURIComponent(playerId)}`,
+          {
+            cache: 'no-cache',
+            headers: {
+              'Cache-Control': 'no-cache'
+            }
+          }
+        );
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        
         const data = await response.json();
+        
+        // Reset error counter on success
+        this.consecutiveErrors = 0;
+        this.retryCount = 0;
+        this.currentInterval = this.pollingConfig.baseInterval;
 
         if (data.matchFound) {
-          console.log('[MatchmakingPolling] Match found:', data);
+          console.log('[MatchmakingPolling] ✅ Match found:', data);
           this.stopPolling();
           this.emit('match_found', data);
+          return;
         }
+        
+        this.lastPollTime = Date.now();
       } catch (error) {
         console.error('[MatchmakingPolling] Error polling for match:', error);
-        // Continue polling on error, just log it
+        this.consecutiveErrors++;
+        this.retryCount++;
+        
+        // Exponential backoff on errors
+        this.currentInterval = Math.min(
+          this.currentInterval * this.pollingConfig.backoffFactor,
+          this.pollingConfig.maxInterval
+        );
+        
+        // Check if we've exceeded max retries
+        if (this.retryCount >= this.pollingConfig.maxRetries) {
+          console.error('[MatchmakingPolling] Max retries exceeded, emitting error');
+          this.emit('matchmaking_error', {
+            message: 'Connection to matchmaking server failed. Please refresh and try again.',
+            error: error.message
+          });
+          this.stopPolling();
+          return;
+        }
       }
-    }, 3000);
+      
+      // Schedule next poll with adaptive interval
+      if (this.isPolling && !this.isPaused) {
+        this.pollingInterval = setTimeout(pollLoop, this.currentInterval);
+      }
+    };
+    
+    // Start the polling loop
+    pollLoop();
   }
 
   // Stop polling
   stopPolling() {
     if (this.pollingInterval) {
-      clearInterval(this.pollingInterval);
+      clearTimeout(this.pollingInterval);
       this.pollingInterval = null;
     }
     if (this.heartbeatInterval) {
-      clearInterval(this.heartbeatInterval);
+      clearTimeout(this.heartbeatInterval);
       this.heartbeatInterval = null;
     }
     this.isPolling = false;
+    this.isPaused = false;
+    this.retryCount = 0;
+    this.currentInterval = this.pollingConfig.baseInterval;
+    this.consecutiveErrors = 0;
     console.log('[MatchmakingPolling] Stopped polling');
+  }
+  
+  // Pause polling temporarily
+  pausePolling() {
+    this.isPaused = true;
+    console.log('[MatchmakingPolling] Paused polling');
+  }
+  
+  // Resume polling
+  resumePolling() {
+    if (!this.isPaused) return;
+    this.isPaused = false;
+    console.log('[MatchmakingPolling] Resumed polling');
+    // Restart polling if we have a current player
+    if (this.currentPlayerId && this.isPolling) {
+      this.startPolling(this.currentPlayerId);
+    }
   }
 
   // Start heartbeat to keep queue entry alive
   startHeartbeat(playerId) {
-    // Send heartbeat every 20 seconds
-    this.heartbeatInterval = setInterval(async () => {
+    // Send heartbeat at configured interval
+    const heartbeatLoop = async () => {
       try {
-        await fetch('/api/matchmaking/heartbeat', {
+        const response = await fetch('/api/matchmaking/heartbeat', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache'
           },
           body: JSON.stringify({ playerId }),
         });
+        
+        if (!response.ok) {
+          console.warn('[MatchmakingPolling] Heartbeat failed:', response.status);
+        }
       } catch (error) {
         console.error('[MatchmakingPolling] Error sending heartbeat:', error);
       }
-    }, 20000);
+      
+      // Schedule next heartbeat
+      if (this.isPolling && !this.isPaused) {
+        this.heartbeatInterval = setTimeout(
+          heartbeatLoop,
+          this.pollingConfig.heartbeatInterval
+        );
+      }
+    };
+    
+    // Start heartbeat loop
+    heartbeatLoop();
   }
 
   // Get queue details
@@ -186,6 +290,20 @@ class MatchmakingPollingService {
     }
     this.stopPolling();
     this.listeners.clear();
+    this.currentPlayerId = null;
+  }
+  
+  // Get current status
+  getStatus() {
+    return {
+      isPolling: this.isPolling,
+      isPaused: this.isPaused,
+      currentPlayerId: this.currentPlayerId,
+      currentInterval: this.currentInterval,
+      retryCount: this.retryCount,
+      consecutiveErrors: this.consecutiveErrors,
+      lastPollTime: this.lastPollTime
+    };
   }
 }
 

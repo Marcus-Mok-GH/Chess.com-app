@@ -1,7 +1,7 @@
 import { query } from '../db.js';
 
 const DEFAULT_ELO = 1200;
-const ELO_RANGE_INITIAL = 200;
+const ELO_RANGE_INITIAL = 500; // Increased from 200 for better matching
 const ELO_RANGE_RELAXATION_TIME = 10000; // 10 seconds
 const MATCHMAKING_INTERVAL_MS = 2000;
 const MATCHMAKING_BATCH_SIZE = 200;
@@ -66,21 +66,32 @@ class MatchmakingService {
 
       const queue = result.rows;
       if (queue.length > 0) {
-        console.log(`[Matchmaking] Processing queue: ${queue.length} player(s) waiting`, queue.map(p => `${p.player_name}(${p.elo})`).join(', '));
+        console.log(`[Matchmaking] Processing queue: ${queue.length} player(s) waiting`);
+        console.log(`[Matchmaking] Queue details:`, queue.map(p => ({
+          name: p.player_name,
+          elo: p.elo,
+          is_ranked: p.is_ranked,
+          socket_id: p.socket_id,
+          player_id: p.player_id
+        })));
       }
       if (queue.length < 2) {
+        console.log(`[Matchmaking] Need at least 2 players (current: ${queue.length}), skipping pairing`);
         this.updateMatchmakingInterval(false);
         return;
       }
 
       const matched = new Set();
+      const now = Date.now();
 
       for (let i = 0; i < queue.length; i++) {
         if (matched.has(queue[i].id)) continue;
 
         const player1 = queue[i];
-        const waitTime = Date.now() - new Date(player1.joined_at).getTime();
+        const waitTime = now - new Date(player1.joined_at).getTime();
         const eloRange = waitTime > ELO_RANGE_RELAXATION_TIME ? Infinity : ELO_RANGE_INITIAL;
+
+        console.log(`[Matchmaking] Checking ${player1.player_name} (elo=${player1.elo}, ranked=${player1.is_ranked}, wait=${Math.floor(waitTime/1000)}s, range=${eloRange === Infinity ? '∞' : eloRange})`);
 
         // Find best match
         let bestMatch = null;
@@ -93,16 +104,22 @@ class MatchmakingService {
           const eloDiff = Math.abs(player1.elo - player2.elo);
 
           // Check if both want ranked matches
-          if (player1.is_ranked !== player2.is_ranked) continue;
+          if (player1.is_ranked !== player2.is_ranked) {
+            console.log(`[Matchmaking]   Skipped ${player2.player_name}: is_ranked mismatch (${player1.is_ranked} vs ${player2.is_ranked})`);
+            continue;
+          }
 
           if (eloDiff <= eloRange && eloDiff < bestEloDiff) {
+            console.log(`[Matchmaking]   Potential match with ${player2.player_name}: elo diff=${eloDiff} ✓`);
             bestMatch = player2;
             bestEloDiff = eloDiff;
+          } else {
+            console.log(`[Matchmaking]   Skipped ${player2.player_name}: elo diff=${eloDiff} > range=${eloRange}`);
           }
         }
 
         if (bestMatch) {
-          console.log(`[Matchmaking] Pairing found: ${player1.player_name}(${player1.elo}) vs ${bestMatch.player_name}(${bestMatch.elo}), elo diff=${bestEloDiff}, ranked=${player1.is_ranked}`);
+          console.log(`[Matchmaking] ✅ Pairing found: ${player1.player_name}(${player1.elo}) vs ${bestMatch.player_name}(${bestMatch.elo}), elo diff=${bestEloDiff}, ranked=${player1.is_ranked}`);
           
           if (await this.createMatch(player1, bestMatch)) {
             matched.add(player1.id);
@@ -110,6 +127,8 @@ class MatchmakingService {
           } else {
             console.error('[Matchmaking] Failed to create match, skipping removal from queue');
           }
+        } else {
+          console.log(`[Matchmaking] No match found for ${player1.player_name}`);
         }
       }
 
@@ -126,6 +145,8 @@ class MatchmakingService {
         console.log(`[Matchmaking] No pairs found this cycle (${queue.length} players in queue)`);
         this.updateMatchmakingInterval(false);
       }
+      
+      console.log(`[Matchmaking] Cycle complete. Matched: ${matched.size}, Remaining in queue: ${queue.length - matched.size}`);
       
       // Also remove stale entries that may have expired during this cycle
       const staleResult = await query(
@@ -460,6 +481,8 @@ export function setupMatchmakingHandlers(io, socket) {
   socket.on('matchmaking_heartbeat', async (data) => {
     const { playerId } = data;
     await service.updateHeartbeat(playerId);
+    // Trigger matchmaking processing on heartbeat to catch matches faster
+    setImmediate(() => service.processMatchmaking());
   });
 
   socket.on('get_queue_status', async () => {

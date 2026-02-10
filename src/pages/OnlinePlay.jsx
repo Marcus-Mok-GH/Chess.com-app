@@ -116,77 +116,9 @@ export default function OnlinePlay() {
   }, [routeGameId, searchParams]);
 
   const startMatchmaking = useCallback(async () => {
-    // Check if Socket.IO is configured and connected
-    const usePolling = !socketService.isConnected || !socketService.socket?.io?.uri || !socketService.socket?.io?.opts?.path;
-    
-    if (usePolling) {
-      setMatchmakingTransport('polling');
-      console.log('[OnlinePlay] Using polling-based matchmaking (serverless mode)');
-      setGameMode('ranked');
-      setError('');
-      setView('matchmaking');
-      setSearchTime(0);
-      setMatchFound(false);
-      
-      if (!isLoggedIn || !user) {
-        setError('Sign in required for matchmaking.');
-        setView('mode-select');
-        return;
-      }
-
-      const currentElo = user.elo;
-      const currentName = user.username;
-      const playerId = `user_${user.id}_${matchmakingSessionId.current}`;
-      
-      setPlayerElo(currentElo);
-      setPlayerId(playerId);
-      
-      console.log('[OnlinePlay] Starting polling matchmaking:', {
-        playerId,
-        playerName: currentName,
-        elo: currentElo
-      });
-      
-      // Join matchmaking queue via polling
-      const joined = await pollingService.joinMatchmaking(playerId, currentName, currentElo, true);
-      if (!joined) {
-        setError('Failed to join matchmaking. Please try again.');
-        setView('mode-select');
-        return;
-      }
-
-      pendingMatchmakingRef.current = true;
-      
-      // Start search timer
-      searchTimeInterval.current = setInterval(() => {
-        setSearchTime(prev => prev + 1);
-      }, 1000);
-      
-      // Update queue details every 5 seconds
-      const queueUpdateInterval = setInterval(() => {
-        pollingService.getQueueDetails();
-      }, 5000);
-      
-      return () => {
-        clearInterval(searchTimeInterval.current);
-        clearInterval(queueUpdateInterval);
-      };
-    }
-
-    setMatchmakingTransport('socket');
-
-    // Socket may still be connecting; queue the request instead of erroring.
-    if (!socketService.isConnected) {
-      console.warn('[OnlinePlay] Socket not connected. Deferring matchmaking until connected.');
-      pendingMatchmakingRef.current = true;
-      setGameMode('ranked');
-      setError('Connecting to server. Matchmaking will start automatically...');
-      setView('matchmaking');
-      setSearchTime(0);
-      setMatchFound(false);
-      return;
-    }
-
+    // Use polling-based matchmaking as primary method
+    setMatchmakingTransport('polling');
+    console.log('[OnlinePlay] Using polling-based matchmaking (primary mode)');
     setGameMode('ranked');
     setError('');
     setView('matchmaking');
@@ -199,7 +131,6 @@ export default function OnlinePlay() {
       return;
     }
 
-    // Get player info from user context if logged in.
     const currentElo = user.elo;
     const currentName = user.username;
     const playerId = `user_${user.id}_${matchmakingSessionId.current}`;
@@ -207,14 +138,14 @@ export default function OnlinePlay() {
     setPlayerElo(currentElo);
     setPlayerId(playerId);
     
-    console.log('[OnlinePlay] Starting Socket.IO matchmaking:', {
+    console.log('[OnlinePlay] Starting polling matchmaking:', {
       playerId,
       playerName: currentName,
       elo: currentElo
     });
     
-    // Join matchmaking queue via socket
-    const joined = socketService.joinMatchmaking(playerId, currentName, currentElo, true);
+    // Join matchmaking queue via polling (primary method)
+    const joined = await pollingService.joinMatchmaking(playerId, currentName, currentElo, true);
     if (!joined) {
       setError('Failed to join matchmaking. Please try again.');
       setView('mode-select');
@@ -228,19 +159,13 @@ export default function OnlinePlay() {
       setSearchTime(prev => prev + 1);
     }, 1000);
     
-    // Send heartbeat every 20 seconds to keep queue entry alive
-    heartbeatInterval.current = setInterval(() => {
-      socketService.sendMatchmakingHeartbeat(playerId);
-    }, 20000);
-    
     // Update queue details every 5 seconds
     const queueUpdateInterval = setInterval(() => {
-      socketService.getQueueDetails();
+      pollingService.getQueueDetails();
     }, 5000);
     
     return () => {
       clearInterval(searchTimeInterval.current);
-      clearInterval(heartbeatInterval.current);
       clearInterval(queueUpdateInterval);
     };
   }, [isLoggedIn, user]);
@@ -261,10 +186,11 @@ export default function OnlinePlay() {
 
     pendingMatchmakingRef.current = false;
     
-    // Leave matchmaking queue via both services
+    // Leave matchmaking queue via polling (primary method)
     if (playerId) {
-      socketService.leaveMatchmaking(playerId);
       await pollingService.leaveMatchmaking(playerId);
+      // Also try socket leave as cleanup
+      socketService.leaveMatchmaking(playerId);
     }
     
     setSearchTime(0);
@@ -273,13 +199,12 @@ export default function OnlinePlay() {
     setGameMode(null);
     setMatchFound(false);
     setPlayersInQueue('--');
-    setMatchmakingTransport('socket');
   }, [clearMatchmakingTimers, playerId]);
 
   // Set up event listeners for both Socket.IO and polling
   useEffect(() => {
     const handleMatchFound = (data) => {
-      console.log('[OnlinePlay] Match found:', data);
+      console.log('[OnlinePlay] Match found via polling:', data);
 
       if (view !== 'matchmaking') {
         console.warn('[OnlinePlay] Ignoring match_found; not in matchmaking view.');
@@ -325,9 +250,17 @@ export default function OnlinePlay() {
         opponentInfo: opponent,
       });
 
-      // Join the game room via Socket.IO if available
+      // Try to join the game room via Socket.IO for real-time updates (enhancement)
+      // Game will work via HTTP API even if Socket.IO fails
       if (socketService.isConnected) {
-        socketService.joinGame(matchedGameId, yourId);
+        console.log('[OnlinePlay] Attempting to join game room via Socket.IO for real-time updates');
+        try {
+          socketService.joinGame(matchedGameId, yourId);
+        } catch (e) {
+          console.warn('[OnlinePlay] Socket.IO join failed, game will use HTTP API:', e);
+        }
+      } else {
+        console.log('[OnlinePlay] Socket.IO not available, game will use HTTP API for updates');
       }
       
       // Transition to playing
@@ -430,8 +363,12 @@ export default function OnlinePlay() {
       if (playerId) {
         // Use sync leave for polling to ensure request completes before page closes
         pollingService.leaveMatchmakingSync(playerId);
-        // Socket leave is fire-and-forget, no need to await
-        socketService.leaveMatchmaking(playerId);
+        // Socket leave is cleanup-only, no need to await
+        try {
+          socketService.leaveMatchmaking(playerId);
+        } catch (e) {
+          // Ignore socket errors during cleanup
+        }
       }
     };
 
@@ -440,7 +377,11 @@ export default function OnlinePlay() {
       if (document.visibilityState === 'hidden' && playerId) {
         console.log('[OnlinePlay] Page hidden, cleaning up matchmaking...');
         pollingService.leaveMatchmakingSync(playerId);
-        socketService.leaveMatchmaking(playerId);
+        try {
+          socketService.leaveMatchmaking(playerId);
+        } catch (e) {
+          // Ignore socket errors during cleanup
+        }
       }
     };
 

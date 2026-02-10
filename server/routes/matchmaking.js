@@ -5,6 +5,18 @@ import { handleRouteError } from '../middleware/errors.js';
 
 const router = express.Router();
 
+// Enhanced configuration for serverless environments
+const MATCHMAKING_CONFIG = {
+  // Time to keep players in queue before removing as stale
+  QUEUE_TIMEOUT_SECONDS: 45,
+  // Time to consider an active game as stale
+  GAME_TIMEOUT_SECONDS: 300,
+  // Whether to always process matchmaking on heartbeat
+  PROCESS_ON_HEARTBEAT: true,
+  // Enable queue size logging
+  LOG_QUEUE_SIZE: true
+};
+
 // Get queue status
 router.get('/status', async (req, res) => {
   try {
@@ -15,7 +27,7 @@ router.get('/status', async (req, res) => {
   }
 });
 
-// Get queue details
+// Get queue details (enhanced with active players only)
 router.get('/details', async (req, res) => {
   try {
     const result = await query(`
@@ -26,6 +38,7 @@ router.get('/details', async (req, res) => {
         COUNT(*) FILTER (WHERE elo BETWEEN 1500 AND 2000) as range_1500_2000,
         COUNT(*) FILTER (WHERE elo >= 2000) as above_2000
       FROM matchmaking_queue
+      WHERE last_heartbeat > NOW() - INTERVAL '45 seconds'
     `);
 
     res.json({
@@ -35,14 +48,15 @@ router.get('/details', async (req, res) => {
         range_1000_1500: parseInt(result.rows[0].range_1000_1500, 10),
         range_1500_2000: parseInt(result.rows[0].range_1500_2000, 10),
         above_2000: parseInt(result.rows[0].above_2000, 10)
-      }
+      },
+      timestamp: new Date().toISOString()
     });
   } catch (error) {
     handleRouteError(res, error, 'Failed to get queue details');
   }
 });
 
-// Join matchmaking queue (polling-based)
+// Join matchmaking queue (polling-based - primary method)
 router.post('/join', async (req, res) => {
   try {
     const { playerId, playerName, elo, isRanked } = req.body;
@@ -83,16 +97,29 @@ router.post('/join', async (req, res) => {
     // Remove any existing entry for this player to avoid duplicates
     await query('DELETE FROM matchmaking_queue WHERE player_id = $1', [playerId]);
 
-    // Add to queue
+    // Add to queue with polling-specific socket_id
+    const socketId = `polling-${playerId}`;
     await query(
       `INSERT INTO matchmaking_queue (socket_id, player_id, player_name, elo, is_ranked)
        VALUES ($1, $2, $3, $4, $5)`,
-      ['polling-' + playerId, playerId, trimmedName, elo || 1200, isRankedValue]
+      [socketId, playerId, trimmedName, elo || 1200, isRankedValue]
     );
 
-    await processMatchmakingOnce(null);
+    // Always process matchmaking immediately after join
+    if (MATCHMAKING_CONFIG.PROCESS_ON_HEARTBEAT) {
+      console.log(`[Matchmaking/HTTP] Processing matchmaking after join`);
+      await processMatchmakingOnce(null).catch(err => {
+        console.error('[Matchmaking/HTTP] Error processing matchmaking on join:', err);
+      });
+    }
 
-    console.log(`[Matchmaking/HTTP] Player ${trimmedName} (${elo}) joined queue`);
+    // Log queue size for monitoring
+    if (MATCHMAKING_CONFIG.LOG_QUEUE_SIZE) {
+      const queueSizeResult = await query('SELECT COUNT(*) as count FROM matchmaking_queue');
+      const queueSize = parseInt(queueSizeResult.rows[0].count, 10);
+      console.log(`[Matchmaking/HTTP] Player ${trimmedName} (${elo}) joined queue (total: ${queueSize})`);
+    }
+    
     res.json({ success: true, message: 'Joined matchmaking queue' });
   } catch (error) {
     handleRouteError(res, error, 'Failed to join matchmaking queue');
@@ -117,7 +144,7 @@ router.post('/leave', async (req, res) => {
   }
 });
 
-// Check for match (polling-based)
+// Check for match (polling-based - primary method)
 router.get('/check-match', async (req, res) => {
   try {
     const { playerId } = req.query;
@@ -126,10 +153,18 @@ router.get('/check-match', async (req, res) => {
       return res.status(400).json({ matchFound: false });
     }
 
+    // First, verify player is still in queue and alive
+    const queueCheck = await query(
+      'SELECT * FROM matchmaking_queue WHERE player_id = $1 AND last_heartbeat > NOW() - INTERVAL \'45 seconds\'',
+      [playerId]
+    );
+    
+    const stillInQueue = queueCheck.rowCount > 0;
+
     // Check if player is in an active game
     const activeGame = await query(
       `SELECT game_id, white_player_id, black_player_id, white_player_name, black_player_name,
-              white_elo, black_elo, status
+              white_elo, black_elo, status, game_mode
        FROM active_games
        WHERE (white_player_id = $1 OR black_player_id = $1)
        AND status IN ('playing', 'waiting')
@@ -138,7 +173,12 @@ router.get('/check-match', async (req, res) => {
     );
 
     if (activeGame.rowCount === 0) {
-      res.json({ matchFound: false });
+      // No match found yet, return status
+      res.json({ 
+        matchFound: false,
+        stillInQueue,
+        queueSize: await getQueueSize()
+      });
       return;
     }
 
@@ -146,8 +186,13 @@ router.get('/check-match', async (req, res) => {
     const isWhite = game.white_player_id === playerId;
 
     // Remove from queue if still there
-    await query('DELETE FROM matchmaking_queue WHERE player_id = $1', [playerId]);
+    if (stillInQueue) {
+      await query('DELETE FROM matchmaking_queue WHERE player_id = $1', [playerId]);
+      console.log(`[Matchmaking/HTTP] Removed matched player ${playerId} from queue`);
+    }
 
+    console.log(`[Matchmaking/HTTP] Match found for ${playerId}: ${game.game_id}`);
+    
     res.json({
       matchFound: true,
       gameId: game.game_id,
@@ -165,12 +210,22 @@ router.get('/check-match', async (req, res) => {
           elo: game.black_elo
         }
       },
-      gameMode: 'ranked'
+      gameMode: game.game_mode || 'ranked'
     });
   } catch (error) {
     handleRouteError(res, error, 'Failed to check for match');
   }
 });
+
+// Helper function to get queue size
+async function getQueueSize() {
+  try {
+    const result = await query('SELECT COUNT(*) as count FROM matchmaking_queue WHERE last_heartbeat > NOW() - INTERVAL \'45 seconds\'');
+    return parseInt(result.rows[0].count, 10);
+  } catch {
+    return 0;
+  }
+}
 
 // Send heartbeat (polling-based)
 router.post('/heartbeat', async (req, res) => {
@@ -181,12 +236,23 @@ router.post('/heartbeat', async (req, res) => {
       return res.status(400).json({ success: false });
     }
 
-    await query(
-      'UPDATE matchmaking_queue SET last_heartbeat = CURRENT_TIMESTAMP WHERE player_id = $1',
+    const updateResult = await query(
+      'UPDATE matchmaking_queue SET last_heartbeat = CURRENT_TIMESTAMP WHERE player_id = $1 RETURNING player_name, elo',
       [playerId]
     );
+    
+    if (updateResult.rowCount === 0) {
+      // Player not in queue anymore, they might have been matched
+      return res.json({ success: true, message: 'Not in queue (may have been matched)' });
+    }
 
-    await processMatchmakingOnce(null);
+    // Always trigger matchmaking on heartbeat to ensure matches are processed
+    if (MATCHMAKING_CONFIG.PROCESS_ON_HEARTBEAT) {
+      console.log(`[Matchmaking/HTTP] Heartbeat from ${playerId}, triggering matchmaking`);
+      await processMatchmakingOnce(null).catch(err => {
+        console.error('[Matchmaking/HTTP] Error processing matchmaking on heartbeat:', err);
+      });
+    }
 
     res.json({ success: true });
   } catch (error) {
