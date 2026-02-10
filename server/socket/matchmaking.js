@@ -369,11 +369,10 @@ export function setupMatchmakingHandlers(io, socket) {
     try {
       const existingGame = await query(
         `SELECT game_id FROM active_games
-         WHERE (white_player_id = $1 OR black_player_id = $1
-           OR white_socket_id = $2 OR black_socket_id = $2)
+         WHERE (white_player_id = $1 OR black_player_id = $1)
          AND status IN ('playing', 'waiting')
          LIMIT 1`,
-        [playerId, socket.id]
+        [playerId]
       );
 
       if (existingGame.rowCount > 0) {
