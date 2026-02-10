@@ -74,6 +74,22 @@
   font-size: 0.8125rem;
 }
 
+.link-button {
+  border: 1px solid #4d4a47;
+  background: transparent;
+  color: #dad5d0;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.link-button:hover {
+  border-color: #9a958f;
+  color: #fff;
+}
+
 /* Toggle Switch */
 .toggle {
   position: relative;

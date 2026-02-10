@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../contexts/SettingsContext';
 import { useUser } from '../contexts/UserContext';
 import './Settings.css';
@@ -12,6 +13,7 @@ const BOARD_THEMES = [
 export default function Settings() {
   const { settings, updateSettings, resetSettings } = useSettings();
   const { user, logout } = useUser();
+  const navigate = useNavigate();
 
   return (
     <div className="settings-page">
@@ -200,6 +202,19 @@ export default function Settings() {
               />
               <span className="toggle-slider"></span>
             </label>
+          </div>
+        </section>
+
+        <section className="settings-section">
+          <h2>About</h2>
+          <div className="setting-item">
+            <div className="setting-info">
+              <label>Changelog</label>
+              <span className="setting-desc">See recent updates and fixes</span>
+            </div>
+            <button className="link-button" type="button" onClick={() => navigate('/changelog')}>
+              View
+            </button>
           </div>
         </section>
 

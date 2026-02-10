@@ -16,12 +16,14 @@ const Login = lazy(() => import('./pages/Login'))
 const GameHistory = lazy(() => import('./pages/GameHistory'))
 const Game = lazy(() => import('./pages/Game'))
 const Settings = lazy(() => import('./pages/Settings'))
+const Changelog = lazy(() => import('./pages/Changelog'))
 
 function getTitle(path) {
   if (path.startsWith('/online/') || path.startsWith('/game/')) return 'Online Play'
   if (path === '/analysis') return 'Game Analysis'
   if (path === '/history') return 'Game History'
   if (path === '/settings') return 'Settings'
+  if (path === '/changelog') return 'Changelog'
   return 'Chess'
 }
 
@@ -225,6 +227,7 @@ export default function App() {
                         <><AppHeader /><Settings /></>
                       </ProtectedRoute>
                     } />
+                    <Route path="/changelog" element={<><AppHeader /><Changelog /></>} />
                   </Routes>
                 </div>
                 <FeedbackPanel />
