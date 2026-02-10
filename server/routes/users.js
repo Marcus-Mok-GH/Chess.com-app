@@ -91,7 +91,7 @@ router.post('/login', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('Login error:', error?.message, error?.code, error?.stack);
     if (error.code === '23505') {
       // Unique violation - race condition, try to fetch
       try {

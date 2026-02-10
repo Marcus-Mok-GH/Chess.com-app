@@ -1,6 +1,6 @@
 {
   "name": "react-javascript",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "author": "",
   "description": "React Chess Application with Real-time Multiplayer",
   "keywords": [
@@ -11,7 +11,7 @@
   ],
   "license": "ISC",
   "engines": {
-    "node": "24.x"
+    "node": ">=20.0.0"
   },
   "scripts": {
     "dev": "npm run dev:all",
@@ -84,7 +84,7 @@
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
     "stockfish.js": "^10.0.2",
-    "vercel": "^50.13.2",
+    "vercel": "^50.14.0",
     "ws": "^8.19.0",
     "yaml-language-server": "^1.19.2"
   }

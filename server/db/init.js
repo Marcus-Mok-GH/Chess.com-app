@@ -128,6 +128,24 @@ export async function initDatabase() {
       await pool.query(`
         CREATE INDEX IF NOT EXISTS idx_match_moves_username ON match_moves(username)
       `);
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS elo_history (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          elo INTEGER NOT NULL,
+          change INTEGER NOT NULL DEFAULT 0,
+          game_code VARCHAR(20),
+          game_mode VARCHAR(20) DEFAULT 'ranked',
+          opponent_elo INTEGER,
+          result VARCHAR(10),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_elo_history_user_id ON elo_history(user_id)
+      `);
     };
 
     for (let attempt = 1; attempt <= 2; attempt += 1) {
