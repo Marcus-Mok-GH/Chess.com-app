@@ -4,7 +4,7 @@ export async function cleanupStaleMatchmakingEntries() {
   try {
     const result = await query(
       `DELETE FROM matchmaking_queue
-       WHERE last_heartbeat < NOW() - INTERVAL '2 minutes'
+       WHERE last_heartbeat < NOW() - INTERVAL '45 seconds'
        RETURNING id`
     );
     if (result.rowCount > 0) {

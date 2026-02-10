@@ -80,6 +80,10 @@ class ApiService {
     return this.request(`/users/leaderboard/top?limit=${limit}`);
   }
 
+  async getEloHistory(username, limit = 100) {
+    return this.request(`/users/${encodeURIComponent(username)}/elo-history?limit=${limit}`);
+  }
+
   // Matchmaking endpoints
   async getQueueStatus() {
     return this.request('/matchmaking/status');

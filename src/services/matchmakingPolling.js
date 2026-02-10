@@ -91,6 +91,23 @@ class MatchmakingPollingService {
     this.currentPlayerId = null;
   }
 
+  // Synchronous leave using sendBeacon for reliable cleanup during page unload
+  leaveMatchmakingSync(playerId) {
+    if (!playerId) return;
+
+    this.stopPolling();
+
+    try {
+      const data = JSON.stringify({ playerId });
+      const success = navigator.sendBeacon('/api/matchmaking/leave', data);
+      console.log('[MatchmakingPolling] Leave beacon sent:', playerId, success ? 'success' : 'queued');
+    } catch (error) {
+      console.error('[MatchmakingPolling] Error sending leave beacon:', error);
+    }
+
+    this.currentPlayerId = null;
+  }
+
   // Start polling for matches
   startPolling(playerId) {
     if (this.isPolling) {
@@ -162,12 +179,12 @@ class MatchmakingPollingService {
     }
   }
 
-  // Cleanup
+  // Cleanup (use sync leave for reliability)
   disconnect() {
-    this.stopPolling();
     if (this.currentPlayerId) {
-      this.leaveMatchmaking(this.currentPlayerId);
+      this.leaveMatchmakingSync(this.currentPlayerId);
     }
+    this.stopPolling();
     this.listeners.clear();
   }
 }

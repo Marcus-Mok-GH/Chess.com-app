@@ -76,6 +76,16 @@ export default function UserBadge() {
               </div>
             </div>
             <div className="dropdown-divider" />
+            <button 
+              className="dropdown-item"
+              onClick={() => {
+                setShowDropdown(false);
+                window.location.href = '/history';
+              }}
+            >
+              📊 View ELO Progress
+            </button>
+            <div className="dropdown-divider" />
             <div className="dropdown-sync-status">
               <span className={isOnline ? "sync-online" : "sync-offline"}>
                 {isOnline ? '☁️ Connected' : '📴 Offline'}

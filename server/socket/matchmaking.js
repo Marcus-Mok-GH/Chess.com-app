@@ -45,7 +45,7 @@ class MatchmakingService {
       // Get all players in queue, ordered by joined_at
       const result = await query(
         `SELECT * FROM matchmaking_queue
-         WHERE last_heartbeat > NOW() - INTERVAL '2 minutes'
+         WHERE last_heartbeat > NOW() - INTERVAL '45 seconds'
          ORDER BY joined_at ASC
          LIMIT $1`,
         [MATCHMAKING_BATCH_SIZE]
@@ -103,6 +103,16 @@ class MatchmakingService {
       } else {
         this.updateMatchmakingInterval(false);
       }
+      
+      // Also remove stale entries that may have expired during this cycle
+      const staleResult = await query(
+        `DELETE FROM matchmaking_queue
+         WHERE last_heartbeat < NOW() - INTERVAL '45 seconds'
+         RETURNING player_name`
+      );
+      if (staleResult.rowCount > 0) {
+        console.log(`[Matchmaking] Removed ${staleResult.rowCount} stale entries during processing`);
+      }
     } catch (error) {
       console.error('[Matchmaking] Error processing queue:', error);
       this.updateMatchmakingInterval(false);
@@ -146,7 +156,8 @@ class MatchmakingService {
         ]
       );
 
-      // Notify both players
+      // Notify both players via Socket.IO (only works for socket-connected players)
+      // Polling-based players will discover the match via HTTP polling
       const matchData = {
         gameId,
         gameMode: player1.is_ranked ? 'ranked' : 'friendly',
@@ -164,17 +175,22 @@ class MatchmakingService {
         }
       };
 
-      this.io.to(player1.socket_id).emit('match_found', {
-        ...matchData,
-        yourColor: isPlayer1White ? 'white' : 'black',
-        yourId: player1.player_id
-      });
-
-      this.io.to(player2.socket_id).emit('match_found', {
-        ...matchData,
-        yourColor: isPlayer1White ? 'black' : 'white',
-        yourId: player2.player_id
-      });
+      // Only emit to players if their socket_id doesn't start with 'polling-'
+      // (polling-based players don't have active socket connections)
+      if (!player1.socket_id.startsWith('polling-')) {
+        this.io.to(player1.socket_id).emit('match_found', {
+          ...matchData,
+          yourColor: isPlayer1White ? 'white' : 'black',
+          yourId: player1.player_id
+        });
+      }
+      if (!player2.socket_id.startsWith('polling-')) {
+        this.io.to(player2.socket_id).emit('match_found', {
+          ...matchData,
+          yourColor: isPlayer1White ? 'black' : 'white',
+          yourId: player2.player_id
+        });
+      }
 
       console.log(`[Matchmaking] Created match ${gameId} between ${player1.player_name} (${player1.elo}) and ${player2.player_name} (${player2.elo})`);
     } catch (error) {

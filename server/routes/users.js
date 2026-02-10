@@ -256,7 +256,14 @@ router.post('/:username/elo', async (req, res) => {
       'UPDATE users SET elo = $1, games_played = $2, wins = $3, losses = $4, draws = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6',
       [newElo, gamesPlayed, wins, losses, draws, user.id]
     );
-    
+
+    // Record ELO history
+    await query(
+      `INSERT INTO elo_history (user_id, elo, change, game_mode, opponent_elo, result)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [user.id, newElo, newElo - user.elo, 'ranked', opponentElo, gameResult]
+    );
+
     res.json({
       success: true,
       previousElo: user.elo,
@@ -299,6 +306,29 @@ router.get('/leaderboard/top', async (req, res) => {
   } catch (error) {
     console.error('Leaderboard error:', error);
     return handleRouteError(res, error, 'Failed to get leaderboard');
+  }  }
+);
+
+// Get ELO history for a user
+router.get('/:username/elo-history', async (req, res) => {
+  try {
+    const { username } = req.params;
+    const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+
+    const result = await query(
+      `SELECT eh.elo, eh.change, eh.game_code, eh.game_mode, eh.opponent_elo, eh.result, eh.created_at
+       FROM elo_history eh
+       JOIN users u ON eh.user_id = u.id
+       WHERE LOWER(u.username) = LOWER($1)
+       ORDER BY eh.created_at ASC
+       LIMIT $2`,
+      [username, limit]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Get ELO history error:', error);
+    return handleRouteError(res, error, 'Failed to get ELO history');
   }
 });
 

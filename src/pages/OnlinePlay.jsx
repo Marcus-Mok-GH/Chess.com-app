@@ -408,17 +408,30 @@ export default function OnlinePlay() {
 
   // Cleanup matchmaking queue on unmount or page unload.
   useEffect(() => {
-    const handleUnload = async () => {
+    const handleUnload = () => {
       if (playerId) {
+        // Use sync leave for polling to ensure request completes before page closes
+        pollingService.leaveMatchmakingSync(playerId);
+        // Socket leave is fire-and-forget, no need to await
         socketService.leaveMatchmaking(playerId);
-        await pollingService.leaveMatchmaking(playerId);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      // Clean up when user navigates away or tab becomes hidden
+      if (document.visibilityState === 'hidden' && playerId) {
+        console.log('[OnlinePlay] Page hidden, cleaning up matchmaking...');
+        pollingService.leaveMatchmakingSync(playerId);
+        socketService.leaveMatchmaking(playerId);
       }
     };
 
     window.addEventListener('beforeunload', handleUnload);
+    window.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       window.removeEventListener('beforeunload', handleUnload);
+      window.removeEventListener('visibilitychange', handleVisibilityChange);
       handleUnload();
     };
   }, [playerId]);
