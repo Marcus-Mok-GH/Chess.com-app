@@ -18,6 +18,7 @@ import { initDatabase, cleanupStaleMatchmakingEntries, cleanupOldActiveGames } f
 import { setDatabaseReady, isDatabaseReady, ensureDatabaseReady } from './db/status.js';
 import { errorResponse } from './middleware/errors.js';
 import { registerSocketHandlers } from './socket/index.js';
+import { getMatchmakingService } from './socket/matchmaking.js';
 import matchmakingRouter from './routes/matchmaking.js';
 import gamesRouter from './routes/games.js';
 import usersRouter from './routes/users.js';
@@ -194,6 +195,10 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });  // Socket.io
   if (io) {
+    // Initialize matchmaking service immediately so it can process queued players
+    getMatchmakingService(io);
+    console.log('[Server] Matchmaking service initialized and running');
+    
     io.on('connection', async (socket) => {
       console.log(`[Socket] Client connected: ${socket.id}`);
       await registerSocketHandlers(io, socket);
