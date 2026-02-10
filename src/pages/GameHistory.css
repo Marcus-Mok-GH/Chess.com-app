@@ -27,6 +27,13 @@
   font-size: 1rem;
 }
 
+.game-history-charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
 .loading, .error-message, .offline-message, .no-games {
   text-align: center;
   padding: 48px 24px;
@@ -161,5 +168,9 @@
   .game-details {
     flex-wrap: wrap;
     gap: 8px;
+  }
+
+  .game-history-charts {
+    grid-template-columns: 1fr;
   }
 }

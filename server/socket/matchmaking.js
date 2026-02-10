@@ -52,6 +52,9 @@ class MatchmakingService {
       );
 
       const queue = result.rows;
+      if (queue.length > 0) {
+        console.log(`[Matchmaking] Processing queue: ${queue.length} player(s) waiting`, queue.map(p => `${p.player_name}(${p.elo})`).join(', '));
+      }
       if (queue.length < 2) {
         this.updateMatchmakingInterval(false);
         return;
@@ -86,6 +89,7 @@ class MatchmakingService {
         }
 
         if (bestMatch) {
+          console.log(`[Matchmaking] Pairing found: ${player1.player_name}(${player1.elo}) vs ${bestMatch.player_name}(${bestMatch.elo}), elo diff=${bestEloDiff}, ranked=${player1.is_ranked}`);
           matched.add(player1.id);
           matched.add(bestMatch.id);
           await this.createMatch(player1, bestMatch);
@@ -99,8 +103,10 @@ class MatchmakingService {
           `DELETE FROM matchmaking_queue WHERE id = ANY($1)`,
           [ids]
         );
+        console.log(`[Matchmaking] Removed ${matched.size} matched players from queue`);
         this.updateMatchmakingInterval(true);
       } else {
+        console.log(`[Matchmaking] No pairs found this cycle (${queue.length} players in queue)`);
         this.updateMatchmakingInterval(false);
       }
       
@@ -175,24 +181,34 @@ class MatchmakingService {
         }
       };
 
+      console.log(`[Matchmaking] Game ${gameId} inserted into active_games (mode=${player1.is_ranked ? 'ranked' : 'friendly'})`);
+      console.log(`[Matchmaking]   White: ${matchData.players.white.name} (${matchData.players.white.elo}) id=${matchData.players.white.id}`);
+      console.log(`[Matchmaking]   Black: ${matchData.players.black.name} (${matchData.players.black.elo}) id=${matchData.players.black.id}`);
+
       // Only emit to players if their socket_id doesn't start with 'polling-'
       // (polling-based players don't have active socket connections)
       if (!player1.socket_id.startsWith('polling-')) {
+        console.log(`[Matchmaking] Emitting match_found to ${player1.player_name} via socket ${player1.socket_id} (color=${isPlayer1White ? 'white' : 'black'})`);
         this.io.to(player1.socket_id).emit('match_found', {
           ...matchData,
           yourColor: isPlayer1White ? 'white' : 'black',
           yourId: player1.player_id
         });
+      } else {
+        console.log(`[Matchmaking] ${player1.player_name} is polling-based (${player1.socket_id}), skipping socket emit`);
       }
       if (!player2.socket_id.startsWith('polling-')) {
+        console.log(`[Matchmaking] Emitting match_found to ${player2.player_name} via socket ${player2.socket_id} (color=${isPlayer1White ? 'black' : 'white'})`);
         this.io.to(player2.socket_id).emit('match_found', {
           ...matchData,
           yourColor: isPlayer1White ? 'black' : 'white',
           yourId: player2.player_id
         });
+      } else {
+        console.log(`[Matchmaking] ${player2.player_name} is polling-based (${player2.socket_id}), skipping socket emit`);
       }
 
-      console.log(`[Matchmaking] Created match ${gameId} between ${player1.player_name} (${player1.elo}) and ${player2.player_name} (${player2.elo})`);
+      console.log(`[Matchmaking] ✅ Match ${gameId} fully created and events emitted`);
     } catch (error) {
       console.error('[Matchmaking] Error creating match:', error);
     }

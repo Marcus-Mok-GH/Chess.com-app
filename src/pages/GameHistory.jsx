@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 import api from '../services/api';
 import { normalizeMoveHistory } from '../engine/game/moveHistory';
+import EloProgressChart from '../components/EloProgressChart';
+import WinRateChart from '../components/WinRateChart';
 import './GameHistory.css';
 
 function formatDate(dateString) {
@@ -28,6 +30,7 @@ export default function GameHistory() {
   const { user, isOnline } = useUser();
   const navigate = useNavigate();
   const [games, setGames] = useState([]);
+  const [eloHistory, setEloHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -37,10 +40,14 @@ export default function GameHistory() {
       return;
     }
 
-    const loadGames = async () => {
+    const loadGameData = async () => {
       try {
-        const userGames = await api.getGameHistory(user.username);
+        const [userGames, historyData] = await Promise.all([
+          api.getGameHistory(user.username),
+          api.getEloHistory(user.username, 500)
+        ]);
         setGames(userGames);
+        setEloHistory(historyData);
       } catch (err) {
         setError('Failed to load game history');
         console.error('Error loading games:', err);
@@ -49,7 +56,7 @@ export default function GameHistory() {
       }
     };
 
-    loadGames();
+    loadGameData();
   }, [user, isOnline]);
 
   const handleViewGame = (game) => {
@@ -125,6 +132,14 @@ export default function GameHistory() {
             {games.length} game{games.length !== 1 ? 's' : ''} played
           </p>
         </div>
+
+        {/* Stats Charts Section */}
+        {eloHistory.length > 0 && (
+          <div className="game-history-charts">
+            <EloProgressChart history={eloHistory} currentElo={user.elo} />
+            <WinRateChart history={eloHistory} />
+          </div>
+        )}
 
         {games.length === 0 ? (
           <div className="no-games">

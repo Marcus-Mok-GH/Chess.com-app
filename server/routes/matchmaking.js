@@ -69,7 +69,7 @@ router.post('/join', async (req, res) => {
     // Check for existing active games
     const existingGame = await query(
       `SELECT game_id FROM active_games
-       WHERE white_player_id = $1 OR black_player_id = $1
+       WHERE (white_player_id = $1 OR black_player_id = $1)
        AND status IN ('playing', 'waiting')
        LIMIT 1`,
       [playerId]
@@ -128,7 +128,8 @@ router.get('/check-match', async (req, res) => {
       `SELECT game_id, white_player_id, black_player_id, white_player_name, black_player_name,
               white_elo, black_elo, status
        FROM active_games
-       WHERE white_player_id = $1 OR black_player_id = $1
+       WHERE (white_player_id = $1 OR black_player_id = $1)
+       AND status IN ('playing', 'waiting')
        LIMIT 1`,
       [playerId]
     );

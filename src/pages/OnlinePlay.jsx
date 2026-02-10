@@ -95,9 +95,12 @@ export default function OnlinePlay() {
       const normalizedGameId = routeGameId.toUpperCase();
       setGameId(normalizedGameId);
 
-      setPlayerId(null);
-      setPlayerColor(null);
-      setOpponentInfo(null);
+      // Only reset player state if we don't already have it from matchmaking
+      if (!gameSessionRef.current.playerId) {
+        setPlayerId(null);
+        setPlayerColor(null);
+        setOpponentInfo(null);
+      }
 
       setView('playing');
       return;
@@ -298,14 +301,16 @@ export default function OnlinePlay() {
       
       playMatchFoundSound(settings);
       
-      // Hide animation after 2 seconds and proceed
+      // Set game state immediately so OnlineChessGame can connect
+      setGameId(matchedGameId);
+      setPlayerId(yourId);
+      setPlayerColor(yourColor);
+      setMatchFound(true);
+      setOpponentInfo(opponent);
+      
+      // Hide animation after 2 seconds
       setTimeout(() => {
         setShowMatchFoundAnimation(false);
-        setGameId(matchedGameId);
-        setPlayerId(yourId);
-        setPlayerColor(yourColor);
-        setMatchFound(true);
-        setOpponentInfo(opponent);
       }, 2000);
       
       persistGameSession({
@@ -323,7 +328,7 @@ export default function OnlinePlay() {
       // Transition to playing
       setView('playing');
       setIsWaiting(false);
-      navigate(`/game/${matchedGameId}`, { replace: true });
+      navigate(`/online/${matchedGameId}`, { replace: true });
       
       console.log('[OnlinePlay] Match setup complete:', {
         gameId: matchedGameId,
@@ -348,17 +353,15 @@ export default function OnlinePlay() {
       }
     };
 
-    // Subscribe to socket events
-    socketService.on('match_found', handleMatchFound);
-    socketService.on('matchmaking_status', (data) => {
+    const handleMatchmakingStatus = (data) => {
       console.log('[OnlinePlay] Matchmaking status:', data);
       if (!data?.inQueue && view === 'matchmaking') {
         setError(data?.message || 'Failed to join matchmaking queue.');
         handleCancelMatchmaking();
       }
-    });
-    socketService.on('matchmaking_error', handleMatchmakingError);
-    socketService.on('connection_status', (data) => {
+    };
+
+    const handleConnectionStatus = (data) => {
       console.log('[OnlinePlay] Connection status:', data);
       if (data.connected && pendingMatchmakingRef.current) {
         pendingMatchmakingRef.current = false;
@@ -370,18 +373,28 @@ export default function OnlinePlay() {
         setError('Connection lost. Reconnecting...');
         pendingMatchmakingRef.current = true;
       }
-    });
-    socketService.on('connection_error', (data) => {
+    };
+
+    const handleConnectionError = (data) => {
       console.error('[OnlinePlay] Connection error:', data);
       if (view === 'matchmaking') {
         setError(data?.error || 'Unable to connect to server. Retrying...');
         pendingMatchmakingRef.current = true;
       }
-    });
-    socketService.on('game_error', (data) => {
+    };
+
+    const handleGameError = (data) => {
       console.error('[OnlinePlay] Game error:', data);
       setError(data?.message || 'Game error occurred');
-    });
+    };
+
+    // Subscribe to socket events
+    socketService.on('match_found', handleMatchFound);
+    socketService.on('matchmaking_status', handleMatchmakingStatus);
+    socketService.on('matchmaking_error', handleMatchmakingError);
+    socketService.on('connection_status', handleConnectionStatus);
+    socketService.on('connection_error', handleConnectionError);
+    socketService.on('game_error', handleGameError);
     socketService.on('queue_details', handleQueueDetails);
 
     // Subscribe to polling events
@@ -392,12 +405,12 @@ export default function OnlinePlay() {
     return () => {
       // Unsubscribe from socket events
       socketService.off('match_found', handleMatchFound);
-      socketService.off('matchmaking_status');
+      socketService.off('matchmaking_status', handleMatchmakingStatus);
       socketService.off('matchmaking_error', handleMatchmakingError);
-      socketService.off('connection_status');
-      socketService.off('connection_error');
-      socketService.off('game_error');
-      socketService.off('queue_details');
+      socketService.off('connection_status', handleConnectionStatus);
+      socketService.off('connection_error', handleConnectionError);
+      socketService.off('game_error', handleGameError);
+      socketService.off('queue_details', handleQueueDetails);
       
       // Unsubscribe from polling events
       pollingService.off('match_found', handleMatchFound);

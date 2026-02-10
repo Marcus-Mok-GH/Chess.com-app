@@ -83,7 +83,7 @@ export default function UserBadge() {
                 window.location.href = '/history';
               }}
             >
-              📊 View ELO Progress
+              📊 View Stats & Charts
             </button>
             <div className="dropdown-divider" />
             <div className="dropdown-sync-status">

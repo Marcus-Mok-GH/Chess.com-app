@@ -98,8 +98,8 @@ class MatchmakingPollingService {
     this.stopPolling();
 
     try {
-      const data = JSON.stringify({ playerId });
-      const success = navigator.sendBeacon('/api/matchmaking/leave', data);
+      const blob = new Blob([JSON.stringify({ playerId })], { type: 'application/json' });
+      const success = navigator.sendBeacon('/api/matchmaking/leave', blob);
       console.log('[MatchmakingPolling] Leave beacon sent:', playerId, success ? 'success' : 'queued');
     } catch (error) {
       console.error('[MatchmakingPolling] Error sending leave beacon:', error);
