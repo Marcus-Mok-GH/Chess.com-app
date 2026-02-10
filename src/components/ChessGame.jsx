@@ -140,6 +140,7 @@ function ChessGame(
   const customEloRef = useRef(customElo);
   const settingsRef = useRef(settings);
   const moveHistoryRef = useRef(moveHistory);
+  const isThinkingRef = useRef(isThinking); // Add ref to track isThinking state
   const victoryTimeoutRef = useRef(null);
   const lastVictoryKeyRef = useRef(null);
 
@@ -177,6 +178,10 @@ function ChessGame(
   useEffect(() => {
     moveHistoryRef.current = moveHistory;
   }, [moveHistory]);
+
+  useEffect(() => {
+    isThinkingRef.current = isThinking;
+  }, [isThinking]);
 
   useEffect(() => {
     if (!game) return;
@@ -440,9 +445,12 @@ function ChessGame(
   }, [game]);
 
   const makeAIMove = useCallback(() => {
-    if (gameRef.current.isGameOver() || !workerRef.current || isThinking) return;
+    if (gameRef.current.isGameOver() || !workerRef.current || isThinkingRef.current) return;
 
     setIsThinking(true);
+
+    // Update the ref immediately to reflect the new state
+    isThinkingRef.current = true;
 
     // Get the actual bot config (may be custom bot with ELO)
     let bot = selectedBotRef.current;
@@ -481,6 +489,7 @@ function ChessGame(
           if (!moveResult) {
             console.warn('[ChessGame] Engine move could not be applied:', bestMove);
             setIsThinking(false);
+            isThinkingRef.current = false;
             return;
           }
 
@@ -508,9 +517,11 @@ function ChessGame(
         }
 
         setIsThinking(false);
+        isThinkingRef.current = false;
       }
     };
 
+    // Remove any existing listeners to prevent duplicates
     workerRef.current.removeEventListener('message', handleMessage);
     workerRef.current.addEventListener('message', handleMessage);
 
@@ -532,8 +543,8 @@ function ChessGame(
   useEffect(() => {
     if (game.turn() !== playerColor && !game.isGameOver() && !isThinking) {
       const timer = setTimeout(() => {
-        // Double-check conditions before making AI move
-        if (gameRef.current.turn() !== playerColor && !gameRef.current.isGameOver() && !isThinking) {
+        // Double-check conditions before making AI move using ref values for most current state
+        if (gameRef.current.turn() !== playerColor && !gameRef.current.isGameOver() && !isThinkingRef.current) {
           makeAIMove();
         }
       }, 50);

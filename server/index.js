@@ -193,22 +193,24 @@ app.use((req, res, next) => {
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   res.status(500).json({ error: 'Internal server error' });
-});  // Socket.io
-  if (io) {
-    // Initialize matchmaking service immediately so it can process queued players
-    getMatchmakingService(io);
-    console.log('[Server] Matchmaking service initialized and running');
-    
-    io.on('connection', async (socket) => {
-      console.log(`[Socket] Client connected: ${socket.id}`);
-      await registerSocketHandlers(io, socket);
-    });
-  } else if (isServerless) {
-    console.warn('[Server] Socket.IO disabled - running in serverless mode (Vercel/AWS Lambda).');
-    console.warn('[Server] For real-time features (matchmaking, online games), deploy the backend server to a platform that supports WebSockets.');
-    console.warn('[Server] Then set VITE_SOCKET_URL environment variable on Vercel to point to your external Socket.IO server.');
-    console.warn('[Server] Example: VITE_SOCKET_URL=https://your-socket-server.railway.app');
-  }
+});
+
+// Socket.io
+if (io) {
+  // Initialize matchmaking service immediately so it can process queued players
+  getMatchmakingService(io);
+  console.log('[Server] Matchmaking service initialized and running');
+
+  io.on('connection', async (socket) => {
+    console.log(`[Socket] Client connected: ${socket.id}`);
+    await registerSocketHandlers(io, socket);
+  });
+} else if (isServerless) {
+  console.warn('[Server] Socket.IO disabled - running in serverless mode (Vercel/AWS Lambda).');
+  console.warn('[Server] For real-time features (matchmaking, online games), deploy the backend server to a platform that supports WebSockets.');
+  console.warn('[Server] Then set VITE_SOCKET_URL environment variable on Vercel to point to your external Socket.IO server.');
+  console.warn('[Server] Example: VITE_SOCKET_URL=https://your-socket-server.railway.app');
+}
 
 // Periodic cleanup - also run in serverless mode via cron or external trigger
 if (!isServerless) {

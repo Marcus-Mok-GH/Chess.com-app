@@ -7,32 +7,97 @@ let collectedMoves = [];
 
 function initEngine() {
   if (engine) return Promise.resolve(engine);
-  
+
   return new Promise((resolve) => {
     // Load stockfish from public folder as a web worker
-    const wasmSupported = typeof WebAssembly === 'object' && 
+    const wasmSupported = typeof WebAssembly === 'object' &&
       WebAssembly.validate(Uint8Array.of(0x0, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00));
-    
-    const stockfishPath = wasmSupported ? '/stockfish.wasm.js' : '/stockfish.js';
-    engine = new Worker(stockfishPath);
-    
+
+    // Try different possible paths for stockfish in different deployment environments
+    let stockfishPath;
+    if (wasmSupported) {
+      // First try the standard path, then try relative paths
+      try {
+        // Try to determine the correct path based on the current script location
+        const currentScript = self.document ? self.document.currentScript : null;
+        if (currentScript && currentScript.src) {
+          const basePath = currentScript.src.substring(0, currentScript.src.lastIndexOf('/') + 1);
+          stockfishPath = basePath + '../stockfish.wasm.js'; // Adjust path as needed
+        } else {
+          // Default to root path
+          stockfishPath = '/stockfish.wasm.js';
+        }
+      } catch (e) {
+        // Fallback to root path
+        stockfishPath = '/stockfish.wasm.js';
+      }
+    } else {
+      try {
+        const currentScript = self.document ? self.document.currentScript : null;
+        if (currentScript && currentScript.src) {
+          const basePath = currentScript.src.substring(0, currentScript.src.lastIndexOf('/') + 1);
+          stockfishPath = basePath + '../stockfish.js';
+        } else {
+          stockfishPath = '/stockfish.js';
+        }
+      } catch (e) {
+        stockfishPath = '/stockfish.js';
+      }
+    }
+
+    // Attempt to create the worker with the determined path
+    try {
+      engine = new Worker(stockfishPath);
+    } catch (err) {
+      console.warn('Failed to create worker with path:', stockfishPath, err);
+      // Try alternative paths
+      const alternativePaths = [
+        '/stockfish.wasm.js',
+        '/stockfish.js',
+        './stockfish.wasm.js',
+        './stockfish.js',
+        '../stockfish.wasm.js',
+        '../stockfish.js'
+      ];
+      
+      let success = false;
+      for (const path of alternativePaths) {
+        try {
+          engine = new Worker(path);
+          success = true;
+          console.log('Successfully created worker with path:', path);
+          break;
+        } catch (altErr) {
+          console.warn('Alternative path failed:', path, altErr);
+          continue;
+        }
+      }
+      
+      if (!success) {
+        console.error('All paths failed to load stockfish. Using fallback behavior.');
+        // If all paths fail, we'll handle this gracefully in the findBestMove function
+        resolve(null);
+        return;
+      }
+    }
+
     engine.onmessage = (e) => {
       const line = typeof e.data === 'string' ? e.data : String(e.data);
-      
+
       // Engine is ready
       if (line === 'uciok') {
         engineReady = true;
         resolve(engine);
         return;
       }
-      
+
       // Collect Multi-PV analysis lines
       if (line.includes(' pv ')) {
         const depthMatch = line.match(/depth (\d+)/);
         const scoreMatch = line.match(/score cp (-?\d+)/);
         const mateMatch = line.match(/score mate (-?\d+)/);
         const pvMatch = line.match(/ pv ([a-h][1-8][a-h][1-8][qrbnQRBN]?)/);
-        
+
         if (pvMatch) {
           const move = pvMatch[1];
           let score = 0;
@@ -42,7 +107,7 @@ function initEngine() {
             score = parseInt(mateMatch[1]) > 0 ? 100000 : -100000;
           }
           const depth = depthMatch ? parseInt(depthMatch[1]) : 0;
-          
+
           // Update or add move
           const existing = collectedMoves.find(m => m.move === move);
           if (existing) {
@@ -55,7 +120,7 @@ function initEngine() {
           }
         }
       }
-      
+
       // Search complete
       if (line.startsWith('bestmove')) {
         const match = line.match(/bestmove ([a-h][1-8][a-h][1-8][qrbnQRBN]?)/);
@@ -70,11 +135,11 @@ function initEngine() {
         }
       }
     };
-    
+
     engine.onerror = (err) => {
       console.error('Stockfish error:', err);
     };
-    
+
     // Initialize UCI protocol
     engine.postMessage('uci');
   });
@@ -179,17 +244,36 @@ function selectMove(bestMove, candidates, bot, game) {
 async function findBestMove(fen, bot, debug) {
   const startTime = performance.now();
   const game = new Chess(fen);
-  
+
   await initEngine();
   
+  // Check if engine initialized successfully
+  if (!engine) {
+    console.error('Stockfish engine failed to initialize. Falling back to random move.');
+    // Fallback to random legal move
+    const moves = game.moves();
+    if (moves.length > 0) {
+      return {
+        type: 'result',
+        bestMove: moves[Math.floor(Math.random() * moves.length)],
+        debugInfo: debug ? { error: 'Engine failed to initialize, using random move' } : null
+      };
+    }
+    return {
+      type: 'result',
+      bestMove: null,
+      debugInfo: debug ? { error: 'Engine failed to initialize, no legal moves available' } : null
+    };
+  }
+
   // Reset state
   collectedMoves = [];
-  
+
   return new Promise((resolve) => {
     pendingCallback = (bestMove, candidates) => {
       const time = Math.round(performance.now() - startTime);
       const selectedMove = selectMove(bestMove, candidates, bot, game);
-      
+
       resolve({
         type: 'result',
         bestMove: selectedMove,
@@ -202,15 +286,15 @@ async function findBestMove(fen, bot, debug) {
         } : null
       });
     };
-    
+
     // Configure engine
     engine.postMessage('ucinewgame');
     engine.postMessage(`position fen ${fen}`);
-    
+
     // Set MultiPV for getting multiple candidate moves
     const multiPV = Math.min(5, game.moves().length);
     engine.postMessage(`setoption name MultiPV value ${multiPV}`);
-    
+
     // Start search
     engine.postMessage(getSearchParams(bot));
   });
