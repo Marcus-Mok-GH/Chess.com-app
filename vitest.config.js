@@ -27,7 +27,7 @@ export default defineConfig({
       statements: 80,
     },
     include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}', 'tests/**/*.{test,spec}.{js,jsx,ts,tsx}', 'app/**/*.{test,spec}.{js,jsx,ts,tsx}', 'lib/**/*.{test,spec}.{js,jsx,ts,tsx}', 'server/**/*.{test,spec}.{js,jsx,ts,tsx}'],
-    exclude: ['node_modules', 'dist', '.idea', '.git', '.cache', '.config', '.local', '.next'],
+    exclude: ['node_modules', 'dist', '.idea', '.git', '.cache', '.config', '.local', '.next', 'tests/e2e/**'],
   },
   resolve: {
     alias: {
