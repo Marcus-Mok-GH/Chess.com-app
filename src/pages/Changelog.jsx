@@ -1,9 +1,37 @@
 import { useEffect, useState } from 'react';
 import './Changelog.css';
 
-const CURRENT_VERSION = '1.1.0';
+const CURRENT_VERSION = '1.1.2';
 
 const CHANGELOG = [
+  {
+    version: '1.1.2',
+    date: '2026-02-10',
+    sections: [
+      {
+        title: 'Fixes',
+        items: [
+          'Fixed Neon serverless driver pool config for Vercel production.',
+          'Separated pg and Neon pool options with safer defaults.',
+          'Switched to dynamic WebSocket import and auto-detected Neon hosts.',
+          'Enabled secure WebSocket (wss) for Neon connections.',
+        ],
+      },
+    ],
+  },
+  {
+    version: '1.1.1',
+    date: '2026-02-10',
+    sections: [
+      {
+        title: 'Fixes',
+        items: [
+          'Added missing elo_history table creation to database init (fixes 500 errors on ELO updates).',
+          'Improved login error logging for easier debugging on Vercel.',
+        ],
+      },
+    ],
+  },
   {
     version: '1.1.0',
     date: '2026-02-10',

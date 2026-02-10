@@ -1,6 +1,8 @@
 import pg from 'pg';
 import { Pool as NeonPool, neonConfig } from '@neondatabase/serverless';
+import { createRequire } from 'module';
 
+const require = createRequire(import.meta.url);
 const { Pool } = pg;
 
 const connectionCandidates = [
@@ -37,8 +39,8 @@ const useNeonServerless = Boolean(process.env.VERCEL || process.env.NEON_PROJECT
 
 if (useNeonServerless) {
   try {
-    const ws = await import('ws');
-    neonConfig.webSocketConstructor = ws.default || ws;
+    const wsModule = require('ws');
+    neonConfig.webSocketConstructor = wsModule;
   } catch {
     // ws not available (e.g. edge runtime) — Neon driver falls back to fetch
   }
