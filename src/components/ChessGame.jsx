@@ -97,6 +97,7 @@ function ChessGame(
   const lastVictoryKeyRef = useRef(null);
 
   const workerRef = useRef(null);
+  const timeoutRef = useRef(null);
   const animationIdRef = useRef(0);
   const persistTimeoutRef = useRef(null);
   const suppressPersistRef = useRef(false);
@@ -419,7 +420,9 @@ function ChessGame(
 
       // Handle final result
       if (type === 'result') {
-        // Remove the event listener to prevent multiple calls
+        // Clear timeout and remove listener
+clearTimeout(timeoutId);
+workerRef.current.removeEventListener('message', handleMessage);
         workerRef.current.removeEventListener('message', handleMessage);
 
         if (newDebugInfo && settingsRef.current.debugMode) {
@@ -461,6 +464,33 @@ function ChessGame(
     };
 
     // Add the event listener
+const timeoutId = setTimeout(() => {
+  workerRef.current.removeEventListener('message', handleMessage);
+  if (isThinking) {
+    console.error('[ChessGame] AI move timeout - using fallback random move');
+    setIsThinking(false);
+    setBotMessage('Thinking took too long... random move!');
+
+    const history = Array.isArray(moveHistoryRef.current) ? moveHistoryRef.current : [];
+    const fallbackGame = buildGameFromHistory(history, fen);
+    const fallbackMoves = fallbackGame.moves();
+    if (fallbackMoves.length > 0) {
+      const randomMoveUCI = fallbackMoves[Math.floor(Math.random() * fallbackMoves.length)];
+      const moveResult = fallbackGame.move(randomMoveUCI);
+      triggerAnimation(moveResult, fallbackGame);
+      setTimeout(() => {
+        setGame(fallbackGame);
+        if (moveResult) {
+          setMoveHistory([...history, moveResult]);
+        }
+      }, 50);
+    } else {
+      setIsThinking(false);
+    }
+  }
+}, 8000);
+
+workerRef.current.addEventListener('message', handleMessage);
     workerRef.current.addEventListener('message', handleMessage);
 
     // Send work to the worker - pass full bot config for Stockfish
