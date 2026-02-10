@@ -20,6 +20,8 @@ import api from '../services/api';
 import StockfishWorker from '../engine/workers/stockfishWorker.js?worker';
 import './ChessGame.css';
 
+const UCI_MOVE_REGEX = /^[a-h][1-8][a-h][1-8][qrbn]?$/i;
+
 function findKingSquare(game, color) {
   const board = game.board();
   for (let row = 0; row < 8; row++) {
@@ -29,6 +31,51 @@ function findKingSquare(game, color) {
         return String.fromCharCode(97 + col) + (8 - row);
       }
 
+    }
+  }
+  return null;
+}
+
+function parseEngineMove(move) {
+  if (!move || typeof move !== 'string') return move;
+  const trimmed = move.trim();
+  if (UCI_MOVE_REGEX.test(trimmed)) {
+    return {
+      from: trimmed.slice(0, 2),
+      to: trimmed.slice(2, 4),
+      promotion: trimmed.length > 4 ? trimmed[4].toLowerCase() : undefined,
+    };
+  }
+  return trimmed;
+}
+
+function applyEngineMove(gameInstance, move) {
+  if (!gameInstance || !move) return null;
+  const parsed = parseEngineMove(move);
+  if (typeof parsed === 'string') {
+    return gameInstance.move(parsed);
+  }
+  if (parsed && typeof parsed === 'object') {
+    const moveObj = {
+      from: parsed.from,
+      to: parsed.to,
+      ...(parsed.promotion ? { promotion: parsed.promotion } : {}),
+    };
+    return gameInstance.move(moveObj);
+  }
+  return null;
+}
+
+function getMoveCoords(gameInstance, move) {
+  const parsed = parseEngineMove(move);
+  if (parsed && typeof parsed === 'object') {
+    return { from: parsed.from, to: parsed.to };
+  }
+  if (typeof parsed === 'string') {
+    const tempGame = new Chess(gameInstance.fen());
+    const applied = tempGame.move(parsed);
+    if (applied) {
+      return { from: applied.from, to: applied.to };
     }
   }
   return null;
@@ -97,7 +144,7 @@ function ChessGame(
   const lastVictoryKeyRef = useRef(null);
 
   const workerRef = useRef(null);
-  const timeoutRef = useRef(null);
+
   const animationIdRef = useRef(0);
   const persistTimeoutRef = useRef(null);
   const suppressPersistRef = useRef(false);
@@ -420,9 +467,7 @@ function ChessGame(
 
       // Handle final result
       if (type === 'result') {
-        // Clear timeout and remove listener
-clearTimeout(timeoutId);
-workerRef.current.removeEventListener('message', handleMessage);
+        // Remove the event listener to prevent multiple calls
         workerRef.current.removeEventListener('message', handleMessage);
 
         if (newDebugInfo && settingsRef.current.debugMode) {
@@ -432,7 +477,12 @@ workerRef.current.removeEventListener('message', handleMessage);
         if (bestMove) {
           const history = Array.isArray(moveHistoryRef.current) ? moveHistoryRef.current : [];
           const newGame = buildGameFromHistory(history, fen);
-          const moveResult = newGame.move(bestMove);
+          const moveResult = applyEngineMove(newGame, bestMove);
+          if (!moveResult) {
+            console.warn('[ChessGame] Engine move could not be applied:', bestMove);
+            setIsThinking(false);
+            return;
+          }
 
           // Trigger animation before updating state
           triggerAnimation(moveResult, newGame);
@@ -440,9 +490,7 @@ workerRef.current.removeEventListener('message', handleMessage);
           // Delay state update to allow animation to start
           setTimeout(() => {
             setGame(newGame);
-            if (moveResult) {
-              setMoveHistory([...history, moveResult]);
-            }
+            setMoveHistory([...history, moveResult]);
 
             if (newGame.isCheckmate()) {
               setBotMessage(getRandomQuote(bot, 'win'));
@@ -463,34 +511,7 @@ workerRef.current.removeEventListener('message', handleMessage);
       }
     };
 
-    // Add the event listener
-const timeoutId = setTimeout(() => {
-  workerRef.current.removeEventListener('message', handleMessage);
-  if (isThinking) {
-    console.error('[ChessGame] AI move timeout - using fallback random move');
-    setIsThinking(false);
-    setBotMessage('Thinking took too long... random move!');
-
-    const history = Array.isArray(moveHistoryRef.current) ? moveHistoryRef.current : [];
-    const fallbackGame = buildGameFromHistory(history, fen);
-    const fallbackMoves = fallbackGame.moves();
-    if (fallbackMoves.length > 0) {
-      const randomMoveUCI = fallbackMoves[Math.floor(Math.random() * fallbackMoves.length)];
-      const moveResult = fallbackGame.move(randomMoveUCI);
-      triggerAnimation(moveResult, fallbackGame);
-      setTimeout(() => {
-        setGame(fallbackGame);
-        if (moveResult) {
-          setMoveHistory([...history, moveResult]);
-        }
-      }, 50);
-    } else {
-      setIsThinking(false);
-    }
-  }
-}, 8000);
-
-workerRef.current.addEventListener('message', handleMessage);
+    workerRef.current.removeEventListener('message', handleMessage);
     workerRef.current.addEventListener('message', handleMessage);
 
     // Send work to the worker - pass full bot config for Stockfish
@@ -831,9 +852,12 @@ workerRef.current.addEventListener('message', handleMessage);
     const handleMessage = (e) => {
       if (e.data.type === 'result' && e.data.bestMove) {
         const move = e.data.bestMove;
-        setHintMove({ from: move.substring(0, 2), to: move.substring(2, 4) });
+        const coords = getMoveCoords(game, move);
+        if (coords) {
+          setHintMove({ from: coords.from, to: coords.to });
+          setTimeout(() => setHintMove(null), 3000);
+        }
         worker.removeEventListener('message', handleMessage);
-        setTimeout(() => setHintMove(null), 3000);
       }
     };
     
