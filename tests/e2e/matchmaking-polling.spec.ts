@@ -1,6 +1,18 @@
 import { test, expect } from '@playwright/test';
 
-test('should use polling matchmaking when starting ranked', async ({ page, context }) => {
+test.describe('Matchmaking E2E Tests', () => {
+  test.beforeEach(async ({ page }) => {
+    // Mock logged-in user for all tests
+    await page.addInitScript(() => {
+      localStorage.setItem('user', JSON.stringify({
+        id: 1,
+        username: 'TestUser',
+        elo: 1200
+      }));
+    });
+  });
+
+  test('should use polling matchmaking when starting ranked', async ({ page, context }) => {
     // Block WebSocket connections to force polling fallback
     await context.route('**/socket.io/**', route => {
       if (route.request().resourceType() === 'websocket') {
@@ -48,25 +60,23 @@ test('should use polling matchmaking when starting ranked', async ({ page, conte
 
     // Wait for page to load
     await expect(page.locator('.online-play-page')).toBeVisible();
+    await expect(page.locator('.mode-title')).toContainText('Choose Game Mode');
 
     // Click Ranked mode to start matchmaking
     await page.click('.mode-option.ranked');
 
     // Should be in matchmaking view
+    await expect(page.locator('.waiting-container')).toBeVisible();
     await expect(page.locator('.matchmaking-title')).toContainText('Finding Opponent');
 
-    // Should show polling transport indicator (polling is now the primary method)
-    const waitingDesc = page.locator('.waiting-desc');
-    const descText = await waitingDesc.textContent();
-    console.log('Waiting desc text:', descText);
-    // The text may vary based on implementation, just verify we're in matchmaking view
-    await expect(page.locator('.matchmaking-title')).toContainText('Finding Opponent');
+    // Verify player rating is displayed
+    await expect(page.locator('.stat-value').first()).toContainText('1200');
 
-    // Verify that matchmaking info is displayed
-    await expect(page.locator('.stat-value').first()).toBeVisible();
+    // Verify matchmaking info is displayed (search time, players online)
+    await expect(page.locator('.search-stats')).toBeVisible();
 
     // Verify Cancel button exists
-    await expect(page.locator('button:has-text("Cancel")')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Cancel' })).toBeVisible();
   });
 
   test('should handle matchmaking errors gracefully', async ({ page, context }) => {
@@ -79,7 +89,7 @@ test('should use polling matchmaking when starting ranked', async ({ page, conte
       }
     });
 
-    // Mock join failure - need to mock other endpoints too
+    // Mock join failure
     await context.route('**/api/matchmaking/join', route => {
       route.fulfill({
         status: 500,
@@ -88,25 +98,18 @@ test('should use polling matchmaking when starting ranked', async ({ page, conte
       });
     });
 
-    // Mock user context to allow ranked play
+    // Navigate to online play page
     await page.goto('/online');
-    await page.evaluate(() => {
-      // Mock localStorage to simulate logged-in user
-      localStorage.setItem('user', JSON.stringify({
-        id: 1,
-        username: 'TestUser',
-        elo: 1200
-      }));
-    });
 
-    // Navigate again to pick up the mock user
-    await page.goto('/online');
+    // Wait for page to load
+    await expect(page.locator('.online-play-page')).toBeVisible();
 
     // Click Ranked mode
     await page.click('.mode-option.ranked');
 
-    // Should show error message
+    // Should show error message and return to mode select
     await expect(page.locator('.error-message')).toBeVisible();
+    await expect(page.locator('.mode-title')).toContainText('Choose Game Mode');
   });
 
   test('should cancel matchmaking and return to mode select', async ({ page, context }) => {
@@ -119,8 +122,10 @@ test('should use polling matchmaking when starting ranked', async ({ page, conte
       }
     });
 
-    // Mock successful join
+    // Mock successful join and leave
+    let joinCalled = false;
     await context.route('**/api/matchmaking/join', route => {
+      joinCalled = true;
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -136,25 +141,47 @@ test('should use polling matchmaking when starting ranked', async ({ page, conte
       });
     });
 
-    // Mock user context
-    await page.goto('/online');
-    await page.evaluate(() => {
-      localStorage.setItem('user', JSON.stringify({
-        id: 1,
-        username: 'TestUser',
-        elo: 1200
-      }));
-    });
-
+    // Navigate to online play page
     await page.goto('/online');
 
     // Start matchmaking
     await page.click('.mode-option.ranked');
-    await expect(page.locator('.matchmaking-title')).toBeVisible();
+
+    // Wait for matchmaking view to appear
+    await expect(page.locator('.waiting-container')).toBeVisible();
+    await expect(page.locator('.matchmaking-title')).toContainText('Finding Opponent');
+
+    // Verify join was called
+    await page.waitForTimeout(500); // Give time for join request
 
     // Click Cancel button
-    await page.click('button:has-text("Cancel")');
+    await page.getByRole('button', { name: 'Cancel' }).click();
 
     // Should return to mode select
     await expect(page.locator('.mode-title')).toContainText('Choose Game Mode');
+    await expect(page.locator('.mode-option.ranked')).toBeVisible();
   });
+
+  test('should prevent ranked play for guest users', async ({ page }) => {
+    // Clear any existing user from localStorage
+    await page.addInitScript(() => {
+      localStorage.removeItem('user');
+    });
+
+    // Navigate to online play page
+    await page.goto('/online');
+
+    // Wait for page to load
+    await expect(page.locator('.online-play-page')).toBeVisible();
+    await expect(page.locator('.guest-banner')).toBeVisible();
+
+    // Try to click Ranked mode
+    await page.click('.mode-option.ranked');
+
+    // Should show login modal
+    await expect(page.locator('[class*="LoginModal"]')).toBeVisible();
+
+    // The page should remain in mode select
+    await expect(page.locator('.mode-title')).toContainText('Choose Game Mode');
+  });
+});

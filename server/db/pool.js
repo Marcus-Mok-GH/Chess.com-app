@@ -1,6 +1,5 @@
 import pg from 'pg';
 import { Pool as NeonPool, neonConfig } from '@neondatabase/serverless';
-import ws from 'ws';
 
 const { Pool } = pg;
 
@@ -33,22 +32,32 @@ try {
   // ignore parsing errors; avoid logging secrets
 }
 
-const useNeonServerless = Boolean(process.env.VERCEL || process.env.NEON_PROJECT_ID);
+const isNeonHost = dbHost && dbHost.includes('neon.tech');
+const useNeonServerless = Boolean(process.env.VERCEL || process.env.NEON_PROJECT_ID || (isProduction && isNeonHost));
+
 if (useNeonServerless) {
-  neonConfig.webSocketConstructor = ws;
+  try {
+    const ws = await import('ws');
+    neonConfig.webSocketConstructor = ws.default || ws;
+  } catch {
+    // ws not available (e.g. edge runtime) — Neon driver falls back to fetch
+  }
   neonConfig.poolQueryViaFetch = true;
+  neonConfig.useSecureWebSocket = true;
 }
 
 const PoolImpl = useNeonServerless ? NeonPool : Pool;
 
-const poolConfig = {
-  connectionString,
-  ssl: isProduction ? { rejectUnauthorized: false } : false,
-  connectionTimeoutMillis: isProduction ? 20000 : 10000,
-  idleTimeoutMillis: 30000,
-  max: 10,
-  family: 4
-};
+const poolConfig = useNeonServerless
+  ? { connectionString }
+  : {
+      connectionString,
+      ssl: isProduction ? { rejectUnauthorized: false } : false,
+      connectionTimeoutMillis: isProduction ? 20000 : 10000,
+      idleTimeoutMillis: 30000,
+      max: 10,
+      family: 4
+    };
 
 let didLog = false;
 function logConnectionTarget() {
@@ -63,8 +72,9 @@ function logConnectionTarget() {
     didLog = true;
     return;
   }
+  const driver = useNeonServerless ? 'neon-serverless' : 'pg';
   const sourceLabel = connectionSource ? ` via ${connectionSource}` : '';
-  console.log(`[DB] Connecting to ${dbHost} (IPv4 preferred)${sourceLabel}`);
+  console.log(`[DB] Connecting to ${dbHost} using ${driver}${sourceLabel}`);
   didLog = true;
 }
 

@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.2 - 2026-02-10
+- Fixed Neon serverless driver pool config for Vercel production: separated pg/Neon pool options, dynamic ws import, auto-detect Neon hosts, enabled secure WebSocket.
+
 ## 1.1.1 - 2026-02-10
 - Added missing `elo_history` table creation to database init (fixes 500 on ELO update route).
 - Improved login error logging for easier debugging on Vercel.
