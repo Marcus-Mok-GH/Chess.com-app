@@ -26,6 +26,7 @@
 - Write imperative, descriptive commits (e.g., `feat: add Socket.IO matchmaking cleanup`).
 - For every edit or change, create a git commit and push it to the remote.
 - For every edit or change, update `CHANGELOG.md` and bump the app version in `package.json` and `package-lock.json`.
+- Versioning: start from `1.1.0`; update the last number for minor changes, the second number for medium changes, and the first number for major changes.
 - Branch naming: `feature/<short-desc>` or `fix/<short-desc>`; default branch protection unknown—run `npm run build` and `npm test` before opening PRs.
 - PRs should summarize scope, note test results, and link issues; include screenshots for UI changes when possible.
 
