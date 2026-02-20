@@ -1,8 +1,7 @@
 import './GameBottomBar.css';
 
 export default function GameBottomBar({
-  onSetup,
-  onNewGame,
+  onNew,
   onFlipBoard,
   onUndo,
   onHint,
@@ -10,16 +9,23 @@ export default function GameBottomBar({
   onReview,
   canUndo,
   isThinking,
-  canSetup,
   canReview,
   showHints = true,
+  botMessage,
+  selectedBot,
 }) {
   return (
     <div className="game-bottom-bar" role="navigation" aria-label="Game controls">
-      <button type="button" className="gbb-btn" onClick={onSetup} disabled={!canSetup}>
-        Setup
-      </button>
-      <button type="button" className="gbb-btn" onClick={onNewGame}>
+      {botMessage && selectedBot && (
+        <div className="gbb-bot-message">
+          <span className="gbb-bot-avatar" style={{ background: selectedBot.color }}>{selectedBot.avatar}</span>
+          <div className="gbb-bot-text">
+            <span className="gbb-bot-name">{selectedBot.name}</span>
+            <span className="gbb-bot-quote">"{botMessage}"</span>
+          </div>
+        </div>
+      )}
+      <button type="button" className="gbb-btn" onClick={onNew}>
         New
       </button>
       <button type="button" className="gbb-btn" onClick={onUndo} disabled={!canUndo || isThinking}>

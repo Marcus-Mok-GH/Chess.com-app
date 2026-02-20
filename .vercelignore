@@ -76,7 +76,6 @@ health-check.js
 screenshot.js
 
 # Docker and deployment configs
-server/db/
 public/stockfish.*
 Dockerfile
 docker-compose*.yml

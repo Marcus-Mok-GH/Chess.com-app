@@ -289,8 +289,10 @@ function ChessGame(
       isThinking,
       canUndo: moveHistory.length >= 2,
       gameStatus: getGameStatus,
+      botMessage,
+      selectedBot,
     });
-  }, [isThinking, moveHistory.length, getGameStatus, onUiStateChange]);
+  }, [isThinking, moveHistory.length, getGameStatus, onUiStateChange, botMessage, selectedBot]);
 
   useEffect(() => {
     if (!initialGameId || !hasLoadedPersistedState || !game) return;
@@ -1009,6 +1011,7 @@ function ChessGame(
               {...bottomPlayer}
               isActive={game.turn() === (boardOrientation === 'white' ? 'w' : 'b')}
               capturedPieces={capturedPieces[bottomPlayer.color === 'w' ? 'b' : 'w']}
+              botMessage={bottomPlayer.isBot ? botMessage : null}
             />
             {settings.debugMode && (
               <DebugPanel debugInfo={debugInfo} isThinking={isThinking} />

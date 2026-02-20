@@ -358,24 +358,13 @@ export default function OnlinePlay() {
   }, [startMatchmaking, view, handleCancelMatchmaking]);
 
   // Cleanup matchmaking queue on unmount or page unload.
+  // Note: We intentionally do NOT clean up on visibilitychange because switching
+  // tabs (e.g. to open a second matchmaking client) would remove the player from
+  // the queue. Stale entries are handled server-side via heartbeat timeout (45s).
   useEffect(() => {
     const handleUnload = () => {
       if (playerId) {
-        // Use sync leave for polling to ensure request completes before page closes
-        pollingService.leaveMatchmakingSync(playerId);
-        // Socket leave is cleanup-only, no need to await
-        try {
-          socketService.leaveMatchmaking(playerId);
-        } catch (e) {
-          // Ignore socket errors during cleanup
-        }
-      }
-    };
-
-    const handleVisibilityChange = () => {
-      // Clean up when user navigates away or tab becomes hidden
-      if (document.visibilityState === 'hidden' && playerId) {
-        console.log('[OnlinePlay] Page hidden, cleaning up matchmaking...');
+        // Use sync leave (sendBeacon) to ensure request completes before page closes
         pollingService.leaveMatchmakingSync(playerId);
         try {
           socketService.leaveMatchmaking(playerId);
@@ -386,11 +375,9 @@ export default function OnlinePlay() {
     };
 
     window.addEventListener('beforeunload', handleUnload);
-    window.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       window.removeEventListener('beforeunload', handleUnload);
-      window.removeEventListener('visibilitychange', handleVisibilityChange);
       handleUnload();
     };
   }, [playerId]);

@@ -99,10 +99,6 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
     navigate('/play', { replace: true });
   }
 
-  function handleNewGame() {
-    gameRef.current?.newGame?.();
-  }
-
   function handleUndo() {
     gameRef.current?.undo?.();
   }
@@ -123,7 +119,6 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
     gameRef.current?.review?.();
   }
 
-  const canSetup = uiState.gameStatus && uiState.gameStatus !== 'playing';
   const canReview = uiState.gameStatus === 'checkmate' || uiState.gameStatus === 'resigned';
 
   return (
@@ -150,9 +145,7 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
             onUiStateChange={setUiState}
           />
           <GameBottomBar
-            onSetup={handleSetup}
-            canSetup={canSetup}
-            onNewGame={handleNewGame}
+            onNew={handleSetup}
             onUndo={handleUndo}
             onFlipBoard={handleFlipBoard}
             onHint={handleHint}
@@ -162,6 +155,8 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
             isThinking={uiState.isThinking}
             showHints={settings.showHints}
             canReview={canReview}
+            botMessage={uiState.botMessage}
+            selectedBot={uiState.selectedBot}
           />
         </>
       )}
