@@ -1,0 +1,48 @@
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+async function authRequest(path, body) {
+  const response = await fetch(`${supabaseUrl}/auth/v1/${path}`, {
+    method: 'POST',
+    headers: {
+      apikey: supabaseAnonKey,
+      Authorization: `Bearer ${supabaseAnonKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.msg || data?.error_description || data?.error || 'Supabase auth failed');
+  }
+
+  return data;
+}
+
+export const supabase = {
+  auth: {
+    async getSession() {
+      return { data: { session: null } };
+    },
+    async signInWithPassword({ email, password }) {
+      try {
+        const data = await authRequest('token?grant_type=password', { email, password });
+        return { data, error: null };
+      } catch (error) {
+        return { data: null, error };
+      }
+    },
+    async signUp({ email, password, options }) {
+      try {
+        const data = await authRequest('signup', { email, password, data: options?.data || {} });
+        return { data, error: null };
+      } catch (error) {
+        return { data: null, error };
+      }
+    },
+    async signOut() {
+      return { error: null };
+    },
+  },
+};

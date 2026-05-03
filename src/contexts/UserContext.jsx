@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
+import { supabase } from '../services/supabase';
 
 const SESSION_USER_KEY = 'chess_user_session';
 const SESSION_USER_DATA_KEY = 'chess_user_data';
@@ -43,6 +44,16 @@ export function UserProvider({ children }) {
     let isMounted = true;
     
     async function init() {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) {
+          localStorage.removeItem(SESSION_USER_KEY);
+          localStorage.removeItem(SESSION_USER_DATA_KEY);
+        }
+      } catch (error) {
+        console.warn('[UserContext] Supabase session check failed:', error?.message);
+      }
+
       // Check for existing session (username stored in localStorage)
       try {
         const sessionUserRaw = localStorage.getItem(SESSION_USER_DATA_KEY);
@@ -116,7 +127,7 @@ export function UserProvider({ children }) {
     };
   }, []);
 
-  const login = useCallback(async (username) => {
+  const login = useCallback(async ({ username, email, password }) => {
     const trimmedUsername = username.trim();
     
     // Validation
@@ -137,7 +148,28 @@ export function UserProvider({ children }) {
     }
 
     try {
-      console.log('[UserContext] Logging in:', trimmedUsername);
+      console.log('[UserContext] Logging in with Supabase:', email);
+
+      let signInResult = await supabase.auth.signInWithPassword({ email, password });
+      if (signInResult.error) {
+        const signUpResult = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { username: trimmedUsername },
+          },
+        });
+
+        if (signUpResult.error) {
+          throw signInResult.error;
+        }
+
+        signInResult = await supabase.auth.signInWithPassword({ email, password });
+        if (signInResult.error) {
+          throw signInResult.error;
+        }
+      }
+
       const response = await api.login(trimmedUsername);
       console.log('✅ LOGIN SUCCESSFUL:', response.user.username);
       
@@ -163,7 +195,8 @@ export function UserProvider({ children }) {
     }
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
     localStorage.removeItem(SESSION_USER_KEY);
     localStorage.removeItem(SESSION_USER_DATA_KEY);
     setUser(null);

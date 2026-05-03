@@ -26,7 +26,7 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
 
   const runAnalysis = async () => {
     if (!isReady) {
-      setAnalysis('Error: AI coach not ready. Please ensure MISTRAL_API_KEY is configured.');
+      setAnalysis('Error: AI coach not ready. Please ensure FIREWORKS_BASE_URL is configured.');
       return;
     }
 
@@ -80,14 +80,14 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
           ) : !isReady ? (
             <div className="coach-error">
               <p>⚠️ AI coach unavailable</p>
-              <p className="small">Please ensure MISTRAL_API_KEY is configured on the server</p>
+              <p className="small">Please ensure FIREWORKS_BASE_URL (and optionally FIREWORKS_API_KEY) are configured on the server</p>
             </div>
           ) : (
             <>
               <button onClick={runAnalysis} className="btn btn-primary">
                 🔍 Start Analysis
               </button>
-              <p className="coach-note">Powered by Mistral AI</p>
+              <p className="coach-note">Powered by Fireworks AI</p>
             </>
           )}
         </div>

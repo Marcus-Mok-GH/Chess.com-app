@@ -1,9 +1,63 @@
 import { useEffect, useState } from 'react';
 import './Changelog.css';
 
-const CURRENT_VERSION = '1.1.2';
+const CURRENT_VERSION = '1.1.6';
 
 const CHANGELOG = [
+  {
+    version: '1.1.6',
+    date: '2026-05-03',
+    sections: [
+      {
+        title: 'Fixes',
+        items: [
+          'Updated Fireworks proxy coach endpoint path to /v1/chat/completions for OpenAI compatibility.',
+        ],
+      },
+    ],
+  },
+  {
+    version: '1.1.5',
+    date: '2026-05-03',
+    sections: [
+      {
+        title: 'Fixes',
+        items: [
+          'Updated coach integration to use configured Fireworks proxy endpoint base URL.',
+          'Made coach API key optional for proxy deployments that do not require Authorization headers.',
+          'Updated coach status and UI guidance for FIREWORKS_BASE_URL configuration.',
+        ],
+      },
+    ],
+  },
+  {
+    version: '1.1.4',
+    date: '2026-05-03',
+    sections: [
+      {
+        title: 'Features',
+        items: [
+          'Switched AI coach provider from Mistral to Fireworks AI.',
+          'Updated coach endpoints to use Fireworks chat completions.',
+          'Added configurable FIREWORKS_COACH_MODEL for model selection.',
+        ],
+      },
+    ],
+  },
+  {
+    version: '1.1.3',
+    date: '2026-05-03',
+    sections: [
+      {
+        title: 'Features',
+        items: [
+          'Switched authentication flow to Supabase Auth with email/password sign-in.',
+          'Added automatic Supabase account creation fallback on first sign-in attempt.',
+          'Updated login page and login modal to collect Supabase credentials.',
+        ],
+      },
+    ],
+  },
   {
     version: '1.1.2',
     date: '2026-02-10',
