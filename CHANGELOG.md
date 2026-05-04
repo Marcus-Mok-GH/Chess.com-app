@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.18 - 2026-05-04
+- Stabilized Vercel dependency installation by switching the deploy install step to lockfile-based `npm ci` with `--legacy-peer-deps`.
+- Added an npm config fallback (`legacy-peer-deps=true`) to avoid peer-resolution install failures in stricter npm environments.
+
 ## 1.1.17 - 2026-05-04
 - Rebuilt `/changelog` page to render directly from `CHANGELOG.md` so the in-app page matches file content and formatting.
 - Added Home quick-action button to open `/changelog` from the logged-in main page.
