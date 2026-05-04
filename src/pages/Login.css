@@ -177,6 +177,15 @@
   font-size: 0.875rem;
 }
 
+.success-message {
+  background: rgba(127, 166, 80, 0.12);
+  border: 1px solid rgba(127, 166, 80, 0.3);
+  color: var(--color-accent-primary);
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+}
+
 .login-loading {
   text-align: center;
   padding: 40px 0;

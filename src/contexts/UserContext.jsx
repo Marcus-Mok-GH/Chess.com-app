@@ -215,7 +215,10 @@ export function UserProvider({ children }) {
       if (result.error) {
         throw result.error;
       }
-      return { success: true };
+      return {
+        success: true,
+        message: 'Request sent. If your project Email Template is configured for OTP, you will receive a 6-digit code.',
+      };
     } catch (error) {
       return { error: error.message || 'Failed to send verification code.' };
     }
