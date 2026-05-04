@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
   build: {
     outDir: 'dist',
     sourcemap: true,
@@ -60,6 +61,8 @@ export default defineConfig({
     }
   },
   define: {
-    'process.env.VITE_SERVER_URL': JSON.stringify(process.env.VITE_SERVER_URL || 'http://localhost:3001')
+    'process.env.VITE_SERVER_URL': JSON.stringify(process.env.VITE_SERVER_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'),
+    'process.env.NEXT_PUBLIC_API_URL': JSON.stringify(process.env.NEXT_PUBLIC_API_URL || process.env.VITE_API_URL || ''),
+    'process.env.NEXT_PUBLIC_SOCKET_URL': JSON.stringify(process.env.NEXT_PUBLIC_SOCKET_URL || process.env.VITE_SOCKET_URL || '')
   }
 });

@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.1.7 - 2026-05-03
+- Unified frontend env variable support to accept both `VITE_*` and `NEXT_PUBLIC_*` names for shared API/socket/Supabase config.
+- Updated Vite env exposure to include `NEXT_PUBLIC_` prefix for cross-frontend compatibility.
+
+## 1.1.6 - 2026-05-03
+- Updated Fireworks proxy coach endpoint path to OpenAI-compatible `/v1/chat/completions`.
+
+## 1.1.5 - 2026-05-03
+- Updated coach Fireworks integration to use the provided proxy endpoint base URL (`FIREWORKS_BASE_URL`).
+- Made coach auth header optional so the proxy can run with or without `FIREWORKS_API_KEY`.
+- Exposed endpoint details in `/coach/status` and updated coach availability messaging.
+
+## 1.1.4 - 2026-05-03
+- Switched AI coach provider from Mistral to Fireworks AI.
+- Updated coach endpoints to use Fireworks chat completions with configurable `FIREWORKS_COACH_MODEL`.
+- Updated coach UI messaging to reference `FIREWORKS_API_KEY` and Fireworks branding.
+
+## 1.1.3 - 2026-05-03
+- Switched authentication flow to Supabase Auth with email/password sign-in and auto sign-up fallback.
+- Updated login screens and modal to collect Supabase credentials while preserving in-app username profiles.
+
 ## 1.1.2 - 2026-02-10
 - Fixed Neon serverless driver pool config for Vercel production: separated pg/Neon pool options, dynamic ws import, auto-detect Neon hosts, enabled secure WebSocket.
 

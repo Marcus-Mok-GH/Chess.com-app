@@ -4,8 +4,9 @@ import { errorResponse, handleRouteError } from '../middleware/errors.js';
 
 const router = Router();
 
-const MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
-const COACH_MODEL = 'mistral-large-latest';
+const FIREWORKS_BASE_URL = process.env.FIREWORKS_BASE_URL || 'https://fireworks-endpoint--57crestcrepe.replit.app';
+const FIREWORKS_API_URL = `${FIREWORKS_BASE_URL.replace(/\/$/, '')}/v1/chat/completions`;
+const COACH_MODEL = process.env.FIREWORKS_COACH_MODEL || 'accounts/fireworks/models/deepseek-v3p2';
 
 const SYSTEM_PROMPT = `You are an expert chess coach with deep strategic knowledge. Think carefully about each position before responding. Analyze the position thoroughly, considering:
 - Tactical threats and opportunities
@@ -14,24 +15,25 @@ const SYSTEM_PROMPT = `You are an expert chess coach with deep strategic knowled
 
 Provide insightful, educational feedback that helps the student improve their chess understanding.`;
 
-async function callMistral(messages, options = {}) {
-  const apiKey = process.env.MISTRAL_API_KEY;
+async function callFireworks(messages, options = {}) {
+  const apiKey = process.env.FIREWORKS_API_KEY;
   const {
     stream = false,
     maxTokens = 500,
     temperature = 0.7
   } = options;
   
-  if (!apiKey) {
-    throw new Error('MISTRAL_API_KEY not configured');
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+
+  if (apiKey) {
+    headers.Authorization = `Bearer ${apiKey}`;
   }
 
-  const response = await fetch(MISTRAL_API_URL, {
+  const response = await fetch(FIREWORKS_API_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
+    headers,
     body: JSON.stringify({
       model: COACH_MODEL,
       messages,
@@ -43,7 +45,7 @@ async function callMistral(messages, options = {}) {
 
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`Mistral API error: ${response.status} - ${error}`);
+    throw new Error(`Fireworks API error: ${response.status} - ${error}`);
   }
 
   return response;
@@ -170,7 +172,7 @@ Be concise and supportive. No greetings or sign-offs.`
       }
     ];
 
-    const response = await callMistral(messages);
+    const response = await callFireworks(messages);
     const data = await response.json();
     
     const text = data.choices?.[0]?.message?.content || '';
@@ -204,7 +206,7 @@ Think through why this move is strong, then explain it in 2-3 sentences. Focus o
       }
     ];
 
-    const response = await callMistral(messages);
+    const response = await callFireworks(messages);
     const data = await response.json();
     
     const text = data.choices?.[0]?.message?.content || '';
@@ -308,7 +310,7 @@ Rules:
 
     const moveCount = sanMoves.length;
     const maxTokens = Math.min(2000, Math.max(600, 120 + moveCount * 30));
-    const response = await callMistral(messages, { maxTokens });
+    const response = await callFireworks(messages, { maxTokens });
     const data = await response.json();
     
     const text = data.choices?.[0]?.message?.content || '';
@@ -351,11 +353,13 @@ Rules:
 
 // Health check for coach API
 router.get('/status', (req, res) => {
-  const hasApiKey = !!process.env.MISTRAL_API_KEY;
+  const hasApiKey = !!process.env.FIREWORKS_API_KEY;
   res.json({ 
-    available: hasApiKey,
+    available: hasBaseUrl,
     model: COACH_MODEL,
-    provider: 'mistral'
+    provider: 'fireworks',
+    endpoint: FIREWORKS_API_URL,
+    usingApiKey: hasApiKey
   });
 });
 

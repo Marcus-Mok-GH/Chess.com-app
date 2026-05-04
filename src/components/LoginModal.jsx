@@ -5,6 +5,8 @@ import './LoginModal.css';
 export default function LoginModal({ onClose, onSuccess, onContinueAsGuest, mode = 'ranked' }) {
   const { login } = useUser();
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -14,7 +16,7 @@ export default function LoginModal({ onClose, onSuccess, onContinueAsGuest, mode
     setIsSubmitting(true);
 
     try {
-      const result = await login(username);
+      const result = await login({ username, email, password });
 
       if (result?.error) {
         setError(result.error);
@@ -75,13 +77,29 @@ export default function LoginModal({ onClose, onSuccess, onContinueAsGuest, mode
               autoComplete="off"
               maxLength={20}
             />
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email"
+              autoComplete="email"
+            />
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              autoComplete="current-password"
+            />
             {error && <span className="error-text">{error}</span>}
           </div>
 
           <button
             type="submit"
             className="btn btn-primary btn-full"
-            disabled={isSubmitting || !username.trim()}
+            disabled={isSubmitting || !username.trim() || !email.trim() || !password.trim()}
           >
             {isSubmitting ? 'Signing in...' : '🚀 Sign In & Play'}
           </button>
