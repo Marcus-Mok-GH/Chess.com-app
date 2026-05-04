@@ -127,7 +127,7 @@ export function UserProvider({ children }) {
     };
   }, []);
 
-  const login = useCallback(async ({ username, email, otp }) => {
+  const login = useCallback(async ({ username }) => {
     const trimmedUsername = username.trim();
     
     // Validation
@@ -148,12 +148,7 @@ export function UserProvider({ children }) {
     }
 
     try {
-      console.log('[UserContext] Logging in with Supabase:', email);
-
-      const verifyResult = await supabase.auth.verifyOtp({ email, token: otp });
-      if (verifyResult.error) {
-        throw verifyResult.error;
-      }
+      console.log('[UserContext] Logging in with username:', trimmedUsername);
 
       const response = await api.login(trimmedUsername);
       console.log('✅ LOGIN SUCCESSFUL:', response.user.username);
@@ -188,7 +183,7 @@ export function UserProvider({ children }) {
     console.log('[UserContext] Logged out');
   }, []);
 
-  const requestLoginOtp = useCallback(async ({ email, username }) => {
+  const requestMagicLink = useCallback(async ({ email, username }) => {
     const trimmedEmail = email?.trim();
     const trimmedUsername = username?.trim();
 
@@ -205,10 +200,12 @@ export function UserProvider({ children }) {
     }
 
     try {
+      const redirectUrl = `${window.location.origin}/login?type=magiclink&username=${encodeURIComponent(trimmedUsername)}&email=${encodeURIComponent(trimmedEmail)}`;
       const result = await supabase.auth.signInWithOtp({
         email: trimmedEmail,
         options: {
           shouldCreateUser: true,
+          emailRedirectTo: redirectUrl,
           data: { username: trimmedUsername },
         },
       });
@@ -217,10 +214,10 @@ export function UserProvider({ children }) {
       }
       return {
         success: true,
-        message: 'Request sent. If your project Email Template is configured for OTP, you will receive a 6-digit code.',
+        message: 'Magic link sent. Check your inbox and click the link to automatically sign in.',
       };
     } catch (error) {
-      return { error: error.message || 'Failed to send verification code.' };
+      return { error: error.message || 'Failed to send magic link.' };
     }
   }, []);
 
@@ -297,7 +294,7 @@ export function UserProvider({ children }) {
     isLoading,
     isOnline,
     login,
-    requestLoginOtp,
+    requestMagicLink,
     logout,
     updateElo,
     refreshUser,

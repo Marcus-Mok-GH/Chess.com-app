@@ -27,11 +27,12 @@ export const supabase = {
     },
     async signInWithOtp({ email, options = {} }) {
       try {
-        const { data: metadata = {}, shouldCreateUser = true } = options;
+        const { data: metadata = {}, shouldCreateUser = true, emailRedirectTo } = options;
         const data = await authRequest('otp', {
           email,
           create_user: shouldCreateUser,
           data: metadata,
+          email_redirect_to: emailRedirectTo,
         });
         return { data, error: null };
       } catch (error) {

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.19 - 2026-05-04
+- Replaced manual OTP code entry with magic-link authentication on both the login page and login modal.
+- Added magic-link request flow with redirect metadata so returning users are automatically signed in and sent to the logged-in home page.
+- Updated Supabase OTP request payload to include `email_redirect_to` for auto-auth callback behavior.
+
 ## 1.1.18 - 2026-05-04
 - Stabilized Vercel dependency installation by switching the deploy install step to lockfile-based `npm ci` with `--legacy-peer-deps`.
 - Added an npm config fallback (`legacy-peer-deps=true`) to avoid peer-resolution install failures in stricter npm environments.
