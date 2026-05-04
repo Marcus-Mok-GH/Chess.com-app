@@ -127,7 +127,7 @@ export function UserProvider({ children }) {
     };
   }, []);
 
-  const login = useCallback(async ({ username, email, password }) => {
+  const login = useCallback(async ({ username, email, otp }) => {
     const trimmedUsername = username.trim();
     
     // Validation
@@ -150,24 +150,9 @@ export function UserProvider({ children }) {
     try {
       console.log('[UserContext] Logging in with Supabase:', email);
 
-      let signInResult = await supabase.auth.signInWithPassword({ email, password });
-      if (signInResult.error) {
-        const signUpResult = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { username: trimmedUsername },
-          },
-        });
-
-        if (signUpResult.error) {
-          throw signInResult.error;
-        }
-
-        signInResult = await supabase.auth.signInWithPassword({ email, password });
-        if (signInResult.error) {
-          throw signInResult.error;
-        }
+      const verifyResult = await supabase.auth.verifyOtp({ email, token: otp });
+      if (verifyResult.error) {
+        throw verifyResult.error;
       }
 
       const response = await api.login(trimmedUsername);
@@ -201,6 +186,36 @@ export function UserProvider({ children }) {
     localStorage.removeItem(SESSION_USER_DATA_KEY);
     setUser(null);
     console.log('[UserContext] Logged out');
+  }, []);
+
+  const requestLoginOtp = useCallback(async ({ email, username }) => {
+    const trimmedEmail = email?.trim();
+    const trimmedUsername = username?.trim();
+
+    if (!trimmedEmail) {
+      return { error: 'Email is required' };
+    }
+
+    if (!trimmedUsername || trimmedUsername.length < 2) {
+      return { error: 'Username must be at least 2 characters' };
+    }
+
+    if (!navigator.onLine) {
+      return { error: 'You must be online to request a code' };
+    }
+
+    try {
+      const result = await supabase.auth.signInWithOtp({
+        email: trimmedEmail,
+        data: { username: trimmedUsername },
+      });
+      if (result.error) {
+        throw result.error;
+      }
+      return { success: true };
+    } catch (error) {
+      return { error: error.message || 'Failed to send verification code.' };
+    }
   }, []);
 
   const updateElo = useCallback(async (opponentElo, gameResult) => {
@@ -276,6 +291,7 @@ export function UserProvider({ children }) {
     isLoading,
     isOnline,
     login,
+    requestLoginOtp,
     logout,
     updateElo,
     refreshUser,

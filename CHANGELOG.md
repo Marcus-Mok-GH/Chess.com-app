@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.1.11 - 2026-05-04
+- Enforced Supabase frontend config to read **only** `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (removed `NEXT_PUBLIC_*` fallbacks).
+
+## 1.1.10 - 2026-05-04
+- Improved Supabase auth error handling for network failures like "Load failed" with actionable troubleshooting guidance.
+- Added explicit validation for missing `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` before auth requests.
+
+## 1.1.9 - 2026-05-04
+- Fixed Supabase OTP request payload to use documented `create_user` and metadata fields.
+- Improved OTP request UX by separating "send code" and "verify code" loading states.
+- Included username metadata when requesting OTP and added pre-send username validation.
+
+## 1.1.8 - 2026-05-04
+- Replaced Supabase email/password auth with email OTP verification flow.
+- Removed magic-link usage from the login experience; users now request and enter a one-time code.
+- Kept username-based game profile provisioning after successful Supabase OTP verification.
+
 ## 1.1.7 - 2026-05-03
 - Unified frontend env variable support to accept both `VITE_*` and `NEXT_PUBLIC_*` names for shared API/socket/Supabase config.
 - Updated Vite env exposure to include `NEXT_PUBLIC_` prefix for cross-frontend compatibility.

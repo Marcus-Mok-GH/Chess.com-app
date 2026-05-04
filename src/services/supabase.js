@@ -1,18 +1,31 @@
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 async function authRequest(path, body) {
-  const response = await fetch(`${supabaseUrl}/auth/v1/${path}`, {
-    method: 'POST',
-    headers: {
-      apikey: supabaseAnonKey,
-      Authorization: `Bearer ${supabaseAnonKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+  }
 
-  const data = await response.json();
+  let response;
+  try {
+    response = await fetch(`${supabaseUrl}/auth/v1/${path}`, {
+      method: 'POST',
+      headers: {
+        apikey: supabaseAnonKey,
+        Authorization: `Bearer ${supabaseAnonKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (error) {
+    const message = error?.message || '';
+    if (message.includes('Load failed') || message.includes('Failed to fetch') || message.includes('NetworkError')) {
+      throw new Error('Could not reach Supabase Auth. Verify VITE_SUPABASE_URL, anon key, and network/CORS settings.');
+    }
+    throw error;
+  }
+
+  const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error(data?.msg || data?.error_description || data?.error || 'Supabase auth failed');
   }
@@ -25,17 +38,25 @@ export const supabase = {
     async getSession() {
       return { data: { session: null } };
     },
-    async signInWithPassword({ email, password }) {
+    async signInWithOtp({ email, data: metadata }) {
       try {
-        const data = await authRequest('token?grant_type=password', { email, password });
+        const data = await authRequest('otp', {
+          email,
+          create_user: true,
+          data: metadata || {},
+        });
         return { data, error: null };
       } catch (error) {
         return { data: null, error };
       }
     },
-    async signUp({ email, password, options }) {
+    async verifyOtp({ email, token }) {
       try {
-        const data = await authRequest('signup', { email, password, data: options?.data || {} });
+        const data = await authRequest('verify', {
+          email,
+          token,
+          type: 'email',
+        });
         return { data, error: null };
       } catch (error) {
         return { data: null, error };
