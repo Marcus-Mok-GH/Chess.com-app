@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.21 - 2026-05-04
+- Restored lockfile integrity and kept deterministic Vercel installs on `npm ci` instead of switching to `npm install`.
+- Updated Vercel install command to explicitly pass `--workspaces=false` with existing safety flags to prevent workspace-context parsing issues in CI.
+
+## 1.1.20 - 2026-05-04
+- Adjusted Vercel install step to use `npm install` with production-safe flags instead of `npm ci` to avoid workspace-flag parsing failures during deployment.
+- Kept `legacy-peer-deps` behavior in the install command so Vercel builds remain resilient to peer dependency conflicts.
+
 ## 1.1.19 - 2026-05-04
 - Replaced manual OTP code entry with magic-link authentication on both the login page and login modal.
 - Added magic-link request flow with redirect metadata so returning users are automatically signed in and sent to the logged-in home page.
