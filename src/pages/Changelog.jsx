@@ -1,9 +1,22 @@
 import { useEffect, useState } from 'react';
 import './Changelog.css';
 
-const CURRENT_VERSION = '1.1.6';
+const CURRENT_VERSION = '1.1.7';
 
 const CHANGELOG = [
+  {
+    version: '1.1.7',
+    date: '2026-05-03',
+    sections: [
+      {
+        title: 'Maintenance',
+        items: [
+          'Unified frontend env support for both VITE_* and NEXT_PUBLIC_* variable names.',
+          'Enabled NEXT_PUBLIC_ envPrefix in Vite config for shared variable naming.',
+        ],
+      },
+    ],
+  },
   {
     version: '1.1.6',
     date: '2026-05-03',

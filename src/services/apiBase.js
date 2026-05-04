@@ -23,7 +23,9 @@ export const normalizeApiBaseUrl = (rawBaseUrl) => {
   return `${base.replace(/\/$/, '')}/api`
 }
 
-export const API_BASE_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_URL)
+const clientApiUrl = import.meta.env.VITE_API_URL || import.meta.env.NEXT_PUBLIC_API_URL;
+
+export const API_BASE_URL = normalizeApiBaseUrl(clientApiUrl)
 
 export const isNetworkError = (error) => {
   const message = error?.message || ''

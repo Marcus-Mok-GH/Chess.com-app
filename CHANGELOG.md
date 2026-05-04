@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.7 - 2026-05-03
+- Unified frontend env variable support to accept both `VITE_*` and `NEXT_PUBLIC_*` names for shared API/socket/Supabase config.
+- Updated Vite env exposure to include `NEXT_PUBLIC_` prefix for cross-frontend compatibility.
+
 ## 1.1.6 - 2026-05-03
 - Updated Fireworks proxy coach endpoint path to OpenAI-compatible `/v1/chat/completions`.
 
