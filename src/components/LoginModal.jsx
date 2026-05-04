@@ -11,6 +11,7 @@ export default function LoginModal({ onClose, onSuccess, onContinueAsGuest, mode
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRequestingOtp, setIsRequestingOtp] = useState(false);
+  const [otpStatus, setOtpStatus] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -37,6 +38,7 @@ export default function LoginModal({ onClose, onSuccess, onContinueAsGuest, mode
 
   const handleRequestOtp = async () => {
     setError('');
+    setOtpStatus('');
     if (!email.trim()) {
       setError('Please enter your email first.');
       return;
@@ -54,6 +56,7 @@ export default function LoginModal({ onClose, onSuccess, onContinueAsGuest, mode
         return;
       }
       setOtpRequested(true);
+      setOtpStatus(result.message || 'Code sent successfully.');
     } finally {
       setIsRequestingOtp(false);
     }
@@ -122,6 +125,7 @@ export default function LoginModal({ onClose, onSuccess, onContinueAsGuest, mode
             />
             <small>Request a one-time code sent to your email, then enter the code to continue.</small>
             {error && <span className="error-text">{error}</span>}
+            {!error && otpStatus && <span className="success-text">✅ {otpStatus}</span>}
           </div>
 
           <button

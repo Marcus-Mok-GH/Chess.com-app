@@ -1,9 +1,37 @@
 import { useEffect, useState } from 'react';
 import './Changelog.css';
 
-const CURRENT_VERSION = '1.1.12';
+const CURRENT_VERSION = '1.1.14';
 
 const CHANGELOG = [
+  {
+    version: '1.1.14',
+    date: '2026-05-04',
+    sections: [
+      {
+        title: 'Fixes',
+        items: [
+          'Aligned OTP request behavior with Supabase docs by removing unsupported request-level OTP forcing.',
+          'Kept explicit OTP send success indicators so requests are not perceived as silent failures.',
+          'Clarified login success messaging that OTP-vs-link email content is controlled by Supabase email template settings.',
+        ],
+      },
+    ],
+  },
+  {
+    version: '1.1.13',
+    date: '2026-05-04',
+    sections: [
+      {
+        title: 'Fixes',
+        items: [
+          'Added explicit success confirmation after sending an OTP request.',
+          'Forced Supabase OTP requests to use OTP email content type (instead of magic-link content).',
+          'Clarified login messaging that users should receive a 6-digit OTP code, not a magic link.',
+        ],
+      },
+    ],
+  },
   {
     version: '1.1.12',
     date: '2026-05-04',

@@ -156,6 +156,12 @@
   margin-top: -4px;
 }
 
+.success-text {
+  color: var(--color-accent-primary);
+  font-size: 0.8125rem;
+  margin-top: -4px;
+}
+
 .btn-full {
   width: 100%;
   padding: 14px 20px;

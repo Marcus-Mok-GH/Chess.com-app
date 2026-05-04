@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.14 - 2026-05-04
+- Fixed OTP flow implementation to match Supabase docs: removed unsupported attempt to force OTP via request payload.
+- Kept explicit send-success UI so OTP requests no longer look like silent failures.
+- Updated success copy to clarify OTP vs magic-link behavior depends on Supabase Email Template configuration.
+
+## 1.1.13 - 2026-05-04
+- Added visible success confirmation after OTP send requests so users know the request completed.
+- Forced Supabase OTP requests to use OTP email content type instead of magic-link content.
+- Updated login UX copy to explicitly state users should receive a 6-digit OTP code, not a magic link.
+
 ## 1.1.12 - 2026-05-04
 - Added automatic database self-healing: if a query fails with missing-table (`42P01`), the app re-initializes schema and retries once.
 - Prevented route crashes when tables are missing by triggering `initDatabase()` on-demand from the shared DB query layer.

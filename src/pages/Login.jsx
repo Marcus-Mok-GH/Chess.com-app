@@ -13,6 +13,7 @@ export default function Login() {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRequestingOtp, setIsRequestingOtp] = useState(false);
+  const [otpStatus, setOtpStatus] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -40,6 +41,7 @@ export default function Login() {
 
   const handleRequestOtp = async () => {
     setError('');
+    setOtpStatus('');
     if (!email.trim()) {
       setError('Please enter your email first.');
       return;
@@ -57,6 +59,7 @@ export default function Login() {
         return;
       }
       setOtpRequested(true);
+      setOtpStatus(result.message || 'Code sent successfully.');
     } finally {
       setIsRequestingOtp(false);
     }
@@ -88,6 +91,7 @@ export default function Login() {
           </div>
 
           {error && <div className="error-message">{error}</div>}
+          {!error && otpStatus && <div className="success-message">✅ {otpStatus}</div>}
 
           <button type="button" className="login-btn" disabled={isSubmitting || isRequestingOtp || !email.trim() || !username.trim()} onClick={handleRequestOtp}>
             {isRequestingOtp ? 'Sending code...' : (otpRequested ? 'Resend OTP Code' : 'Send OTP Code')}
