@@ -25,17 +25,25 @@ export const supabase = {
     async getSession() {
       return { data: { session: null } };
     },
-    async signInWithPassword({ email, password }) {
+    async signInWithOtp({ email, data: metadata }) {
       try {
-        const data = await authRequest('token?grant_type=password', { email, password });
+        const data = await authRequest('otp', {
+          email,
+          create_user: true,
+          data: metadata || {},
+        });
         return { data, error: null };
       } catch (error) {
         return { data: null, error };
       }
     },
-    async signUp({ email, password, options }) {
+    async verifyOtp({ email, token }) {
       try {
-        const data = await authRequest('signup', { email, password, data: options?.data || {} });
+        const data = await authRequest('verify', {
+          email,
+          token,
+          type: 'email',
+        });
         return { data, error: null };
       } catch (error) {
         return { data: null, error };
