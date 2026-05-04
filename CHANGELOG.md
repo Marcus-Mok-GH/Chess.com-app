@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.1.12 - 2026-05-04
+- Added automatic database self-healing: if a query fails with missing-table (`42P01`), the app re-initializes schema and retries once.
+- Prevented route crashes when tables are missing by triggering `initDatabase()` on-demand from the shared DB query layer.
+
+## 1.1.11 - 2026-05-04
+- Aligned OTP request payload shape with Supabase's documented `options` object (`shouldCreateUser` + metadata).
+- Updated login copy to focus on email OTP code entry only.
+- Removed remaining magic-link wording from login surfaces.
+
+## 1.1.10 - 2026-05-04
+- Removed remaining password-based login path in the ranked-game login modal.
+- Fully switched Supabase auth UX to email OTP verification in both login surfaces.
+- Kept explicit OTP code entry flow (no magic link fallback).
+
 ## 1.1.9 - 2026-05-04
 - Fixed Supabase OTP request payload to use documented `create_user` and metadata fields.
 - Improved OTP request UX by separating "send code" and "verify code" loading states.

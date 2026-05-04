@@ -25,12 +25,13 @@ export const supabase = {
     async getSession() {
       return { data: { session: null } };
     },
-    async signInWithOtp({ email, data: metadata }) {
+    async signInWithOtp({ email, options = {} }) {
       try {
+        const { data: metadata = {}, shouldCreateUser = true } = options;
         const data = await authRequest('otp', {
           email,
-          create_user: true,
-          data: metadata || {},
+          create_user: shouldCreateUser,
+          data: metadata,
         });
         return { data, error: null };
       } catch (error) {

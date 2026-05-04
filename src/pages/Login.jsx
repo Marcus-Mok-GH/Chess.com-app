@@ -84,7 +84,7 @@ export default function Login() {
           <div className="form-group">
             <label htmlFor="otp">Email OTP code</label>
             <input id="otp" type="text" value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="Enter 6-digit code" disabled={isSubmitting || isRequestingOtp || !otpRequested} maxLength={6} />
-            <small>Request a one-time code sent to your email. Magic link and password login are disabled.</small>
+            <small>Request a one-time code sent to your email, then enter the code to sign in.</small>
           </div>
 
           {error && <div className="error-message">{error}</div>}
