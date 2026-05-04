@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "buildCommand": "npm run build",
-  "installCommand": "npm ci --ignore-scripts --no-audit --no-fund --legacy-peer-deps --workspaces=false",
+  "installCommand": "npm ci --ignore-scripts --no-audit --no-fund --legacy-peer-deps --no-workspaces",
   "framework": null,
   "outputDirectory": "dist",
   "regions": [

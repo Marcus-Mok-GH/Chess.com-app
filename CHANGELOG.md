@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.22 - 2026-05-04
+- Fixed Vercel install flag usage by replacing invalid `--workspaces=false` with npm-supported `--no-workspaces` on `npm ci`.
+- Kept lockfile-based installs and peer dependency compatibility flags for deterministic CI deployments.
+
 ## 1.1.21 - 2026-05-04
 - Restored lockfile integrity and kept deterministic Vercel installs on `npm ci` instead of switching to `npm install`.
 - Updated Vercel install command to explicitly pass `--workspaces=false` with existing safety flags to prevent workspace-context parsing issues in CI.
