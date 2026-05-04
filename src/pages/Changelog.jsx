@@ -1,9 +1,37 @@
 import { useEffect, useState } from 'react';
 import './Changelog.css';
 
-const CURRENT_VERSION = '1.1.7';
+const CURRENT_VERSION = '1.1.9';
 
 const CHANGELOG = [
+  {
+    version: '1.1.9',
+    date: '2026-05-04',
+    sections: [
+      {
+        title: 'Fixes',
+        items: [
+          'Aligned Supabase OTP request payload with documented create_user + metadata fields.',
+          'Improved OTP login UX with separate send-code and verify-code loading states.',
+          'Added username validation and metadata forwarding during OTP request.',
+        ],
+      },
+    ],
+  },
+  {
+    version: '1.1.8',
+    date: '2026-05-04',
+    sections: [
+      {
+        title: 'Features',
+        items: [
+          'Replaced Supabase email/password auth with email OTP verification.',
+          'Removed magic-link flow from login and switched to explicit one-time code entry.',
+          'Kept username-based in-app profile creation after OTP verification succeeds.',
+        ],
+      },
+    ],
+  },
   {
     version: '1.1.7',
     date: '2026-05-03',
