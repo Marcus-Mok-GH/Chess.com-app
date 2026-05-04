@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.12 - 2026-05-04
+- Resolved branch merge conflicts in changelog and package metadata files.
+- Kept Supabase auth configuration on VITE-only variables and retained OTP login flow updates.
+
 ## 1.1.11 - 2026-05-04
 - Enforced Supabase frontend config to read **only** `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (removed `NEXT_PUBLIC_*` fallbacks).
 

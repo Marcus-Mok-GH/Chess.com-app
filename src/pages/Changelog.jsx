@@ -1,9 +1,21 @@
 import { useEffect, useState } from 'react';
 import './Changelog.css';
 
-const CURRENT_VERSION = '1.1.11';
+const CURRENT_VERSION = '1.1.12';
 
 const CHANGELOG = [
+  {
+    version: '1.1.12',
+    date: '2026-05-04',
+    sections: [
+      {
+        title: 'Maintenance',
+        items: [
+          'Resolved branch merge conflicts in changelog/package metadata while preserving VITE-only Supabase config and OTP auth flow.',
+        ],
+      },
+    ],
+  },
   {
     version: '1.1.11',
     date: '2026-05-04',
