@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.1.17 - 2026-05-04
+- Rebuilt `/changelog` page to render directly from `CHANGELOG.md` so the in-app page matches file content and formatting.
+- Added Home quick-action button to open `/changelog` from the logged-in main page.
+- Added a "Back to Home" button on the changelog page for easy two-way navigation.
+
+## 1.1.16 - 2026-05-04
+- Allowed non-participants to join online games as spectators with read-only realtime updates.
+- Restricted move submission to only the two bound match players and added explicit spectator move rejection.
+- Enforced server-side turn order so only the active color can submit a move.
+
+## 1.1.15 - 2026-05-04
+- Fixed online multiplayer move sync by binding Socket.IO connections to each player when joining a game created via HTTP APIs.
+- Added explicit game-participant authorization in Socket.IO `join_game` so only players in the match can subscribe and move.
+- Removed invalid client-side `socket.leave(...)` call that could interrupt online game session cleanup in browsers.
+
 ## 1.1.14 - 2026-05-04
 - Fixed OTP flow implementation to match Supabase docs: removed unsupported attempt to force OTP via request payload.
 - Kept explicit send-success UI so OTP requests no longer look like silent failures.

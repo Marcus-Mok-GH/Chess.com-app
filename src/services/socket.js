@@ -375,7 +375,6 @@ class SocketService {
     if (!this.socket?.connected) return false;
 
     this.socket.emit('leave_game', { gameId, playerId });
-    this.socket.leave(gameId);
     return true;
   }
 }

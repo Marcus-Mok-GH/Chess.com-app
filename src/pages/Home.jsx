@@ -114,6 +114,18 @@ export default function Home() {
               </div>
             </button>
 
+
+            <button
+              className="action-card"
+              onClick={() => navigate('/changelog')}
+            >
+              <div className="action-icon">📝</div>
+              <div className="action-content">
+                <h3>Changelog</h3>
+                <p>Read release notes and latest updates</p>
+              </div>
+            </button>
+
             <button 
               className="action-card play-online-card"
               onClick={() => navigate('/online')}
