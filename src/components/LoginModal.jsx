@@ -3,12 +3,14 @@ import { useUser } from '../contexts/UserContext';
 import './LoginModal.css';
 
 export default function LoginModal({ onClose, onSuccess, onContinueAsGuest, mode = 'ranked' }) {
-  const { login } = useUser();
+  const { login, requestLoginOtp } = useUser();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
+  const [otpRequested, setOtpRequested] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRequestingOtp, setIsRequestingOtp] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -16,7 +18,7 @@ export default function LoginModal({ onClose, onSuccess, onContinueAsGuest, mode
     setIsSubmitting(true);
 
     try {
-      const result = await login({ username, email, password });
+      const result = await login({ username, email, otp });
 
       if (result?.error) {
         setError(result.error);
@@ -30,6 +32,30 @@ export default function LoginModal({ onClose, onSuccess, onContinueAsGuest, mode
       console.error('[LoginModal] Login failed:', err);
       setError(err?.message || 'Failed to login');
       setIsSubmitting(false);
+    }
+  };
+
+  const handleRequestOtp = async () => {
+    setError('');
+    if (!email.trim()) {
+      setError('Please enter your email first.');
+      return;
+    }
+    if (!username.trim()) {
+      setError('Please enter a username first.');
+      return;
+    }
+
+    setIsRequestingOtp(true);
+    try {
+      const result = await requestLoginOtp({ email, username });
+      if (!result.success) {
+        setError(result.error);
+        return;
+      }
+      setOtpRequested(true);
+    } finally {
+      setIsRequestingOtp(false);
     }
   };
 
@@ -86,22 +112,33 @@ export default function LoginModal({ onClose, onSuccess, onContinueAsGuest, mode
               autoComplete="email"
             />
             <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              autoComplete="current-password"
+              id="otp"
+              type="text"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              placeholder="Enter 6-digit OTP code"
+              maxLength={6}
+              disabled={isSubmitting || isRequestingOtp || !otpRequested}
             />
+            <small>Request a one-time code sent to your email, then enter the code to continue.</small>
             {error && <span className="error-text">{error}</span>}
           </div>
 
           <button
+            type="button"
+            className="btn btn-secondary btn-full"
+            disabled={isSubmitting || isRequestingOtp || !username.trim() || !email.trim()}
+            onClick={handleRequestOtp}
+          >
+            {isRequestingOtp ? 'Sending code...' : (otpRequested ? 'Resend OTP Code' : 'Send OTP Code')}
+          </button>
+
+          <button
             type="submit"
             className="btn btn-primary btn-full"
-            disabled={isSubmitting || !username.trim() || !email.trim() || !password.trim()}
+            disabled={isSubmitting || !username.trim() || !email.trim() || !otp.trim() || !otpRequested}
           >
-            {isSubmitting ? 'Signing in...' : '🚀 Sign In & Play'}
+            {isSubmitting ? 'Signing in...' : '🚀 Verify OTP & Play'}
           </button>
         </form>
 

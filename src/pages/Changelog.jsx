@@ -1,9 +1,37 @@
 import { useEffect, useState } from 'react';
 import './Changelog.css';
 
-const CURRENT_VERSION = '1.1.9';
+const CURRENT_VERSION = '1.1.11';
 
 const CHANGELOG = [
+  {
+    version: '1.1.11',
+    date: '2026-05-04',
+    sections: [
+      {
+        title: 'Fixes',
+        items: [
+          'Aligned Supabase OTP request payload shape with documented options (shouldCreateUser + metadata).',
+          'Updated login text to focus on explicit email OTP code entry.',
+          'Removed leftover magic-link wording from login UI.',
+        ],
+      },
+    ],
+  },
+  {
+    version: '1.1.10',
+    date: '2026-05-04',
+    sections: [
+      {
+        title: 'Features',
+        items: [
+          'Removed remaining password-based login flow from the in-game login modal.',
+          'Switched all Supabase auth UX paths to explicit email OTP verification.',
+          'Kept manual OTP code entry and no magic-link fallback.',
+        ],
+      },
+    ],
+  },
   {
     version: '1.1.9',
     date: '2026-05-04',

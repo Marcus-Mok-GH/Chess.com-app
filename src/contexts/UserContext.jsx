@@ -207,7 +207,10 @@ export function UserProvider({ children }) {
     try {
       const result = await supabase.auth.signInWithOtp({
         email: trimmedEmail,
-        data: { username: trimmedUsername },
+        options: {
+          shouldCreateUser: true,
+          data: { username: trimmedUsername },
+        },
       });
       if (result.error) {
         throw result.error;
