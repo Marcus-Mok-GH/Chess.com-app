@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.19 - 2026-05-04
+- Fixed Vercel install command compatibility by replacing `npm ci ...` with `npm install --ignore-scripts --legacy-peer-deps` (compatible with older npm CLIs used in some build images).
+- Kept peer-dependency fallback behavior to prevent install failures from strict peer resolution in CI.
+
+## 1.1.18 - 2026-05-04
+- Stabilized Vercel dependency installation by switching the deploy install step to lockfile-based `npm ci` with `--legacy-peer-deps`.
+- Added an npm config fallback (`legacy-peer-deps=true`) to avoid peer-resolution install failures in stricter npm environments.
+
 ## 1.1.17 - 2026-05-04
 - Rebuilt `/changelog` page to render directly from `CHANGELOG.md` so the in-app page matches file content and formatting.
 - Added Home quick-action button to open `/changelog` from the logged-in main page.
