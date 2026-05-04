@@ -351,11 +351,35 @@ export function setupGameHandlers(io, socket) {
       return;
     }
 
-    // Join the socket room for this game
+    // Bind this socket to the player slot if it matches the game participants.
+    // Friendly games are created via HTTP, so socket ids are usually null until this step.
+    const isWhitePlayer = game.white_player_id === playerId;
+    const isBlackPlayer = game.black_player_id === playerId;
+
+    const isParticipant = isWhitePlayer || isBlackPlayer;
+
+    if (isWhitePlayer && game.white_socket_id !== socket.id) {
+      await query(
+        `UPDATE active_games SET white_socket_id = $1, updated_at = CURRENT_TIMESTAMP WHERE game_id = $2`,
+        [socket.id, gameId]
+      );
+      game.white_socket_id = socket.id;
+    }
+
+    if (isBlackPlayer && game.black_socket_id !== socket.id) {
+      await query(
+        `UPDATE active_games SET black_socket_id = $1, updated_at = CURRENT_TIMESTAMP WHERE game_id = $2`,
+        [socket.id, gameId]
+      );
+      game.black_socket_id = socket.id;
+    }
+
+    // Join the socket room for this game. Non-participants are spectators.
     socket.join(gameId);
 
     // Send current game state
     socket.emit('game_state', {
+      role: isParticipant ? 'player' : 'spectator',
       gameId: game.game_id,
       fen: game.fen,
       moveHistory: game.move_history,
@@ -367,11 +391,13 @@ export function setupGameHandlers(io, socket) {
       gameMode: game.game_mode
     });
 
-    // Notify other player
-    socket.to(gameId).emit('player_joined', {
-      playerId,
-      timestamp: Date.now()
-    });
+    if (isParticipant) {
+      // Notify others only for active players, not spectators.
+      socket.to(gameId).emit('player_joined', {
+        playerId,
+        timestamp: Date.now()
+      });
+    }
   });
 
   socket.on('make_move', async (data) => {
@@ -412,9 +438,23 @@ export function setupGameHandlers(io, socket) {
       return;
     }
 
-    // Session validation: Verify socket owns this game
-    if (game.white_socket_id !== socket.id && game.black_socket_id !== socket.id) {
-      socket.emit('move_error', { message: 'Unauthorized - not your game' });
+    const isWhiteSocket = game.white_socket_id === socket.id;
+    const isBlackSocket = game.black_socket_id === socket.id;
+
+    // Only the two active players may submit moves; spectators are read-only.
+    if (!isWhiteSocket && !isBlackSocket) {
+      socket.emit('move_error', { message: 'Spectators cannot make moves' });
+      return;
+    }
+
+    // Enforce turn order server-side.
+    const activeColor = game.fen && typeof game.fen === 'string'
+      ? game.fen.trim().split(/\s+/)[1]
+      : 'w';
+    const expectedSocketId = activeColor === 'w' ? game.white_socket_id : game.black_socket_id;
+
+    if (!expectedSocketId || expectedSocketId !== socket.id) {
+      socket.emit('move_error', { message: 'Not your turn' });
       return;
     }
 
