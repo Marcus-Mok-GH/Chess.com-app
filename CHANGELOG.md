@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.12 - 2026-05-04
+- Added automatic database self-healing: if a query fails with missing-table (`42P01`), the app re-initializes schema and retries once.
+- Prevented route crashes when tables are missing by triggering `initDatabase()` on-demand from the shared DB query layer.
+
 ## 1.1.11 - 2026-05-04
 - Aligned OTP request payload shape with Supabase's documented `options` object (`shouldCreateUser` + metadata).
 - Updated login copy to focus on email OTP code entry only.

@@ -1,9 +1,22 @@
 import { useEffect, useState } from 'react';
 import './Changelog.css';
 
-const CURRENT_VERSION = '1.1.11';
+const CURRENT_VERSION = '1.1.12';
 
 const CHANGELOG = [
+  {
+    version: '1.1.12',
+    date: '2026-05-04',
+    sections: [
+      {
+        title: 'Fixes',
+        items: [
+          'Added automatic DB schema recovery when a query hits missing-table error (42P01).',
+          'Now re-runs database initialization and retries the failed query once to avoid app crashes.',
+        ],
+      },
+    ],
+  },
   {
     version: '1.1.11',
     date: '2026-05-04',
