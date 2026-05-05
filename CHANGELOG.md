@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.26 - 2026-05-05
+- Fixed Vercel install command failure by removing unsupported `--no-workspaces` flag from `npm ci`.
+- Kept install command compatible across npm versions used by Vercel builders.
+
 ## 1.1.25 - 2026-05-05
 - Fixed Vercel npm install failures by pinning `brace-expansion` away from blocked `1.1.14` lockfile resolution.
 - Updated lockfile package resolution to `brace-expansion@1.1.12` and removed stale integrity entries for deterministic installs.
