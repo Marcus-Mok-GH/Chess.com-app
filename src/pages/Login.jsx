@@ -62,9 +62,16 @@ export default function Login() {
   return (
     <div className="login-page">
       <div className="login-container">
+        <div className="login-badge">Secure Sign-In</div>
         <div className="login-header">
           <h1>♟️ Chess</h1>
-          <p>Sign in with an email magic link</p>
+          <p>Sign in with an email magic link and jump back into your next match.</p>
+        </div>
+
+        <div className="login-benefits" aria-label="Login benefits">
+          <p><span aria-hidden="true">⚡</span> Fast one-click access</p>
+          <p><span aria-hidden="true">🔒</span> No password to remember</p>
+          <p><span aria-hidden="true">♜</span> Keep your profile and stats synced</p>
         </div>
 
         <form onSubmit={(e) => e.preventDefault()} className="login-form">

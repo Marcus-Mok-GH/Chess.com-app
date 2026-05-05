@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.1.25 - 2026-05-05
+- Fixed Vercel npm install failures by pinning `brace-expansion` away from blocked `1.1.14` lockfile resolution.
+- Updated lockfile package resolution to `brace-expansion@1.1.12` and removed stale integrity entries for deterministic installs.
+
+## 1.1.24 - 2026-05-05
+- Fixed npm install/CI lockfile resolution by replacing SSH-based `libsignal-node` lockfile URLs with HTTPS equivalents.
+- This prevents `npm ci` failures in environments without outbound SSH access to GitHub (port 22).
+
+## 1.1.23 - 2026-05-05
+- Refined the `/login` page with a secure sign-in badge and clearer value-focused intro copy.
+- Added quick benefit callouts to communicate speed, security, and profile continuity before authentication.
+- Preserved the existing magic-link flow while improving visual hierarchy and readability on desktop and mobile.
+
 ## 1.1.22 - 2026-05-04
 - Fixed Vercel install flag usage by replacing invalid `--workspaces=false` with npm-supported `--no-workspaces` on `npm ci`.
 - Kept lockfile-based installs and peer dependency compatibility flags for deterministic CI deployments.

@@ -55,6 +55,23 @@
   backdrop-filter: blur(16px);
 }
 
+.login-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(127, 166, 80, 0.16);
+  border: 1px solid rgba(127, 166, 80, 0.42);
+  color: var(--color-accent-primary);
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  margin: 0 auto 16px;
+  width: fit-content;
+}
+
 .login-container::before {
   content: '';
   position: absolute;
@@ -94,6 +111,26 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.login-benefits {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.login-benefits p {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .form-group {
