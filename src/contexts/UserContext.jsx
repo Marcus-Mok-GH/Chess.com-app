@@ -44,20 +44,12 @@ export function UserProvider({ children }) {
     let isMounted = true;
 
     async function init() {
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (!data.session) {
-          localStorage.removeItem(SESSION_USER_KEY);
-          localStorage.removeItem(SESSION_USER_DATA_KEY);
-        }
-      } catch (error) {
-        console.warn('[UserContext] Supabase session check failed:', error?.message);
-      }
+      let sessionUser = null;
+      let sessionUsername = '';
 
-      // Check for existing session (username stored in localStorage)
+      // Restore local session immediately so the app can render without waiting on network I/O.
       try {
         const sessionUserRaw = localStorage.getItem(SESSION_USER_DATA_KEY);
-        let sessionUser = null;
         if (sessionUserRaw) {
           try {
             sessionUser = JSON.parse(sessionUserRaw);
@@ -71,52 +63,72 @@ export function UserProvider({ children }) {
           }
         }
 
-        const sessionUsername = sessionUser?.username || localStorage.getItem(SESSION_USER_KEY);
-        if (sessionUsername && isMounted) {
-          console.log('[UserContext] Found session for:', sessionUsername);
-          // Fetch fresh user data from database
-          try {
-            const serverUser = await api.getUser(sessionUsername);
-            if (isMounted) {
-              const userData = {
-                id: serverUser.id,
-                username: serverUser.username,
-                elo: serverUser.elo,
-                gamesPlayed: serverUser.gamesPlayed,
-                wins: serverUser.wins,
-                losses: serverUser.losses,
-                draws: serverUser.draws,
-                createdAt: serverUser.createdAt,
-              };
-              setUser(userData);
-              persistUser(userData);
-              console.log('✅ SESSION RESTORED (server):', userData.username);
-            }
-          } catch (error) {
-            console.error('🔴 SESSION RESTORE FAILED:', error.message);
-            const isConnectionIssue = error.message.includes('Connection Failed') ||
-              error.message.includes('Failed to fetch') ||
-              error.message.includes('Network');
-            const isNotFound = error.message.includes('User not found') ||
-              error.message.includes('HTTP error 404');
-            if (isNotFound) {
-              console.warn('[UserContext] Clearing invalid session');
-              localStorage.removeItem(SESSION_USER_KEY);
-              localStorage.removeItem(SESSION_USER_DATA_KEY);
-              if (isMounted) {
-                setUser(null);
-              }
-            } else if (!isConnectionIssue) {
-              console.warn('[UserContext] Keeping cached session after restore error');
-            }
-          }
-        }
+        sessionUsername = sessionUser?.username || localStorage.getItem(SESSION_USER_KEY) || '';
       } catch (e) {
         console.error('🔴 SESSION LOAD ERROR:', e.message);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
 
-      if (isMounted) {
-        setIsLoading(false);
+      // Validate auth state and refresh user data in the background.
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) {
+          localStorage.removeItem(SESSION_USER_KEY);
+          localStorage.removeItem(SESSION_USER_DATA_KEY);
+          if (isMounted) {
+            setUser(null);
+          }
+          return;
+        }
+      } catch (error) {
+        console.warn('[UserContext] Supabase session check failed:', error?.message);
+      }
+
+      if (!sessionUsername || !isMounted) {
+        return;
+      }
+
+      console.log('[UserContext] Found session for:', sessionUsername);
+      try {
+        const serverUser = await api.getUser(sessionUsername);
+        if (!isMounted) {
+          return;
+        }
+
+        const userData = {
+          id: serverUser.id,
+          username: serverUser.username,
+          elo: serverUser.elo,
+          gamesPlayed: serverUser.gamesPlayed,
+          wins: serverUser.wins,
+          losses: serverUser.losses,
+          draws: serverUser.draws,
+          createdAt: serverUser.createdAt,
+        };
+        setUser(userData);
+        persistUser(userData);
+        console.log('✅ SESSION RESTORED (server):', userData.username);
+      } catch (error) {
+        console.error('🔴 SESSION RESTORE FAILED:', error.message);
+        const isConnectionIssue = error.message.includes('Connection Failed') ||
+          error.message.includes('Failed to fetch') ||
+          error.message.includes('Network');
+        const isNotFound = error.message.includes('User not found') ||
+          error.message.includes('HTTP error 404');
+
+        if (isNotFound) {
+          console.warn('[UserContext] Clearing invalid session');
+          localStorage.removeItem(SESSION_USER_KEY);
+          localStorage.removeItem(SESSION_USER_DATA_KEY);
+          if (isMounted) {
+            setUser(null);
+          }
+        } else if (!isConnectionIssue) {
+          console.warn('[UserContext] Keeping cached session after restore error');
+        }
       }
     }
 
@@ -125,7 +137,7 @@ export function UserProvider({ children }) {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [persistUser]);
 
   const login = useCallback(async ({ username }) => {
     const trimmedUsername = username.trim();
