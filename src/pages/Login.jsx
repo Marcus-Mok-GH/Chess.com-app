@@ -4,7 +4,7 @@ import { useUser } from '../contexts/UserContext';
 import './Login.css';
 
 export default function Login() {
-  const { requestMagicLink, completeMagicLinkSignIn, isLoading } = useUser();
+  const { requestMagicLink, completeMagicLinkSignIn, isLoading, isLoggedIn } = useUser();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [username, setUsername] = useState('');
@@ -43,6 +43,13 @@ export default function Login() {
   };
 
   useEffect(() => {
+    if (isLoading) return;
+    if (isLoggedIn) {
+      navigate('/home', { replace: true });
+    }
+  }, [isLoading, isLoggedIn, navigate]);
+
+  useEffect(() => {
     const token = searchParams.get('token');
     const tokenHash = searchParams.get('token_hash');
     const magicType = searchParams.get('type') || 'magiclink';
@@ -51,7 +58,7 @@ export default function Login() {
     let hashType = null;
     if (window.location.hash.startsWith('#')) {
       const hashParams = new URLSearchParams(window.location.hash.slice(1));
-      hashToken = hashParams.get('token');
+      hashToken = hashParams.get('token') || hashParams.get('access_token');
       hashType = hashParams.get('type');
     }
 

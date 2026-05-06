@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.35 - 2026-05-06
+- Fixed magic-link callback reliability so `/login` now completes sign-in when Supabase returns hash-based `access_token` callbacks as well as query token variants.
+- Added authenticated-user auto-redirect on `/login` to guarantee post-auth navigation lands on `/home` instead of remaining on the login screen.
+- Persisted Supabase auth session locally after OTP verification and reuse it via `getSession()` so startup auth checks no longer clear a freshly-created magic-link session.
+- Added login callback regression tests covering both query `token_hash` and hash `access_token` callback formats.
+
 ## 1.1.34 - 2026-05-06
 - Improved startup performance by restoring cached user sessions immediately and moving Supabase/API session refresh into a non-blocking background sync.
 - Optimized font loading in `index.html` with stylesheet preload + noscript fallback to reduce render-blocking on first paint.
