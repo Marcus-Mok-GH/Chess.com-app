@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.37 - 2026-05-06
+- Fixed magic-link login callback handling for implicit-flow redirects containing `#access_token` + `refresh_token` by persisting the returned session before app login.
+- Kept token-hash verification path for query callbacks and continued accepting both `type=magiclink` and `type=email` callback variants.
+- Reduced `/login` auth loop risk by completing sign-in from either callback format used by Supabase email links.
+
+## 1.1.36 - 2026-05-06
+- Fixed magic-link callback completion when Supabase returns `type=email` by treating both `magiclink` and `email` callback types as valid auth returns.
+- Normalized callback verification payloads to use Supabase-compatible `type=email` for magic-link verification requests.
+- Added regression coverage for query callbacks that arrive with `type=email` to prevent `/login` loops after clicking emailed links.
+
 ## 1.1.35 - 2026-05-06
 - Fixed magic-link callback reliability so `/login` now completes sign-in when Supabase returns hash-based `access_token` callbacks as well as query token variants.
 - Added authenticated-user auto-redirect on `/login` to guarantee post-auth navigation lands on `/home` instead of remaining on the login screen.

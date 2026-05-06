@@ -55,16 +55,24 @@ export default function Login() {
     const magicType = searchParams.get('type') || 'magiclink';
 
     let hashToken = null;
+    let hashRefreshToken = null;
+    let hashExpiresAt = null;
+    let hashTokenType = null;
     let hashType = null;
     if (window.location.hash.startsWith('#')) {
       const hashParams = new URLSearchParams(window.location.hash.slice(1));
       hashToken = hashParams.get('token') || hashParams.get('access_token');
+      hashRefreshToken = hashParams.get('refresh_token');
+      hashExpiresAt = hashParams.get('expires_at');
+      hashTokenType = hashParams.get('token_type');
       hashType = hashParams.get('type');
     }
 
     const callbackToken = token || tokenHash || hashToken;
     const callbackType = hashType || magicType;
-    if (!callbackToken || callbackType !== 'magiclink') return;
+    const normalizedType = callbackType === 'magiclink' ? 'email' : callbackType;
+    const isMagicLinkCallback = ['magiclink', 'email'].includes(callbackType);
+    if (!callbackToken || !isMagicLinkCallback) return;
 
     (async () => {
       const result = await completeMagicLinkSignIn({
@@ -72,7 +80,11 @@ export default function Login() {
         email: searchParams.get('email') || email,
         token: token || hashToken || undefined,
         tokenHash: tokenHash || undefined,
-        type: callbackType,
+        accessToken: hashToken || undefined,
+        refreshToken: hashRefreshToken || undefined,
+        expiresAt: hashExpiresAt ? Number(hashExpiresAt) : undefined,
+        tokenType: hashTokenType || undefined,
+        type: normalizedType,
       });
       if (result?.success) {
         navigate('/home', { replace: true });
