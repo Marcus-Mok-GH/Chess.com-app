@@ -1,6 +1,5 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import changelogRaw from '../../CHANGELOG.md?raw';
 import './Changelog.css';
 
 function parseChangelog(markdown) {
@@ -28,7 +27,26 @@ function parseChangelog(markdown) {
 
 export default function Changelog() {
   const navigate = useNavigate();
-  const entries = useMemo(() => parseChangelog(changelogRaw), []);
+  const [markdown, setMarkdown] = useState('');
+
+  useEffect(() => {
+    let active = true;
+
+    fetch('/CHANGELOG.md')
+      .then((response) => (response.ok ? response.text() : ''))
+      .then((content) => {
+        if (active) setMarkdown(content);
+      })
+      .catch(() => {
+        if (active) setMarkdown('');
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const entries = useMemo(() => parseChangelog(markdown), [markdown]);
 
   return (
     <div className="changelog-page">
