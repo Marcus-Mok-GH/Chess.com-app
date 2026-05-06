@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.1.33 - 2026-05-06
+- Hardened magic-link callback handling by verifying Supabase callback tokens before app login and then redirecting to `/home`.
+- Added support for callback token parsing from query (`token`, `token_hash`) and hash fragments for reliable post-email-link sign-in.
+
+## 1.1.32 - 2026-05-06
+- Reverted authentication flow from OTP code entry back to magic-link sign-in on both login surfaces.
+- Restored magic-link redirect callback handling on `/login` for automatic post-link sign-in.
+
+## 1.1.31 - 2026-05-06
+- Refined `public/favicon.svg` to better match the app's chess theme with board colors and a centered king silhouette.
+
+## 1.1.30 - 2026-05-06
+- Refined OTP login modal state handling and improved OTP input semantics (`inputMode` + `one-time-code` autocomplete).
+- Added a new custom chess-themed `public/favicon.svg` app icon.
+
+## 1.1.29 - 2026-05-06
+- Switched login authentication from magic-link sign-in to explicit 6-digit OTP verification on both the full login page and ranked login modal.
+- Added client-side OTP verification flow before profile login to ensure users complete one-time code validation.
+- Updated auth UX copy and button states to reflect requesting and verifying OTP codes instead of magic links.
+
 ## 1.1.28 - 2026-05-06
 - Added `src/pages/Changelog.test.jsx` to verify changelog markdown is fetched from `/CHANGELOG.md` and rendered correctly.
 - Added UI smoke coverage for changelog header/back button rendering behavior.

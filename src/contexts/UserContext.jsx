@@ -42,7 +42,7 @@ export function UserProvider({ children }) {
   // Load user session on mount
   useEffect(() => {
     let isMounted = true;
-    
+
     async function init() {
       try {
         const { data } = await supabase.auth.getSession();
@@ -114,14 +114,14 @@ export function UserProvider({ children }) {
       } catch (e) {
         console.error('🔴 SESSION LOAD ERROR:', e.message);
       }
-      
+
       if (isMounted) {
         setIsLoading(false);
       }
     }
 
     init();
-    
+
     return () => {
       isMounted = false;
     };
@@ -129,7 +129,7 @@ export function UserProvider({ children }) {
 
   const login = useCallback(async ({ username }) => {
     const trimmedUsername = username.trim();
-    
+
     // Validation
     if (!trimmedUsername || trimmedUsername.length < 2) {
       return { error: 'Username must be at least 2 characters' };
@@ -152,7 +152,7 @@ export function UserProvider({ children }) {
 
       const response = await api.login(trimmedUsername);
       console.log('✅ LOGIN SUCCESSFUL:', response.user.username);
-      
+
       const userData = {
         id: response.user.id,
         username: response.user.username,
@@ -196,7 +196,7 @@ export function UserProvider({ children }) {
     }
 
     if (!navigator.onLine) {
-      return { error: 'You must be online to request a code' };
+      return { error: 'You must be online to request a link' };
     }
 
     try {
@@ -214,12 +214,40 @@ export function UserProvider({ children }) {
       }
       return {
         success: true,
-        message: 'Magic link sent. Check your inbox and click the link to automatically sign in.',
+        message: 'Magic link sent. Check your inbox and click the link to sign in automatically.',
       };
     } catch (error) {
       return { error: error.message || 'Failed to send magic link.' };
     }
   }, []);
+
+
+
+  const completeMagicLinkSignIn = useCallback(async ({ email, username, token, tokenHash, type = 'magiclink' }) => {
+    const trimmedUsername = username?.trim();
+
+    if (!trimmedUsername) {
+      return { error: 'Username is required to complete sign in.' };
+    }
+
+    if (!token && !tokenHash) {
+      return { error: 'Missing magic-link token. Please request a new link.' };
+    }
+
+    try {
+      const verifyResult = await supabase.auth.verifyOtp({
+        email: email?.trim(),
+        token: token || undefined,
+        tokenHash: tokenHash || undefined,
+        type,
+      });
+
+      if (verifyResult.error) throw verifyResult.error;
+      return await login({ username: trimmedUsername });
+    } catch (error) {
+      return { error: error.message || 'Magic link is invalid or expired. Request a new link.' };
+    }
+  }, [login]);
 
   const updateElo = useCallback(async (opponentElo, gameResult) => {
     if (!user) return;
@@ -241,11 +269,11 @@ export function UserProvider({ children }) {
         losses: response.losses,
         draws: response.draws,
       };
-      
+
       setUser(updatedUser);
       persistUser(updatedUser);
       console.log('✅ ELO UPDATED:', response.previousElo, '→', response.newElo);
-      
+
       return {
         previousElo: response.previousElo,
         newElo: response.newElo,
@@ -279,7 +307,7 @@ export function UserProvider({ children }) {
         draws: serverUser.draws,
         createdAt: serverUser.createdAt,
       };
-      
+
       setUser(refreshedUser);
       persistUser(refreshedUser);
       console.log('✅ USER REFRESHED:', refreshedUser.username);
@@ -295,6 +323,7 @@ export function UserProvider({ children }) {
     isOnline,
     login,
     requestMagicLink,
+    completeMagicLinkSignIn,
     logout,
     updateElo,
     refreshUser,

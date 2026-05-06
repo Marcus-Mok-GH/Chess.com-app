@@ -4,7 +4,7 @@ import { useUser } from '../contexts/UserContext';
 import './Login.css';
 
 export default function Login() {
-  const { login, requestMagicLink, isLoading } = useUser();
+  const { requestMagicLink, completeMagicLinkSignIn, isLoading } = useUser();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [username, setUsername] = useState('');
@@ -44,18 +44,36 @@ export default function Login() {
 
   useEffect(() => {
     const token = searchParams.get('token');
-    const magicType = searchParams.get('type');
-    if (!token || magicType !== 'magiclink') return;
+    const tokenHash = searchParams.get('token_hash');
+    const magicType = searchParams.get('type') || 'magiclink';
+
+    let hashToken = null;
+    let hashType = null;
+    if (window.location.hash.startsWith('#')) {
+      const hashParams = new URLSearchParams(window.location.hash.slice(1));
+      hashToken = hashParams.get('token');
+      hashType = hashParams.get('type');
+    }
+
+    const callbackToken = token || tokenHash || hashToken;
+    const callbackType = hashType || magicType;
+    if (!callbackToken || callbackType !== 'magiclink') return;
 
     (async () => {
-      const result = await login({ username: searchParams.get('username') || username, email: searchParams.get('email') || email });
+      const result = await completeMagicLinkSignIn({
+        username: searchParams.get('username') || username,
+        email: searchParams.get('email') || email,
+        token: token || hashToken || undefined,
+        tokenHash: tokenHash || undefined,
+        type: callbackType,
+      });
       if (result?.success) {
         navigate('/home', { replace: true });
       } else {
         setError(result?.error || 'Magic link sign in failed. Request a new link.');
       }
     })();
-  }, [login, navigate, searchParams, username, email]);
+  }, [completeMagicLinkSignIn, email, navigate, searchParams, username]);
 
   if (isLoading) return <div className="login-page"><div className="login-container"><div className="login-loading"><div className="spinner"></div><p>Loading...</p></div></div></div>;
 
