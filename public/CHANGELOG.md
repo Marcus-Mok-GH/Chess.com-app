@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.34 - 2026-05-06
+- Improved startup performance by restoring cached user sessions immediately and moving Supabase/API session refresh into a non-blocking background sync.
+- Optimized font loading in `index.html` with stylesheet preload + noscript fallback to reduce render-blocking on first paint.
+
 ## 1.1.33 - 2026-05-06
 - Hardened magic-link callback handling by verifying Supabase callback tokens before app login and then redirecting to `/home`.
 - Added support for callback token parsing from query (`token`, `token_hash`) and hash fragments for reliable post-email-link sign-in.
