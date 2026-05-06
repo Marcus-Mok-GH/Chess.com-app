@@ -87,6 +87,7 @@ export default function Login() {
         type: normalizedType,
       });
       if (result?.success) {
+        window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
         navigate('/home', { replace: true });
       } else {
         setError(result?.error || 'Magic link sign in failed. Request a new link.');

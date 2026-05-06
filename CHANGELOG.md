@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.38 - 2026-05-06
+- Fixed Supabase magic-link sign-in callback handling so login succeeds even when the redirect omits `username`/`email` query params by caching pending magic-link context locally.
+- Updated magic-link redirect URL to a stable `/login?type=magiclink` callback and clear URL hash tokens after successful callback processing.
+
 ## 1.1.37 - 2026-05-06
 - Fixed magic-link login callback handling for implicit-flow redirects containing `#access_token` + `refresh_token` by persisting the returned session before app login.
 - Kept token-hash verification path for query callbacks and continued accepting both `type=magiclink` and `type=email` callback variants.
