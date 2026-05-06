@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.23 - 2026-05-06
+- Regenerated `package-lock.json` to resolve `npm ci` EINTEGRITY failures on `brace-expansion@1.1.14` tarball verification.
+- Confirmed deterministic install now succeeds with `npm ci --ignore-scripts --no-audit --no-fund --legacy-peer-deps --no-workspaces`.
+
 ## 1.1.22 - 2026-05-04
 - Fixed Vercel install flag usage by replacing invalid `--workspaces=false` with npm-supported `--no-workspaces` on `npm ci`.
 - Kept lockfile-based installs and peer dependency compatibility flags for deterministic CI deployments.
