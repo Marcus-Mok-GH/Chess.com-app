@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.28 - 2026-05-06
+- Added `src/pages/Changelog.test.jsx` to verify changelog markdown is fetched from `/CHANGELOG.md` and rendered correctly.
+- Added UI smoke coverage for changelog header/back button rendering behavior.
+
 ## 1.1.27 - 2026-05-06
 - Fixed `/changelog` build failures by loading changelog content via runtime fetch from `/CHANGELOG.md` instead of importing `../../CHANGELOG.md?raw`.
 - Added `public/CHANGELOG.md` so production deployments (including Vercel) always serve the changelog file at a stable path.
