@@ -1,5 +1,27 @@
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const SESSION_STORAGE_KEY = 'supabase_auth_session';
+
+function storeSession(session) {
+  if (!session) return;
+  localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+}
+
+function clearStoredSession() {
+  localStorage.removeItem(SESSION_STORAGE_KEY);
+}
+
+function getStoredSession() {
+  const raw = localStorage.getItem(SESSION_STORAGE_KEY);
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    clearStoredSession();
+    return null;
+  }
+}
 
 async function authRequest(path, body) {
   const response = await fetch(`${supabaseUrl}/auth/v1/${path}`, {
@@ -23,7 +45,7 @@ async function authRequest(path, body) {
 export const supabase = {
   auth: {
     async getSession() {
-      return { data: { session: null } };
+      return { data: { session: getStoredSession() } };
     },
     async signInWithOtp({ email, options = {} }) {
       try {
@@ -46,12 +68,16 @@ export const supabase = {
         if (token) payload.token = token;
         if (tokenHash) payload.token_hash = tokenHash;
         const data = await authRequest('verify', payload);
+        if (data?.session) {
+          storeSession(data.session);
+        }
         return { data, error: null };
       } catch (error) {
         return { data: null, error };
       }
     },
     async signOut() {
+      clearStoredSession();
       return { error: null };
     },
   },
