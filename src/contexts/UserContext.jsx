@@ -4,6 +4,7 @@ import { supabase } from '../services/supabase';
 
 const SESSION_USER_KEY = 'chess_user_session';
 const SESSION_USER_DATA_KEY = 'chess_user_data';
+const PENDING_MAGIC_LINK_KEY = 'chess_pending_magic_link';
 
 const UserContext = createContext(null);
 
@@ -212,7 +213,8 @@ export function UserProvider({ children }) {
     }
 
     try {
-      const redirectUrl = `${window.location.origin}/login?type=magiclink&username=${encodeURIComponent(trimmedUsername)}&email=${encodeURIComponent(trimmedEmail)}`;
+      const redirectUrl = `${window.location.origin}/login?type=magiclink`;
+      localStorage.setItem(PENDING_MAGIC_LINK_KEY, JSON.stringify({ username: trimmedUsername, email: trimmedEmail }));
       const result = await supabase.auth.signInWithOtp({
         email: trimmedEmail,
         options: {
@@ -236,10 +238,21 @@ export function UserProvider({ children }) {
 
 
   const completeMagicLinkSignIn = useCallback(async ({ email, username, token, tokenHash, accessToken, refreshToken, expiresAt, tokenType, type = 'magiclink' }) => {
-    const trimmedUsername = username?.trim();
+    const pendingMagicLink = (() => {
+      try {
+        const raw = localStorage.getItem(PENDING_MAGIC_LINK_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        localStorage.removeItem(PENDING_MAGIC_LINK_KEY);
+        return null;
+      }
+    })();
 
-    if (!trimmedUsername) {
-      return { error: 'Username is required to complete sign in.' };
+    const resolvedUsername = username?.trim() || pendingMagicLink?.username?.trim() || '';
+    const resolvedEmail = email?.trim() || pendingMagicLink?.email?.trim() || '';
+
+    if (!resolvedUsername) {
+      return { error: 'Missing username context for magic link. Please request a new link from this browser.' };
     }
 
     try {
@@ -251,7 +264,8 @@ export function UserProvider({ children }) {
           tokenType,
         });
         if (sessionResult.error) throw sessionResult.error;
-        return await login({ username: trimmedUsername });
+        localStorage.removeItem(PENDING_MAGIC_LINK_KEY);
+        return await login({ username: resolvedUsername });
       }
 
       if (!token && !tokenHash) {
@@ -259,14 +273,15 @@ export function UserProvider({ children }) {
       }
 
       const verifyResult = await supabase.auth.verifyOtp({
-        email: email?.trim(),
+        email: resolvedEmail || undefined,
         token: token || undefined,
         tokenHash: tokenHash || undefined,
         type,
       });
 
       if (verifyResult.error) throw verifyResult.error;
-      return await login({ username: trimmedUsername });
+      localStorage.removeItem(PENDING_MAGIC_LINK_KEY);
+      return await login({ username: resolvedUsername });
     } catch (error) {
       return { error: error.message || 'Magic link is invalid or expired. Request a new link.' };
     }
