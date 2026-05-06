@@ -39,13 +39,13 @@ export const supabase = {
         return { data: null, error };
       }
     },
-    async verifyOtp({ email, token }) {
+    async verifyOtp({ email, token, tokenHash, type = 'email' }) {
       try {
-        const data = await authRequest('verify', {
-          email,
-          token,
-          type: 'email',
-        });
+        const payload = { type };
+        if (email) payload.email = email;
+        if (token) payload.token = token;
+        if (tokenHash) payload.token_hash = tokenHash;
+        const data = await authRequest('verify', payload);
         return { data, error: null };
       } catch (error) {
         return { data: null, error };
