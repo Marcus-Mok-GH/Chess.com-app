@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.1.26 - 2026-05-06
+- Installed `vite` explicitly with `npm install` and verified local production build succeeds.
+- Added missing `@testing-library/dom` dev dependency to fix Vitest module resolution errors.
+- Verified both `npm run build` and `npm test` pass locally after dependency updates.
+
+## 1.1.25 - 2026-05-06
+- Adjusted Vercel install command to `npm ci --include=dev ...` so build-time tools in `devDependencies` are installed during deployment builds.
+- Reverted `vite` and `@vitejs/plugin-react` back to `devDependencies` to keep runtime dependencies lean.
+- Removed `NODE_ENV` from `vercel.example.json` to avoid unintentionally omitting dev dependencies during Vercel installs.
+
+## 1.1.24 - 2026-05-06
+- Fixed deployment build failure (`Command "npm run build" exited with 1`) caused by missing `vite` binary when hosts install only production dependencies.
+- Moved `vite` and `@vitejs/plugin-react` into runtime `dependencies` so `vite build` is available in CI/CD build environments.
+
 ## 1.1.23 - 2026-05-06
 - Regenerated `package-lock.json` to resolve `npm ci` EINTEGRITY failures on `brace-expansion@1.1.14` tarball verification.
 - Confirmed deterministic install now succeeds with `npm ci --ignore-scripts --no-audit --no-fund --legacy-peer-deps --no-workspaces`.

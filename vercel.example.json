@@ -22,7 +22,6 @@
   "env": {
     "DATABASE_URL": "@database-url",
     "FRONTEND_URL": "@vercel-project-url",
-    "NODE_ENV": "production",
     "PORT": "3001",
     "MISTRAL_API_KEY": "@mistral-api-key",
     "VITE_SOCKET_URL": ""

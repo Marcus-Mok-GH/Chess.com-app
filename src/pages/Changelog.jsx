@@ -41,7 +41,7 @@ export default function Changelog() {
 
         <header className="changelog-header">
           <h1>Changelog</h1>
-          <p>Release history from CHANGELOG.md</p>
+          <p>Release history synced from CHANGELOG.md (latest first, auto-updated)</p>
         </header>
 
         <div className="changelog-entries">
