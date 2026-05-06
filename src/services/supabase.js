@@ -76,6 +76,21 @@ export const supabase = {
         return { data: null, error };
       }
     },
+
+    async setSession({ accessToken, refreshToken, expiresAt = null, tokenType = 'bearer' }) {
+      if (!accessToken || !refreshToken) {
+        return { error: new Error('Missing access or refresh token') };
+      }
+
+      storeSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        expires_at: expiresAt,
+        token_type: tokenType,
+      });
+      return { error: null };
+    },
+
     async signOut() {
       clearStoredSession();
       return { error: null };

@@ -235,18 +235,29 @@ export function UserProvider({ children }) {
 
 
 
-  const completeMagicLinkSignIn = useCallback(async ({ email, username, token, tokenHash, type = 'magiclink' }) => {
+  const completeMagicLinkSignIn = useCallback(async ({ email, username, token, tokenHash, accessToken, refreshToken, expiresAt, tokenType, type = 'magiclink' }) => {
     const trimmedUsername = username?.trim();
 
     if (!trimmedUsername) {
       return { error: 'Username is required to complete sign in.' };
     }
 
-    if (!token && !tokenHash) {
-      return { error: 'Missing magic-link token. Please request a new link.' };
-    }
-
     try {
+      if (accessToken && refreshToken) {
+        const sessionResult = await supabase.auth.setSession({
+          accessToken,
+          refreshToken,
+          expiresAt,
+          tokenType,
+        });
+        if (sessionResult.error) throw sessionResult.error;
+        return await login({ username: trimmedUsername });
+      }
+
+      if (!token && !tokenHash) {
+        return { error: 'Missing magic-link token. Please request a new link.' };
+      }
+
       const verifyResult = await supabase.auth.verifyOtp({
         email: email?.trim(),
         token: token || undefined,

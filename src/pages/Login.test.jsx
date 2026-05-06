@@ -45,6 +45,30 @@ describe('Login magic-link callback routing', () => {
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/home', { replace: true }));
   });
 
+
+
+  it('accepts query callbacks with type=email and redirects to /home', async () => {
+    const completeMagicLinkSignIn = vi.fn().mockResolvedValue({ success: true });
+    mockUseUser.mockReturnValue({
+      requestMagicLink: vi.fn(),
+      completeMagicLinkSignIn,
+      isLoading: false,
+      isLoggedIn: false,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/login?type=email&username=tester&email=test%40mail.com&token_hash=abc123']}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(completeMagicLinkSignIn).toHaveBeenCalled());
+    expect(completeMagicLinkSignIn).toHaveBeenCalledWith(expect.objectContaining({ type: 'email' }));
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/home', { replace: true }));
+  });
+
   it('accepts hash access_token callbacks and redirects to /home', async () => {
     window.location.hash = '#access_token=hash_token_123&type=magiclink';
     const completeMagicLinkSignIn = vi.fn().mockResolvedValue({ success: true });
