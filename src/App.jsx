@@ -115,37 +115,24 @@ function AppHeader() {
 
 // Puter.js initialization check
 function PuterCheck() {
+  const { isReady, injectPuterScript } = usePuter();
+
   useEffect(() => {
     // Only run in browser environment
     if (typeof window === 'undefined') {
       return;
     }
 
-    const checkPuter = () => {
-      try {
-        if (window.puter && window.puter.ai) {
-          console.log('✅ Puter.js loaded successfully');
-          console.log('   Available models: https://developer.puter.com/ai/models/');
-          return true;
-        }
-      } catch (error) {
-        // Silently ignore - Puter.js is optional
-      }
-      return false;
-    };
-
-    // Check immediately
-    if (!checkPuter()) {
-      // Check again after a delay
-      const timer = setTimeout(() => {
-        if (!checkPuter() && import.meta.env.DEV) {
-          console.warn('⚠️ Puter.js not loaded. AI features will be unavailable.');
-        }
-      }, 5000);
-
-      return () => clearTimeout(timer);
+    if (isReady && import.meta.env.DEV) {
+      console.log('✅ Puter.js loaded successfully');
     }
-  }, []);
+  }, [isReady]);
+
+  // Inject script only if it's actually used by some component or on user interaction
+  // For now, we'll keep the logic but won't auto-inject here to save initial load.
+
+  return null;
+}
 
   return null;
 }
