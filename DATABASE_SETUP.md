@@ -43,6 +43,22 @@ FRONTEND_URL=http://localhost:5173
 NODE_ENV=development
 ```
 
+### 2a. Supabase Setup (Alternative)
+
+If you prefer using Supabase for both the database and authentication:
+
+1. **Database**: Use the connection string provided in Supabase Project Settings > Database.
+   ```
+   DATABASE_URL=postgresql://postgres:[your-password]@db.[project-id].supabase.co:5432/postgres
+   ```
+2. **Authentication**: Get your API credentials from Supabase Project Settings > API and add them to `.env`:
+   ```
+   VITE_SUPABASE_URL=https://[project-id].supabase.co
+   VITE_SUPABASE_ANON_KEY=[your-anon-key]
+   NEXT_PUBLIC_SUPABASE_URL=https://[project-id].supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=[your-anon-key]
+   ```
+
 ### 3. Initialize Database Schema
 
 The server will automatically create tables on first run. Alternatively, run the SQL script:
