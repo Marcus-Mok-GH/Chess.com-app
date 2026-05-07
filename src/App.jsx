@@ -41,7 +41,7 @@ function AppHeader() {
       {/* Top header (simplified) */}
       <header className="app-header">
         <div className="header-content">
-          <Link to={isLoggedIn ? "/home" : "/login"} className="app-logo">
+          <Link to={isLoggedIn ? "/home" : "/"} className="app-logo">
             ♟️ Chess
           </Link>
           <h1 className="page-title">{getTitle(location.pathname)}</h1>
@@ -187,18 +187,10 @@ export default function App() {
                         <><AppHeader /><Home /></>
                       </ProtectedRoute>
                     } />
-                    <Route path="/play" element={
-                      <ProtectedRoute>
-                        <><AppHeader /><Play /></>
-                      </ProtectedRoute>
-                    } />
+                    <Route path="/play" element={<><AppHeader /><Play /></>} />
                     <Route path="/online" element={<><AppHeader /><OnlinePlay /></>} />
                     <Route path="/online/:gameId" element={<><AppHeader /><OnlinePlay /></>} />
-                    <Route path="/game/:gameId" element={
-                      <ProtectedRoute>
-                        <><AppHeader /><Game /></>
-                      </ProtectedRoute>
-                    } />
+                    <Route path="/game/:gameId" element={<><AppHeader /><Game /></>} />
                     <Route path="/analysis/:gameId?" element={
                       <ProtectedRoute>
                         <><AppHeader /><Analysis /></>
