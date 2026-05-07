@@ -658,3 +658,34 @@
     font-size: 0.75rem;
   }
 }
+
+
+@media (max-width: 768px) {
+  .home-page {
+    padding-bottom: 110px;
+  }
+
+  .home-container {
+    padding: 18px 14px 28px;
+  }
+
+  .welcome-section {
+    padding: 20px 16px;
+  }
+
+  .welcome-title {
+    font-size: 1.8rem;
+    line-height: 1.15;
+  }
+
+  .stats-overview {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .detailed-stats,
+  .quick-actions,
+  .member-info {
+    padding: 16px;
+  }
+}

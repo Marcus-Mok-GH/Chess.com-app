@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.46 - 2026-05-07
+- Optimized the app header for mobile screens with tighter spacing, adaptive layout, and cleaner title/logout behavior on narrow devices.
+- Improved bottom navigation touch ergonomics with larger tap targets and safe-area-aware spacing for modern phones.
+- Tuned home page mobile spacing/card density so key stats and sections are easier to scan without crowding.
+
 ## 1.1.45 - 2026-05-07
 - Added/updated automated tests for landing-page live stats rendering and redirect behavior.
 - Added API client coverage for `getPublicStats()` to ensure `/stats/public` requests are exercised.
