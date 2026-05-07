@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.1.45 - 2026-05-07
+- Added/updated automated tests for landing-page live stats rendering and redirect behavior.
+- Added API client coverage for `getPublicStats()` to ensure `/stats/public` requests are exercised.
+
+## 1.1.44 - 2026-05-07
+- Fixed API route wiring so `/api/health` and `/api/stats/public` are registered independently.
+- Hardened public stats initialization to auto-run database setup when tables are missing, preventing landing-stat crashes during first boot.
+
+## 1.1.43 - 2026-05-07
+- Replaced landing-page mock stats with live backend metrics (online players, registered players, recorded games, and server uptime) fetched in real time from a new public stats API endpoint.
+
 ## 1.1.42 - 2026-05-07
 - Added global favicon link coverage so the chess icon appears consistently across app routes (including `/login`) and auxiliary static test pages.
 

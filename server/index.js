@@ -14,7 +14,7 @@ if (shouldLoadEnv) {
   config();
 }
 
-import { initDatabase, cleanupStaleMatchmakingEntries, cleanupOldActiveGames } from './db.js';
+import { initDatabase, cleanupStaleMatchmakingEntries, cleanupOldActiveGames, query } from './db.js';
 import { checkDatabaseConnection } from './db/init.js';
 import { setDatabaseReady, isDatabaseReady, ensureDatabaseReady } from './db/status.js';
 import { errorResponse } from './middleware/errors.js';
@@ -58,6 +58,41 @@ app.get('/api/health', (req, res) => {
     api: 'ready',
     database: dbStatus
   });
+});
+
+app.get('/api/stats/public', async (req, res) => {
+  try {
+    if (!hasDatabase) {
+      return res.status(503).json({ error: 'Stats unavailable while database is offline.' });
+    }
+
+    if (!isDatabaseReady()) {
+      const ready = await ensureDatabaseReady(initDatabase);
+      if (!ready) {
+        return res.status(503).json({ error: 'Stats unavailable while database is initializing.' });
+      }
+    }
+
+    const [usersResult, gamesResult, activeGamesResult] = await Promise.all([
+      query('SELECT COUNT(*)::int AS count FROM users'),
+      query('SELECT COUNT(*)::int AS count FROM games'),
+      query("SELECT COUNT(*)::int AS count FROM active_games WHERE status = 'active'")
+    ]);
+
+    const connectedClients = io?.engine?.clientsCount ?? 0;
+
+    res.json({
+      registeredPlayers: usersResult.rows[0]?.count ?? 0,
+      gamesRecorded: gamesResult.rows[0]?.count ?? 0,
+      liveGames: activeGamesResult.rows[0]?.count ?? 0,
+      livePlayers: connectedClients,
+      serverUptimeSeconds: Math.floor(process.uptime()),
+      generatedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Stats] Failed to generate landing stats:', error);
+    return res.status(500).json({ error: 'Failed to load public stats.' });
+  }
 });
 
 const PORT = process.env.PORT || process.env.SERVER_PORT || 3001;
