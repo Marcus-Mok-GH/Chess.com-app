@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.40 - 2026-05-07
+- Optimized the mobile header so navigation wraps cleanly and can be horizontally scrolled instead of clipping on smaller phones.
+- Improved compact-screen in-game layout by making sidebar panels stack full width to reduce cramped two-column cards.
+
 ## 1.1.38 - 2026-05-06
 - Fixed Supabase magic-link sign-in callback handling so login succeeds even when the redirect omits `username`/`email` query params by caching pending magic-link context locally.
 - Updated magic-link redirect URL to a stable `/login?type=magiclink` callback and clear URL hash tokens after successful callback processing.

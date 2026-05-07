@@ -1756,8 +1756,8 @@ body {
   }
   
   .sidebar-panel {
-    flex: 1 1 calc(50% - 4px);
-    min-width: 140px;
+    flex: 1 1 100%;
+    min-width: 0;
   }
   
   .move-history {
@@ -1810,18 +1810,41 @@ body {
 
 @media (max-width: 600px) {
   .app-header {
-    padding: 0 12px;
-    height: 44px;
+    padding: 0 10px;
+    height: auto;
+    min-height: 44px;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .header-right {
+    width: 100%;
+    justify-content: center;
     gap: 8px;
+  }
+
+  .nav-links {
+    width: 100%;
+    overflow-x: auto;
+    justify-content: flex-start;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .nav-links::-webkit-scrollbar {
+    display: none;
   }
   
   .app-logo {
-    font-size: 1rem;
+    font-size: 0.9375rem;
   }
   
   .nav-link {
     padding: 6px 10px;
     font-size: 0.8125rem;
+    flex-shrink: 0;
   }
   
   .app-header .login-btn {
