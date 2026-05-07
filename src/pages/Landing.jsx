@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, memo } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useUser } from '../contexts/UserContext'
 import LoginModal from '../components/LoginModal'
 import './Landing.css'
 
-const FloatingPiece = ({ type, color, style }) => {
+const FloatingPiece = memo(({ type, color, style }) => {
   const pieces = {
     wK: '/custom-pieces/wK.svg',
     wQ: '/custom-pieces/wQ.svg',
@@ -25,9 +25,10 @@ const FloatingPiece = ({ type, color, style }) => {
       alt="" 
       className="floating-piece"
       style={style}
+      loading="lazy"
     />
   )
-}
+})
 
 export default function Landing() {
   const navigate = useNavigate()
@@ -90,14 +91,14 @@ export default function Landing() {
               <div className="chess-card-bg"></div>
               <div className="chess-card-main">
                 <div className="preview-board">
-                  {[...Array(64)].map((_, i) => {
+                  {useMemo(() => [...Array(64)].map((_, i) => {
                     const row = Math.floor(i / 8);
                     const col = i % 8;
                     const isLight = (row + col) % 2 === 0;
                     return (
                       <div key={i} className={`preview-square ${isLight ? 'light' : 'dark'}`}></div>
                     );
-                  })}
+                  }), [])}
                 </div>
               </div>
               <div className="floating-pieces-container">

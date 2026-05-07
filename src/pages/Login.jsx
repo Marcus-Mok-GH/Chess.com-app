@@ -167,7 +167,7 @@ export default function Login() {
           >
             {isRequestingLink ? (
               <>
-                <div className="login-spinner" style={{ width: '20px', height: '20px', borderThickness: '2px', margin: 0 }}></div>
+                <div className="login-spinner" style={{ width: '20px', height: '20px', borderWidth: '2px', margin: 0 }}></div>
                 <span>Sending...</span>
               </>
             ) : (

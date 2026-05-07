@@ -25,8 +25,9 @@
   width: 80vw;
   height: 80vw;
   border-radius: 50%;
-  filter: blur(120px);
-  opacity: 0.15;
+  filter: blur(80px);
+  opacity: 0.12;
+  pointer-events: none;
 }
 
 .glow-1 {
@@ -155,7 +156,6 @@
   background: rgba(255, 255, 255, 0.05);
   color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
 }
 
 .btn-premium.secondary:hover {
@@ -172,7 +172,8 @@
 /* Hero Visual */
 .hero-visual {
   position: relative;
-  animation: visualAppear 1s cubic-bezier(0.16, 1, 0.3, 1) 0.2s backwards;
+  animation: visualAppear 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s backwards;
+  will-change: transform, opacity;
 }
 
 @keyframes visualAppear {
@@ -240,8 +241,9 @@
   position: absolute;
   width: 60px;
   height: 60px;
-  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.4));
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.4));
   animation: pieceFloat 6s ease-in-out infinite;
+  will-change: transform;
 }
 
 @keyframes pieceFloat {
@@ -402,6 +404,30 @@
   text-align: center;
   color: var(--color-text-muted);
   font-size: 0.9rem;
+}
+
+/* Performance Optimizations for Weaker Devices */
+@media (prefers-reduced-motion: reduce) {
+  .hero-content, .hero-visual, .floating-piece, .stat-card, .feature-card {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .landing-glow {
+    filter: blur(40px); /* Lighter blur for mobile */
+    opacity: 0.08;
+  }
+
+  .floating-piece {
+    animation-duration: 10s; /* Slower animation is sometimes easier on CPU */
+  }
+
+  .chess-card-main {
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); /* Smaller shadow */
+  }
 }
 
 /* Mobile Responsive */
