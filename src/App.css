@@ -2181,3 +2181,82 @@ body {
 .app {
   padding-bottom: calc(70px + env(safe-area-inset-bottom));
 }
+
+
+@media (max-width: 768px) {
+  .app-header {
+    height: auto;
+    min-height: 60px;
+    padding: 8px 12px;
+  }
+
+  .app-header .header-content {
+    width: 100%;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .app-logo {
+    font-size: 0.875rem;
+    letter-spacing: 0.08em;
+  }
+
+  .page-title {
+    font-size: 0.875rem;
+    text-align: center;
+  }
+
+  .user-info {
+    display: none;
+  }
+
+  .logout-btn {
+    min-height: 40px;
+    padding: 8px 10px;
+  }
+
+  .bottom-nav {
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
+  }
+
+  .nav-content {
+    gap: 0.25rem;
+  }
+
+  .nav-tab {
+    min-height: 48px;
+    min-width: 0;
+    padding: 0.45rem 0.35rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-header {
+    padding: 6px 10px;
+  }
+
+  .app-header .header-content {
+    grid-template-columns: auto 1fr;
+  }
+
+  .page-title {
+    text-align: right;
+    font-size: 0.8rem;
+  }
+
+  .header-right {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+
+  .logout-btn {
+    font-size: 0.75rem;
+    padding: 7px 10px;
+  }
+
+  .nav-label {
+    font-size: 0.7rem;
+  }
+}
