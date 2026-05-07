@@ -19,6 +19,7 @@ const GameHistory = lazy(() => import('./pages/GameHistory'))
 const Game = lazy(() => import('./pages/Game'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Changelog = lazy(() => import('./pages/Changelog'))
+const Landing = lazy(() => import('./pages/Landing'))
 
 function getTitle(path) {
   if (path.startsWith('/online/') || path.startsWith('/game/')) return 'Online Play'
@@ -179,41 +180,41 @@ export default function App() {
               <Suspense fallback={<RouteFallback />}>
                 <div className="app">
                   <Routes>
-                    <Route path="/" element={<Navigate to="/login" replace />} />
+                    <Route path="/" element={<Landing />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/home" element={
                       <ProtectedRoute>
-                        <><AppHeader /><Home /></>
+                        <div className="app-content-with-nav"><AppHeader /><Home /></div>
                       </ProtectedRoute>
                     } />
                     <Route path="/play" element={
                       <ProtectedRoute>
-                        <><AppHeader /><Play /></>
+                        <div className="app-content-with-nav"><AppHeader /><Play /></div>
                       </ProtectedRoute>
                     } />
-                    <Route path="/online" element={<><AppHeader /><OnlinePlay /></>} />
-                    <Route path="/online/:gameId" element={<><AppHeader /><OnlinePlay /></>} />
+                    <Route path="/online" element={<div className="app-content-with-nav"><AppHeader /><OnlinePlay /></div>} />
+                    <Route path="/online/:gameId" element={<div className="app-content-with-nav"><AppHeader /><OnlinePlay /></div>} />
                     <Route path="/game/:gameId" element={
                       <ProtectedRoute>
-                        <><AppHeader /><Game /></>
+                        <div className="app-content-with-nav"><AppHeader /><Game /></div>
                       </ProtectedRoute>
                     } />
                     <Route path="/analysis/:gameId?" element={
                       <ProtectedRoute>
-                        <><AppHeader /><Analysis /></>
+                        <div className="app-content-with-nav"><AppHeader /><Analysis /></div>
                       </ProtectedRoute>
                     } />
                     <Route path="/history" element={
                       <ProtectedRoute>
-                        <><AppHeader /><GameHistory /></>
+                        <div className="app-content-with-nav"><AppHeader /><GameHistory /></div>
                       </ProtectedRoute>
                     } />
                     <Route path="/settings" element={
                       <ProtectedRoute>
-                        <><AppHeader /><Settings /></>
+                        <div className="app-content-with-nav"><AppHeader /><Settings /></div>
                       </ProtectedRoute>
                     } />
-                    <Route path="/changelog" element={<><AppHeader /><Changelog /></>} />
+                    <Route path="/changelog" element={<div className="app-content-with-nav"><AppHeader /><Changelog /></div>} />
                   </Routes>
                 </div>
                 <FeedbackPanel />

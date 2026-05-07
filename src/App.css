@@ -79,6 +79,7 @@ html, body, #root {
   min-height: 100%;
   width: 100%;
   overflow-x: hidden;
+  background-color: #0d0e12;
 }
 
 html {
@@ -2155,6 +2156,6 @@ body {
 }
 
 /* App container padding for fixed bottom nav */
-.app {
+.app-content-with-nav {
   padding-bottom: calc(70px + env(safe-area-inset-bottom));
 }
