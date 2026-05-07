@@ -19,6 +19,16 @@ export function usePuter() {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const injectPuterScript = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    if (document.querySelector('script[src="https://js.puter.com/v2/"]')) return;
+
+    const script = document.createElement('script');
+    script.src = 'https://js.puter.com/v2/';
+    script.async = true;
+    document.head.appendChild(script);
+  }, []);
+
   useEffect(() => {
     // Only run in browser
     if (typeof window === 'undefined') {
@@ -59,7 +69,7 @@ export function usePuter() {
         checkPuter();
       }, 500);
 
-      // Timeout after 10 seconds
+      // Timeout after 15 seconds (give it more time since we might just have injected it)
       setTimeout(() => {
         if (mounted && !isReady) {
           setIsLoading(false);
@@ -67,7 +77,7 @@ export function usePuter() {
             clearInterval(checkInterval);
           }
         }
-      }, 10000);
+      }, 15000);
     }
 
     return () => {
@@ -76,22 +86,28 @@ export function usePuter() {
         clearInterval(checkInterval);
       }
     };
-  }, []);
+  }, [isReady]);
 
   /**
    * Chat with AI using Puter.js
    * @param {string} prompt - The prompt to send
    * @param {Object} options - Chat options
-   * @param {string} options.model - Model to use (default: 'gpt-5-nano')
+   * @param {string} options.model - Model to use (default: 'gpt-4o')
    * @param {boolean} options.stream - Whether to stream the response
    * @returns {Promise<string|AsyncIterable>} Response or stream
    */
   const chat = useCallback(async (prompt, options = {}) => {
-    if (!isReady || !window.puter?.ai?.chat) {
-      throw new Error('Puter.js AI not ready');
+    // If not ready, try to inject script and wait
+    if (!isReady) {
+      injectPuterScript();
+      // We can't wait here easily in a hook without refactoring
+      // For now, assume it will be called again or caller handles error
+      if (!window.puter?.ai?.chat) {
+        throw new Error('Puter.js AI not ready. Script has been injected, please try again in a moment.');
+      }
     }
 
-    const { model = 'gpt-5-nano', stream = false, ...otherOptions } = options;
+    const { model = 'gpt-4o', stream = false, ...otherOptions } = options;
 
     try {
       const response = await window.puter.ai.chat(prompt, {
@@ -111,13 +127,14 @@ export function usePuter() {
       console.error('Puter.ai.chat error:', err);
       throw err;
     }
-  }, [isReady]);
+  }, [isReady, injectPuterScript]);
 
   return {
     isReady,
     error,
     isLoading,
-    chat
+    chat,
+    injectPuterScript
   };
 }
 

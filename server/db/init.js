@@ -151,7 +151,7 @@ export async function initDatabase() {
     for (let attempt = 1; attempt <= 2; attempt += 1) {
       try {
         await runInit();
-        console.log('Database initialized successfully');
+        console.log('Database schema ensured');
         break;
       } catch (error) {
         if (isDuplicateTypeError(error) && attempt < 2) {
@@ -165,6 +165,21 @@ export async function initDatabase() {
   } catch (error) {
     console.error('Error initializing database:', error);
     throw error;
+  } finally {
+    if (shouldClosePool) {
+      await pool.end();
+    }
+  }
+}
+
+export async function checkDatabaseConnection() {
+  const pool = getPool();
+  try {
+    await pool.query('SELECT 1');
+    return true;
+  } catch (error) {
+    console.error('Database connection check failed:', error.message);
+    return false;
   } finally {
     if (shouldClosePool) {
       await pool.end();

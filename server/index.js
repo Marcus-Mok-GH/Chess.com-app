@@ -15,6 +15,7 @@ if (shouldLoadEnv) {
 }
 
 import { initDatabase, cleanupStaleMatchmakingEntries, cleanupOldActiveGames } from './db.js';
+import { checkDatabaseConnection } from './db/init.js';
 import { setDatabaseReady, isDatabaseReady, ensureDatabaseReady } from './db/status.js';
 import { errorResponse } from './middleware/errors.js';
 import { registerSocketHandlers } from './socket/index.js';
@@ -240,20 +241,31 @@ if (isServerless) {
 async function start() {
   if (hasDatabase) {
     try {
-      // Set a timeout for database initialization
-      console.log('[Server] Initializing database...');
+      // For performance on Vercel/Serverless, we only check the connection.
+      // Schema initialization (initDatabase) should be run via 'npm run db:setup'
+      // during deployment or manually.
+      console.log('[Server] Checking database connection...');
       const timeoutMs = isServerless ? 30000 : 15000;
-      await Promise.race([
-        initDatabase(),
+
+      const checkAction = isServerless ? checkDatabaseConnection : initDatabase;
+      const actionName = isServerless ? 'connection check' : 'initialization';
+
+      const ready = await Promise.race([
+        checkAction(),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error(`Database connection timeout after ${timeoutMs / 1000}s`)), timeoutMs)
+          setTimeout(() => reject(new Error(`Database ${actionName} timeout after ${timeoutMs / 1000}s`)), timeoutMs)
         )
       ]);
-      setDatabaseReady(true);
-      console.log('[Server] Database initialized successfully');
+
+      setDatabaseReady(ready);
+      if (ready) {
+        console.log(`[Server] Database ${actionName} successful`);
+      } else {
+        console.error(`[Server] Database ${actionName} failed`);
+      }
     } catch (error) {
       setDatabaseReady(false);
-      console.error('[Server] Database initialization failed:', error.message);
+      console.error('[Server] Database startup failed:', error.message);
       if (!isServerless) {
         process.exit(1);
       }

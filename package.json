@@ -1,6 +1,6 @@
 {
   "name": "react-javascript",
-  "version": "1.1.38",
+  "version": "1.1.39",
   "author": "",
   "description": "React Chess Application with Real-time Multiplayer",
   "keywords": [
@@ -36,7 +36,8 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:install": "playwright install --with-deps"
+    "test:e2e:install": "playwright install --with-deps",
+    "db:setup": "node server/db/setup.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
@@ -56,25 +57,12 @@
   },
   "type": "module",
   "dependencies": {
-    "@anthropic-ai/sandbox-runtime": "^0.0.34",
     "@neondatabase/serverless": "^1.0.2",
-    "@openai/codex": "^0.98.0",
-    "@openclaw/msteams": "^2026.2.9",
-    "@qodo/command": "^0.36.0",
-    "@qwen-code/qwen-code": "^0.10.0",
-    "@sourcegraph/amp": "^0.0.1770700009-g3c4c88",
     "@supabase/supabase-js": "^2.105.3",
-    "bcryptjs": "^3.0.3",
     "chess.js": "^1.4.0",
-    "claude-flow": "^3.1.0-alpha.3",
-    "codebuff": "^1.0.616",
     "cors": "^2.8.6",
     "dotenv": "^17.2.3",
     "express": "^4.22.1",
-    "forgecode": "^1.25.0",
-    "next": "^16.1.6",
-    "openclaw": "^2026.2.9",
-    "opencode-ai": "1.1.53",
     "pg": "^8.17.2",
     "playwright": "^1.58.1",
     "puter": "^1.0.0",
@@ -87,7 +75,6 @@
     "socket.io-client": "^4.8.3",
     "stockfish.js": "^10.0.2",
     "vercel": "^50.14.0",
-    "ws": "^8.19.0",
-    "yaml-language-server": "^1.19.2"
+    "ws": "^8.19.0"
   }
 }
