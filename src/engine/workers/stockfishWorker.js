@@ -9,6 +9,26 @@ function initEngine() {
   if (engine) return Promise.resolve(engine);
 
   return new Promise((resolve) => {
+    let settled = false;
+    const resolveOnce = (value) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+
+    // Prevent hanging forever when Stockfish cannot boot in some browser/worker environments
+    const initTimeout = setTimeout(() => {
+      if (!engineReady) {
+        console.error('Stockfish initialization timed out. Falling back to random moves.');
+        try {
+          engine?.terminate();
+        } catch (e) {
+          // Quiet fallback: if termination fails, continue with AI recovery path
+        }
+        engine = null;
+        resolveOnce(null);
+      }
+    }, 4000);
     // Load stockfish from public folder as a web worker
     const wasmSupported = typeof WebAssembly === 'object' &&
       WebAssembly.validate(Uint8Array.of(0x0, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00));
@@ -76,7 +96,8 @@ function initEngine() {
       if (!success) {
         console.error('All paths failed to load stockfish. Using fallback behavior.');
         // If all paths fail, we'll handle this gracefully in the findBestMove function
-        resolve(null);
+        clearTimeout(initTimeout);
+        resolveOnce(null);
         return;
       }
     }
@@ -87,7 +108,8 @@ function initEngine() {
       // Engine is ready
       if (line === 'uciok') {
         engineReady = true;
-        resolve(engine);
+        clearTimeout(initTimeout);
+        resolveOnce(engine);
         return;
       }
 
@@ -138,6 +160,14 @@ function initEngine() {
 
     engine.onerror = (err) => {
       console.error('Stockfish error:', err);
+      clearTimeout(initTimeout);
+      try {
+        engine?.terminate();
+      } catch (e) {
+        // Quiet fallback: if termination fails, continue with AI recovery path
+      }
+      engine = null;
+      resolveOnce(null);
     };
 
     // Initialize UCI protocol

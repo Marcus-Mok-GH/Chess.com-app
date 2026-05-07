@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.48 - 2026-05-07
+- Updated Stockfish worker fallback comments to clearer AI-themed wording while keeping the AI move-recovery behavior intact.
+
+## 1.1.47 - 2026-05-07
+- Fixed AI turn freezes by adding Stockfish worker initialization timeout/error fallback, so the bot now always responds with a legal move even if the engine fails to boot.
+
 ## 1.1.46 - 2026-05-07
 - Optimized the app header for mobile screens with tighter spacing, adaptive layout, and cleaner title/logout behavior on narrow devices.
 - Improved bottom navigation touch ergonomics with larger tap targets and safe-area-aware spacing for modern phones.
