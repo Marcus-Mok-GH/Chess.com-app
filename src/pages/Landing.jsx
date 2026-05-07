@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { LogoIcon } from '../components/ChessPieceIcon'
 import { useUser } from '../contexts/UserContext'
 import LoginModal from '../components/LoginModal'
 import './Landing.css'
@@ -30,27 +29,11 @@ const FloatingPiece = ({ type, color, style }) => {
   )
 }
 
-const floatingPiecesData = [
-  { type: 'K', color: 'w' },
-  { type: 'Q', color: 'w' },
-  { type: 'R', color: 'w' },
-  { type: 'B', color: 'w' },
-  { type: 'N', color: 'w' },
-  { type: 'P', color: 'w' },
-  { type: 'K', color: 'b' },
-  { type: 'Q', color: 'b' },
-  { type: 'R', color: 'b' },
-  { type: 'B', color: 'b' },
-  { type: 'N', color: 'b' },
-  { type: 'P', color: 'b' },
-]
-
 export default function Landing() {
   const navigate = useNavigate()
   const { isLoggedIn, isLoading, isOnline } = useUser()
   const [showLoginModal, setShowLoginModal] = useState(false)
 
-  // Redirect logged in users to home page (but wait for loading to complete)
   useEffect(() => {
     if (!isLoading && isLoggedIn) {
       navigate('/home', { replace: true })
@@ -58,9 +41,7 @@ export default function Landing() {
   }, [isLoggedIn, isLoading, navigate])
 
   const handlePlayOnline = () => {
-    if (!isOnline) {
-      return // Do nothing when offline
-    }
+    if (!isOnline) return
     if (!isLoggedIn) {
       setShowLoginModal(true)
     } else {
@@ -70,216 +51,123 @@ export default function Landing() {
 
   return (
     <div className="landing">
+      <div className="landing-bg">
+        <div className="landing-glow glow-1"></div>
+        <div className="landing-glow glow-2"></div>
+        <div className="landing-grid"></div>
+      </div>
+
       <div className="landing-hero">
-        <div className="floating-pieces">
-          {floatingPiecesData.map((piece, i) => (
-            <FloatingPiece 
-              key={i}
-              type={piece.type}
-              color={piece.color}
-              style={{
-                left: `${(i * 8) + 2}%`,
-                animationDelay: `${i * 0.5}s`,
-                animationDuration: `${6 + (i % 3) * 2}s`
-              }}
-            />
-          ))}
-        </div>
+        <div className="hero-wrapper">
+          <div className="hero-content">
+            <div className="hero-badge">
+              <span>New</span> Multi-engine Analysis Available
+            </div>
+            <h1 className="hero-title">Master the Art of Chess</h1>
+            <p className="hero-subtitle">
+              Experience the world's most sophisticated chess platform. Play against elite AI,
+              climb the global rankings, and analyze your games with professional tools.
+            </p>
 
-        <div className="hero-content">
-          <h1 className="hero-title">Play Chess Online</h1>
-          <p className="hero-subtitle">Challenge AI opponents of every skill level or battle players worldwide</p>
-          
-          <div className="hero-buttons">
-            <button 
-              className="play-button primary"
-              onClick={() => navigate('/play')}
-            >
-              <img src="/custom-pieces/bN.svg" alt="" className="btn-icon" />
-              Play vs Computer
-            </button>
-            <button 
-              className={`play-button secondary ${!isOnline ? 'disabled' : ''}`}
-              onClick={handlePlayOnline}
-              disabled={!isOnline}
-              title={!isOnline ? 'Online play unavailable while offline' : ''}
-            >
-              <span className="btn-icon-emoji">🌐</span>
-              {!isOnline ? 'Online (Offline)' : 'Play Online'}
-            </button>
+            <div className="hero-actions">
+              <button className="btn-premium primary" onClick={() => navigate('/play')}>
+                <span>Play vs Computer</span>
+                <span className="btn-arrow">→</span>
+              </button>
+              <button
+                className={`btn-premium secondary ${!isOnline ? 'disabled' : ''}`}
+                onClick={handlePlayOnline}
+                disabled={!isOnline}
+              >
+                <span>Play Online</span>
+                <span className="btn-icon">🌐</span>
+              </button>
+            </div>
           </div>
-        </div>
 
-        <div className="hero-image">
-          <div className="chess-preview">
-            <div className="preview-board">
-              {[...Array(8)].map((_, row) => (
-                <div key={row} className="preview-row">
-                  {[...Array(8)].map((_, col) => (
-                    <div 
-                      key={col} 
-                      className={`preview-square ${(row + col) % 2 === 0 ? 'light' : 'dark'}`}
-                    />
-                  ))}
+          <div className="hero-visual">
+            <div className="chess-card-container">
+              <div className="chess-card-bg"></div>
+              <div className="chess-card-main">
+                <div className="preview-board">
+                  {[...Array(64)].map((_, i) => {
+                    const row = Math.floor(i / 8);
+                    const col = i % 8;
+                    const isLight = (row + col) % 2 === 0;
+                    return (
+                      <div key={i} className={`preview-square ${isLight ? 'light' : 'dark'}`}></div>
+                    );
+                  })}
                 </div>
-              ))}
+              </div>
+              <div className="floating-pieces-container">
+                <FloatingPiece type="K" color="w" style={{ top: '10%', left: '15%', animationDelay: '0s' }} />
+                <FloatingPiece type="Q" color="b" style={{ bottom: '20%', right: '10%', animationDelay: '1s' }} />
+                <FloatingPiece type="N" color="w" style={{ top: '60%', left: '5%', animationDelay: '2s' }} />
+                <FloatingPiece type="B" color="b" style={{ top: '5%', right: '20%', animationDelay: '0.5s' }} />
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="stats-section">
-        <div className="stats-content">
-          <div className="stat-item">
-            <span className="stat-number">10,000+</span>
+      <section className="stats-section">
+        <div className="stats-grid">
+          <div className="stat-card">
+            <span className="stat-number">10K+</span>
             <span className="stat-label">Active Players</span>
           </div>
-          <div className="stat-item">
-            <span className="stat-number">100+</span>
-            <span className="stat-label">ELO Levels</span>
+          <div className="stat-card">
+            <span className="stat-number">150+</span>
+            <span className="stat-label">AI Personalities</span>
           </div>
-          <div className="stat-item">
-            <span className="stat-number">&lt;3s</span>
-            <span className="stat-label">Instant Matchmaking</span>
+          <div className="stat-card">
+            <span className="stat-number">99.9%</span>
+            <span className="stat-label">Uptime</span>
           </div>
-          <div className="stat-item">
+          <div className="stat-card">
             <span className="stat-number">24/7</span>
-            <span className="stat-label">Always Available</span>
+            <span className="stat-label">Expert Support</span>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="features-section">
-        <h2 className="section-title">Why Players Love Us</h2>
-        <div className="features-content">
+      <section className="features-section">
+        <div className="section-header">
+          <h2>Everything You Need to Win</h2>
+          <p>Powerful features for players of all skill levels.</p>
+        </div>
+        <div className="features-grid">
           <div className="feature-card">
-            <div className="feature-icon">🤖</div>
-            <h3>Play Against Bots</h3>
-            <p>Choose from multiple AI opponents with different personalities and skill levels</p>
+            <span className="feature-icon">🤖</span>
+            <h3>Next-Gen AI</h3>
+            <p>Challenge bots ranging from beginners to Grandmasters, powered by Stockfish 16.</p>
           </div>
-          
           <div className="feature-card">
-            <div className="feature-icon">📊</div>
-            <h3>Track Your Moves</h3>
-            <p>Review complete game history with detailed move notation</p>
+            <span className="feature-icon">📊</span>
+            <h3>Deep Analysis</h3>
+            <p>Understand every mistake and brilliant move with our advanced game review system.</p>
           </div>
-          
           <div className="feature-card">
-            <div className="feature-icon">⚡</div>
-            <h3>Powered by Stockfish</h3>
-            <p>World-class chess engine providing challenging gameplay</p>
+            <span className="feature-icon">⚡</span>
+            <h3>Instant Play</h3>
+            <p>Jump into a game in seconds with our lightning-fast matchmaking system.</p>
           </div>
         </div>
-      </div>
-
-      <div className="how-it-works-section">
-        <h2 className="section-title">How It Works</h2>
-        <div className="steps-content">
-          <div className="step-item">
-            <div className="step-number">1</div>
-            <div className="step-icon">🎯</div>
-            <h3>Choose Your Mode</h3>
-            <p>Play against AI bots or challenge real players online</p>
-          </div>
-          <div className="step-arrow">→</div>
-          <div className="step-item">
-            <div className="step-number">2</div>
-            <div className="step-icon-img">
-              <img src="/custom-pieces/bP.svg" alt="" />
-            </div>
-            <h3>Play Your Game</h3>
-            <p>Enjoy smooth gameplay with intuitive controls</p>
-          </div>
-          <div className="step-arrow">→</div>
-          <div className="step-item">
-            <div className="step-number">3</div>
-            <div className="step-icon">📈</div>
-            <h3>Improve & Grow</h3>
-            <p>Learn from each game and climb the ranks</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="why-choose-section">
-        <h2 className="section-title">Why Choose Us</h2>
-        <div className="benefits-grid">
-          <div className="benefit-item">
-            <span className="benefit-icon">💰</span>
-            <div className="benefit-text">
-              <h4>100% Free</h4>
-              <p>No hidden fees or premium locks</p>
-            </div>
-          </div>
-          <div className="benefit-item">
-            <span className="benefit-icon">🚀</span>
-            <div className="benefit-text">
-              <h4>No Account Needed</h4>
-              <p>Jump straight into playing</p>
-            </div>
-          </div>
-          <div className="benefit-item">
-            <span className="benefit-icon">🎮</span>
-            <div className="benefit-text">
-              <h4>Multiple Game Modes</h4>
-              <p>AI, online, and more coming</p>
-            </div>
-          </div>
-          <div className="benefit-item">
-            <span className="benefit-icon">⚡</span>
-            <div className="benefit-text">
-              <h4>Instant Play</h4>
-              <p>Start a game in seconds</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="testimonials-section">
-        <h2 className="section-title">Words of Wisdom</h2>
-        <div className="testimonials-content">
-          <div className="testimonial-card">
-            <p className="quote">"Chess is the gymnasium of the mind."</p>
-            <span className="author">— Blaise Pascal</span>
-          </div>
-          <div className="testimonial-card">
-            <p className="quote">"Every chess master was once a beginner."</p>
-            <span className="author">— Irving Chernev</span>
-          </div>
-          <div className="testimonial-card">
-            <p className="quote">"Chess is life in miniature."</p>
-            <span className="author">— Garry Kasparov</span>
-          </div>
-        </div>
-      </div>
+      </section>
 
       <footer className="landing-footer">
         <div className="footer-content">
-          <div className="footer-brand">
-            <span className="logo">
-              <LogoIcon size={24} /> Chess
-            </span>
-            <p>Play, Learn, Master</p>
-          </div>
+          <div className="footer-logo">♟️ ChessPremium</div>
           <div className="footer-links">
-            <div className="footer-column">
-              <h4>Play</h4>
-              <Link to="/play">vs Computer</Link>
-              <Link to="/online">Online</Link>
-            </div>
-            <div className="footer-column">
-              <h4>Learn</h4>
-              <a href="#">Tutorials</a>
-              <a href="#">Openings</a>
-            </div>
-            <div className="footer-column">
-              <h4>Community</h4>
-              <a href="#">Discord</a>
-              <a href="#">Forums</a>
-            </div>
+            <Link to="/play">Play</Link>
+            <Link to="/online">Online</Link>
+            <Link to="/changelog">Updates</Link>
+            <a href="#">Privacy</a>
           </div>
         </div>
         <div className="footer-bottom">
-          <p>© 2024 Chess. Made with ♥ for chess lovers everywhere.</p>
+          <p>© 2024 ChessPremium. Built for the modern grandmaster.</p>
         </div>
       </footer>
 

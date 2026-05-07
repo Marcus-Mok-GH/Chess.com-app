@@ -94,34 +94,94 @@ export default function Login() {
     })();
   }, [completeMagicLinkSignIn, email, navigate, searchParams, username]);
 
-  if (isLoading) return <div className="login-page"><div className="login-container"><div className="login-loading"><div className="spinner"></div><p>Loading...</p></div></div></div>;
-
   return (
     <div className="login-page">
-      <div className="login-container">
+      <div className="login-bg-glow"></div>
+      <div className="login-grid-overlay"></div>
+
+      <div className="login-card">
+        {isLoading && (
+          <div className="login-loading-overlay">
+            <div className="login-spinner"></div>
+            <p>Authenticating...</p>
+          </div>
+        )}
+
         <div className="login-header">
-          <h1>♟️ Chess</h1>
-          <p>Sign in with an email magic link</p>
+          <span className="login-logo">♟️</span>
+          <h1>Welcome Back</h1>
+          <p>The ultimate chess experience awaits you.</p>
         </div>
 
         <form onSubmit={(e) => e.preventDefault()} className="login-form">
-          <div className="form-group">
-            <label htmlFor="username">Username</label>
-            <input id="username" type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Choose a username" maxLength={20} disabled={isRequestingLink} autoFocus />
-          </div>
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" disabled={isRequestingLink} />
-            <small>We will email a secure magic link. Click it to automatically sign in and continue.</small>
+          <div className="form-field">
+            <label htmlFor="username">
+              <span>Username</span>
+            </label>
+            <input
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter your username"
+              maxLength={20}
+              disabled={isRequestingLink || isLoading}
+              autoFocus
+            />
           </div>
 
-          {error && <div className="error-message">{error}</div>}
-          {!error && status && <div className="success-message">✅ {status}</div>}
+          <div className="form-field">
+            <label htmlFor="email">
+              <span>Email Address</span>
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              disabled={isRequestingLink || isLoading}
+            />
+            <small>We'll send a magic link to your inbox for a passwordless login.</small>
+          </div>
 
-          <button type="button" className="login-btn" disabled={isRequestingLink || !email.trim() || !username.trim()} onClick={handleRequestMagicLink}>
-            {isRequestingLink ? 'Sending link...' : 'Send Magic Link'}
+          {error && (
+            <div className="login-status error">
+              <span>⚠️</span>
+              {error}
+            </div>
+          )}
+
+          {!error && status && (
+            <div className="login-status success">
+              <span>✅</span>
+              {status}
+            </div>
+          )}
+
+          <button
+            type="button"
+            className="login-button"
+            disabled={isRequestingLink || isLoading || !email.trim() || !username.trim()}
+            onClick={handleRequestMagicLink}
+          >
+            {isRequestingLink ? (
+              <>
+                <div className="login-spinner" style={{ width: '20px', height: '20px', borderThickness: '2px', margin: 0 }}></div>
+                <span>Sending...</span>
+              </>
+            ) : (
+              <>
+                <span>Send Magic Link</span>
+                <span className="btn-arrow">→</span>
+              </>
+            )}
           </button>
         </form>
+
+        <div className="login-footer">
+          <p>Don't have an account? <a href="#" onClick={(e) => { e.preventDefault(); setStatus('Just enter a new username and email to sign up!'); }}>Sign up now</a></p>
+        </div>
       </div>
     </div>
   );
