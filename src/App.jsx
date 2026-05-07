@@ -6,6 +6,8 @@ import { FeedbackPanel } from './components/FeedbackPanel'
 import ErrorBoundary from './components/ErrorBoundary'
 import UserBadge from './components/UserBadge'
 import GuestBlocked from './components/GuestBlocked'
+import { usePuter } from './hooks/usePuter'
+import { Analytics } from '@vercel/analytics/react'
 import './App.css'
 
 const Home = lazy(() => import('./pages/Home'))
@@ -220,6 +222,7 @@ export default function App() {
           </SettingsProvider>
         </UserProvider>
       </ErrorBoundary>
+      <Analytics />
     </>
   )
 }
