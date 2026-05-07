@@ -19,6 +19,7 @@ const GameHistory = lazy(() => import('./pages/GameHistory'))
 const Game = lazy(() => import('./pages/Game'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Changelog = lazy(() => import('./pages/Changelog'))
+const Landing = lazy(() => import('./pages/Landing'))
 
 function getTitle(path) {
   if (path.startsWith('/online/') || path.startsWith('/game/')) return 'Online Play'
@@ -179,7 +180,7 @@ export default function App() {
               <Suspense fallback={<RouteFallback />}>
                 <div className="app">
                   <Routes>
-                    <Route path="/" element={<Navigate to="/login" replace />} />
+                    <Route path="/" element={<Landing />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/home" element={
                       <ProtectedRoute>
