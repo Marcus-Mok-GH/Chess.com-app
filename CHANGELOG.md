@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.41 - 2026-05-07
+- Removed `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` fallbacks so Supabase auth now reads only Vite env variables (`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`).
+
 ## 1.1.40 - 2026-05-07
 - Optimized the mobile header so navigation wraps cleanly and can be horizontally scrolled instead of clipping on smaller phones.
 - Improved compact-screen in-game layout by making sidebar panels stack full width to reduce cramped two-column cards.
