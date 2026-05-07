@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.1.42 - 2026-05-07
+- Added global favicon link coverage so the chess icon appears consistently across app routes (including `/login`) and auxiliary static test pages.
+
+## 1.1.41 - 2026-05-07
+- Removed `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` fallbacks so Supabase auth now reads only Vite env variables (`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`).
+
+## 1.1.40 - 2026-05-07
+- Optimized the mobile header so navigation wraps cleanly and can be horizontally scrolled instead of clipping on smaller phones.
+- Improved compact-screen in-game layout by making sidebar panels stack full width to reduce cramped two-column cards.
+
+## 1.1.38 - 2026-05-06
+- Fixed Supabase magic-link sign-in callback handling so login succeeds even when the redirect omits `username`/`email` query params by caching pending magic-link context locally.
+- Updated magic-link redirect URL to a stable `/login?type=magiclink` callback and clear URL hash tokens after successful callback processing.
+
+## 1.1.37 - 2026-05-06
+- Fixed magic-link login callback handling for implicit-flow redirects containing `#access_token` + `refresh_token` by persisting the returned session before app login.
+- Kept token-hash verification path for query callbacks and continued accepting both `type=magiclink` and `type=email` callback variants.
+- Reduced `/login` auth loop risk by completing sign-in from either callback format used by Supabase email links.
+
+## 1.1.36 - 2026-05-06
+- Fixed magic-link callback completion when Supabase returns `type=email` by treating both `magiclink` and `email` callback types as valid auth returns.
+- Normalized callback verification payloads to use Supabase-compatible `type=email` for magic-link verification requests.
+- Added regression coverage for query callbacks that arrive with `type=email` to prevent `/login` loops after clicking emailed links.
+
 ## 1.1.35 - 2026-05-06
 - Fixed magic-link callback reliability so `/login` now completes sign-in when Supabase returns hash-based `access_token` callbacks as well as query token variants.
 - Added authenticated-user auto-redirect on `/login` to guarantee post-auth navigation lands on `/home` instead of remaining on the login screen.

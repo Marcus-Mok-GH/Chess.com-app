@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.42 - 2026-05-07
+- Added global favicon link coverage so the chess icon appears consistently across app routes (including `/login`) and auxiliary static test pages.
+
 ## 1.1.41 - 2026-05-07
 - Removed `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` fallbacks so Supabase auth now reads only Vite env variables (`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`).
 
