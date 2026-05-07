@@ -134,9 +134,6 @@ function PuterCheck() {
   return null;
 }
 
-  return null;
-}
-
 function ProtectedRoute({ children, guestRedirect }) {
   const { isLoggedIn, isLoading } = useUser();
 
