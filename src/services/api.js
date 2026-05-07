@@ -94,6 +94,10 @@ class ApiService {
   }
 
   // Health check
+  async getPublicStats() {
+    return this.request('/stats/public');
+  }
+
   async healthCheck() {
     try {
       // Health endpoint is at root level, proxied through Vite

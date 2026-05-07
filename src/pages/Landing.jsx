@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, memo } from 'react'
+import { api } from '../services/api'
 import { useNavigate, Link } from 'react-router-dom'
 import { useUser } from '../contexts/UserContext'
 import LoginModal from '../components/LoginModal'
@@ -34,6 +35,13 @@ export default function Landing() {
   const navigate = useNavigate()
   const { isLoggedIn, isLoading, isOnline } = useUser()
   const [showLoginModal, setShowLoginModal] = useState(false)
+  const [stats, setStats] = useState({
+    registeredPlayers: 0,
+    gamesRecorded: 0,
+    liveGames: 0,
+    livePlayers: 0,
+    serverUptimeSeconds: 0,
+  })
 
   useEffect(() => {
     if (!isLoading && isLoggedIn) {
@@ -41,6 +49,35 @@ export default function Landing() {
     }
   }, [isLoggedIn, isLoading, navigate])
 
+
+  useEffect(() => {
+    let mounted = true
+
+    const loadStats = async () => {
+      try {
+        const data = await api.getPublicStats()
+        if (mounted) setStats(data)
+      } catch (error) {
+        console.warn('[Landing] Failed to load live stats:', error.message)
+      }
+    }
+
+    loadStats()
+    const intervalId = setInterval(loadStats, 30000)
+
+    return () => {
+      mounted = false
+      clearInterval(intervalId)
+    }
+  }, [])
+
+  const uptimeLabel = useMemo(() => {
+    const hours = Math.floor((stats.serverUptimeSeconds || 0) / 3600)
+    if (hours < 1) return 'Under 1h'
+    if (hours < 24) return `${hours}h`
+    const days = Math.floor(hours / 24)
+    return `${days}d ${hours % 24}h`
+  }, [stats.serverUptimeSeconds])
   const handlePlayOnline = () => {
     if (!isOnline) return
     if (!isLoggedIn) {
@@ -115,20 +152,20 @@ export default function Landing() {
       <section className="stats-section">
         <div className="stats-grid">
           <div className="stat-card">
-            <span className="stat-number">10K+</span>
-            <span className="stat-label">Active Players</span>
+            <span className="stat-number">{stats.livePlayers.toLocaleString()}</span>
+            <span className="stat-label">Players Online Now</span>
           </div>
           <div className="stat-card">
-            <span className="stat-number">150+</span>
-            <span className="stat-label">AI Personalities</span>
+            <span className="stat-number">{stats.registeredPlayers.toLocaleString()}</span>
+            <span className="stat-label">Registered Players</span>
           </div>
           <div className="stat-card">
-            <span className="stat-number">99.9%</span>
-            <span className="stat-label">Uptime</span>
+            <span className="stat-number">{stats.gamesRecorded.toLocaleString()}</span>
+            <span className="stat-label">Games Recorded</span>
           </div>
           <div className="stat-card">
-            <span className="stat-number">24/7</span>
-            <span className="stat-label">Expert Support</span>
+            <span className="stat-number">{uptimeLabel}</span>
+            <span className="stat-label">Server Uptime</span>
           </div>
         </div>
       </section>
