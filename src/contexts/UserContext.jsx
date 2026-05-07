@@ -277,18 +277,22 @@ export function UserProvider({ children }) {
       }
     })();
 
-    const resolvedUsername = username?.trim() || pendingMagicLink?.username?.trim() || '';
+    let resolvedUsername = username?.trim() || pendingMagicLink?.username?.trim() || '';
     const resolvedEmail = email?.trim() || pendingMagicLink?.email?.trim() || '';
 
-    if (!resolvedUsername) {
+    if (!resolvedUsername && !code && !tokenHash && !token && !accessToken) {
       return { error: 'Missing username context for magic link. Please request a new link from this browser.' };
     }
 
     try {
       // 1. Handle different auth callback scenarios
       if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) throw error;
+        // Recover username from metadata if missing
+        if (!resolvedUsername && data.user?.user_metadata?.username) {
+          resolvedUsername = data.user.user_metadata.username;
+        }
       } else if (accessToken && refreshToken) {
         const { error } = await supabase.auth.setSession({
           access_token: accessToken,
@@ -296,19 +300,25 @@ export function UserProvider({ children }) {
         });
         if (error) throw error;
       } else if (tokenHash) {
-        const { error } = await supabase.auth.verifyOtp({
+        const { data, error } = await supabase.auth.verifyOtp({
           email: resolvedEmail || undefined,
           token_hash: tokenHash,
           type: type === 'magiclink' ? 'magiclink' : type,
         });
         if (error) throw error;
+        if (!resolvedUsername && data.user?.user_metadata?.username) {
+          resolvedUsername = data.user.user_metadata.username;
+        }
       } else if (token) {
-        const { error } = await supabase.auth.verifyOtp({
+        const { data, error } = await supabase.auth.verifyOtp({
           email: resolvedEmail || undefined,
           token: token,
           type: type === 'magiclink' ? 'magiclink' : type,
         });
         if (error) throw error;
+        if (!resolvedUsername && data.user?.user_metadata?.username) {
+          resolvedUsername = data.user.user_metadata.username;
+        }
       } else {
         // Check if we already have a session (e.g. library handled it automatically)
         const { data: { session } } = await supabase.auth.getSession();
@@ -318,6 +328,15 @@ export function UserProvider({ children }) {
       }
 
       // 2. Sync with backend
+      if (!resolvedUsername) {
+        const { data: { session } } = await supabase.auth.getSession();
+        resolvedUsername = session?.user?.user_metadata?.username;
+      }
+
+      if (!resolvedUsername) {
+        return { error: 'Could not resolve username from magic link. Please request a new link.' };
+      }
+
       localStorage.removeItem(PENDING_MAGIC_LINK_KEY);
       return await login({ username: resolvedUsername });
     } catch (error) {
