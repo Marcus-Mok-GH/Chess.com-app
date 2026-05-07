@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.50 - 2026-05-07
+- Removed `NEXT_PUBLIC_*` API/socket URL fallbacks from client networking so runtime endpoints are resolved exclusively from Vite environment variables.
+
+## 1.1.49 - 2026-05-07
+- Fixed login/API network failures caused by protocol-less API host values by deriving the request protocol from the active browser origin before appending `/api`.
+
 ## 1.1.48 - 2026-05-07
 - Updated Stockfish worker fallback comments to clearer AI-themed wording while keeping the AI move-recovery behavior intact.
 
