@@ -50,44 +50,43 @@ export default function Login() {
   }, [isLoading, isLoggedIn, navigate]);
 
   useEffect(() => {
+    const code = searchParams.get('code');
     const token = searchParams.get('token');
     const tokenHash = searchParams.get('token_hash');
     const magicType = searchParams.get('type') || 'magiclink';
 
     let hashToken = null;
     let hashRefreshToken = null;
-    let hashExpiresAt = null;
-    let hashTokenType = null;
     let hashType = null;
+
     if (window.location.hash.startsWith('#')) {
       const hashParams = new URLSearchParams(window.location.hash.slice(1));
       hashToken = hashParams.get('token') || hashParams.get('access_token');
       hashRefreshToken = hashParams.get('refresh_token');
-      hashExpiresAt = hashParams.get('expires_at');
-      hashTokenType = hashParams.get('token_type');
       hashType = hashParams.get('type');
     }
 
-    const callbackToken = token || tokenHash || hashToken;
+    const hasCallbackParams = code || token || tokenHash || hashToken;
+    if (!hasCallbackParams) return;
+
     const callbackType = hashType || magicType;
-    const normalizedType = callbackType === 'magiclink' ? 'email' : callbackType;
-    const isMagicLinkCallback = ['magiclink', 'email'].includes(callbackType);
-    if (!callbackToken || !isMagicLinkCallback) return;
+    const normalizedType = (callbackType === 'magiclink' || callbackType === 'email') ? 'magiclink' : callbackType;
 
     (async () => {
       const result = await completeMagicLinkSignIn({
         username: searchParams.get('username') || username,
         email: searchParams.get('email') || email,
-        token: token || hashToken || undefined,
+        token: token || undefined,
         tokenHash: tokenHash || undefined,
         accessToken: hashToken || undefined,
         refreshToken: hashRefreshToken || undefined,
-        expiresAt: hashExpiresAt ? Number(hashExpiresAt) : undefined,
-        tokenType: hashTokenType || undefined,
         type: normalizedType,
+        code: code || undefined,
       });
+
       if (result?.success) {
-        window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+        // Clear URL parameters after successful login
+        window.history.replaceState({}, document.title, window.location.pathname);
         navigate('/home', { replace: true });
       } else {
         setError(result?.error || 'Magic link sign in failed. Request a new link.');

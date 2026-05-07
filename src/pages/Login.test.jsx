@@ -65,7 +65,7 @@ describe('Login magic-link callback routing', () => {
     );
 
     await waitFor(() => expect(completeMagicLinkSignIn).toHaveBeenCalled());
-    expect(completeMagicLinkSignIn).toHaveBeenCalledWith(expect.objectContaining({ type: 'email' }));
+    expect(completeMagicLinkSignIn).toHaveBeenCalledWith(expect.objectContaining({ type: 'magiclink' }));
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/home', { replace: true }));
   });
 
