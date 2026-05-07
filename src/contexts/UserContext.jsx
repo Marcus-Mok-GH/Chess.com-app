@@ -40,7 +40,7 @@ export function UserProvider({ children }) {
     };
   }, []);
 
-  // Load user session on mount
+  // Load user session on mount and handle auth state changes
   useEffect(() => {
     let isMounted = true;
 
@@ -48,7 +48,7 @@ export function UserProvider({ children }) {
       let sessionUser = null;
       let sessionUsername = '';
 
-      // Restore local session immediately so the app can render without waiting on network I/O.
+      // 1. Restore local session immediately for UI responsiveness
       try {
         const sessionUserRaw = localStorage.getItem(SESSION_USER_DATA_KEY);
         if (sessionUserRaw) {
@@ -63,7 +63,6 @@ export function UserProvider({ children }) {
             localStorage.removeItem(SESSION_USER_DATA_KEY);
           }
         }
-
         sessionUsername = sessionUser?.username || localStorage.getItem(SESSION_USER_KEY) || '';
       } catch (e) {
         console.error('🔴 SESSION LOAD ERROR:', e.message);
@@ -73,31 +72,34 @@ export function UserProvider({ children }) {
         }
       }
 
-      // Validate auth state and refresh user data in the background.
+      // 2. Validate with Supabase and sync with server
       try {
-        const { data } = await supabase.auth.getSession();
-        if (!data.session) {
-          localStorage.removeItem(SESSION_USER_KEY);
-          localStorage.removeItem(SESSION_USER_DATA_KEY);
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session) {
+          console.log('[UserContext] No Supabase session found');
           if (isMounted) {
             setUser(null);
+            localStorage.removeItem(SESSION_USER_KEY);
+            localStorage.removeItem(SESSION_USER_DATA_KEY);
           }
           return;
         }
-      } catch (error) {
-        console.warn('[UserContext] Supabase session check failed:', error?.message);
-      }
 
-      if (!sessionUsername || !isMounted) {
-        return;
-      }
+        // If we have a session but no username yet, try to get it from session metadata
+        if (!sessionUsername && session.user?.user_metadata?.username) {
+          sessionUsername = session.user.user_metadata.username;
+        }
 
-      console.log('[UserContext] Found session for:', sessionUsername);
-      try {
-        const serverUser = await api.getUser(sessionUsername);
-        if (!isMounted) {
+        if (!sessionUsername) {
+          console.warn('[UserContext] Supabase session exists but no username found');
           return;
         }
+
+        console.log('[UserContext] Found session for:', sessionUsername);
+        const serverUser = await api.getUser(sessionUsername);
+
+        if (!isMounted) return;
 
         const userData = {
           id: serverUser.id,
@@ -113,30 +115,57 @@ export function UserProvider({ children }) {
         persistUser(userData);
         console.log('✅ SESSION RESTORED (server):', userData.username);
       } catch (error) {
+        if (!isMounted) return;
         console.error('🔴 SESSION RESTORE FAILED:', error.message);
-        const isConnectionIssue = error.message.includes('Connection Failed') ||
-          error.message.includes('Failed to fetch') ||
-          error.message.includes('Network');
-        const isNotFound = error.message.includes('User not found') ||
-          error.message.includes('HTTP error 404');
 
+        const isNotFound = error.message.includes('User not found') || error.message.includes('404');
         if (isNotFound) {
-          console.warn('[UserContext] Clearing invalid session');
+          setUser(null);
           localStorage.removeItem(SESSION_USER_KEY);
           localStorage.removeItem(SESSION_USER_DATA_KEY);
-          if (isMounted) {
-            setUser(null);
-          }
-        } else if (!isConnectionIssue) {
-          console.warn('[UserContext] Keeping cached session after restore error');
+          await supabase.auth.signOut();
         }
       }
     }
 
     init();
 
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log(`[UserContext] Auth event: ${event}`);
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        localStorage.removeItem(SESSION_USER_KEY);
+        localStorage.removeItem(SESSION_USER_DATA_KEY);
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        if (session && !user) {
+          const username = session.user?.user_metadata?.username;
+          if (username) {
+            try {
+              const serverUser = await api.getUser(username);
+              const userData = {
+                id: serverUser.id,
+                username: serverUser.username,
+                elo: serverUser.elo,
+                gamesPlayed: serverUser.gamesPlayed,
+                wins: serverUser.wins,
+                losses: serverUser.losses,
+                draws: serverUser.draws,
+                createdAt: serverUser.createdAt,
+              };
+              setUser(userData);
+              persistUser(userData);
+            } catch (err) {
+              console.error('[UserContext] Failed to fetch user after sign-in event', err);
+            }
+          }
+        }
+      }
+    });
+
     return () => {
       isMounted = false;
+      subscription.unsubscribe();
     };
   }, [persistUser]);
 
@@ -237,7 +266,7 @@ export function UserProvider({ children }) {
 
 
 
-  const completeMagicLinkSignIn = useCallback(async ({ email, username, token, tokenHash, accessToken, refreshToken, expiresAt, tokenType, type = 'magiclink' }) => {
+  const completeMagicLinkSignIn = useCallback(async ({ email, username, token, tokenHash, accessToken, refreshToken, type = 'magiclink', code }) => {
     const pendingMagicLink = (() => {
       try {
         const raw = localStorage.getItem(PENDING_MAGIC_LINK_KEY);
@@ -256,33 +285,43 @@ export function UserProvider({ children }) {
     }
 
     try {
-      if (accessToken && refreshToken) {
-        const sessionResult = await supabase.auth.setSession({
-          accessToken,
-          refreshToken,
-          expiresAt,
-          tokenType,
+      // 1. Handle different auth callback scenarios
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) throw error;
+      } else if (accessToken && refreshToken) {
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
         });
-        if (sessionResult.error) throw sessionResult.error;
-        localStorage.removeItem(PENDING_MAGIC_LINK_KEY);
-        return await login({ username: resolvedUsername });
+        if (error) throw error;
+      } else if (tokenHash) {
+        const { error } = await supabase.auth.verifyOtp({
+          email: resolvedEmail || undefined,
+          token_hash: tokenHash,
+          type: type === 'magiclink' ? 'magiclink' : type,
+        });
+        if (error) throw error;
+      } else if (token) {
+        const { error } = await supabase.auth.verifyOtp({
+          email: resolvedEmail || undefined,
+          token: token,
+          type: type === 'magiclink' ? 'magiclink' : type,
+        });
+        if (error) throw error;
+      } else {
+        // Check if we already have a session (e.g. library handled it automatically)
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          return { error: 'Missing magic-link token or session. Please request a new link.' };
+        }
       }
 
-      if (!token && !tokenHash) {
-        return { error: 'Missing magic-link token. Please request a new link.' };
-      }
-
-      const verifyResult = await supabase.auth.verifyOtp({
-        email: resolvedEmail || undefined,
-        token: token || undefined,
-        tokenHash: tokenHash || undefined,
-        type,
-      });
-
-      if (verifyResult.error) throw verifyResult.error;
+      // 2. Sync with backend
       localStorage.removeItem(PENDING_MAGIC_LINK_KEY);
       return await login({ username: resolvedUsername });
     } catch (error) {
+      console.error('[UserContext] completeMagicLinkSignIn error:', error);
       return { error: error.message || 'Magic link is invalid or expired. Request a new link.' };
     }
   }, [login]);
