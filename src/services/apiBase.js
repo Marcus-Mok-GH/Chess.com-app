@@ -13,7 +13,10 @@ export const normalizeApiBaseUrl = (rawBaseUrl) => {
   const hasProtocol = /^[a-z][a-z0-9+.-]*:\/\//i.test(base)
   if (!hasProtocol && !base.startsWith('/')) {
     const looksLocal = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?(\/|$)/i.test(base)
-    const protocol = looksLocal ? 'http://' : 'https://'
+    const browserProtocol = typeof window !== 'undefined' && window.location?.protocol
+      ? `${window.location.protocol}//`
+      : null
+    const protocol = looksLocal ? 'http://' : (browserProtocol || 'https://')
     base = `${protocol}${base}`
   }
 
@@ -23,7 +26,7 @@ export const normalizeApiBaseUrl = (rawBaseUrl) => {
   return `${base.replace(/\/$/, '')}/api`
 }
 
-const clientApiUrl = import.meta.env.VITE_API_URL || import.meta.env.NEXT_PUBLIC_API_URL;
+const clientApiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_SERVER_URL;
 
 export const API_BASE_URL = normalizeApiBaseUrl(clientApiUrl)
 

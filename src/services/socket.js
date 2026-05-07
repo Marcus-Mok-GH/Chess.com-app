@@ -9,7 +9,7 @@ function resolveSocketConfig() {
   const isViteDev = import.meta.env?.DEV;
 
   const urlEnv = isBrowser
-    ? (import.meta.env.VITE_SOCKET_URL || import.meta.env.NEXT_PUBLIC_SOCKET_URL || import.meta.env.VITE_SERVER_URL || import.meta.env.NEXT_PUBLIC_API_URL)
+    ? (import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_SERVER_URL || import.meta.env.VITE_API_URL)
     : (process.env?.VITE_SOCKET_URL || process.env?.VITE_SERVER_URL);
 
   const pathEnv = isBrowser
