@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.53 - 2026-05-08
+- Removed Stockfish move fallback behavior so bot turns now require a successfully initialized engine and report explicit worker errors when initialization/search fails.
+
+## 1.1.52 - 2026-05-08
+- Improved Stockfish bot reliability by simplifying worker engine path resolution, extending engine startup timeout, and prioritizing consistent UCI initialization before selecting moves.
+- Reduced unintended weak-bot behavior at high ratings by avoiding unnecessary initialization failures that previously triggered fallback legal/random move selection.
+
 ## 1.1.51 - 2026-05-07
 - Fixed login "Load failed" error in Safari by removing hardcoded `localhost` fallbacks in `vite.config.js` and normalizing API base URLs to use relative paths in production.
 - Enhanced Supabase client initialization to handle missing environment variables with descriptive error messages instead of generic network failures.
