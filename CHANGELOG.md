@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.55 - 2026-05-08
+- Refined README.md for a technical audience, adding deep architecture details and environment configuration.
+- Removed public-facing installation steps and local screenshot references from README.md.
+
+## 1.1.54 - 2026-05-08
+- Updated README.md with comprehensive project-specific information, features, tech stack, and setup instructions.
+- Removed generic Replit boilerplate from README.md.
+
 ## 1.1.53 - 2026-05-08
 - Removed Stockfish move fallback behavior so bot turns now require a successfully initialized engine and report explicit worker errors when initialization/search fails.
 

@@ -1,5 +1,52 @@
 # Changelog
 
+## 1.1.55 - 2026-05-08
+- Refined README.md for a technical audience, adding deep architecture details and environment configuration.
+- Removed public-facing installation steps and local screenshot references from README.md.
+
+## 1.1.54 - 2026-05-08
+- Updated README.md with comprehensive project-specific information, features, tech stack, and setup instructions.
+- Removed generic Replit boilerplate from README.md.
+
+## 1.1.53 - 2026-05-08
+- Removed Stockfish move fallback behavior so bot turns now require a successfully initialized engine and report explicit worker errors when initialization/search fails.
+
+## 1.1.52 - 2026-05-08
+- Improved Stockfish bot reliability by simplifying worker engine path resolution, extending engine startup timeout, and prioritizing consistent UCI initialization before selecting moves.
+- Reduced unintended weak-bot behavior at high ratings by avoiding unnecessary initialization failures that previously triggered fallback legal/random move selection.
+
+## 1.1.51 - 2026-05-07
+- Fixed login "Load failed" error in Safari by removing hardcoded `localhost` fallbacks in `vite.config.js` and normalizing API base URLs to use relative paths in production.
+- Enhanced Supabase client initialization to handle missing environment variables with descriptive error messages instead of generic network failures.
+
+## 1.1.50 - 2026-05-07
+- Removed `NEXT_PUBLIC_*` API/socket URL fallbacks from client networking so runtime endpoints are resolved exclusively from Vite environment variables.
+
+## 1.1.49 - 2026-05-07
+- Fixed login/API network failures caused by protocol-less API host values by deriving the request protocol from the active browser origin before appending `/api`.
+
+## 1.1.48 - 2026-05-07
+- Updated Stockfish worker fallback comments to clearer AI-themed wording while keeping the AI move-recovery behavior intact.
+
+## 1.1.47 - 2026-05-07
+- Fixed AI turn freezes by adding Stockfish worker initialization timeout/error fallback, so the bot now always responds with a legal move even if the engine fails to boot.
+
+## 1.1.46 - 2026-05-07
+- Optimized the app header for mobile screens with tighter spacing, adaptive layout, and cleaner title/logout behavior on narrow devices.
+- Improved bottom navigation touch ergonomics with larger tap targets and safe-area-aware spacing for modern phones.
+- Tuned home page mobile spacing/card density so key stats and sections are easier to scan without crowding.
+
+## 1.1.45 - 2026-05-07
+- Added/updated automated tests for landing-page live stats rendering and redirect behavior.
+- Added API client coverage for `getPublicStats()` to ensure `/stats/public` requests are exercised.
+
+## 1.1.44 - 2026-05-07
+- Fixed API route wiring so `/api/health` and `/api/stats/public` are registered independently.
+- Hardened public stats initialization to auto-run database setup when tables are missing, preventing landing-stat crashes during first boot.
+
+## 1.1.43 - 2026-05-07
+- Replaced landing-page mock stats with live backend metrics (online players, registered players, recorded games, and server uptime) fetched in real time from a new public stats API endpoint.
+
 ## 1.1.42 - 2026-05-07
 - Added global favicon link coverage so the chess icon appears consistently across app routes (including `/login`) and auxiliary static test pages.
 
