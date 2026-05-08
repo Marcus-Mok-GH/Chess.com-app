@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.51 - 2026-05-07
+- Fixed login "Load failed" error in Safari by removing hardcoded `localhost` fallbacks in `vite.config.js` and normalizing API base URLs to use relative paths in production.
+- Enhanced Supabase client initialization to handle missing environment variables with descriptive error messages instead of generic network failures.
+
 ## 1.1.50 - 2026-05-07
 - Removed `NEXT_PUBLIC_*` API/socket URL fallbacks from client networking so runtime endpoints are resolved exclusively from Vite environment variables.
 
