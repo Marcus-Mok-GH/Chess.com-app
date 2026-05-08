@@ -61,7 +61,7 @@ export default defineConfig({
     }
   },
   define: {
-    'process.env.VITE_SERVER_URL': JSON.stringify(process.env.VITE_SERVER_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'),
+    'process.env.VITE_SERVER_URL': JSON.stringify(process.env.VITE_SERVER_URL || process.env.NEXT_PUBLIC_API_URL || ''),
     'process.env.NEXT_PUBLIC_API_URL': JSON.stringify(process.env.NEXT_PUBLIC_API_URL || process.env.VITE_API_URL || ''),
     'process.env.NEXT_PUBLIC_SOCKET_URL': JSON.stringify(process.env.NEXT_PUBLIC_SOCKET_URL || process.env.VITE_SOCKET_URL || '')
   }

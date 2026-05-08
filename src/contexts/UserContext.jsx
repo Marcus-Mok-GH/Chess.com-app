@@ -244,6 +244,11 @@ export function UserProvider({ children }) {
     try {
       const redirectUrl = `${window.location.origin}/login?type=magiclink`;
       localStorage.setItem(PENDING_MAGIC_LINK_KEY, JSON.stringify({ username: trimmedUsername, email: trimmedEmail }));
+
+      if (!supabase?.auth?.signInWithOtp) {
+        throw new Error('Supabase Auth is not available. Please check your environment variables.');
+      }
+
       const result = await supabase.auth.signInWithOtp({
         email: trimmedEmail,
         options: {
@@ -252,6 +257,7 @@ export function UserProvider({ children }) {
           data: { username: trimmedUsername },
         },
       });
+
       if (result.error) {
         throw result.error;
       }
@@ -260,6 +266,7 @@ export function UserProvider({ children }) {
         message: 'Magic link sent. Check your inbox and click the link to sign in automatically.',
       };
     } catch (error) {
+      console.error('🔴 MAGIC LINK REQUEST FAILED:', error);
       return { error: error.message || 'Failed to send magic link.' };
     }
   }, []);
@@ -285,8 +292,13 @@ export function UserProvider({ children }) {
     }
 
     try {
+      if (!supabase?.auth) {
+        throw new Error('Supabase Auth is not available.');
+      }
+
       // 1. Handle different auth callback scenarios
       if (code) {
+        if (!supabase.auth.exchangeCodeForSession) throw new Error('Supabase exchangeCodeForSession is missing');
         const { data, error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) throw error;
         // Recover username from metadata if missing
@@ -294,12 +306,14 @@ export function UserProvider({ children }) {
           resolvedUsername = data.user.user_metadata.username;
         }
       } else if (accessToken && refreshToken) {
+        if (!supabase.auth.setSession) throw new Error('Supabase setSession is missing');
         const { error } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken,
         });
         if (error) throw error;
       } else if (tokenHash) {
+        if (!supabase.auth.verifyOtp) throw new Error('Supabase verifyOtp is missing');
         const { data, error } = await supabase.auth.verifyOtp({
           email: resolvedEmail || undefined,
           token_hash: tokenHash,
@@ -310,6 +324,7 @@ export function UserProvider({ children }) {
           resolvedUsername = data.user.user_metadata.username;
         }
       } else if (token) {
+        if (!supabase.auth.verifyOtp) throw new Error('Supabase verifyOtp is missing');
         const { data, error } = await supabase.auth.verifyOtp({
           email: resolvedEmail || undefined,
           token: token,

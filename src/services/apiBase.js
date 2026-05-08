@@ -1,7 +1,9 @@
 export const normalizeApiBaseUrl = (rawBaseUrl) => {
-  if (!rawBaseUrl) return '/api'
+  // If undefined, null, empty string, or the literal string "undefined" (common Vite build artifact)
+  if (!rawBaseUrl || rawBaseUrl === 'undefined') return '/api'
+
   const trimmed = rawBaseUrl.trim()
-  if (!trimmed) return '/api'
+  if (!trimmed || trimmed === 'undefined') return '/api'
 
   const lower = trimmed.toLowerCase()
   if (lower === 'api' || lower === 'api/') {
@@ -20,6 +22,7 @@ export const normalizeApiBaseUrl = (rawBaseUrl) => {
     base = `${protocol}${base}`
   }
 
+  // Prevent double /api/api
   if (/\/api\/?$/.test(base)) {
     return base.replace(/\/$/, '')
   }
@@ -32,9 +35,12 @@ export const API_BASE_URL = normalizeApiBaseUrl(clientApiUrl)
 
 export const isNetworkError = (error) => {
   const message = error?.message || ''
-  return error?.name === 'TypeError'
+  const name = error?.name || ''
+
+  return name === 'TypeError'
     || message === 'Load failed'
     || message === 'Failed to fetch'
     || message.includes('NetworkError')
     || message.toLowerCase().includes('network')
+    || message.toLowerCase().includes('aborted')
 }
