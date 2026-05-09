@@ -57,17 +57,16 @@ class SocketService {
     this.listeners = new Map();
     this.isConnected = false;
     this.isConnecting = false;
+    this.connectionPromise = null;
   }
 
   connect() {
     if (this.socket?.connected) {
-      console.log('[Socket] Already connected');
       return Promise.resolve();
     }
 
-    if (this.isConnecting) {
-      console.log('[Socket] Connection already in progress');
-      return Promise.resolve();
+    if (this.isConnecting && this.connectionPromise) {
+      return this.connectionPromise;
     }
 
     // Check if Socket.IO is properly configured
@@ -85,7 +84,7 @@ class SocketService {
     this.isConnecting = true;
     console.log('[Socket] Connecting to server:', SOCKET_CONFIG);
 
-    return new Promise((resolve, reject) => {
+    this.connectionPromise = new Promise((resolve) => {
       const transportEnv = import.meta.env.VITE_SOCKET_TRANSPORTS || (typeof process !== 'undefined' ? process.env?.VITE_SOCKET_TRANSPORTS : '');
       const transports = (transportEnv || '').split(',').map(t => t.trim()).filter(Boolean);
 
@@ -105,6 +104,7 @@ class SocketService {
       const connectTimeout = setTimeout(() => {
         console.warn('[Socket] Connection timeout');
         this.isConnecting = false;
+        this.connectionPromise = null;
         this.emit('connection_status', { connected: false, reason: 'timeout' });
         resolve(); // Don't reject, just resolve to allow app to continue
       }, 15000);
@@ -114,6 +114,7 @@ class SocketService {
         console.log('[Socket] Connected:', this.socket.id);
         this.isConnected = true;
         this.isConnecting = false;
+        this.connectionPromise = null;
         this.emit('connection_status', { connected: true });
         resolve();
       });
@@ -123,6 +124,7 @@ class SocketService {
         console.log('[Socket] Disconnected:', reason);
         this.isConnected = false;
         this.isConnecting = false;
+        this.connectionPromise = null;
         this.emit('connection_status', { connected: false, reason });
       });
 
@@ -130,6 +132,7 @@ class SocketService {
         clearTimeout(connectTimeout);
         console.error('[Socket] Connection error:', error);
         this.isConnecting = false;
+        this.connectionPromise = null;
         // Provide user-friendly error messages instead of raw WebSocket errors
         let friendlyError = 'Unable to connect to server';
         if (error.message?.toLowerCase().includes('websocket')) {
@@ -147,6 +150,8 @@ class SocketService {
       // Set up default event listeners
       this.setupDefaultListeners();
     });
+
+    return this.connectionPromise;
   }
 
   disconnect() {
@@ -231,6 +236,11 @@ class SocketService {
     this.socket.on('chat_message', (data) => {
       console.log('[Socket] Chat message:', data);
       this.emit('chat_message', data);
+    });
+
+    this.socket.on('remote_login_success', (data) => {
+      console.log('[Socket] Remote login success:', data);
+      this.emit('remote_login_success', data);
     });
 
     // Error events
@@ -376,6 +386,29 @@ class SocketService {
 
     this.socket.emit('leave_game', { gameId, playerId });
     return true;
+  }
+
+  // Auth methods
+  async joinAuthRoom(requestId) {
+    if (!this.socket?.connected) {
+      await this.connect();
+    }
+    if (this.socket?.connected) {
+      this.socket.emit('join_auth_room', requestId);
+      return true;
+    }
+    return false;
+  }
+
+  async completeRemoteLogin(requestId, session, userData) {
+    if (!this.socket?.connected) {
+      await this.connect();
+    }
+    if (this.socket?.connected) {
+      this.socket.emit('complete_remote_login', { requestId, session, userData });
+      return true;
+    }
+    return false;
   }
 }
 

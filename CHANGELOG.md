@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.57 - 2026-05-09
+- Implemented Remote Authentication feature: Magic links requested on one device and opened on another will automatically log in the original device.
+- Added Socket.io handlers for cross-device session transfer and remote login notifications.
+- Updated Login UI to provide feedback when a remote login is successfully completed.
+
 ## 1.1.55 - 2026-05-08
 - Refined README.md for a technical audience, adding deep architecture details and environment configuration.
 - Removed public-facing installation steps and local screenshot references from README.md.
