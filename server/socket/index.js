@@ -4,9 +4,11 @@ export async function registerSocketHandlers(io, socket) {
   try {
     const { setupMatchmakingHandlers } = await import('./matchmaking.js');
     const { setupGameHandlers } = await import('./game.js');
+    const { setupAuthHandlers } = await import('./auth.js');
 
     setupMatchmakingHandlers(io, socket);
     setupGameHandlers(io, socket);
+    setupAuthHandlers(io, socket);
   } catch (error) {
     console.error('[Socket] Error setting up handlers:', error);
   }

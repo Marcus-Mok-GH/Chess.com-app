@@ -53,6 +53,7 @@ export default function Login() {
     const code = searchParams.get('code');
     const token = searchParams.get('token');
     const tokenHash = searchParams.get('token_hash');
+    const requestId = searchParams.get('requestId');
     const magicType = searchParams.get('type') || 'magiclink';
 
     let hashToken = null;
@@ -82,12 +83,17 @@ export default function Login() {
         refreshToken: hashRefreshToken || undefined,
         type: normalizedType,
         code: code || undefined,
+        requestId: requestId || undefined,
       });
 
       if (result?.success) {
         // Clear URL parameters after successful login
         window.history.replaceState({}, document.title, window.location.pathname);
-        navigate('/home', { replace: true });
+        if (result.remote) {
+          setStatus('Success! You have been logged in on your other device. You can close this window.');
+        } else {
+          navigate('/home', { replace: true });
+        }
       } else {
         setError(result?.error || 'Magic link sign in failed. Request a new link.');
       }

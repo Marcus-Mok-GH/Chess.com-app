@@ -1,10 +1,12 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import { supabase } from '../services/supabase';
+import socket from '../services/socket';
 
 const SESSION_USER_KEY = 'chess_user_session';
 const SESSION_USER_DATA_KEY = 'chess_user_data';
 const PENDING_MAGIC_LINK_KEY = 'chess_pending_magic_link';
+const AUTH_REQUEST_ID_KEY = 'chess_auth_request_id';
 
 const UserContext = createContext(null);
 
@@ -17,6 +19,15 @@ export function UserProvider({ children }) {
     if (!userData?.username) return;
     localStorage.setItem(SESSION_USER_KEY, userData.username);
     localStorage.setItem(SESSION_USER_DATA_KEY, JSON.stringify(userData));
+  }, []);
+
+  // Handle socket re-connection for pending auth requests
+  useEffect(() => {
+    const requestId = localStorage.getItem(AUTH_REQUEST_ID_KEY);
+    if (requestId) {
+      console.log('[UserContext] Re-joining auth room for pending request:', requestId);
+      socket.joinAuthRoom(requestId);
+    }
   }, []);
 
   // Monitor online/offline status
@@ -39,6 +50,34 @@ export function UserProvider({ children }) {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  // Listen for remote login success
+  useEffect(() => {
+    const handleRemoteLogin = async ({ session, userData }) => {
+      console.log('📱 REMOTE LOGIN SUCCESS RECEIVED');
+
+      try {
+        if (supabase.auth.setSession) {
+          await supabase.auth.setSession({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+          });
+        }
+
+        setUser(userData);
+        persistUser(userData);
+        localStorage.setItem(SESSION_USER_KEY, userData.username);
+        localStorage.removeItem(AUTH_REQUEST_ID_KEY);
+        localStorage.removeItem(PENDING_MAGIC_LINK_KEY);
+        console.log('✅ REMOTE SESSION ESTABLISHED:', userData.username);
+      } catch (err) {
+        console.error('🔴 FAILED TO ESTABLISH REMOTE SESSION:', err);
+      }
+    };
+
+    socket.on('remote_login_success', handleRemoteLogin);
+    return () => socket.off('remote_login_success', handleRemoteLogin);
+  }, [persistUser]);
 
   // Load user session on mount and handle auth state changes
   useEffect(() => {
@@ -210,7 +249,7 @@ export function UserProvider({ children }) {
       persistUser(userData);
       setUser(userData);
 
-      return { success: true, isNewUser: response.isNewUser };
+      return { success: true, isNewUser: response.isNewUser, userData };
     } catch (error) {
       console.error('🔴 LOGIN FAILED:', error.message);
       return { error: error.message || 'Failed to sign in. Please try again.' };
@@ -242,8 +281,18 @@ export function UserProvider({ children }) {
     }
 
     try {
-      const redirectUrl = `${window.location.origin}/login?type=magiclink`;
-      localStorage.setItem(PENDING_MAGIC_LINK_KEY, JSON.stringify({ username: trimmedUsername, email: trimmedEmail }));
+      const requestId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      const redirectUrl = `${window.location.origin}/login?type=magiclink&requestId=${requestId}`;
+
+      localStorage.setItem(PENDING_MAGIC_LINK_KEY, JSON.stringify({
+        username: trimmedUsername,
+        email: trimmedEmail,
+        requestId
+      }));
+      localStorage.setItem(AUTH_REQUEST_ID_KEY, requestId);
+
+      // Connect socket and join room for this request
+      await socket.joinAuthRoom(requestId);
 
       if (!supabase?.auth?.signInWithOtp) {
         throw new Error('Supabase Auth is not available. Please check your environment variables.');
@@ -273,7 +322,7 @@ export function UserProvider({ children }) {
 
 
 
-  const completeMagicLinkSignIn = useCallback(async ({ email, username, token, tokenHash, accessToken, refreshToken, type = 'magiclink', code }) => {
+  const completeMagicLinkSignIn = useCallback(async ({ email, username, token, tokenHash, accessToken, refreshToken, type = 'magiclink', code, requestId }) => {
     const pendingMagicLink = (() => {
       try {
         const raw = localStorage.getItem(PENDING_MAGIC_LINK_KEY);
@@ -283,6 +332,9 @@ export function UserProvider({ children }) {
         return null;
       }
     })();
+
+    const localRequestId = localStorage.getItem(AUTH_REQUEST_ID_KEY);
+    const isRemoteLogin = requestId && requestId !== localRequestId;
 
     let resolvedUsername = username?.trim() || pendingMagicLink?.username?.trim() || '';
     const resolvedEmail = email?.trim() || pendingMagicLink?.email?.trim() || '';
@@ -353,12 +405,33 @@ export function UserProvider({ children }) {
       }
 
       localStorage.removeItem(PENDING_MAGIC_LINK_KEY);
-      return await login({ username: resolvedUsername });
+
+      const loginResult = await login({ username: resolvedUsername });
+
+      if (loginResult.success && isRemoteLogin) {
+        console.log('[UserContext] Detected remote login completion, broadcasting session...');
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (session) {
+          await socket.completeRemoteLogin(requestId, session, user || loginResult.userData || { username: resolvedUsername });
+
+          // DO NOT call logout() here because it calls supabase.auth.signOut()
+          // which invalidates the session globally.
+          // Instead, just clear local state and storage on this device.
+          localStorage.removeItem(SESSION_USER_KEY);
+          localStorage.removeItem(SESSION_USER_DATA_KEY);
+          setUser(null);
+
+          return { success: true, remote: true };
+        }
+      }
+
+      return loginResult;
     } catch (error) {
       console.error('[UserContext] completeMagicLinkSignIn error:', error);
       return { error: error.message || 'Magic link is invalid or expired. Request a new link.' };
     }
-  }, [login]);
+  }, [login, user]);
 
   const updateElo = useCallback(async (opponentElo, gameResult) => {
     if (!user) return;
