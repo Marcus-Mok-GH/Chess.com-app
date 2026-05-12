@@ -71,6 +71,25 @@ const upsertMatchMoves = async ({ gameId, username, moveHistory, isWhite }) => {
   }
 };
 
+const verifyPlayerAuth = (socket, game, playerId) => {
+  const isWhiteSocket = game.white_socket_id === socket.id;
+  const isBlackSocket = game.black_socket_id === socket.id;
+
+  if (!isWhiteSocket && !isBlackSocket) {
+    return { valid: false, error: 'Unauthorized - not your game' };
+  }
+
+  if (isWhiteSocket && game.white_player_id !== playerId) {
+    return { valid: false, error: 'Player ID mismatch' };
+  }
+
+  if (isBlackSocket && game.black_player_id !== playerId) {
+    return { valid: false, error: 'Player ID mismatch' };
+  }
+
+  return { valid: true, color: isWhiteSocket ? 'white' : 'black' };
+};
+
 // Game service class
 class GameService {
   constructor(io) {
@@ -332,7 +351,7 @@ export function setupGameHandlers(io, socket) {
       return;
     }
 
-    if (!playerId || typeof playerId !== 'string') {
+    if (!playerId || typeof playerId !== 'string' || playerId.trim().length === 0) {
       socket.emit('game_error', { message: 'Invalid player ID' });
       return;
     }
@@ -351,13 +370,35 @@ export function setupGameHandlers(io, socket) {
       return;
     }
 
-    // Bind this socket to the player slot if it matches the game participants.
-    // Friendly games are created via HTTP, so socket ids are usually null until this step.
+    // Determine which slot this playerId belongs to
     const isWhitePlayer = game.white_player_id === playerId;
     const isBlackPlayer = game.black_player_id === playerId;
-
     const isParticipant = isWhitePlayer || isBlackPlayer;
 
+    // Harden: if a slot is already filled, reject attempts to claim it with a different socket
+    if (isWhitePlayer && game.white_socket_id && game.white_socket_id !== socket.id) {
+      socket.emit('game_error', { message: 'Unauthorized - not your game' });
+      return;
+    }
+
+    if (isBlackPlayer && game.black_socket_id && game.black_socket_id !== socket.id) {
+      socket.emit('game_error', { message: 'Unauthorized - not your game' });
+      return;
+    }
+
+    // Harden: if the slot already has a player_id assigned, ensure the playerId matches
+    if (game.white_socket_id === socket.id && game.white_player_id && game.white_player_id !== playerId) {
+      socket.emit('game_error', { message: 'Player ID mismatch' });
+      return;
+    }
+
+    if (game.black_socket_id === socket.id && game.black_player_id && game.black_player_id !== playerId) {
+      socket.emit('game_error', { message: 'Player ID mismatch' });
+      return;
+    }
+
+    // Bind this socket to the player slot if it matches the game participants.
+    // Friendly games are created via HTTP, so socket ids are usually null until this step.
     if (isWhitePlayer && game.white_socket_id !== socket.id) {
       await query(
         `UPDATE active_games SET white_socket_id = $1, updated_at = CURRENT_TIMESTAMP WHERE game_id = $2`,
@@ -438,12 +479,9 @@ export function setupGameHandlers(io, socket) {
       return;
     }
 
-    const isWhiteSocket = game.white_socket_id === socket.id;
-    const isBlackSocket = game.black_socket_id === socket.id;
-
-    // Only the two active players may submit moves; spectators are read-only.
-    if (!isWhiteSocket && !isBlackSocket) {
-      socket.emit('move_error', { message: 'Spectators cannot make moves' });
+    const auth = verifyPlayerAuth(socket, game, playerId);
+    if (!auth.valid) {
+      socket.emit('move_error', { message: auth.error });
       return;
     }
 
@@ -451,9 +489,9 @@ export function setupGameHandlers(io, socket) {
     const activeColor = game.fen && typeof game.fen === 'string'
       ? game.fen.trim().split(/\s+/)[1]
       : 'w';
-    const expectedSocketId = activeColor === 'w' ? game.white_socket_id : game.black_socket_id;
+    const expectedColor = activeColor === 'w' ? 'white' : 'black';
 
-    if (!expectedSocketId || expectedSocketId !== socket.id) {
+    if (auth.color !== expectedColor) {
       socket.emit('move_error', { message: 'Not your turn' });
       return;
     }
@@ -533,10 +571,15 @@ export function setupGameHandlers(io, socket) {
 
   socket.on('game_over', async (data) => {
     // Validate input data
-    const { gameId, result, reason } = data;
+    const { gameId, result, reason, playerId } = data;
 
     if (!gameId || typeof gameId !== 'string') {
       socket.emit('move_error', { message: 'Invalid game ID' });
+      return;
+    }
+
+    if (!playerId || typeof playerId !== 'string') {
+      socket.emit('move_error', { message: 'Invalid player ID' });
       return;
     }
 
@@ -559,9 +602,9 @@ export function setupGameHandlers(io, socket) {
       return;
     }
 
-    // Session validation: Verify socket owns this game
-    if (game.white_socket_id !== socket.id && game.black_socket_id !== socket.id) {
-      socket.emit('move_error', { message: 'Unauthorized - not your game' });
+    const auth = verifyPlayerAuth(socket, game, playerId);
+    if (!auth.valid) {
+      socket.emit('move_error', { message: auth.error });
       return;
     }
 
@@ -598,14 +641,14 @@ export function setupGameHandlers(io, socket) {
       return;
     }
 
-    // Session validation: Verify socket owns this game
-    if (game.white_socket_id !== socket.id && game.black_socket_id !== socket.id) {
-      socket.emit('move_error', { message: 'Unauthorized - not your game' });
+    const auth = verifyPlayerAuth(socket, game, playerId);
+    if (!auth.valid) {
+      socket.emit('move_error', { message: auth.error });
       return;
     }
 
     // Determine winner based on who resigned
-    const winner = game.white_player_id === playerId ? 'black' : 'white';
+    const winner = auth.color === 'white' ? 'black' : 'white';
 
     await service.endGame(gameId, winner);
 
@@ -640,9 +683,9 @@ export function setupGameHandlers(io, socket) {
       return;
     }
 
-    // Session validation: Verify socket owns this game
-    if (game.white_socket_id !== socket.id && game.black_socket_id !== socket.id) {
-      socket.emit('move_error', { message: 'Unauthorized - not your game' });
+    const auth = verifyPlayerAuth(socket, game, playerId);
+    if (!auth.valid) {
+      socket.emit('move_error', { message: auth.error });
       return;
     }
 
@@ -682,9 +725,9 @@ export function setupGameHandlers(io, socket) {
       return;
     }
 
-    // Session validation: Verify socket owns this game
-    if (game.white_socket_id !== socket.id && game.black_socket_id !== socket.id) {
-      socket.emit('move_error', { message: 'Unauthorized - not your game' });
+    const auth = verifyPlayerAuth(socket, game, playerId);
+    if (!auth.valid) {
+      socket.emit('move_error', { message: auth.error });
       return;
     }
 
@@ -734,9 +777,9 @@ export function setupGameHandlers(io, socket) {
       return;
     }
 
-    // Session validation: Verify socket owns this game
-    if (game.white_socket_id !== socket.id && game.black_socket_id !== socket.id) {
-      socket.emit('move_error', { message: 'Unauthorized - not your game' });
+    const auth = verifyPlayerAuth(socket, game, playerId);
+    if (!auth.valid) {
+      socket.emit('move_error', { message: auth.error });
       return;
     }
 
