@@ -117,7 +117,13 @@ export function UserProvider({ children }) {
 
         if (!session) {
           console.log('[UserContext] No Supabase session found');
-          if (isMounted) {
+          // Don't clear state if we're in the middle of an auth callback --
+          // the PKCE exchange may not have completed yet.
+          const url = new URL(window.location.href);
+          const hasAuthCallback = url.searchParams.has('code') ||
+                                  url.searchParams.has('token_hash') ||
+                                  url.hash.includes('access_token');
+          if (!hasAuthCallback && isMounted) {
             setUser(null);
             localStorage.removeItem(SESSION_USER_KEY);
             localStorage.removeItem(SESSION_USER_DATA_KEY);
@@ -181,7 +187,10 @@ export function UserProvider({ children }) {
           const username = session.user?.user_metadata?.username;
           if (username) {
             try {
-              const serverUser = await api.getUser(username);
+              // Use api.login() (upsert) instead of api.getUser() so new
+              // users are created in PostgreSQL on first magic-link sign-in.
+              const response = await api.login(username);
+              const serverUser = response.user;
               const userData = {
                 id: serverUser.id,
                 username: serverUser.username,
@@ -282,7 +291,7 @@ export function UserProvider({ children }) {
 
     try {
       const requestId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      const redirectUrl = `${window.location.origin}/login?type=magiclink&requestId=${requestId}`;
+      const redirectUrl = `${window.location.origin}/login?type=magiclink&requestId=${requestId}&username=${encodeURIComponent(trimmedUsername)}&email=${encodeURIComponent(trimmedEmail)}`;
 
       localStorage.setItem(PENDING_MAGIC_LINK_KEY, JSON.stringify({
         username: trimmedUsername,

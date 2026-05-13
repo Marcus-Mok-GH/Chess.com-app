@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.58 - 2026-05-13
+- Fixed Supabase magic link authentication failure caused by a PKCE double-exchange race condition by setting `detectSessionInUrl: false` and explicit `flowType: 'pkce'` in the Supabase client config.
+- Fixed `onAuthStateChange` SIGNED_IN handler to use `api.login()` (upsert) instead of `api.getUser()` so new users are created in PostgreSQL on first sign-in.
+- Prevented `init()` from clearing user state when an auth callback (`code`, `token_hash`, or `access_token`) is still in progress.
+- Added `username` and `email` query params to the magic link redirect URL for cross-browser resilience.
+- Added `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to `.env.example`.
+
 ## 1.1.57 - 2026-05-09
 - Implemented Remote Authentication feature: Magic links requested on one device and opened on another will automatically log in the original device.
 - Added Socket.io handlers for cross-device session transfer and remote login notifications.
