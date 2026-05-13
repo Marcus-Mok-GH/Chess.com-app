@@ -370,7 +370,15 @@ export function UserProvider({ children }) {
         }
       } else {
         // Check if we already have a session (e.g. library handled it automatically)
-        const { data: { session } } = await supabase.auth.getSession();
+        // Some providers finalize auth asynchronously after redirect, so briefly wait and retry.
+        let session = null;
+        for (let attempt = 0; attempt < 6; attempt += 1) {
+          const { data } = await supabase.auth.getSession();
+          session = data?.session || null;
+          if (session) break;
+          await new Promise((resolve) => setTimeout(resolve, 250));
+        }
+
         if (!session) {
           return { error: 'Missing magic-link token or session. Please request a new link.' };
         }
