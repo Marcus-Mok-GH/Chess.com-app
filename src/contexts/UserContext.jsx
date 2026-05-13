@@ -120,7 +120,8 @@ export function UserProvider({ children }) {
           // Don't clear state if we're in the middle of an auth callback --
           // the PKCE exchange may not have completed yet.
           const url = new URL(window.location.href);
-          const hasAuthCallback = url.searchParams.has('code') ||
+          const isLoginPath = url.pathname === '/login';
+          const hasAuthCallback = (isLoginPath && url.searchParams.has('code')) ||
                                   url.searchParams.has('token_hash') ||
                                   url.hash.includes('access_token');
           if (!hasAuthCallback && isMounted) {
@@ -291,7 +292,7 @@ export function UserProvider({ children }) {
 
     try {
       const requestId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      const redirectUrl = `${window.location.origin}/login?type=magiclink&requestId=${requestId}&username=${encodeURIComponent(trimmedUsername)}&email=${encodeURIComponent(trimmedEmail)}`;
+      const redirectUrl = `${window.location.origin}/login?type=magiclink&requestId=${requestId}&username=${encodeURIComponent(trimmedUsername)}`;
 
       localStorage.setItem(PENDING_MAGIC_LINK_KEY, JSON.stringify({
         username: trimmedUsername,

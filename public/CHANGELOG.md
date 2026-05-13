@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.59 - 2026-05-13
+- Removed `email` query param from magic link redirect URL to prevent PII exposure in browser history, server logs, and Referer headers.
+- Scoped `hasAuthCallback` guard to the `/login` path so a generic `code` query param on other routes no longer suppresses session cleanup.
+
 ## 1.1.58 - 2026-05-13
 - Fixed Supabase magic link authentication failure caused by a PKCE double-exchange race condition by setting `detectSessionInUrl: false` and explicit `flowType: 'pkce'` in the Supabase client config.
 - Fixed `onAuthStateChange` SIGNED_IN handler to use `api.login()` (upsert) instead of `api.getUser()` so new users are created in PostgreSQL on first sign-in.
