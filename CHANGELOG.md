@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.60 - 2026-05-13
+- Fixed magic-link callback handling when redirect URLs only include `requestId` (e.g., ending with `#`) by retrying Supabase session hydration for a short window before failing.
+- Reduced false-negative login failures where users were sent back to the login screen despite a valid magic-link session still initializing in the browser.
+
 ## 1.1.59 - 2026-05-14
 - Fixed magic-link login reliability by improving post-redirect session synchronization and relaxing token validation when a session is already established by the browser.
 - Improved user session recovery to automatically register/sync backend profiles when a valid Supabase session exists but the local profile is missing.
