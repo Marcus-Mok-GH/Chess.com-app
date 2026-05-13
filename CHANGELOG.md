@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.59 - 2026-05-14
+- Fixed magic-link login reliability by improving post-redirect session synchronization and relaxing token validation when a session is already established by the browser.
+- Improved user session recovery to automatically register/sync backend profiles when a valid Supabase session exists but the local profile is missing.
+- Fixed a bug where clicking a magic link would sometimes land on the login page without completing the sign-in process.
+
 ## 1.1.58 - 2026-05-13
 - Redesigned app icon with a stylized knight silhouette, green accent gradient, subtle board pattern, and glow effects matching the app's dark theme and color palette.
 

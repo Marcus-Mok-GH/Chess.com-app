@@ -67,7 +67,7 @@ export default function Login() {
       hashType = hashParams.get('type');
     }
 
-    const hasCallbackParams = code || token || tokenHash || hashToken;
+    const hasCallbackParams = code || token || tokenHash || hashToken || requestId || searchParams.get('type') === 'magiclink';
     if (!hasCallbackParams) return;
 
     const callbackType = hashType || magicType;

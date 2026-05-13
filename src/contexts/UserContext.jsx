@@ -136,23 +136,15 @@ export function UserProvider({ children }) {
         }
 
         console.log('[UserContext] Found session for:', sessionUsername);
-        const serverUser = await api.getUser(sessionUsername);
+        const loginResult = await login({ username: sessionUsername });
 
         if (!isMounted) return;
 
-        const userData = {
-          id: serverUser.id,
-          username: serverUser.username,
-          elo: serverUser.elo,
-          gamesPlayed: serverUser.gamesPlayed,
-          wins: serverUser.wins,
-          losses: serverUser.losses,
-          draws: serverUser.draws,
-          createdAt: serverUser.createdAt,
-        };
-        setUser(userData);
-        persistUser(userData);
-        console.log('✅ SESSION RESTORED (server):', userData.username);
+        if (loginResult.success) {
+          console.log('✅ SESSION RESTORED (server):', loginResult.userData.username);
+        } else {
+          console.error('🔴 SESSION SYNC FAILED:', loginResult.error);
+        }
       } catch (error) {
         if (!isMounted) return;
         console.error('🔴 SESSION RESTORE FAILED:', error.message);
@@ -162,7 +154,7 @@ export function UserProvider({ children }) {
           setUser(null);
           localStorage.removeItem(SESSION_USER_KEY);
           localStorage.removeItem(SESSION_USER_DATA_KEY);
-          await supabase.auth.signOut();
+          // Don't sign out from Supabase here; it's too aggressive and may break flows
         }
       }
     }
@@ -180,23 +172,9 @@ export function UserProvider({ children }) {
         if (session && !user) {
           const username = session.user?.user_metadata?.username;
           if (username) {
-            try {
-              const serverUser = await api.getUser(username);
-              const userData = {
-                id: serverUser.id,
-                username: serverUser.username,
-                elo: serverUser.elo,
-                gamesPlayed: serverUser.gamesPlayed,
-                wins: serverUser.wins,
-                losses: serverUser.losses,
-                draws: serverUser.draws,
-                createdAt: serverUser.createdAt,
-              };
-              setUser(userData);
-              persistUser(userData);
-            } catch (err) {
-              console.error('[UserContext] Failed to fetch user after sign-in event', err);
-            }
+            login({ username }).catch(err => {
+              console.error('[UserContext] Failed to sync user after sign-in event', err);
+            });
           }
         }
       }
@@ -340,7 +318,11 @@ export function UserProvider({ children }) {
     const resolvedEmail = email?.trim() || pendingMagicLink?.email?.trim() || '';
 
     if (!resolvedUsername && !code && !tokenHash && !token && !accessToken) {
-      return { error: 'Missing username context for magic link. Please request a new link from this browser.' };
+      // Check if we already have a session (e.g. library handled it automatically via URL hash)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        return { error: 'Missing username context for magic link. Please request a new link from this browser.' };
+      }
     }
 
     try {
