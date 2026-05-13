@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.58 - 2026-05-13
+- Redesigned app icon with a stylized knight silhouette, green accent gradient, subtle board pattern, and glow effects matching the app's dark theme and color palette.
+
 ## 1.1.57 - 2026-05-09
 - Implemented Remote Authentication feature: Magic links requested on one device and opened on another will automatically log in the original device.
 - Added Socket.io handlers for cross-device session transfer and remote login notifications.

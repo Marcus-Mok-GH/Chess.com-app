@@ -1,32 +1,91 @@
 <svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bg" x1="28" y1="24" x2="228" y2="232" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#111827"/>
-      <stop offset="1" stop-color="#1F2937"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="256" y2="256" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1b1c1f"/>
+      <stop offset="1" stop-color="#0d0e12"/>
     </linearGradient>
-    <linearGradient id="piece" x1="86" y1="56" x2="170" y2="206" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#F8FAFC"/>
-      <stop offset="1" stop-color="#D1D5DB"/>
+    <linearGradient id="knight" x1="80" y1="40" x2="176" y2="220" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#a3c96a"/>
+      <stop offset="1" stop-color="#7fa650"/>
     </linearGradient>
+    <linearGradient id="glow" x1="128" y1="28" x2="128" y2="228" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7fa650" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#7fa650" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="28" y1="28" x2="228" y2="228" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7fa650" stop-opacity="0.6"/>
+      <stop offset="0.5" stop-color="#7fa650" stop-opacity="0.15"/>
+      <stop offset="1" stop-color="#7fa650" stop-opacity="0.4"/>
+    </linearGradient>
+    <filter id="knightShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="10" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+    <filter id="innerGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="18" result="blur"/>
+      <feComposite in="blur" operator="over"/>
+    </filter>
+    <clipPath id="roundedClip">
+      <rect x="16" y="16" width="224" height="224" rx="48"/>
+    </clipPath>
   </defs>
 
-  <rect x="16" y="16" width="224" height="224" rx="44" fill="url(#bg)"/>
-  <rect x="34" y="34" width="188" height="188" rx="30" fill="#0B1220"/>
+  <!-- Outer rounded square -->
+  <rect x="16" y="16" width="224" height="224" rx="48" fill="url(#bg)"/>
 
-  <g opacity="0.95">
-    <rect x="52" y="52" width="38" height="38" fill="#F0D9B5"/>
-    <rect x="90" y="52" width="38" height="38" fill="#B58863"/>
-    <rect x="128" y="52" width="38" height="38" fill="#F0D9B5"/>
-    <rect x="166" y="52" width="38" height="38" fill="#B58863"/>
-    <rect x="52" y="90" width="38" height="38" fill="#B58863"/>
-    <rect x="90" y="90" width="38" height="38" fill="#F0D9B5"/>
-    <rect x="128" y="90" width="38" height="38" fill="#B58863"/>
-    <rect x="166" y="90" width="38" height="38" fill="#F0D9B5"/>
+  <!-- Subtle diagonal board pattern (clipped) -->
+  <g clip-path="url(#roundedClip)" opacity="0.08">
+    <rect x="16" y="16" width="56" height="56" fill="#ffffff"/>
+    <rect x="128" y="16" width="56" height="56" fill="#ffffff"/>
+    <rect x="72" y="72" width="56" height="56" fill="#ffffff"/>
+    <rect x="184" y="72" width="56" height="56" fill="#ffffff"/>
+    <rect x="16" y="128" width="56" height="56" fill="#ffffff"/>
+    <rect x="128" y="128" width="56" height="56" fill="#ffffff"/>
+    <rect x="72" y="184" width="56" height="56" fill="#ffffff"/>
+    <rect x="184" y="184" width="56" height="56" fill="#ffffff"/>
   </g>
 
-  <path d="M120 62H136V74H148V90H136V102H120V90H108V74H120V62Z" fill="url(#piece)"/>
-  <path d="M100 114H156V130H146V146C146 160 138 172 128 180C118 172 110 160 110 146V130H100V114Z" fill="url(#piece)"/>
-  <rect x="94" y="186" width="68" height="16" rx="6" fill="url(#piece)"/>
+  <!-- Background glow behind knight -->
+  <ellipse cx="128" cy="130" rx="70" ry="80" fill="url(#glow)" filter="url(#innerGlow)"/>
 
-  <rect x="34" y="34" width="188" height="188" rx="30" stroke="#374151" stroke-width="6"/>
+  <!-- Knight piece silhouette -->
+  <g filter="url(#knightShadow)">
+    <path d="
+      M 100 200
+      L 156 200
+      L 156 188
+      C 156 184 154 180 150 178
+      L 144 174
+      L 148 158
+      C 150 150 154 142 160 136
+      L 168 128
+      C 174 122 178 114 178 106
+      L 178 96
+      C 178 84 170 74 158 70
+      L 148 66
+      L 152 54
+      C 154 48 150 42 144 40
+      L 136 38
+      C 130 36 124 40 122 46
+      L 116 64
+      L 106 70
+      C 94 78 86 90 82 104
+      L 78 120
+      C 76 130 78 140 84 148
+      L 92 162
+      L 88 174
+      C 84 180 86 186 90 190
+      L 100 200
+      Z
+    " fill="url(#knight)"/>
+    <!-- Knight eye -->
+    <circle cx="132" cy="62" r="5" fill="#1b1c1f"/>
+    <!-- Knight nostril -->
+    <ellipse cx="148" cy="52" rx="3" ry="2.5" fill="#1b1c1f" opacity="0.6"/>
+    <!-- Mane detail lines -->
+    <path d="M 106 76 C 100 88 96 100 94 114" stroke="#1b1c1f" stroke-width="2.5" stroke-linecap="round" opacity="0.25"/>
+    <path d="M 112 72 C 106 86 102 98 100 112" stroke="#1b1c1f" stroke-width="2" stroke-linecap="round" opacity="0.2"/>
+  </g>
+
+  <!-- Accent border -->
+  <rect x="16" y="16" width="224" height="224" rx="48" stroke="url(#rim)" stroke-width="3" fill="none"/>
 </svg>
