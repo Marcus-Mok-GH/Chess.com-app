@@ -108,26 +108,10 @@ export default function Landing() {
             </p>
 
             <div className="hero-actions">
-<<<<<<< HEAD
-              <button className="btn-premium primary" onClick={() => navigate('/login')}>
-                <span>Get started</span>
-                <span className="btn-arrow">→</span>
-              </button>
-              <button
-                className={`btn-premium secondary ${!isOnline ? 'disabled' : ''}`}
-                onClick={handlePlayOnline}
-                disabled={!isOnline}
-              >
-                <span>Get started</span>
-                <span className="btn-icon">🌐</span>
-              </button>
-=======
               <button className="btn-premium primary" onClick={() => navigate('/login')} style={{ maxWidth: '280px' }}>
                 <span>Get Started</span>
                 <span className="btn-arrow">→</span>
               </button>
-              {/** Removed Play Online button - functionality merged into Get Started */}
->>>>>>> 7563ec7 (feat: replace Play with Computer and Play Online with single Get Started button)
             </div>
           </div>
 
