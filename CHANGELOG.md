@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.63 - 2026-05-14
+- Updated the landing page primary CTA labels by replacing “Play vs Computer” and “Play Online” with “Get started.”
+
 ## 1.1.62 - 2026-05-14
 - Fixed magic-link callback completion when Supabase returns auth data in URL hash (including `token_hash` or `code`) by reading hash parameters in addition to query parameters.
 - Improved post-redirect session hydration timing for callback URLs that arrive without direct tokens, reducing cases where users stayed on the login page after opening a valid magic link.

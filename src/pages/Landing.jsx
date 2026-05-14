@@ -109,7 +109,7 @@ export default function Landing() {
 
             <div className="hero-actions">
               <button className="btn-premium primary" onClick={() => navigate('/play')}>
-                <span>Play vs Computer</span>
+                <span>Get started</span>
                 <span className="btn-arrow">→</span>
               </button>
               <button
@@ -117,7 +117,7 @@ export default function Landing() {
                 onClick={handlePlayOnline}
                 disabled={!isOnline}
               >
-                <span>Play Online</span>
+                <span>Get started</span>
                 <span className="btn-icon">🌐</span>
               </button>
             </div>
