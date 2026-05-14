@@ -57,17 +57,21 @@ export default function Login() {
     const magicType = searchParams.get('type') || 'magiclink';
 
     let hashToken = null;
+    let hashTokenHash = null;
+    let hashCode = null;
     let hashRefreshToken = null;
     let hashType = null;
 
     if (window.location.hash.startsWith('#')) {
       const hashParams = new URLSearchParams(window.location.hash.slice(1));
       hashToken = hashParams.get('token') || hashParams.get('access_token');
+      hashTokenHash = hashParams.get('token_hash');
+      hashCode = hashParams.get('code');
       hashRefreshToken = hashParams.get('refresh_token');
       hashType = hashParams.get('type');
     }
 
-    const hasCallbackParams = code || token || tokenHash || hashToken || requestId || searchParams.get('type') === 'magiclink';
+    const hasCallbackParams = code || hashCode || token || tokenHash || hashToken || hashTokenHash || requestId || searchParams.get('type') === 'magiclink';
     if (!hasCallbackParams) return;
 
     const callbackType = hashType || magicType;
@@ -77,12 +81,12 @@ export default function Login() {
       const result = await completeMagicLinkSignIn({
         username: searchParams.get('username') || username,
         email: searchParams.get('email') || email,
-        token: token || undefined,
-        tokenHash: tokenHash || undefined,
+        token: token || hashToken || undefined,
+        tokenHash: tokenHash || hashTokenHash || undefined,
         accessToken: hashToken || undefined,
         refreshToken: hashRefreshToken || undefined,
         type: normalizedType,
-        code: code || undefined,
+        code: code || hashCode || undefined,
         requestId: requestId || undefined,
       });
 
