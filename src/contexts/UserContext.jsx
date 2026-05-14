@@ -260,7 +260,9 @@ export function UserProvider({ children }) {
 
     try {
       const requestId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      const redirectUrl = `${window.location.origin}/login?type=magiclink&requestId=${requestId}`;
+      const configuredCallbackBase = import.meta.env.VITE_SUPABASE_AUTH_CALLBACK_URL?.trim();
+      const callbackBase = configuredCallbackBase || `${window.location.origin}/login`;
+      const redirectUrl = `${callbackBase}${callbackBase.includes('?') ? '&' : '?'}type=magiclink&requestId=${requestId}`;
 
       localStorage.setItem(PENDING_MAGIC_LINK_KEY, JSON.stringify({
         username: trimmedUsername,
@@ -372,11 +374,11 @@ export function UserProvider({ children }) {
         // Check if we already have a session (e.g. library handled it automatically)
         // Some providers finalize auth asynchronously after redirect, so briefly wait and retry.
         let session = null;
-        for (let attempt = 0; attempt < 6; attempt += 1) {
+        for (let attempt = 0; attempt < 20; attempt += 1) {
           const { data } = await supabase.auth.getSession();
           session = data?.session || null;
           if (session) break;
-          await new Promise((resolve) => setTimeout(resolve, 250));
+          await new Promise((resolve) => setTimeout(resolve, 300));
         }
 
         if (!session) {
