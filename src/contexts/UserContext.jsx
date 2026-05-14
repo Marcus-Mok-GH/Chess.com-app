@@ -282,7 +282,6 @@ export function UserProvider({ children }) {
         email: trimmedEmail,
         options: {
           shouldCreateUser: true,
-          emailRedirectTo: redirectUrl,
           data: { username: trimmedUsername },
         },
       });
