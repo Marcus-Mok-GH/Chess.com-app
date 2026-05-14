@@ -108,7 +108,7 @@ export default function Landing() {
             </p>
 
             <div className="hero-actions">
-              <button className="btn-premium primary" onClick={() => navigate('/play')}>
+              <button className="btn-premium primary" onClick={() => navigate('/login')}>
                 <span>Get started</span>
                 <span className="btn-arrow">→</span>
               </button>

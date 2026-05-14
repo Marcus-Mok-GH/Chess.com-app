@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.64 - 2026-05-14
+- Updated the landing page primary “Get started” button to redirect users to the login page.
+
 ## 1.1.63 - 2026-05-14
 - Updated the landing page primary CTA labels by replacing “Play vs Computer” and “Play Online” with “Get started.”
 
