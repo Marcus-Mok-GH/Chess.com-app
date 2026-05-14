@@ -18,6 +18,7 @@ const GameHistory = lazy(() => import('./pages/GameHistory'))
 const Game = lazy(() => import('./pages/Game'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Changelog = lazy(() => import('./pages/Changelog'))
+const CloudFlare = lazy(() => import('./pages/CloudFlare'))
 const Landing = lazy(() => import('./pages/Landing'))
 
 function getTitle(path) {
