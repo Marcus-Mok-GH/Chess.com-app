@@ -14,7 +14,6 @@ const Home = lazy(() => import('./pages/Home'))
 const Play = lazy(() => import('./pages/Play'))
 const OnlinePlay = lazy(() => import('./pages/OnlinePlay'))
 const Analysis = lazy(() => import('./pages/Analysis'))
-const Login = lazy(() => import('./pages/Login'))
 const GameHistory = lazy(() => import('./pages/GameHistory'))
 const Game = lazy(() => import('./pages/Game'))
 const Settings = lazy(() => import('./pages/Settings'))
@@ -154,7 +153,7 @@ function ProtectedRoute({ children, guestRedirect }) {
     if (guestRedirect) {
       return guestRedirect;
     }
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return children;
