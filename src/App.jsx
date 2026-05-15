@@ -11,6 +11,8 @@ import { Analytics } from '@vercel/analytics/react'
 import './App.css'
 
 const Home = lazy(() => import('./pages/Home'))
+const Login = lazy(() => import('./pages/Login'))
+const AuthCallback = lazy(() => import('./pages/AuthCallback'))
 const Play = lazy(() => import('./pages/Play'))
 const OnlinePlay = lazy(() => import('./pages/OnlinePlay'))
 const Analysis = lazy(() => import('./pages/Analysis'))
@@ -131,9 +133,6 @@ function PuterCheck() {
     }
   }, [isReady]);
 
-  // Inject script only if it's actually used by some component or on user interaction
-  // For now, we'll keep the logic but won't auto-inject here to save initial load.
-
   return null;
 }
 
@@ -150,7 +149,6 @@ function ProtectedRoute({ children, guestRedirect }) {
   }
 
   if (!isLoggedIn) {
-    // For Online route, show a friendly guest message instead of redirecting to login
     if (guestRedirect) {
       return guestRedirect;
     }
@@ -182,6 +180,8 @@ export default function App() {
                   <Routes>
                     <Route path="/" element={<Landing />} />
                     <Route path="/login" element={<Login />} />
+                    {/* Auth callback — Supabase magic link redirects here */}
+                    <Route path="/auth/callback" element={<AuthCallback />} />
                     <Route path="/home" element={
                       <ProtectedRoute>
                         <><AppHeader /><Home /></>
