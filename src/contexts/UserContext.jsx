@@ -154,7 +154,6 @@ export function UserProvider({ children }) {
           setUser(null);
           localStorage.removeItem(SESSION_USER_KEY);
           localStorage.removeItem(SESSION_USER_DATA_KEY);
-          // Don't sign out from Supabase here; it's too aggressive and may break flows
         }
       }
     }
@@ -261,7 +260,8 @@ export function UserProvider({ children }) {
     try {
       const requestId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       const configuredCallbackBase = import.meta.env.VITE_SUPABASE_AUTH_CALLBACK_URL?.trim();
-      const callbackBase = configuredCallbackBase || `${window.location.origin}/login`;
+      // Default to /auth/callback so Supabase lands on the AuthCallback page
+      const callbackBase = configuredCallbackBase || `${window.location.origin}/auth/callback`;
       const redirectUrl = `${callbackBase}${callbackBase.includes('?') ? '&' : '?'}type=magiclink&requestId=${requestId}`;
 
       localStorage.setItem(PENDING_MAGIC_LINK_KEY, JSON.stringify({
@@ -282,6 +282,8 @@ export function UserProvider({ children }) {
         email: trimmedEmail,
         options: {
           shouldCreateUser: true,
+          // Pass the redirect URL so Supabase sends the user to /auth/callback
+          emailRedirectTo: redirectUrl,
           data: { username: trimmedUsername },
         },
       });
