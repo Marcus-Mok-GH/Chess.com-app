@@ -273,9 +273,11 @@ let isSearching = false;
 self.onmessage = async function(e) {
   const { fen, bot, debug } = e.data;
 
-  // Skip if already searching to prevent conflicts
+  // Skip if already searching to prevent conflicts — but notify the main thread
+  // so it can reset isThinking and not freeze waiting for a response that never comes.
   if (isSearching) {
     console.warn('Skipping AI move request - already processing');
+    self.postMessage({ type: 'error', error: 'Engine busy — request dropped, please retry' });
     return;
   }
 
