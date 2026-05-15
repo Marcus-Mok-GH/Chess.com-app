@@ -107,18 +107,18 @@
   }
 
   .gbb-bot-avatar {
-    width: 26px;
-    height: 26px;
+    width: 28px;
+    height: 28px;
     font-size: 1rem;
   }
 
   .gbb-bot-quote {
-    font-size: 0.75rem;
+    font-size: 0.8125rem; /* minimum legible — was 0.75rem */
   }
 
   .gbb-btn {
     flex: 1 1 calc(50% - 6px);
-    min-height: 42px;
+    min-height: 44px; /* WCAG touch target — was 42px */
     font-size: 0.85rem;
   }
 }

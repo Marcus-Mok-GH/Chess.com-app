@@ -133,7 +133,8 @@
 }
 
 .view-game-btn {
-  padding: 8px 16px;
+  padding: 10px 16px;
+  min-height: 44px; /* WCAG touch target */
   background: linear-gradient(180deg, #81b64c 0%, #6fa03d 100%);
   color: #fff;
   border: none;
@@ -142,6 +143,10 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
 }
 
 .view-game-btn:hover {
@@ -172,5 +177,32 @@
 
   .game-history-charts {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .game-history-page {
+    padding: 12px;
+  }
+
+  .game-history-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .game-item {
+    padding: 14px 12px;
+  }
+
+  .game-code {
+    font-size: 0.8125rem;
+  }
+
+  .game-date {
+    font-size: 0.8125rem;
+  }
+
+  .view-game-btn {
+    font-size: 0.8125rem;
+    padding: 10px 14px;
   }
 }
