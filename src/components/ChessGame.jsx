@@ -540,7 +540,7 @@ function ChessGame(
       },
       debug: settingsRef.current.debugMode,
     });
-  }, [triggerAnimation, isThinking]);
+  }, [triggerAnimation]);
 
   useEffect(() => {
     if (game.turn() !== playerColor && !game.isGameOver() && !isThinking) {
