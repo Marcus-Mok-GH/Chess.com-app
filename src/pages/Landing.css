@@ -22,8 +22,8 @@
 
 .landing-glow {
   position: absolute;
-  width: 80vw;
-  height: 80vw;
+  width: min(80vw, 500px); /* cap size so it doesn't cause horizontal scroll on narrow screens */
+  height: min(80vw, 500px);
   border-radius: 50%;
   filter: blur(80px);
   opacity: 0.12;
@@ -101,7 +101,7 @@
 }
 
 .hero-title {
-  font-size: clamp(3rem, 6vw, 5rem);
+  font-size: clamp(2rem, 6vw, 5rem); /* floor lowered to 2rem so it doesn't overflow 320px screens */
   font-weight: 700;
   font-family: var(--font-display);
   line-height: 1;
@@ -312,7 +312,7 @@
 }
 
 .section-header h2 {
-  font-size: clamp(2.5rem, 4vw, 3.5rem);
+  font-size: clamp(1.75rem, 4vw, 3.5rem); /* floor lowered so it doesn't overflow on 320px */
   font-family: var(--font-display);
   margin-bottom: 16px;
 }
@@ -458,7 +458,11 @@
 
 @media (max-width: 768px) {
   .hero-title {
-    font-size: 3.5rem;
+    font-size: clamp(2rem, 8vw, 3.5rem);
+  }
+
+  .hero-subtitle {
+    font-size: 1.1rem;
   }
 
   .stats-grid, .features-grid {
@@ -468,5 +472,37 @@
   .footer-content {
     flex-direction: column;
     gap: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .landing-hero {
+    padding: 0 16px;
+  }
+
+  .hero-subtitle {
+    font-size: 1rem;
+    margin-bottom: 28px;
+  }
+
+  .hero-actions {
+    gap: 12px;
+    flex-direction: column;
+  }
+
+  .btn-premium {
+    padding: 14px 24px;
+    font-size: 1rem;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .features-section,
+  .stats-section {
+    padding: 60px 16px;
+  }
+
+  .section-header {
+    margin-bottom: 40px;
   }
 }
