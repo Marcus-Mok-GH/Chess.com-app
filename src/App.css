@@ -879,7 +879,7 @@ body {
   gap: 6px;
   transition: all 0.15s;
   white-space: nowrap;
-  min-height: 40px;
+  min-height: 44px; /* WCAG 2.5.5 minimum touch target */
 }
 
 .btn-primary {
@@ -1582,7 +1582,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 1100; /* Above bottom-nav (1000) to prevent tap-through on mobile */
   padding: 16px;
 }
 
@@ -1611,8 +1611,8 @@ body {
 }
 
 .modal-close {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1623,6 +1623,7 @@ body {
   cursor: pointer;
   border-radius: 4px;
   transition: all 0.15s;
+  flex-shrink: 0;
 }
 
 .modal-close:hover {
@@ -2213,7 +2214,7 @@ body {
   }
 
   .logout-btn {
-    min-height: 40px;
+    min-height: 44px;
     padding: 8px 10px;
   }
 
@@ -2234,7 +2235,7 @@ body {
 
 @media (max-width: 480px) {
   .app-header {
-    padding: 6px 10px;
+    padding: 6px 8px;
   }
 
   .app-header .header-content {
