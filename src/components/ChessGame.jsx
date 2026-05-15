@@ -18,7 +18,6 @@ import { normalizeMoveHistory, toSanHistory, toStoredMoveHistory, buildGameFromH
 import { useUser } from '../contexts/UserContext';
 import api from '../services/api';
 import StockfishWorker from '../engine/workers/stockfishWorker.js?worker';
-import { findBestMove as findBestMoveLocal } from '../engine/ai/chessAI';
 import './ChessGame.css';
 
 const UCI_MOVE_REGEX = /^[a-h][1-8][a-h][1-8][qrbn]?$/i;
@@ -136,6 +135,7 @@ function ChessGame(
   const [isCoachingLoading, setIsCoachingLoading] = useState(false);
   const [hasResigned, setHasResigned] = useState(false);
   const [showVictory, setShowVictory] = useState(false);
+  const [engineError, setEngineError] = useState(null);
   const gameRef = useRef(game);
   const selectedBotRef = useRef(selectedBot);
   const customEloRef = useRef(customElo);
@@ -147,6 +147,7 @@ function ChessGame(
 
   const workerRef = useRef(null);
   const botMoveHandlerRef = useRef(null);
+  const engineErrorRef = useRef(false);
 
   const animationIdRef = useRef(0);
   const persistTimeoutRef = useRef(null);
@@ -449,7 +450,7 @@ function ChessGame(
   }, [game]);
 
   const makeAIMove = useCallback(() => {
-    if (gameRef.current.isGameOver() || !workerRef.current || isThinkingRef.current) return;
+    if (gameRef.current.isGameOver() || !workerRef.current || isThinkingRef.current || engineErrorRef.current) return;
 
     setIsThinking(true);
 
@@ -536,59 +537,13 @@ function ChessGame(
         isThinkingRef.current = false;
       }
 
-      // Handle engine errors — fall back to pure-JS minimax so the bot still moves
-      // and the turn changes, which stops the infinite retry loop.
+      // Handle engine errors — surface them in the UI and stop retrying.
       if (type === 'error') {
-        console.error('[ChessGame] Engine error:', e.data.error, '— falling back to minimax AI');
+        const msg = e.data.error || 'Unknown engine error';
+        console.error('[ChessGame] Engine error:', msg);
         clearHandler();
-
-        const currentGame = gameRef.current;
-        const history = Array.isArray(moveHistoryRef.current) ? moveHistoryRef.current : [];
-        let madeFallbackMove = false;
-
-        if (!currentGame.isGameOver()) {
-          try {
-            // Cap depth so the synchronous minimax doesn't freeze the UI
-            const fallbackDepth = Math.min(bot.depth || 3, 3);
-            const fallbackGame = new Chess(fen);
-            const fallbackMove = findBestMoveLocal(fallbackGame, fallbackDepth, bot);
-
-            if (fallbackMove) {
-              const newGame = buildGameFromHistory(history, fen);
-              const moveResult = applyEngineMove(newGame, fallbackMove);
-
-              if (moveResult) {
-                madeFallbackMove = true;
-                triggerAnimation(moveResult, newGame);
-                setTimeout(() => {
-                  setGame(newGame);
-                  setMoveHistory([...history, moveResult]);
-
-                  if (newGame.isCheckmate()) {
-                    setBotMessage(getRandomQuote(bot, 'win'));
-                  } else if (newGame.isDraw()) {
-                    setBotMessage(getRandomQuote(bot, 'draw'));
-                  } else if (newGame.inCheck()) {
-                    setBotMessage(getRandomQuote(bot, 'check'));
-                  } else if (moveResult.captured) {
-                    setBotMessage(getRandomQuote(bot, 'capture'));
-                  } else if (Math.random() < 0.15) {
-                    const categories = ['thinking', 'blunder', 'goodMove'];
-                    setBotMessage(getRandomQuote(bot, categories[Math.floor(Math.random() * categories.length)]));
-                  }
-                }, 50);
-              }
-            }
-          } catch (fallbackErr) {
-            console.error('[ChessGame] Fallback minimax also failed:', fallbackErr);
-          }
-        }
-
-        if (!madeFallbackMove) {
-          // No move could be made — just unblock so the player can continue
-          setBotMessage('...');
-        }
-
+        engineErrorRef.current = true;
+        setEngineError(msg);
         setIsThinking(false);
         isThinkingRef.current = false;
       }
@@ -888,6 +843,8 @@ function ChessGame(
     setCoachingTip(null);
     setHasResigned(false);
     setHasLoadedPersistedState(true);
+    setEngineError(null);
+    engineErrorRef.current = false;
   }, [gameId, selectedBot]);
 
   const handleResign = useCallback(() => {
@@ -1083,6 +1040,23 @@ function ChessGame(
               capturedPieces={capturedPieces[bottomPlayer.color === 'w' ? 'b' : 'w']}
               botMessage={bottomPlayer.isBot ? botMessage : null}
             />
+            {engineError && (
+              <div
+                role="alert"
+                style={{
+                  margin: '8px 0',
+                  padding: '10px 14px',
+                  background: '#3a0000',
+                  border: '1px solid #ff4444',
+                  borderRadius: '6px',
+                  color: '#ff8080',
+                  fontSize: '13px',
+                  lineHeight: '1.4',
+                }}
+              >
+                <strong>⚠️ Engine error:</strong> {engineError}
+              </div>
+            )}
             {settings.debugMode && (
               <DebugPanel debugInfo={debugInfo} isThinking={isThinking} />
             )}
