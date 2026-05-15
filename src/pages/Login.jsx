@@ -1,20 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
-import './LoginModal.css';
+import './Login.css';
 
-export default function LoginModal({ onClose, onContinueAsGuest, mode = 'ranked' }) {
-  const { requestOtp, verifyEmailOtp } = useUser();
+export default function Login() {
+  const { requestOtp, verifyEmailOtp, isLoggedIn, isLoading } = useUser();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
 
   const [step, setStep] = useState('email'); // 'email' | 'verify'
-  const [error, setError] = useState('');
+  const [error, setError] = useState(searchParams.get('error') || '');
   const [successMsg, setSuccessMsg] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const isRanked = mode === 'ranked';
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!isLoading && isLoggedIn) {
+      navigate('/home', { replace: true });
+    }
+  }, [isLoading, isLoggedIn, navigate]);
 
   const handleSendCode = async () => {
     setError('');
@@ -22,14 +30,14 @@ export default function LoginModal({ onClose, onContinueAsGuest, mode = 'ranked'
     if (!email.trim()) return setError('Please enter your email address.');
     if (!username.trim()) return setError('Please choose a username.');
 
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
       const result = await requestOtp({ email, username });
       if (!result.success) return setError(result.error);
       setSuccessMsg(result.message || 'Code sent! Check your email.');
       setStep('verify');
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -37,13 +45,13 @@ export default function LoginModal({ onClose, onContinueAsGuest, mode = 'ranked'
     setError('');
     if (!otpCode.trim()) return setError('Please enter the 6-digit code.');
 
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
       const result = await verifyEmailOtp({ email, token: otpCode });
       if (!result.success) return setError(result.error || 'Invalid or expired code. Please try again.');
-      onClose?.();
+      navigate('/home', { replace: true });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -51,97 +59,87 @@ export default function LoginModal({ onClose, onContinueAsGuest, mode = 'ranked'
     setError('');
     setSuccessMsg('');
     setOtpCode('');
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
       const result = await requestOtp({ email, username });
       if (!result.success) return setError(result.error);
       setSuccessMsg('New code sent! Check your email.');
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  return (
-    <div className="login-overlay" onKeyDown={(e) => e.key === 'Escape' && onClose?.()}>
-      <div className="login-modal">
+  if (isLoading) {
+    return (
+      <div className="login-page">
+        <div className="login-card">
+          <div className="spinner"></div>
+        </div>
+      </div>
+    );
+  }
 
-        {/* Step 1: email + username */}
+  return (
+    <div className="login-page">
+      <div className="login-card">
+        <div className="login-logo">♟️</div>
+
         {step === 'email' && (
           <>
-            <div className="login-header">
-              <h2>♟️ Ready to Play?</h2>
-              <p>Sign in to track your progress, earn ELO, and climb the leaderboard</p>
-            </div>
+            <h1 className="login-title">Sign in to Chess</h1>
+            <p className="login-subtitle">Enter your username and email to receive a sign-in code</p>
 
-            <form onSubmit={(e) => e.preventDefault()} className="login-form">
-              <div className="input-group">
-                <label htmlFor="username">Choose a username</label>
+            <form className="login-form" onSubmit={(e) => e.preventDefault()}>
+              <div className="login-field">
+                <label htmlFor="username">Username</label>
                 <input
                   id="username"
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter your username"
+                  placeholder="Choose a username"
                   autoFocus
                   autoComplete="off"
                   maxLength={20}
                 />
+              </div>
+
+              <div className="login-field">
+                <label htmlFor="email">Email</label>
                 <input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Email"
+                  placeholder="your@email.com"
                   autoComplete="email"
                   onKeyDown={(e) => e.key === 'Enter' && handleSendCode()}
                 />
-                <small>We'll send a 6-digit code to your email — no link to click.</small>
-                {error && <span className="error-text">{error}</span>}
               </div>
+
+              {error && <p className="login-error">{error}</p>}
 
               <button
                 type="button"
-                className="btn btn-secondary btn-full"
-                disabled={isLoading || !username.trim() || !email.trim()}
+                className="login-btn"
+                disabled={isSubmitting || !username.trim() || !email.trim()}
                 onClick={handleSendCode}
               >
-                {isLoading ? 'Sending code...' : 'Send Code'}
+                {isSubmitting ? 'Sending…' : 'Send Code'}
               </button>
             </form>
-
-            {!isRanked && onContinueAsGuest && (
-              <div className="login-guest-section">
-                <div className="login-divider"><span>or</span></div>
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-full"
-                  onClick={() => { onContinueAsGuest?.(); onClose?.(); }}
-                >
-                  Continue as Guest
-                </button>
-                <p className="guest-note">Guest progress won't be saved</p>
-              </div>
-            )}
-
-            {isRanked && (
-              <p className="ranked-note">♔️ Ranked mode requires an account to track your ELO</p>
-            )}
           </>
         )}
 
-        {/* Step 2: enter the code */}
         {step === 'verify' && (
           <>
-            <div className="login-header">
-              <h2>Check your email</h2>
-              <p>
-                We sent a 6-digit code to <strong>{email}</strong>.
-                Enter it below to sign in.
-              </p>
-            </div>
+            <h1 className="login-title">Check your email</h1>
+            <p className="login-subtitle">
+              We sent a 6-digit code to <strong>{email}</strong>
+            </p>
 
-            <form onSubmit={(e) => e.preventDefault()} className="login-form">
-              <div className="input-group">
+            <form className="login-form" onSubmit={(e) => e.preventDefault()}>
+              <div className="login-field">
                 <label htmlFor="otp-code">Verification code</label>
                 <input
                   id="otp-code"
@@ -156,33 +154,39 @@ export default function LoginModal({ onClose, onContinueAsGuest, mode = 'ranked'
                   maxLength={6}
                   onKeyDown={(e) => e.key === 'Enter' && handleVerifyCode()}
                 />
-                {error && <span className="error-text">{error}</span>}
-                {!error && successMsg && <span className="success-text">✅ {successMsg}</span>}
               </div>
+
+              {error && <p className="login-error">{error}</p>}
+              {!error && successMsg && <p className="login-success">✅ {successMsg}</p>}
 
               <button
                 type="button"
-                className="btn btn-secondary btn-full"
-                disabled={isLoading || otpCode.length !== 6}
+                className="login-btn"
+                disabled={isSubmitting || otpCode.length !== 6}
                 onClick={handleVerifyCode}
               >
-                {isLoading ? 'Verifying...' : 'Verify Code'}
+                {isSubmitting ? 'Verifying…' : 'Verify Code'}
               </button>
 
-              <div className="login-guest-section">
-                <div className="login-divider"><span>didn't get it?</span></div>
+              <div className="login-secondary-actions">
                 <button
                   type="button"
-                  className="btn btn-ghost btn-full"
-                  disabled={isLoading}
+                  className="login-link-btn"
+                  disabled={isSubmitting}
                   onClick={handleResendCode}
                 >
                   Resend code
                 </button>
+                <span className="login-divider-dot">·</span>
                 <button
                   type="button"
-                  className="btn btn-ghost btn-full"
-                  onClick={() => { setStep('email'); setError(''); setSuccessMsg(''); setOtpCode(''); }}
+                  className="login-link-btn"
+                  onClick={() => {
+                    setStep('email');
+                    setError('');
+                    setSuccessMsg('');
+                    setOtpCode('');
+                  }}
                 >
                   ← Change email
                 </button>
@@ -190,15 +194,6 @@ export default function LoginModal({ onClose, onContinueAsGuest, mode = 'ranked'
             </form>
           </>
         )}
-
-        <button
-          type="button"
-          className="login-close-btn"
-          onClick={onClose}
-          aria-label="Close"
-        >
-          ✕
-        </button>
       </div>
     </div>
   );
