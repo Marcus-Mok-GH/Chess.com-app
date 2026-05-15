@@ -18,6 +18,7 @@ import { normalizeMoveHistory, toSanHistory, toStoredMoveHistory, buildGameFromH
 import { useUser } from '../contexts/UserContext';
 import api from '../services/api';
 import StockfishWorker from '../engine/workers/stockfishWorker.js?worker';
+import { findBestMove as findBestMoveLocal } from '../engine/ai/chessAI';
 import './ChessGame.css';
 
 const UCI_MOVE_REGEX = /^[a-h][1-8][a-h][1-8][qrbn]?$/i;
@@ -535,10 +536,59 @@ function ChessGame(
         isThinkingRef.current = false;
       }
 
-      // Handle engine errors — must reset thinking state so the bot can try again
+      // Handle engine errors — fall back to pure-JS minimax so the bot still moves
+      // and the turn changes, which stops the infinite retry loop.
       if (type === 'error') {
-        console.error('[ChessGame] Engine error:', e.data.error);
+        console.error('[ChessGame] Engine error:', e.data.error, '— falling back to minimax AI');
         clearHandler();
+
+        const currentGame = gameRef.current;
+        const history = Array.isArray(moveHistoryRef.current) ? moveHistoryRef.current : [];
+        let madeFallbackMove = false;
+
+        if (!currentGame.isGameOver()) {
+          try {
+            // Cap depth so the synchronous minimax doesn't freeze the UI
+            const fallbackDepth = Math.min(bot.depth || 3, 3);
+            const fallbackGame = new Chess(fen);
+            const fallbackMove = findBestMoveLocal(fallbackGame, fallbackDepth, bot);
+
+            if (fallbackMove) {
+              const newGame = buildGameFromHistory(history, fen);
+              const moveResult = applyEngineMove(newGame, fallbackMove);
+
+              if (moveResult) {
+                madeFallbackMove = true;
+                triggerAnimation(moveResult, newGame);
+                setTimeout(() => {
+                  setGame(newGame);
+                  setMoveHistory([...history, moveResult]);
+
+                  if (newGame.isCheckmate()) {
+                    setBotMessage(getRandomQuote(bot, 'win'));
+                  } else if (newGame.isDraw()) {
+                    setBotMessage(getRandomQuote(bot, 'draw'));
+                  } else if (newGame.inCheck()) {
+                    setBotMessage(getRandomQuote(bot, 'check'));
+                  } else if (moveResult.captured) {
+                    setBotMessage(getRandomQuote(bot, 'capture'));
+                  } else if (Math.random() < 0.15) {
+                    const categories = ['thinking', 'blunder', 'goodMove'];
+                    setBotMessage(getRandomQuote(bot, categories[Math.floor(Math.random() * categories.length)]));
+                  }
+                }, 50);
+              }
+            }
+          } catch (fallbackErr) {
+            console.error('[ChessGame] Fallback minimax also failed:', fallbackErr);
+          }
+        }
+
+        if (!madeFallbackMove) {
+          // No move could be made — just unblock so the player can continue
+          setBotMessage('...');
+        }
+
         setIsThinking(false);
         isThinkingRef.current = false;
       }
