@@ -188,7 +188,7 @@ export default function Landing() {
 
       <footer className="landing-footer">
         <div className="footer-content">
-          <div className="footer-logo">♟️ ChessPremium</div>
+          <div className="footer-logo">♟️ chess.com-app</div>
           <div className="footer-links">
             <Link to="/play">Play</Link>
             <Link to="/online">Online</Link>
@@ -197,7 +197,7 @@ export default function Landing() {
           </div>
         </div>
         <div className="footer-bottom">
-          <p>© 2024 ChessPremium. Built for the modern grandmaster.</p>
+          <p>© 2024 chess.com-app. Built for the modern grandmaster.</p>
         </div>
       </footer>
 
