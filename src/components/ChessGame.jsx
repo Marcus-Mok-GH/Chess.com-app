@@ -148,6 +148,7 @@ function ChessGame(
   const workerRef = useRef(null);
   const botMoveHandlerRef = useRef(null);
   const engineErrorRef = useRef(false);
+  const busyRetryCountRef = useRef(0);
 
   const animationIdRef = useRef(0);
   const persistTimeoutRef = useRef(null);
@@ -493,6 +494,7 @@ function ChessGame(
 
       // Handle final result
       if (type === 'result') {
+        busyRetryCountRef.current = 0; // Reset retry counter on success
         clearHandler();
 
         if (newDebugInfo && settingsRef.current.debugMode) {
@@ -537,7 +539,29 @@ function ChessGame(
         isThinkingRef.current = false;
       }
 
-      // Handle engine errors — surface them in the UI and stop retrying.
+      // Handle transient "busy" responses — engine was already searching.
+      // Retry automatically up to 3 times without disabling the AI.
+      if (type === 'busy') {
+        clearHandler();
+        busyRetryCountRef.current += 1;
+        if (busyRetryCountRef.current <= 3) {
+          console.warn(`[ChessGame] Engine busy — retry ${busyRetryCountRef.current}/3`);
+          setTimeout(() => {
+            setIsThinking(false);
+            isThinkingRef.current = false;
+            // useEffect dependency on isThinking will re-trigger makeAIMove
+          }, 800);
+        } else {
+          console.error('[ChessGame] Engine busy after max retries — giving up.');
+          engineErrorRef.current = true;
+          setEngineError('Engine is unresponsive. Start a new game to reset.');
+          setIsThinking(false);
+          isThinkingRef.current = false;
+        }
+        return;
+      }
+
+      // Handle fatal engine errors — surface in UI.
       if (type === 'error') {
         const msg = e.data.error || 'Unknown engine error';
         console.error('[ChessGame] Engine error:', msg);
@@ -845,6 +869,7 @@ function ChessGame(
     setHasLoadedPersistedState(true);
     setEngineError(null);
     engineErrorRef.current = false;
+    busyRetryCountRef.current = 0;
   }, [gameId, selectedBot]);
 
   const handleResign = useCallback(() => {
