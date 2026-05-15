@@ -145,6 +145,7 @@ function ChessGame(
   const lastVictoryKeyRef = useRef(null);
 
   const workerRef = useRef(null);
+  const botMoveHandlerRef = useRef(null);
 
   const animationIdRef = useRef(0);
   const persistTimeoutRef = useRef(null);
@@ -465,7 +466,20 @@ function ChessGame(
     // Show thinking message
     setBotMessage(getRandomQuote(bot, 'thinking'));
 
-    // Define message handler to avoid multiple handlers
+    // Remove any previously registered handler before attaching a new one
+    if (botMoveHandlerRef.current && workerRef.current) {
+      workerRef.current.removeEventListener('message', botMoveHandlerRef.current);
+      botMoveHandlerRef.current = null;
+    }
+
+    const clearHandler = () => {
+      if (workerRef.current && botMoveHandlerRef.current) {
+        workerRef.current.removeEventListener('message', botMoveHandlerRef.current);
+      }
+      botMoveHandlerRef.current = null;
+    };
+
+    // Define message handler
     const handleMessage = (e) => {
       const { type, bestMove, debugInfo: newDebugInfo } = e.data;
 
@@ -477,8 +491,7 @@ function ChessGame(
 
       // Handle final result
       if (type === 'result') {
-        // Remove the event listener to prevent multiple calls
-        workerRef.current.removeEventListener('message', handleMessage);
+        clearHandler();
 
         if (newDebugInfo && settingsRef.current.debugMode) {
           setDebugInfo(newDebugInfo);
@@ -521,10 +534,17 @@ function ChessGame(
         setIsThinking(false);
         isThinkingRef.current = false;
       }
+
+      // Handle engine errors — must reset thinking state so the bot can try again
+      if (type === 'error') {
+        console.error('[ChessGame] Engine error:', e.data.error);
+        clearHandler();
+        setIsThinking(false);
+        isThinkingRef.current = false;
+      }
     };
 
-    // Remove any existing listeners to prevent duplicates
-    workerRef.current.removeEventListener('message', handleMessage);
+    botMoveHandlerRef.current = handleMessage;
     workerRef.current.addEventListener('message', handleMessage);
 
     // Send work to the worker - pass full bot config for Stockfish
