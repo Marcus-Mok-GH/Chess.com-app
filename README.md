@@ -1,4 +1,4 @@
-# ChessPremium ♟️
+# chess.com-app
 
 A sophisticated, full-stack React chess platform featuring real-time multiplayer, advanced AI opponents, and deep game analysis. This internal repository hosts the core engine, socket orchestration, and premium UI components.
 
@@ -42,7 +42,7 @@ A sophisticated, full-stack React chess platform featuring real-time multiplayer
 Key environment variables required for full functionality:
 
 | Variable | Description | Default/Example |
-|----------|-------------|-----------------|
+|----------|-------------|------------------|
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://...` |
 | `FRONTEND_URL` | CORS origin for production | `https://chess-premium.com` |
 | `FIREWORKS_API_KEY` | API key for AI coach | `fw_...` |
