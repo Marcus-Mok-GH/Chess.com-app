@@ -5,13 +5,6 @@ import './Login.css';
 
 const PENDING_OTP_KEY = 'chess_pending_otp';
 
-/**
- * Render the email verification page that accepts an 8-digit OTP, verifies it, allows resending a new code, and supports canceling by logging out.
- *
- * The component redirects to /home or /login when the user is not awaiting verification. It reads pending verification data from localStorage, validates and submits the OTP, shows error or success messages, and disables actions while requests are in progress.
- *
- * @returns {JSX.Element} The verification page React element.
- */
 export default function VerifyEmail() {
   const {
     isAwaitingVerification,
@@ -44,7 +37,7 @@ export default function VerifyEmail() {
 
   const handleVerifyCode = async () => {
     setError('');
-    if (!otpCode.trim()) return setError('Please enter the 8-digit code.');
+    if (!/^\d{8}$/.test(otpCode)) return setError('Please enter the full 8-digit code.');
 
     setIsSubmitting(true);
     try {
