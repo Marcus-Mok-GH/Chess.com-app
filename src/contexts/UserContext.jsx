@@ -233,7 +233,10 @@ export function UserProvider({ children }) {
 
   /**
    * Step 1 of OTP login: send a 6-digit code to the user's email.
-   * No redirect URL needed — code is entered inline.
+   * emailRedirectTo is intentionally omitted — including it switches
+   * Supabase to magic-link/PKCE mode, which breaks verifyOtp with
+   * type:'email'. Without it, Supabase sends a plain OTP code that
+   * verifies cleanly via the inline code entry.
    */
   const requestOtp = useCallback(async ({ email, username }) => {
     const trimmedEmail = email?.trim();
@@ -259,7 +262,6 @@ export function UserProvider({ children }) {
         email: trimmedEmail,
         options: {
           shouldCreateUser: true,
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: { username: trimmedUsername },
         },
       });
@@ -302,7 +304,7 @@ export function UserProvider({ children }) {
       const { data, error } = await supabase.auth.verifyOtp({
         email: email.trim(),
         token: token.trim(),
-        type: 'magiclink',
+        type: 'email',
       });
 
       if (error) throw error;

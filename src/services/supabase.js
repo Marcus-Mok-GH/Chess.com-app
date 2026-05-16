@@ -53,5 +53,12 @@ const mockAuth = {
 };
 
 export const supabase = !isMock
-  ? createClient(supabaseUrl, supabaseAnonKey)
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        flowType: 'implicit',
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+      },
+    })
   : { auth: mockAuth };
