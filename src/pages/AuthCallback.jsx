@@ -13,6 +13,19 @@ import './AuthCallback.css';
 
 const PENDING_OTP_KEY = 'chess_pending_otp';
 
+/**
+ * Handle Supabase authentication callback and complete the app sign-in process.
+ *
+ * Parses query/hash parameters produced by OAuth, PKCE, magic-link/OTP, or implicit flows,
+ * exchanges or verifies credentials with Supabase, resolves the application username
+ * (preferring a pending value stored in localStorage under `PENDING_OTP_KEY`), calls the
+ * app `login` action, and navigates the user on success or failure.
+ *
+ * On successful sign-in the component navigates to `/home`. On failure it redirects to
+ * `/login?error=<message>` with an encoded error message.
+ *
+ * @returns {JSX.Element} The loading UI displayed while handling the authentication callback.
+ */
 export default function AuthCallback() {
   const navigate = useNavigate();
   const { login } = useUser();
