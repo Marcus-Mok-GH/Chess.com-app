@@ -10,6 +10,14 @@ const AUTH_REQUEST_ID_KEY = 'chess_auth_request_id';
 
 const UserContext = createContext(null);
 
+/**
+ * Provides user authentication state, session management, OTP flow state, and related actions to descendant components via UserContext.
+ *
+ * Manages localStorage session persistence, Supabase auth integration, socket-based remote login handling, online/offline status, OTP request/verification, and exposes actions like login, logout, requestOtp, verifyEmailOtp, updateElo, and refreshUser.
+ *
+ * @param {{ children: import('react').ReactNode }} props - Provider children to receive the context.
+ * @returns {import('react').ReactElement} The UserContext.Provider element supplying auth state and actions.
+ */
 export function UserProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -433,6 +441,12 @@ export function UserProvider({ children }) {
   );
 }
 
+/**
+ * Accesses the UserContext value for the current React component tree.
+ *
+ * @returns {import('./UserContext').UserContextValue} The context value supplied by the nearest UserProvider.
+ * @throws {Error} If called outside of a UserProvider.
+ */
 export function useUser() {
   const context = useContext(UserContext);
   if (!context) {

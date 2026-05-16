@@ -3,6 +3,14 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 import './Login.css';
 
+/**
+ * Render the sign-in page that collects a username and email and initiates an OTP request.
+ *
+ * The component redirects authenticated users to /home when loading completes, validates inputs,
+ * calls `requestOtp` with `{ email, username }`, shows validation or request errors, and navigates
+ * to /verify-email after a successful OTP request.
+ * @returns {JSX.Element} The login page UI.
+ */
 export default function Login() {
   const { requestOtp, isLoggedIn, isLoading } = useUser();
   const navigate = useNavigate();
