@@ -35,7 +35,7 @@ try {
 }
 
 const isNeonHost = dbHost && dbHost.includes('neon.tech');
-const useNeonServerless = Boolean(process.env.VERCEL || process.env.NEON_PROJECT_ID || (isProduction && isNeonHost));
+const useNeonServerless = Boolean(process.env.NEON_PROJECT_ID || isNeonHost);
 
 if (useNeonServerless) {
   try {
