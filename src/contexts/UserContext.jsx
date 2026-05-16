@@ -302,7 +302,7 @@ export function UserProvider({ children }) {
       const { data, error } = await supabase.auth.verifyOtp({
         email: email.trim(),
         token: token.trim(),
-        type: 'magiclink',
+        type: 'email',
       });
 
       if (error) throw error;
