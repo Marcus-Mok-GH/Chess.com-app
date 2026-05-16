@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import socket from '../services/socket';
 
@@ -51,20 +51,6 @@ export function useMagicLinkSerializer() {
   return { serialize, magicUrlForEmail };
 }
 
-/**
- * Detects magic-link callback parameters from a URL and completes the sign-in flow when present.
- *
- * Parses the provided URL for magic-link callback parameters, attempts to finalize authentication by
- * exchanging a code or verifying a token/token_hash with Supabase, clears related pending state in
- * localStorage, updates auth state via the optional setter, and optionally finalizes a remote login.
- *
- * @param {string | null | undefined} url - The URL to inspect for magic-link callback parameters.
- * @param {(state: Object) => void} [setAuthState] - Optional state setter to report loading or error states.
- * @returns {{ handleCompleteMagicLinkSignIn: (username: string, params: Object, isRemoteLogin?: boolean) => Promise<void>, pendingData: any }}
- *          An object containing:
- *          - `handleCompleteMagicLinkSignIn(username, params, isRemoteLogin)` — completes the magic-link sign-in flow for a given username and parsed params; when `isRemoteLogin` is true and a requestId is present the function will finalize remote login.
- *          - `pendingData` — local pending magic-link state (may be null).
- */
 export function useMagicLinkAuth(url, setAuthState) {
   const { serialize } = useMagicLinkSerializer();
   const [pendingData, setPendingData] = useState(null);
