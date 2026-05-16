@@ -30,3 +30,7 @@ Thumbs.db
 *.tmp
 .cache/
 .vercel
+
+# Test output
+playwright-report/
+test-results/
