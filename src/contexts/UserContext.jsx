@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import api from '../services/api';
 import { supabase } from '../services/supabase';
 import socket from '../services/socket';
@@ -20,6 +20,7 @@ const UserContext = createContext(null);
  */
 export function UserProvider({ children }) {
   const [user, setUser] = useState(null);
+  const userRef = useRef(null); // tracks current user for stale-closure-safe handlers
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isAwaitingVerification, setIsAwaitingVerification] = useState(() => {
@@ -31,6 +32,11 @@ export function UserProvider({ children }) {
       return raw ? (JSON.parse(raw).email || '') : '';
     } catch { return ''; }
   });
+
+  // Keep ref in sync so event-handler closures always see the latest user value.
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   const persistUser = useCallback((userData) => {
     if (!userData?.username) return;
@@ -131,9 +137,17 @@ export function UserProvider({ children }) {
         if (!session) {
           console.log('[UserContext] No Supabase session found');
           if (isMounted) {
-            setUser(null);
-            localStorage.removeItem(SESSION_USER_KEY);
-            localStorage.removeItem(SESSION_USER_DATA_KEY);
+            // Do NOT clear auth state while OTP verification is in progress.
+            // init() runs at mount and its async getSession() call can resolve
+            // AFTER verifyEmailOtp() has already set the user, causing a race
+            // where setUser(null) overwrites the freshly-authenticated user in
+            // the same React batch, redirecting the user back to /login.
+            const isOtpPending = !!localStorage.getItem(PENDING_OTP_KEY);
+            if (!isOtpPending) {
+              setUser(null);
+              localStorage.removeItem(SESSION_USER_KEY);
+              localStorage.removeItem(SESSION_USER_DATA_KEY);
+            }
           }
           return;
         }
@@ -178,11 +192,20 @@ export function UserProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log(`[UserContext] Auth event: ${event}`);
       if (event === 'SIGNED_OUT') {
-        setUser(null);
-        localStorage.removeItem(SESSION_USER_KEY);
-        localStorage.removeItem(SESSION_USER_DATA_KEY);
+        // Don't clear auth state if an OTP is currently being verified — Supabase
+        // can fire a spurious SIGNED_OUT during the OTP flow (e.g. invalidating a
+        // previous session), and we must not clobber the freshly-set user.
+        const isOtpPending = !!localStorage.getItem(PENDING_OTP_KEY);
+        if (!isOtpPending) {
+          setUser(null);
+          localStorage.removeItem(SESSION_USER_KEY);
+          localStorage.removeItem(SESSION_USER_DATA_KEY);
+        }
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        if (session && !user) {
+        // Use userRef (not the captured `user` variable) to avoid stale-closure
+        // false-positives: without the ref, `!user` is always true because the
+        // closure captures the initial null value and never updates.
+        if (session && !userRef.current) {
           const username = session.user?.user_metadata?.username;
           if (username) {
             login({ username }).catch(err => {
@@ -345,11 +368,18 @@ export function UserProvider({ children }) {
       const loginResult = await login({ username: resolvedUsername });
 
       if (loginResult.success) {
-        localStorage.removeItem(PENDING_OTP_KEY);
-        localStorage.removeItem(AUTH_REQUEST_ID_KEY);
         setIsAwaitingVerification(false);
         setPendingOtpEmail('');
       }
+      // Always clear localStorage keys regardless of backend outcome.
+      // The Supabase OTP token is consumed once verifyOtp() succeeds, so
+      // retaining PENDING_OTP_KEY after a backend failure would trap the
+      // user on /verify-email after a page refresh with an invalid code.
+      // isAwaitingVerification stays true on failure so the error message
+      // remains visible; a subsequent refresh re-initialises it to false
+      // (PENDING_OTP_KEY gone) and the guard sends the user to /login.
+      localStorage.removeItem(PENDING_OTP_KEY);
+      localStorage.removeItem(AUTH_REQUEST_ID_KEY);
 
       return loginResult;
     } catch (error) {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 import './Login.css';
 
@@ -14,15 +14,19 @@ export default function VerifyEmail() {
     requestOtp,
     logout,
   } = useUser();
-  const navigate = useNavigate();
-
   const [otpCode, setOtpCode] = useState('');
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Guard: if not awaiting verification, redirect to the appropriate page
-  if (!isAwaitingVerification) {
+  // Guard: if not awaiting verification AND not mid-submit, redirect.
+  // isSubmitting is checked as a safety net: verifyEmailOtp() clears
+  // isAwaitingVerification (and sets user) in one async continuation, while
+  // setIsSubmitting(false) runs in the following finally block — a separate
+  // microtask. Without this check a render between the two updates could see
+  // isAwaitingVerification=false but user=null, causing a premature redirect
+  // to /login. Suppressing the guard while still submitting closes that window.
+  if (!isAwaitingVerification && !isSubmitting) {
     return <Navigate to={isLoggedIn ? '/home' : '/login'} replace />;
   }
 
@@ -43,7 +47,11 @@ export default function VerifyEmail() {
     try {
       const result = await verifyEmailOtp({ email: pendingOtpEmail, token: otpCode });
       if (!result.success) return setError(result.error || 'Invalid or expired code. Please try again.');
-      navigate('/home', { replace: true });
+      // Navigation is handled declaratively by the guard below.
+      // verifyEmailOtp() sets isAwaitingVerification=false and user in the same
+      // React state batch; once isSubmitting also becomes false (finally block),
+      // the guard fires: <Navigate to="/home" replace />.
+      // Calling navigate() here would race against those pending state updates.
     } finally {
       setIsSubmitting(false);
     }
