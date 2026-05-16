@@ -3,27 +3,31 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 400px;
-  padding: 2rem;
+  min-height: 300px; /* reduced so error still shows on small phones */
+  padding: 1.5rem;
 }
 
 .chess-game-error .error-message {
   text-align: center;
   background: #3c3a37;
-  padding: 2rem;
+  padding: 1.5rem;
   border-radius: 8px;
   border: 1px solid #ff6b6b;
-  max-width: 400px;
+  max-width: min(400px, 100%); /* never wider than the viewport */
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .chess-game-error h2 {
   color: #ff6b6b;
   margin-bottom: 1rem;
+  font-size: clamp(1rem, 4vw, 1.5rem);
 }
 
 .chess-game-error p {
   color: #b8b9ba;
   margin-bottom: 1.5rem;
+  font-size: clamp(0.875rem, 3.5vw, 1rem);
 }
 
 .chess-game-error .retry-button {
@@ -31,12 +35,25 @@
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
+  min-height: 44px; /* WCAG touch target */
   border-radius: 4px;
   cursor: pointer;
   font-size: 1rem;
   transition: background-color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .chess-game-error .retry-button:hover {
   background: #8fb85a;
+}
+
+@media (max-width: 480px) {
+  .chess-game-error {
+    padding: 1rem;
+    min-height: 200px;
+    align-items: flex-start;
+    padding-top: 2rem;
+  }
 }

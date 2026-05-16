@@ -66,3 +66,22 @@
     font-size: 0.875rem;
   }
 }
+
+@media (max-width: 480px) {
+  .play-nav .nav-content {
+    padding: 0 12px;
+    gap: 8px;
+    height: 48px;
+  }
+
+  .play-nav .logo {
+    font-size: 1rem;
+  }
+
+  .play-nav .page-title {
+    font-size: 0.8125rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}

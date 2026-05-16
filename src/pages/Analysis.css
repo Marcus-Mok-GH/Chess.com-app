@@ -159,11 +159,12 @@
 
 .analysis-board-wrap {
   width: 100%;
-  max-width: min(calc(100vh - 180px), 560px);
-  min-width: 280px;
-  min-height: 280px;
+  /* Use dvh when available (accounts for mobile browser chrome); fall back to vh */
+  max-width: min(calc(100svh - 180px), 560px);
+  min-width: 260px;
+  min-height: 260px;
   aspect-ratio: 1;
-  max-height: min(calc(100vh - 180px), 560px);
+  max-height: min(calc(100svh - 180px), 560px);
   border-radius: 12px;
   overflow: hidden;
   box-shadow: var(--shadow-lg);
@@ -202,6 +203,7 @@
 .btn-sm {
   padding: 6px 12px;
   font-size: 0.8125rem;
+  min-height: 44px; /* WCAG touch target */
 }
 
 /* Right panel - tabs + content */
@@ -409,9 +411,35 @@
   .analysis-tab {
     padding: 12px 10px;
     font-size: 0.875rem;
+    min-height: 44px;
   }
 
   .analysis-move-row {
     grid-template-columns: 24px 1fr 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .analysis-board-wrap {
+    max-width: min(94vw, 420px);
+    min-width: 240px;
+  }
+
+  .analysis-board-section {
+    padding: 12px 10px;
+  }
+
+  .analysis-move-row {
+    grid-template-columns: 20px 1fr 1fr;
+    font-size: 0.8125rem;
+  }
+
+  .analysis-title {
+    font-size: 1rem;
+  }
+
+  .btn-sm {
+    padding: 8px 10px;
+    font-size: 0.8125rem;
   }
 }
