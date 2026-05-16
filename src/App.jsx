@@ -1,5 +1,5 @@
 import { useEffect, Suspense, lazy } from 'react'
-import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Link, Outlet, useLocation, Navigate } from 'react-router-dom'
 import { UserProvider, useUser } from './contexts/UserContext'
 import { SettingsProvider } from './contexts/SettingsContext'
 import { FeedbackPanel } from './components/FeedbackPanel'
@@ -167,6 +167,22 @@ function RouteFallback() {
   )
 }
 
+/**
+ * Persistent app shell — renders AppHeader once and keeps it visible
+ * during route transitions. Suspense only covers the page content area
+ * (via <Outlet>), so navigation never causes a full blank screen.
+ */
+function AppShell() {
+  return (
+    <div className="app">
+      <AppHeader />
+      <Suspense fallback={<RouteFallback />}>
+        <Outlet />
+      </Suspense>
+    </div>
+  )
+}
+
 export default function App() {
   return (
     <>
@@ -175,42 +191,28 @@ export default function App() {
         <UserProvider>
           <SettingsProvider>
             <BrowserRouter>
-              <Suspense fallback={<RouteFallback />}>
-                <div className="app">
-                  <Routes>
-                    <Route path="/" element={<Landing />} />
-                    <Route path="/login" element={<Login />} />
-                    {/* Auth callback — Supabase magic link redirects here */}
-                    <Route path="/auth/callback" element={<AuthCallback />} />
-                    <Route path="/home" element={
-                      <ProtectedRoute>
-                        <><AppHeader /><Home /></>
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/play" element={<><AppHeader /><Play /></>} />
-                    <Route path="/online" element={<><AppHeader /><OnlinePlay /></>} />
-                    <Route path="/online/:gameId" element={<><AppHeader /><OnlinePlay /></>} />
-                    <Route path="/game/:gameId" element={<><AppHeader /><Game /></>} />
-                    <Route path="/analysis/:gameId?" element={
-                      <ProtectedRoute>
-                        <><AppHeader /><Analysis /></>
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/history" element={
-                      <ProtectedRoute>
-                        <><AppHeader /><GameHistory /></>
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/settings" element={
-                      <ProtectedRoute>
-                        <><AppHeader /><Settings /></>
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/changelog" element={<><AppHeader /><Changelog /></>} />
-                  </Routes>
-                </div>
-                <FeedbackPanel />
-              </Suspense>
+              <Routes>
+                {/* Headerless routes — full-screen layouts */}
+                <Route path="/" element={<Suspense fallback={<RouteFallback />}><Landing /></Suspense>} />
+                <Route path="/login" element={<Suspense fallback={<RouteFallback />}><Login /></Suspense>} />
+                {/* Auth callback — Supabase OTP / magic link redirects here */}
+                <Route path="/auth/callback" element={<Suspense fallback={<RouteFallback />}><AuthCallback /></Suspense>} />
+
+                {/* App routes — share persistent AppHeader via AppShell layout */}
+                <Route element={<AppShell />}>
+                  <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+                  <Route path="/play" element={<Play />} />
+                  <Route path="/online" element={<OnlinePlay />} />
+                  <Route path="/online/:gameId" element={<OnlinePlay />} />
+                  <Route path="/game/:gameId" element={<Game />} />
+                  <Route path="/analysis/:gameId?" element={<ProtectedRoute><Analysis /></ProtectedRoute>} />
+                  <Route path="/history" element={<ProtectedRoute><GameHistory /></ProtectedRoute>} />
+                  <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                  <Route path="/changelog" element={<Changelog />} />
+                </Route>
+              </Routes>
+              {/* FeedbackPanel lives outside Routes so it persists across all navigations */}
+              <FeedbackPanel />
             </BrowserRouter>
           </SettingsProvider>
         </UserProvider>
