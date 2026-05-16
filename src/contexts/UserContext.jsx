@@ -342,12 +342,15 @@ export function UserProvider({ children }) {
         return { error: 'Could not resolve username. Please start over.' };
       }
 
-      localStorage.removeItem(PENDING_OTP_KEY);
-      localStorage.removeItem(AUTH_REQUEST_ID_KEY);
-      setIsAwaitingVerification(false);
-      setPendingOtpEmail('');
-
       const loginResult = await login({ username: resolvedUsername });
+
+      if (loginResult.success) {
+        localStorage.removeItem(PENDING_OTP_KEY);
+        localStorage.removeItem(AUTH_REQUEST_ID_KEY);
+        setIsAwaitingVerification(false);
+        setPendingOtpEmail('');
+      }
+
       return loginResult;
     } catch (error) {
       console.error('🔴 OTP VERIFICATION FAILED:', error);
