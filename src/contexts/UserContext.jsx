@@ -268,7 +268,7 @@ export function UserProvider({ children }) {
 
       return {
         success: true,
-        message: 'Code sent! Check your email for a 6-digit verification code.',
+        message: 'Code sent! Check your email for an 8-digit verification code.',
       };
     } catch (error) {
       console.error('🔴 OTP REQUEST FAILED:', error);

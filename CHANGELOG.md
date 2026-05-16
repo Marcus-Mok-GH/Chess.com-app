@@ -1,10 +1,13 @@
 # Changelog
 
+## 1.1.65 - 2026-05-16
+- Fixed OTP verification to accept 8-digit codes issued by Supabase; updated input length limits, validation conditions, placeholder text, and all user-facing messaging in `Login.jsx`, `LoginModal.jsx`, and `UserContext.jsx`.
+
 ## 1.1.64 - 2026-05-14
-- Updated the landing page primary “Get started” button to redirect users to the login page.
+- Updated the landing page primary "Get started" button to redirect users to the login page.
 
 ## 1.1.63 - 2026-05-14
-- Updated the landing page primary CTA labels by replacing “Play vs Computer” and “Play Online” with “Get started.”
+- Updated the landing page primary CTA labels by replacing "Play vs Computer" and "Play Online" with "Get started."
 
 ## 1.1.62 - 2026-05-14
 - Fixed magic-link callback completion when Supabase returns auth data in URL hash (including `token_hash` or `code`) by reading hash parameters in addition to query parameters.
