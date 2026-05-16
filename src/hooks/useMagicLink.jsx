@@ -93,10 +93,10 @@ export function useMagicLinkAuth(url, setAuthState) {
           const { data, error } = await supabase.auth.verifyOtp({
             email: undefined,
             token_hash: params.tokenHash,
-            type: params.type === 'magiclink' ? 'magiclink' : 'email',
+            type: 'email', // 'magiclink' is deprecated; 'email' covers all email-based flows
           });
           if (error) throw error;
-          
+
           if (data.user?.user_metadata?.username) {
             username = data.user.user_metadata.username;
           }
@@ -104,7 +104,7 @@ export function useMagicLinkAuth(url, setAuthState) {
           const { data, error } = await supabase.auth.verifyOtp({
             email: undefined,
             token: params.token,
-            type: params.type === 'magiclink' ? 'magiclink' : 'email',
+            type: 'email', // 'magiclink' is deprecated; 'email' covers all email-based flows
           });
           if (error) throw error;
           

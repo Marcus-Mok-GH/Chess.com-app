@@ -49,10 +49,11 @@ export default function AuthCallback() {
           if (error) throw error;
           authUser = data.user;
         } else if (tokenHash) {
-          // Token-hash flow
+          // Token-hash flow — 'magiclink' and 'signup' are deprecated; normalize to 'email'
+          const normalizedType = (type === 'magiclink' || type === 'signup' || !type) ? 'email' : type;
           const { data, error } = await supabase.auth.verifyOtp({
             token_hash: tokenHash,
-            type: type || 'magiclink',
+            type: normalizedType,
           });
           if (error) throw error;
           authUser = data.user;
