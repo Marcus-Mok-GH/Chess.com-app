@@ -14,6 +14,15 @@ export function UserProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isAwaitingVerification, setIsAwaitingVerification] = useState(() => {
+    try { return !!localStorage.getItem(PENDING_OTP_KEY); } catch { return false; }
+  });
+  const [pendingOtpEmail, setPendingOtpEmail] = useState(() => {
+    try {
+      const raw = localStorage.getItem(PENDING_OTP_KEY);
+      return raw ? (JSON.parse(raw).email || '') : '';
+    } catch { return ''; }
+  });
 
   const persistUser = useCallback((userData) => {
     if (!userData?.username) return;
@@ -137,6 +146,9 @@ export function UserProvider({ children }) {
 
         if (loginResult.success) {
           console.log('✅ SESSION RESTORED (server):', loginResult.userData.username);
+          setIsAwaitingVerification(false);
+          setPendingOtpEmail('');
+          localStorage.removeItem(PENDING_OTP_KEY);
         } else {
           console.error('🔴 SESSION SYNC FAILED:', loginResult.error);
         }
@@ -227,7 +239,10 @@ export function UserProvider({ children }) {
     await supabase.auth.signOut();
     localStorage.removeItem(SESSION_USER_KEY);
     localStorage.removeItem(SESSION_USER_DATA_KEY);
+    localStorage.removeItem(PENDING_OTP_KEY);
     setUser(null);
+    setIsAwaitingVerification(false);
+    setPendingOtpEmail('');
     console.log('[UserContext] Logged out');
   }, []);
 
@@ -265,6 +280,9 @@ export function UserProvider({ children }) {
       });
 
       if (result.error) throw result.error;
+
+      setIsAwaitingVerification(true);
+      setPendingOtpEmail(trimmedEmail);
 
       return {
         success: true,
@@ -318,6 +336,8 @@ export function UserProvider({ children }) {
 
       localStorage.removeItem(PENDING_OTP_KEY);
       localStorage.removeItem(AUTH_REQUEST_ID_KEY);
+      setIsAwaitingVerification(false);
+      setPendingOtpEmail('');
 
       const loginResult = await login({ username: resolvedUsername });
       return loginResult;
@@ -395,6 +415,8 @@ export function UserProvider({ children }) {
     isLoggedIn: !!user,
     isLoading,
     isOnline,
+    isAwaitingVerification,
+    pendingOtpEmail,
     login,
     requestOtp,
     verifyEmailOtp,

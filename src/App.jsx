@@ -1,5 +1,5 @@
 import { useEffect, Suspense, lazy } from 'react'
-import { BrowserRouter, Routes, Route, Link, Outlet, useLocation, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Link, Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom'
 import { UserProvider, useUser } from './contexts/UserContext'
 import { SettingsProvider } from './contexts/SettingsContext'
 import { FeedbackPanel } from './components/FeedbackPanel'
@@ -22,6 +22,7 @@ const Settings = lazy(() => import('./pages/Settings'))
 const Changelog = lazy(() => import('./pages/Changelog'))
 const CloudFlare = lazy(() => import('./pages/CloudFlare'))
 const Landing = lazy(() => import('./pages/Landing'))
+const VerifyEmail = lazy(() => import('./pages/VerifyEmail'))
 
 function getTitle(path) {
   if (path.startsWith('/online/') || path.startsWith('/game/')) return 'Online Play'
@@ -168,6 +169,25 @@ function RouteFallback() {
 }
 
 /**
+ * Intercepts all navigations while the user is in the pending-verification state.
+ * Rendered as a null component inside BrowserRouter so it always runs,
+ * regardless of which route is active.
+ */
+function GlobalVerificationGuard() {
+  const { isAwaitingVerification } = useUser();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isAwaitingVerification && location.pathname !== '/verify-email') {
+      navigate('/verify-email', { replace: true });
+    }
+  }, [isAwaitingVerification, location.pathname, navigate]);
+
+  return null;
+}
+
+/**
  * Persistent app shell — renders AppHeader once and keeps it visible
  * during route transitions. Suspense only covers the page content area
  * (via <Outlet>), so navigation never causes a full blank screen.
@@ -191,10 +211,13 @@ export default function App() {
         <UserProvider>
           <SettingsProvider>
             <BrowserRouter>
+              <GlobalVerificationGuard />
               <Routes>
                 {/* Headerless routes — full-screen layouts */}
                 <Route path="/" element={<Suspense fallback={<RouteFallback />}><Landing /></Suspense>} />
                 <Route path="/login" element={<Suspense fallback={<RouteFallback />}><Login /></Suspense>} />
+                {/* Verify email — OTP entry after requestOtp; locked until verified or cancelled */}
+                <Route path="/verify-email" element={<Suspense fallback={<RouteFallback />}><VerifyEmail /></Suspense>} />
                 {/* Auth callback — Supabase OTP / magic link redirects here */}
                 <Route path="/auth/callback" element={<Suspense fallback={<RouteFallback />}><AuthCallback /></Suspense>} />
 
