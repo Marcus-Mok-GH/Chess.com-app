@@ -302,7 +302,7 @@ export function UserProvider({ children }) {
       const { data, error } = await supabase.auth.verifyOtp({
         email: email.trim(),
         token: token.trim(),
-        type: 'magiclink',  // emailRedirectTo causes Supabase to issue magiclink tokens, not email OTP tokens
+        type: 'magiclink',
       });
 
       if (error) throw error;
