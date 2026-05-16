@@ -24,11 +24,6 @@ const CloudFlare = lazy(() => import('./pages/CloudFlare'))
 const Landing = lazy(() => import('./pages/Landing'))
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail'))
 
-/**
- * Determine the page title for a given URL pathname.
- * @param {string} path - The URL pathname (for example, '/online/123' or '/settings').
- * @returns {string} The human-readable page title corresponding to the pathname (e.g., 'Online Play', 'Game Analysis', 'Settings', or 'Chess' by default).
- */
 function getTitle(path) {
   if (path.startsWith('/online/') || path.startsWith('/game/')) return 'Online Play'
   if (path === '/analysis') return 'Game Analysis'
@@ -164,11 +159,6 @@ function ProtectedRoute({ children, guestRedirect }) {
   return children;
 }
 
-/**
- * Render a full-screen loading fallback with a spinner and "Loading..." text.
- *
- * @returns {JSX.Element} The loading screen element.
- */
 function RouteFallback() {
   return (
     <div className="loading-screen">
@@ -179,10 +169,9 @@ function RouteFallback() {
 }
 
 /**
- * Ensures users awaiting email verification are routed to the verify page.
- *
- * When the user is awaiting verification and not currently on '/verify-email',
- * navigates to '/verify-email' using replace so the previous route is not kept in history.
+ * Intercepts all navigations while the user is in the pending-verification state.
+ * Rendered as a null component inside BrowserRouter so it always runs,
+ * regardless of which route is active.
  */
 function GlobalVerificationGuard() {
   const { isAwaitingVerification } = useUser();
@@ -190,7 +179,7 @@ function GlobalVerificationGuard() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (isAwaitingVerification && location.pathname !== '/verify-email') {
+    if (isAwaitingVerification && location.pathname !== '/verify-email' && !location.pathname.startsWith('/auth/')) {
       navigate('/verify-email', { replace: true });
     }
   }, [isAwaitingVerification, location.pathname, navigate]);
@@ -214,15 +203,6 @@ function AppShell() {
   )
 }
 
-/**
- * Compose the application's top-level layout, providers, global guards, and route tree.
- *
- * Renders global checks and providers (PuterCheck, ErrorBoundary, UserProvider, SettingsProvider),
- * the BrowserRouter with GlobalVerificationGuard and route definitions (including headerless and
- * AppShell-scoped routes), a persistent FeedbackPanel, and analytics.
- *
- * @returns {JSX.Element} The root React element containing global providers, routing, guards, and persistent UI.
- */
 export default function App() {
   return (
     <>
