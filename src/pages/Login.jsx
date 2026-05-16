@@ -3,18 +3,23 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 import './Login.css';
 
+/**
+ * Render the sign-in page that collects a username and email and initiates an OTP request.
+ *
+ * The component redirects authenticated users to /home when loading completes, validates inputs,
+ * calls `requestOtp` with `{ email, username }`, shows validation or request errors, and navigates
+ * to /verify-email after a successful OTP request.
+ * @returns {JSX.Element} The login page UI.
+ */
 export default function Login() {
-  const { requestOtp, verifyEmailOtp, isLoggedIn, isLoading } = useUser();
+  const { requestOtp, isLoggedIn, isLoading } = useUser();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
-  const [otpCode, setOtpCode] = useState('');
 
-  const [step, setStep] = useState('email'); // 'email' | 'verify'
   const [error, setError] = useState(searchParams.get('error') || '');
-  const [successMsg, setSuccessMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Redirect if already logged in
@@ -26,7 +31,6 @@ export default function Login() {
 
   const handleSendCode = async () => {
     setError('');
-    setSuccessMsg('');
     if (!email.trim()) return setError('Please enter your email address.');
     if (!username.trim()) return setError('Please choose a username.');
 
@@ -34,36 +38,8 @@ export default function Login() {
     try {
       const result = await requestOtp({ email, username });
       if (!result.success) return setError(result.error);
-      setSuccessMsg(result.message || 'Code sent! Check your email.');
-      setStep('verify');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleVerifyCode = async () => {
-    setError('');
-    if (!otpCode.trim()) return setError('Please enter the 8-digit code.');
-
-    setIsSubmitting(true);
-    try {
-      const result = await verifyEmailOtp({ email, token: otpCode });
-      if (!result.success) return setError(result.error || 'Invalid or expired code. Please try again.');
-      navigate('/home', { replace: true });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleResendCode = async () => {
-    setError('');
-    setSuccessMsg('');
-    setOtpCode('');
-    setIsSubmitting(true);
-    try {
-      const result = await requestOtp({ email, username });
-      if (!result.success) return setError(result.error);
-      setSuccessMsg('New code sent! Check your email.');
+      // GlobalVerificationGuard picks up isAwaitingVerification and navigates to /verify-email
+      navigate('/verify-email', { replace: true });
     } finally {
       setIsSubmitting(false);
     }
@@ -84,116 +60,48 @@ export default function Login() {
       <div className="login-card">
         <div className="login-logo">♟️</div>
 
-        {step === 'email' && (
-          <>
-            <h1 className="login-title">Sign in to Chess</h1>
-            <p className="login-subtitle">Enter your username and email to receive a sign-in code</p>
+        <h1 className="login-title">Sign in to Chess</h1>
+        <p className="login-subtitle">Enter your username and email to receive a sign-in code</p>
 
-            <form className="login-form" onSubmit={(e) => e.preventDefault()}>
-              <div className="login-field">
-                <label htmlFor="username">Username</label>
-                <input
-                  id="username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Choose a username"
-                  autoFocus
-                  autoComplete="off"
-                  maxLength={20}
-                />
-              </div>
+        <form className="login-form" onSubmit={(e) => e.preventDefault()}>
+          <div className="login-field">
+            <label htmlFor="username">Username</label>
+            <input
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Choose a username"
+              autoFocus
+              autoComplete="off"
+              maxLength={20}
+            />
+          </div>
 
-              <div className="login-field">
-                <label htmlFor="email">Email</label>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your@email.com"
-                  autoComplete="email"
-                  onKeyDown={(e) => e.key === 'Enter' && handleSendCode()}
-                />
-              </div>
+          <div className="login-field">
+            <label htmlFor="email">Email</label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="your@email.com"
+              autoComplete="email"
+              onKeyDown={(e) => e.key === 'Enter' && handleSendCode()}
+            />
+          </div>
 
-              {error && <p className="login-error">{error}</p>}
+          {error && <p className="login-error">{error}</p>}
 
-              <button
-                type="button"
-                className="login-btn"
-                disabled={isSubmitting || !username.trim() || !email.trim()}
-                onClick={handleSendCode}
-              >
-                {isSubmitting ? 'Sending…' : 'Send Code'}
-              </button>
-            </form>
-          </>
-        )}
-
-        {step === 'verify' && (
-          <>
-            <h1 className="login-title">Check your email</h1>
-            <p className="login-subtitle">
-              We sent an 8-digit code to <strong>{email}</strong>
-            </p>
-
-            <form className="login-form" onSubmit={(e) => e.preventDefault()}>
-              <div className="login-field">
-                <label htmlFor="otp-code">Verification code</label>
-                <input
-                  id="otp-code"
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
-                  placeholder="00000000"
-                  autoFocus
-                  autoComplete="one-time-code"
-                  maxLength={8}
-                  onKeyDown={(e) => e.key === 'Enter' && handleVerifyCode()}
-                />
-              </div>
-
-              {error && <p className="login-error">{error}</p>}
-              {!error && successMsg && <p className="login-success">✅ {successMsg}</p>}
-
-              <button
-                type="button"
-                className="login-btn"
-                disabled={isSubmitting || otpCode.length !== 8}
-                onClick={handleVerifyCode}
-              >
-                {isSubmitting ? 'Verifying…' : 'Verify Code'}
-              </button>
-
-              <div className="login-secondary-actions">
-                <button
-                  type="button"
-                  className="login-link-btn"
-                  disabled={isSubmitting}
-                  onClick={handleResendCode}
-                >
-                  Resend code
-                </button>
-                <span className="login-divider-dot">·</span>
-                <button
-                  type="button"
-                  className="login-link-btn"
-                  onClick={() => {
-                    setStep('email');
-                    setError('');
-                    setSuccessMsg('');
-                    setOtpCode('');
-                  }}
-                >
-                  ← Change email
-                </button>
-              </div>
-            </form>
-          </>
-        )}
+          <button
+            type="button"
+            className="login-btn"
+            disabled={isSubmitting || !username.trim() || !email.trim()}
+            onClick={handleSendCode}
+          >
+            {isSubmitting ? 'Sending…' : 'Send Code'}
+          </button>
+        </form>
       </div>
     </div>
   );
