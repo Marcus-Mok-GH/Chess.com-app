@@ -232,8 +232,8 @@ export function UserProvider({ children }) {
   }, []);
 
   /**
-   * Step 1 of OTP login: send a 6-digit code to the user's email.
-   * No redirect URL needed — code is entered inline.
+   * Step 1 of OTP login: send a sign-in link to the user's email.
+   * The link redirects to /auth/callback where the session is established.
    */
   const requestOtp = useCallback(async ({ email, username }) => {
     const trimmedEmail = email?.trim();
@@ -259,7 +259,7 @@ export function UserProvider({ children }) {
         email: trimmedEmail,
         options: {
           shouldCreateUser: true,
-          // No emailRedirectTo — this sends a 6-digit OTP code instead of a magic link
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: { username: trimmedUsername },
         },
       });
@@ -268,7 +268,7 @@ export function UserProvider({ children }) {
 
       return {
         success: true,
-        message: 'Code sent! Check your email for a 6-digit verification code.',
+        message: 'Check your email for a sign-in link.',
       };
     } catch (error) {
       console.error('🔴 OTP REQUEST FAILED:', error);
@@ -278,7 +278,8 @@ export function UserProvider({ children }) {
   }, []);
 
   /**
-   * Step 2 of OTP login: verify the 6-digit code.
+   * Step 2 of OTP login: verify the 6-digit code (used when Supabase
+   * project is configured to send codes instead of magic links).
    */
   const verifyEmailOtp = useCallback(async ({ email, token }) => {
     if (!email || !token) return { error: 'Email and verification code are required' };
