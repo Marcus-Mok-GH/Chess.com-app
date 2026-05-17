@@ -5,12 +5,15 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const { Pool } = pg;
 
+// Prefer pooled connection URLs for general-purpose queries.
+// Direct/unpooled URLs (db.xxx.supabase.co) require a persistent TCP connection to
+// port 5432 which is not available in serverless environments (Vercel, AWS Lambda).
+// Keep them as a last resort so local dev still works if only the direct URL is set.
 const connectionCandidates = [
-  ['DATABASE_URL_UNPOOLED', process.env.DATABASE_URL_UNPOOLED],
-  ['POSTGRES_URL_NON_POOLING', process.env.POSTGRES_URL_NON_POOLING],
-  ['POSTGRES_PRISMA_URL', process.env.POSTGRES_PRISMA_URL],
   ['POSTGRES_URL', process.env.POSTGRES_URL],
-  ['DATABASE_URL', process.env.DATABASE_URL]
+  ['DATABASE_URL', process.env.DATABASE_URL],
+  ['POSTGRES_URL_NON_POOLING', process.env.POSTGRES_URL_NON_POOLING],
+  ['DATABASE_URL_UNPOOLED', process.env.DATABASE_URL_UNPOOLED],
 ];
 
 let connectionSource = null;
@@ -93,6 +96,12 @@ export function getPool() {
 // This helper returns a pool pointed at the direct connection string when available,
 // and falls back to the regular shared pool if no separate direct URL is configured.
 // See: https://supabase.com/docs/guides/database/connecting-to-postgres
+//
+// NOTE: On Vercel (and other serverless platforms) direct connections to
+// db.xxx.supabase.co are NOT reachable — the platform blocks raw TCP to port 5432.
+// In that case we skip the direct pool entirely and let DDL run over the pooler.
+const isServerlessEnv = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+
 const directCandidates = [
   process.env.DATABASE_URL_UNPOOLED,
   process.env.POSTGRES_URL_NON_POOLING,
@@ -100,7 +109,7 @@ const directCandidates = [
 const directConnectionString = directCandidates.find(Boolean) ?? null;
 
 let directPool = null;
-if (!useNeonServerless && directConnectionString && directConnectionString !== connectionString) {
+if (!useNeonServerless && !isServerlessEnv && directConnectionString && directConnectionString !== connectionString) {
   directPool = new Pool({
     connectionString: directConnectionString,
     ssl: isProduction ? { rejectUnauthorized: false } : false,
