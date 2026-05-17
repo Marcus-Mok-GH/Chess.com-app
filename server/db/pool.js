@@ -10,7 +10,6 @@ const { Pool } = pg;
 // TCP connection that fails DNS resolution in Vercel serverless (getaddrinfo ENOTFOUND).
 const connectionCandidates = [
   ['POSTGRES_URL', process.env.POSTGRES_URL],
-  ['POSTGRES_PRISMA_URL', process.env.POSTGRES_PRISMA_URL],
   ['DATABASE_URL', process.env.DATABASE_URL]
 ];
 
