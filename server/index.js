@@ -276,28 +276,24 @@ if (isServerless) {
 async function start() {
   if (hasDatabase) {
     try {
-      // For performance on Vercel/Serverless, we only check the connection.
-      // Schema initialization (initDatabase) should be run via 'npm run db:setup'
-      // during deployment or manually.
-      console.log('[Server] Checking database connection...');
-      const timeoutMs = isServerless ? 30000 : 15000;
+      // Always run schema initialization on startup. All CREATE TABLE statements
+      // use IF NOT EXISTS so this is safe and idempotent on every cold start.
+      console.log('[Server] Initializing database...');
+      const timeoutMs = isServerless ? 60000 : 15000;
 
-      const checkAction = isServerless ? checkDatabaseConnection : initDatabase;
-      const actionName = isServerless ? 'connection check' : 'initialization';
+      const checkAction = initDatabase;
+      const actionName = 'initialization';
 
-      const ready = await Promise.race([
+      await Promise.race([
         checkAction(),
         new Promise((_, reject) =>
           setTimeout(() => reject(new Error(`Database ${actionName} timeout after ${timeoutMs / 1000}s`)), timeoutMs)
         )
       ]);
 
-      setDatabaseReady(ready);
-      if (ready) {
-        console.log(`[Server] Database ${actionName} successful`);
-      } else {
-        console.error(`[Server] Database ${actionName} failed`);
-      }
+      // initDatabase() returns void — success is signalled by not throwing.
+      setDatabaseReady(true);
+      console.log(`[Server] Database ${actionName} successful`);
     } catch (error) {
       setDatabaseReady(false);
       console.error('[Server] Database startup failed:', error.message);
