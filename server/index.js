@@ -284,19 +284,16 @@ async function start() {
       const checkAction = initDatabase;
       const actionName = 'initialization';
 
-      const ready = await Promise.race([
+      await Promise.race([
         checkAction(),
         new Promise((_, reject) =>
           setTimeout(() => reject(new Error(`Database ${actionName} timeout after ${timeoutMs / 1000}s`)), timeoutMs)
         )
       ]);
 
-      setDatabaseReady(ready);
-      if (ready) {
-        console.log(`[Server] Database ${actionName} successful`);
-      } else {
-        console.error(`[Server] Database ${actionName} failed`);
-      }
+      // initDatabase() returns void — success is signalled by not throwing.
+      setDatabaseReady(true);
+      console.log(`[Server] Database ${actionName} successful`);
     } catch (error) {
       setDatabaseReady(false);
       console.error('[Server] Database startup failed:', error.message);

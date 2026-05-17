@@ -89,4 +89,30 @@ export function getPool() {
   return useNeonServerless ? new PoolImpl(poolConfig) : sharedPool;
 }
 
+// Supabase docs recommend using the direct (unpooled) connection for DDL/migrations.
+// This helper returns a pool pointed at the direct connection string when available,
+// and falls back to the regular shared pool if no separate direct URL is configured.
+// See: https://supabase.com/docs/guides/database/connecting-to-postgres
+const directCandidates = [
+  process.env.DATABASE_URL_UNPOOLED,
+  process.env.POSTGRES_URL_NON_POOLING,
+];
+const directConnectionString = directCandidates.find(Boolean) ?? null;
+
+let directPool = null;
+if (!useNeonServerless && directConnectionString && directConnectionString !== connectionString) {
+  directPool = new Pool({
+    connectionString: directConnectionString,
+    ssl: isProduction ? { rejectUnauthorized: false } : false,
+    connectionTimeoutMillis: isProduction ? 20000 : 10000,
+    idleTimeoutMillis: 30000,
+    max: 2, // DDL only — keep it small
+    family: 4
+  });
+}
+
+export function getDirectPool() {
+  return directPool ?? getPool();
+}
+
 export default sharedPool ?? null;

@@ -1,7 +1,7 @@
-import { getPool, shouldClosePool } from './pool.js';
+import { getDirectPool, getPool, shouldClosePool } from './pool.js';
 
 export async function initDatabase() {
-  const pool = getPool();
+  const pool = getDirectPool();
   const isDuplicateTypeError = (error) =>
     error?.code === '23505' && error?.constraint === 'pg_type_typname_nsp_index';
 
