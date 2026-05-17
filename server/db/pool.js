@@ -5,10 +5,10 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const { Pool } = pg;
 
+// Only pooled/session-mode URLs here — unpooled direct URLs are for DDL only (see directCandidates).
+// DATABASE_URL_UNPOOLED / POSTGRES_URL_NON_POOLING point to db.xxx.supabase.co which is a direct
+// TCP connection that fails DNS resolution in Vercel serverless (getaddrinfo ENOTFOUND).
 const connectionCandidates = [
-  ['DATABASE_URL_UNPOOLED', process.env.DATABASE_URL_UNPOOLED],
-  ['POSTGRES_URL_NON_POOLING', process.env.POSTGRES_URL_NON_POOLING],
-  ['POSTGRES_PRISMA_URL', process.env.POSTGRES_PRISMA_URL],
   ['POSTGRES_URL', process.env.POSTGRES_URL],
   ['DATABASE_URL', process.env.DATABASE_URL]
 ];
