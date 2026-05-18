@@ -28,7 +28,7 @@ if (unpooledUrl && unpooledUrl !== pooledUrl) {
   console.log(`[DB] DATABASE_URL_UNPOOLED (direct) → ${host ?? '(unparseable)'}`);
 }
 
-const sslConfig = isProduction ? { rejectUnauthorized: false } : false;
+const sslConfig = isProduction ? { rejectUnauthorized: true } : false;
 const timeoutMs = isProduction ? 20000 : 10000;
 
 const sharedPool = pooledUrl
@@ -53,8 +53,7 @@ const directPool = unpooledUrl && unpooledUrl !== pooledUrl
       ssl: sslConfig,
       connectionTimeoutMillis: timeoutMs,
       idleTimeoutMillis: 30000,
-      max: 2,
-      family: 4
+      max: 2
     })
   : null;
 
