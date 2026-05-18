@@ -9,11 +9,60 @@ export async function initDatabase() {
   const client = await pool.connect();
   try {
     const runInit = async () => {
+      // Check if we need to perform the migration/reset.
+      // We check if any of the legacy integer columns still exist.
+      // If they do, we need to reset them to VARCHAR to match the new schema.
+      let needsReset = false;
+      const detectedMismatches = [];
+      try {
+        const typeCheck = await client.query(`
+          SELECT table_name, column_name, data_type
+          FROM information_schema.columns
+          WHERE (table_name = 'users' AND column_name = 'id')
+             OR (table_name = 'games' AND column_name = 'white_player_id')
+             OR (table_name = 'games' AND column_name = 'black_player_id')
+             OR (table_name = 'user_settings' AND column_name = 'user_id')
+             OR (table_name = 'elo_history' AND column_name = 'user_id')
+        `);
+        for (const row of typeCheck.rows) {
+          if (row.data_type === 'integer') {
+            needsReset = true;
+            detectedMismatches.push(`${row.table_name}.${row.column_name}`);
+          }
+        }
+      } catch (e) {
+        // If table doesn't exist, we don't need to reset, CREATE TABLE IF NOT EXISTS will handle it.
+      }
+
       await client.query('BEGIN');
       try {
+        if (needsReset) {
+          if (process.env.FORCE_DB_RESET !== 'true') {
+            console.error('[DB] CRITICAL: Schema mismatch detected in the following columns:');
+            console.error(`[DB] ${detectedMismatches.join(', ')}`);
+            console.error('[DB] Database reset is required but FORCE_DB_RESET flag is not set.');
+            console.error('[DB] Please back up your data and set FORCE_DB_RESET=true to proceed.');
+            console.error('[DB] ABORTING to prevent data loss.');
+            throw new Error('Schema mismatch detected but FORCE_DB_RESET not authorized');
+          }
+          console.warn(`[DB] FORCE_DB_RESET authorized. Resetting tables with mismatched columns: ${detectedMismatches.join(', ')}`);
+          await client.query(`
+            DROP TABLE IF EXISTS elo_history CASCADE;
+            DROP TABLE IF EXISTS match_moves CASCADE;
+            DROP TABLE IF EXISTS user_settings CASCADE;
+            DROP TABLE IF EXISTS games CASCADE;
+            DROP TABLE IF EXISTS active_games CASCADE;
+            DROP TABLE IF EXISTS matchmaking_queue CASCADE;
+            DROP TABLE IF EXISTS users CASCADE;
+          `);
+        }
+
+        // Ensure UUID extension is available
+        await client.query('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
+
         await client.query(`
           CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
+            id VARCHAR(100) PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
             username VARCHAR(20) UNIQUE NOT NULL,
             elo INTEGER DEFAULT 1200,
             games_played INTEGER DEFAULT 0,
@@ -29,8 +78,8 @@ export async function initDatabase() {
           CREATE TABLE IF NOT EXISTS games (
             id SERIAL PRIMARY KEY,
             game_code VARCHAR(10) UNIQUE NOT NULL,
-            white_player_id INTEGER REFERENCES users(id),
-            black_player_id INTEGER REFERENCES users(id),
+            white_player_id VARCHAR(100) REFERENCES users(id),
+            black_player_id VARCHAR(100) REFERENCES users(id),
             white_player_name VARCHAR(20),
             black_player_name VARCHAR(20),
             result VARCHAR(10),
@@ -45,7 +94,7 @@ export async function initDatabase() {
 
         await client.query(`
           CREATE TABLE IF NOT EXISTS user_settings (
-            user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+            user_id VARCHAR(100) PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
             settings JSONB DEFAULT '{}'::jsonb,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           )
@@ -135,7 +184,7 @@ export async function initDatabase() {
         await client.query(`
           CREATE TABLE IF NOT EXISTS elo_history (
             id SERIAL PRIMARY KEY,
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            user_id VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
             elo INTEGER NOT NULL,
             change INTEGER NOT NULL DEFAULT 0,
             game_code VARCHAR(20),

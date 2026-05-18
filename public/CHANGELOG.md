@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.1.66 - 2026-05-18
+- Fixed database initialization failure caused by type mismatch between integer and string-based player IDs.
+- Standardized all player ID columns across the database schema to `VARCHAR(100)` and enabled `pgcrypto` for UUID generation.
+- Added a conditional one-time database reset that only triggers when a legacy integer-based schema is detected.
+
+## 1.1.65 - 2026-05-16
+- Fixed OTP verification to accept 8-digit codes issued by Supabase; updated input length limits, validation conditions, placeholder text, and all user-facing messaging in `Login.jsx`, `LoginModal.jsx`, and `UserContext.jsx`.
+
+## 1.1.64 - 2026-05-14
+- Updated the landing page primary "Get started" button to redirect users to the login page.
+
+## 1.1.63 - 2026-05-14
+- Updated the landing page primary CTA labels by replacing "Play vs Computer" and "Play Online" with "Get started."
+
+## 1.1.62 - 2026-05-14
+- Fixed magic-link callback completion when Supabase returns auth data in URL hash (including `token_hash` or `code`) by reading hash parameters in addition to query parameters.
+- Improved post-redirect session hydration timing for callback URLs that arrive without direct tokens, reducing cases where users stayed on the login page after opening a valid magic link.
+
+## 1.1.61 - 2026-05-14
+- Added support for a configurable Supabase magic-link callback URL via `VITE_SUPABASE_AUTH_CALLBACK_URL`.
+- Magic-link requests now prefer the configured callback URL and append `type=magiclink` and `requestId` automatically.
+
+## 1.1.60 - 2026-05-13
+- Fixed magic-link callback handling when redirect URLs only include `requestId` (e.g., ending with `#`) by retrying Supabase session hydration for a short window before failing.
+- Reduced false-negative login failures where users were sent back to the login screen despite a valid magic-link session still initializing in the browser.
+
 ## 1.1.59 - 2026-05-14
 - Fixed magic-link login reliability by improving post-redirect session synchronization and relaxing token validation when a session is already established by the browser.
 - Improved user session recovery to automatically register/sync backend profiles when a valid Supabase session exists but the local profile is missing.
