@@ -9,11 +9,44 @@ export async function initDatabase() {
   const client = await pool.connect();
   try {
     const runInit = async () => {
+      // Check if we need to perform the migration/reset.
+      // We check if the 'users' table exists and if its 'id' column is an integer.
+      // If it is, we need to reset it to VARCHAR to match other tables and fix the mismatch.
+      let needsReset = false;
+      try {
+        const typeCheck = await client.query(`
+          SELECT data_type
+          FROM information_schema.columns
+          WHERE table_name = 'users' AND column_name = 'id'
+        `);
+        if (typeCheck.rows.length > 0 && typeCheck.rows[0].data_type === 'integer') {
+          console.warn('[DB] Type mismatch detected (users.id is integer). Performing authorized one-time reset.');
+          needsReset = true;
+        }
+      } catch (e) {
+        // If table doesn't exist, we don't need to reset, CREATE TABLE IF NOT EXISTS will handle it.
+      }
+
       await client.query('BEGIN');
       try {
+        if (needsReset) {
+          await client.query(`
+            DROP TABLE IF EXISTS elo_history CASCADE;
+            DROP TABLE IF EXISTS match_moves CASCADE;
+            DROP TABLE IF EXISTS user_settings CASCADE;
+            DROP TABLE IF EXISTS games CASCADE;
+            DROP TABLE IF EXISTS active_games CASCADE;
+            DROP TABLE IF EXISTS matchmaking_queue CASCADE;
+            DROP TABLE IF EXISTS users CASCADE;
+          `);
+        }
+
+        // Ensure UUID extension is available
+        await client.query('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
+
         await client.query(`
           CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
+            id VARCHAR(100) PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
             username VARCHAR(20) UNIQUE NOT NULL,
             elo INTEGER DEFAULT 1200,
             games_played INTEGER DEFAULT 0,
@@ -29,8 +62,8 @@ export async function initDatabase() {
           CREATE TABLE IF NOT EXISTS games (
             id SERIAL PRIMARY KEY,
             game_code VARCHAR(10) UNIQUE NOT NULL,
-            white_player_id INTEGER REFERENCES users(id),
-            black_player_id INTEGER REFERENCES users(id),
+            white_player_id VARCHAR(100) REFERENCES users(id),
+            black_player_id VARCHAR(100) REFERENCES users(id),
             white_player_name VARCHAR(20),
             black_player_name VARCHAR(20),
             result VARCHAR(10),
@@ -45,7 +78,7 @@ export async function initDatabase() {
 
         await client.query(`
           CREATE TABLE IF NOT EXISTS user_settings (
-            user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+            user_id VARCHAR(100) PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
             settings JSONB DEFAULT '{}'::jsonb,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           )
@@ -135,7 +168,7 @@ export async function initDatabase() {
         await client.query(`
           CREATE TABLE IF NOT EXISTS elo_history (
             id SERIAL PRIMARY KEY,
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            user_id VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
             elo INTEGER NOT NULL,
             change INTEGER NOT NULL DEFAULT 0,
             game_code VARCHAR(20),

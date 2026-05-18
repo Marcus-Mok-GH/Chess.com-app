@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.66 - 2026-05-18
+- Fixed database initialization failure caused by type mismatch between integer and string-based player IDs.
+- Standardized all player ID columns across the database schema to `VARCHAR(100)` and enabled `pgcrypto` for UUID generation.
+- Added a conditional one-time database reset that only triggers when a legacy integer-based schema is detected.
+
 ## 1.1.65 - 2026-05-16
 - Fixed OTP verification to accept 8-digit codes issued by Supabase; updated input length limits, validation conditions, placeholder text, and all user-facing messaging in `Login.jsx`, `LoginModal.jsx`, and `UserContext.jsx`.
 
