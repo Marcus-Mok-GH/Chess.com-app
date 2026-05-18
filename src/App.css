@@ -1907,7 +1907,7 @@ body {
   }
   
   .bot-name {
-    font-size: 0.625rem;
+    font-size: 0.6875rem; /* minimum legible size; was 0.625rem (10px) */
   }
 
   .reactions-grid {
@@ -2259,5 +2259,120 @@ body {
 
   .nav-label {
     font-size: 0.7rem;
+  }
+}
+
+/* ========================================
+   LANDSCAPE MODE — Mobile phones
+   Phones held sideways have tiny heights (300–500px).
+   The portrait calc(--game-viewport - Npx) formulas
+   use viewport HEIGHT as a width constraint, which
+   produces near-zero board sizes in landscape.
+   These rules restore a usable layout.
+   ======================================== */
+
+@media (orientation: landscape) and (max-height: 500px) {
+  /* Revert to side-by-side layout; portrait flips to column at ≤768px */
+  .game-container {
+    flex-direction: row !important;
+    align-items: flex-start;
+    height: 100%;
+  }
+
+  .board-section {
+    flex: 0 0 auto;
+    max-width: none;
+  }
+
+  /* Size board by HEIGHT (the constraining dimension in landscape).
+     The portrait formulas (calc(100dvh - Npx) used as WIDTH) break here;
+     override them all with a single height-aware calculation. */
+  .board-wrapper,
+  .hide-bottom-nav .board-wrapper {
+    width: min(
+      calc(100dvh - 110px), /* viewport height minus header + controls */
+      48vw                  /* never exceed half the screen width */
+    ) !important;
+    max-width: 48vw !important;
+    min-width: 180px;
+    min-height: 180px;
+  }
+
+  /* Compact game wrapper padding — fixed bottom bar is shorter in landscape */
+  .chess-game,
+  .online-chess-game {
+    padding: 4px 8px !important;
+    padding-bottom: calc(46px + env(safe-area-inset-bottom)) !important;
+    gap: 6px !important;
+    overflow-y: hidden;
+  }
+
+  .hide-bottom-nav .chess-game {
+    padding-bottom: calc(4px + env(safe-area-inset-bottom)) !important;
+  }
+
+  /* Sidebar: vertical column on the right, scrollable if needed */
+  .sidebar {
+    width: 160px !important;
+    flex-direction: column !important;
+    flex-shrink: 0;
+    overflow-y: auto;
+    max-height: calc(100dvh - 56px);
+    height: auto;
+  }
+
+  .move-history {
+    max-height: 80px !important;
+  }
+
+  /* Compact header — save precious vertical pixels */
+  .app-header {
+    min-height: 36px !important;
+    padding: 3px 10px !important;
+  }
+
+  .app-header .header-content {
+    padding: 3px 10px;
+  }
+
+  .app-logo {
+    font-size: 0.8125rem !important;
+  }
+
+  /* Compact fixed game-controls bar */
+  .game-controls {
+    padding: 4px 8px !important;
+    padding-bottom: calc(4px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .game-controls .btn {
+    min-height: 36px !important;
+    padding: 5px 4px !important;
+    font-size: 0.6875rem !important;
+  }
+
+  /* Compact bottom nav */
+  .bottom-nav {
+    padding: 3px 0 !important;
+    padding-bottom: calc(3px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .nav-tab {
+    min-height: 36px !important;
+    padding: 3px 4px !important;
+  }
+
+  .nav-icon {
+    font-size: 1rem;
+    margin-bottom: 0;
+  }
+
+  .nav-label {
+    font-size: 0.6rem !important;
+  }
+
+  /* App container padding for the shorter landscape nav */
+  .app {
+    padding-bottom: calc(46px + env(safe-area-inset-bottom)) !important;
   }
 }
