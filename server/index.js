@@ -26,14 +26,9 @@ import usersRouter from './routes/users.js';
 import coachRouter from './routes/coach.js';
 
 // Validate environment variables
-const databaseUrl = process.env.DATABASE_URL
-  || process.env.DATABASE_URL_UNPOOLED
-  || process.env.POSTGRES_URL_NON_POOLING
-  || process.env.POSTGRES_PRISMA_URL
-  || process.env.POSTGRES_URL;
-const hasDatabase = Boolean(databaseUrl);
+const hasDatabase = Boolean(process.env.DATABASE_URL);
 if (!hasDatabase) {
-  console.warn('[Server] WARNING: DATABASE_URL (or POSTGRES_URL) not set. Database features will be disabled.');
+  console.warn('[Server] WARNING: DATABASE_URL not set. Database features will be disabled.');
 } else {
   console.log('[Server] Database URL detected.');
 }
@@ -158,12 +153,12 @@ app.use('/api', async (req, res, next) => {
     return next();
   }
   if (!hasDatabase) {
-    return errorResponse(res, 503, 'Database not configured. Set DATABASE_URL (or POSTGRES_URL) in your deployment environment.');
+    return errorResponse(res, 503, 'Database not configured. Set DATABASE_URL in your deployment environment.');
   }
   if (!isDatabaseReady()) {
     const ready = await ensureDatabaseReady(initDatabase);
     if (!ready) {
-      return errorResponse(res, 503, 'Database unavailable. Check DATABASE_URL/POSTGRES_URL connectivity.');
+      return errorResponse(res, 503, 'Database unavailable. Check DATABASE_URL connectivity.');
     }
   }
   return next();
@@ -303,7 +298,7 @@ async function start() {
     }
   } else {
     setDatabaseReady(false);
-    console.warn('[Server] Skipping database initialization. DATABASE_URL (or POSTGRES_URL) is not set.');
+    console.warn('[Server] Skipping database initialization. DATABASE_URL is not set.');
   }
 
   if (!isServerless) {
