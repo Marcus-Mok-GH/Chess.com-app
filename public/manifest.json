@@ -1,0 +1,19 @@
+{
+  "name": "Chess - Play Online",
+  "short_name": "Chess",
+  "description": "Play chess online — bot opponents, real-time multiplayer, and game analysis.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1b1c1f",
+  "theme_color": "#1b1c1f",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["games", "sports"]
+}
