@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.71 - 2026-05-21
+- Removed automatic redirect from landing page for authenticated users.
+- Updated app logo to always link to the landing page.
+- Updated landing page Hero CTA to "Go to Dashboard" for logged-in users.
+
 ## 1.1.70 - 2026-05-20
 - Fixed "Load failed" error in Safari during OTP code request.
 - Implemented missing server-side Better Auth (Neon Auth) configuration and handler.

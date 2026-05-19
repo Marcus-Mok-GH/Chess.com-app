@@ -43,7 +43,7 @@ function AppHeader() {
       {/* Top header (simplified) */}
       <header className="app-header">
         <div className="header-content">
-          <Link to={isLoggedIn ? "/home" : "/"} className="app-logo">
+          <Link to="/" className="app-logo">
             ♟️ Chess
           </Link>
           <h1 className="page-title">{getTitle(location.pathname)}</h1>

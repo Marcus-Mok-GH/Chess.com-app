@@ -44,13 +44,6 @@ export default function Landing() {
   })
 
   useEffect(() => {
-    if (!isLoading && isLoggedIn) {
-      navigate('/home', { replace: true })
-    }
-  }, [isLoggedIn, isLoading, navigate])
-
-
-  useEffect(() => {
     let mounted = true
 
     const loadStats = async () => {
@@ -108,8 +101,12 @@ export default function Landing() {
             </p>
 
             <div className="hero-actions">
-              <button className="btn-premium primary" onClick={() => navigate('/login')} style={{ maxWidth: '280px' }}>
-                <span>Get Started</span>
+              <button
+                className="btn-premium primary"
+                onClick={() => navigate(isLoggedIn ? '/home' : '/login')}
+                style={{ maxWidth: '280px' }}
+              >
+                <span>{isLoggedIn ? 'Go to Dashboard' : 'Get Started'}</span>
                 <span className="btn-arrow">→</span>
               </button>
             </div>
