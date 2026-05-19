@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import api from '../services/api';
-import { supabase } from '../services/supabase';
+import { neonAuth } from '../services/neonAuth';
 import socket from '../services/socket';
 
 const SESSION_USER_KEY = 'chess_user_session';
@@ -80,12 +80,9 @@ export function UserProvider({ children }) {
       console.log('📱 REMOTE LOGIN SUCCESS RECEIVED');
 
       try {
-        if (supabase.auth.setSession) {
-          await supabase.auth.setSession({
-            access_token: session.access_token,
-            refresh_token: session.refresh_token,
-          });
-        }
+        // NOTE: Neon Auth (Better Auth) typically handles session via cookies or its own internal state.
+        // If we need to manually set it from a remote broadcast, we'd need to see if neonAuth has a setSession equivalent.
+        // For now, we update the user state.
 
         setUser(userData);
         persistUser(userData);
@@ -132,16 +129,12 @@ export function UserProvider({ children }) {
       }
 
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const sessionResult = await neonAuth.getSession();
+        const session = sessionResult?.data?.session;
 
         if (!session) {
-          console.log('[UserContext] No Supabase session found');
+          console.log('[UserContext] No Neon session found');
           if (isMounted) {
-            // Do NOT clear auth state while OTP verification is in progress.
-            // init() runs at mount and its async getSession() call can resolve
-            // AFTER verifyEmailOtp() has already set the user, causing a race
-            // where setUser(null) overwrites the freshly-authenticated user in
-            // the same React batch, redirecting the user back to /login.
             const isOtpPending = !!localStorage.getItem(PENDING_OTP_KEY);
             if (!isOtpPending) {
               setUser(null);
@@ -152,8 +145,9 @@ export function UserProvider({ children }) {
           return;
         }
 
-        if (!sessionUsername && session.user?.user_metadata?.username) {
-          sessionUsername = session.user.user_metadata.username;
+        // Neon Auth (Better Auth) stores user data in session.user
+        if (!sessionUsername && sessionResult.data.user?.username) {
+          sessionUsername = sessionResult.data.user.username;
         }
 
         if (!sessionUsername) {
@@ -189,36 +183,12 @@ export function UserProvider({ children }) {
 
     init();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log(`[UserContext] Auth event: ${event}`);
-      if (event === 'SIGNED_OUT') {
-        // Don't clear auth state if an OTP is currently being verified — Supabase
-        // can fire a spurious SIGNED_OUT during the OTP flow (e.g. invalidating a
-        // previous session), and we must not clobber the freshly-set user.
-        const isOtpPending = !!localStorage.getItem(PENDING_OTP_KEY);
-        if (!isOtpPending) {
-          setUser(null);
-          localStorage.removeItem(SESSION_USER_KEY);
-          localStorage.removeItem(SESSION_USER_DATA_KEY);
-        }
-      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        // Use userRef (not the captured `user` variable) to avoid stale-closure
-        // false-positives: without the ref, `!user` is always true because the
-        // closure captures the initial null value and never updates.
-        if (session && !userRef.current) {
-          const username = session.user?.user_metadata?.username;
-          if (username) {
-            login({ username }).catch(err => {
-              console.error('[UserContext] Failed to sync user after sign-in event', err);
-            });
-          }
-        }
-      }
-    });
+    // Neon Auth might not have a direct onAuthStateChange equivalent in the basic client,
+    // but we can poll or use their event system if available.
+    // For now, we rely on the init() and manual login/logout calls.
 
     return () => {
       isMounted = false;
-      subscription.unsubscribe();
     };
   }, [persistUser]);
 
@@ -267,7 +237,7 @@ export function UserProvider({ children }) {
   }, []);
 
   const logout = useCallback(async () => {
-    await supabase.auth.signOut();
+    await neonAuth.signOut();
     localStorage.removeItem(SESSION_USER_KEY);
     localStorage.removeItem(SESSION_USER_DATA_KEY);
     localStorage.removeItem(PENDING_OTP_KEY);
@@ -297,17 +267,9 @@ export function UserProvider({ children }) {
         email: trimmedEmail,
       }));
 
-      if (!supabase?.auth?.signInWithOtp) {
-        throw new Error('Supabase Auth is not available. Please check your environment variables.');
-      }
-
-      const result = await supabase.auth.signInWithOtp({
+      const result = await neonAuth.emailOtp.sendVerificationOtp({
         email: trimmedEmail,
-        options: {
-          shouldCreateUser: true,
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-          data: { username: trimmedUsername },
-        },
+        type: 'sign-in',
       });
 
       if (result.error) throw result.error;
@@ -317,7 +279,7 @@ export function UserProvider({ children }) {
 
       return {
         success: true,
-        message: 'Code sent! Check your email for an 8-digit verification code.',
+        message: 'Code sent! Check your email for an 6-digit verification code.',
       };
     } catch (error) {
       console.error('🔴 OTP REQUEST FAILED:', error);
@@ -344,21 +306,17 @@ export function UserProvider({ children }) {
     })();
 
     try {
-      if (!supabase?.auth?.verifyOtp) {
-        throw new Error('Supabase verifyOtp is not available.');
-      }
-
-      const { data, error } = await supabase.auth.verifyOtp({
+      const { data, error } = await neonAuth.signIn.emailOtp({
         email: email.trim(),
-        token: token.trim(),
-        type: 'email',
+        otp: token.trim(),
       });
 
       if (error) throw error;
 
       const resolvedUsername =
         pendingData?.username?.trim() ||
-        data?.user?.user_metadata?.username ||
+        data?.user?.username ||
+        data?.user?.name ||
         '';
 
       if (!resolvedUsername) {

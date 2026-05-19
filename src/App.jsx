@@ -12,7 +12,6 @@ import './App.css'
 
 const Home = lazy(() => import('./pages/Home'))
 const Login = lazy(() => import('./pages/Login'))
-const AuthCallback = lazy(() => import('./pages/AuthCallback'))
 const Play = lazy(() => import('./pages/Play'))
 const OnlinePlay = lazy(() => import('./pages/OnlinePlay'))
 const Analysis = lazy(() => import('./pages/Analysis'))
@@ -219,7 +218,6 @@ export default function App() {
                 {/* Verify email — OTP entry after requestOtp; locked until verified or cancelled */}
                 <Route path="/verify-email" element={<Suspense fallback={<RouteFallback />}><VerifyEmail /></Suspense>} />
                 {/* Auth callback — Supabase OTP / magic link redirects here */}
-                <Route path="/auth/callback" element={<Suspense fallback={<RouteFallback />}><AuthCallback /></Suspense>} />
 
                 {/* App routes — share persistent AppHeader via AppShell layout */}
                 <Route element={<AppShell />}>
