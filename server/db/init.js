@@ -9,54 +9,8 @@ export async function initDatabase() {
   const client = await pool.connect();
   try {
     const runInit = async () => {
-      // Check if we need to perform the migration/reset.
-      // We check if any of the legacy integer columns still exist.
-      // If they do, we need to reset them to VARCHAR to match the new schema.
-      let needsReset = false;
-      const detectedMismatches = [];
-      try {
-        const typeCheck = await client.query(`
-          SELECT table_name, column_name, data_type
-          FROM information_schema.columns
-          WHERE (table_name = 'users' AND column_name = 'id')
-             OR (table_name = 'games' AND column_name = 'white_player_id')
-             OR (table_name = 'games' AND column_name = 'black_player_id')
-             OR (table_name = 'user_settings' AND column_name = 'user_id')
-             OR (table_name = 'elo_history' AND column_name = 'user_id')
-        `);
-        for (const row of typeCheck.rows) {
-          if (row.data_type === 'integer') {
-            needsReset = true;
-            detectedMismatches.push(`${row.table_name}.${row.column_name}`);
-          }
-        }
-      } catch (e) {
-        // If table doesn't exist, we don't need to reset, CREATE TABLE IF NOT EXISTS will handle it.
-      }
-
       await client.query('BEGIN');
       try {
-        if (needsReset) {
-          if (process.env.FORCE_DB_RESET !== 'true') {
-            console.error('[DB] CRITICAL: Schema mismatch detected in the following columns:');
-            console.error(`[DB] ${detectedMismatches.join(', ')}`);
-            console.error('[DB] Database reset is required but FORCE_DB_RESET flag is not set.');
-            console.error('[DB] Please back up your data and set FORCE_DB_RESET=true to proceed.');
-            console.error('[DB] ABORTING to prevent data loss.');
-            throw new Error('Schema mismatch detected but FORCE_DB_RESET not authorized');
-          }
-          console.warn(`[DB] FORCE_DB_RESET authorized. Resetting tables with mismatched columns: ${detectedMismatches.join(', ')}`);
-          await client.query(`
-            DROP TABLE IF EXISTS elo_history CASCADE;
-            DROP TABLE IF EXISTS match_moves CASCADE;
-            DROP TABLE IF EXISTS user_settings CASCADE;
-            DROP TABLE IF EXISTS games CASCADE;
-            DROP TABLE IF EXISTS active_games CASCADE;
-            DROP TABLE IF EXISTS matchmaking_queue CASCADE;
-            DROP TABLE IF EXISTS users CASCADE;
-          `);
-        }
-
         // Ensure UUID extension is available
         await client.query('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
 
