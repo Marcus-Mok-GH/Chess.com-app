@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.67 - 2026-05-19
+- Optimized PostgreSQL pool configuration for Vercel + Neon by tuning serverless pool sizing and idle timeout defaults.
+- Added Neon pooler hostname detection/warnings to help prevent non-pooled connection strings in serverless deployments.
+- Kept IPv4-only socket forcing scoped to Supabase hosts so Neon deployments can use their standard pooled endpoints on Vercel.
+
 ## 1.1.66 - 2026-05-18
 - Fixed database initialization failure caused by type mismatch between integer and string-based player IDs.
 - Standardized all player ID columns across the database schema to `VARCHAR(100)` and enabled `pgcrypto` for UUID generation.
