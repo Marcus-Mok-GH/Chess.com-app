@@ -145,10 +145,9 @@ export function UserProvider({ children }) {
         }
 
         // Neon Auth stores the display name in user.name (not user.username).
-        // Fall back to email prefix as a last resort so login() can still run.
         if (!sessionUsername) {
           const neonUser = sessionResult.data.user;
-          sessionUsername = neonUser?.name || neonUser?.email?.split('@')[0] || '';
+          sessionUsername = neonUser?.name || '';
         }
 
         if (!sessionUsername) {

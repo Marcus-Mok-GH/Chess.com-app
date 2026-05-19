@@ -12,6 +12,54 @@ import {
 
 const router = express.Router();
 
+// Simple in-memory rate limiting (resets on server restart)
+const ipWindowMs = 60 * 1000;
+const ipMaxRequests = 5;
+const emailWindowMs = 60 * 60 * 1000;
+const emailMaxRequests = 3;
+const verifyMaxAttempts = 5;
+
+const ipRequestMap = new Map();
+const emailRequestMap = new Map();
+const verifyAttemptMap = new Map();
+
+function checkIpLimit(ip) {
+  const now = Date.now();
+  const entry = ipRequestMap.get(ip) || { count: 0, windowStart: now };
+  if (now - entry.windowStart > ipWindowMs) {
+    entry.count = 0;
+    entry.windowStart = now;
+  }
+  entry.count++;
+  ipRequestMap.set(ip, entry);
+  return entry.count <= ipMaxRequests;
+}
+
+function checkEmailLimit(email) {
+  const now = Date.now();
+  const entry = emailRequestMap.get(email) || { count: 0, windowStart: now };
+  if (now - entry.windowStart > emailWindowMs) {
+    entry.count = 0;
+    entry.windowStart = now;
+  }
+  entry.count++;
+  emailRequestMap.set(email, entry);
+  return entry.count <= emailMaxRequests;
+}
+
+function checkVerifyAttempts(email) {
+  const attempts = verifyAttemptMap.get(email) || 0;
+  return attempts < verifyMaxAttempts;
+}
+
+function incrementVerifyAttempts(email) {
+  verifyAttemptMap.set(email, (verifyAttemptMap.get(email) || 0) + 1);
+}
+
+function resetVerifyAttempts(email) {
+  verifyAttemptMap.delete(email);
+}
+
 // POST /api/auth/send-otp
 // Step 1: generate and email a 6-digit OTP
 router.post('/send-otp', async (req, res) => {
@@ -24,6 +72,13 @@ router.post('/send-otp', async (req, res) => {
   const normalized = email.toLowerCase().trim();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
     return res.status(400).json({ error: 'Invalid email address' });
+  }
+
+  if (!checkIpLimit(req.ip)) {
+    return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+  }
+  if (!checkEmailLimit(normalized)) {
+    return res.status(429).json({ error: 'Too many requests. Please try again later.' });
   }
 
   try {
@@ -45,6 +100,10 @@ router.post('/verify-otp', async (req, res) => {
     return res.status(400).json({ error: 'Email, code, and username are required' });
   }
 
+  if (typeof email !== 'string' || typeof otp !== 'string' || typeof username !== 'string') {
+    return res.status(400).json({ error: 'Email, code, and username must be strings' });
+  }
+
   const trimmedUsername = username.trim();
   if (
     trimmedUsername.length < 2 ||
@@ -55,6 +114,14 @@ router.post('/verify-otp', async (req, res) => {
   }
 
   const normalizedEmail = email.toLowerCase().trim();
+
+  if (!checkIpLimit(req.ip)) {
+    return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+  }
+  if (!checkVerifyAttempts(normalizedEmail)) {
+    return res.status(429).json({ error: 'Too many verification attempts. Please request a new code.' });
+  }
+  incrementVerifyAttempts(normalizedEmail);
 
   try {
     const valid = await validateOtp(normalizedEmail, otp.trim());
@@ -114,6 +181,8 @@ router.post('/verify-otp', async (req, res) => {
       ipAddress: req.ip,
       userAgent: req.headers['user-agent'],
     });
+
+    resetVerifyAttempts(normalizedEmail);
 
     res.json({
       success: true,
