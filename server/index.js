@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { config } from 'dotenv';
+import { toNodeHandler } from 'better-auth/node';
 
 // Load local environment variables only in non-production environments.
 // On Vercel, rely on project env vars instead of bundled .env files.
@@ -18,6 +19,8 @@ import { initDatabase, cleanupStaleMatchmakingEntries, cleanupOldActiveGames, qu
 import { checkDatabaseConnection } from './db/init.js';
 import { setDatabaseReady, isDatabaseReady, ensureDatabaseReady } from './db/status.js';
 import { errorResponse } from './middleware/errors.js';
+import { ensureAuthTables } from './db/migrations.js';
+import { auth } from './auth.js';
 import { registerSocketHandlers } from './socket/index.js';
 import { getMatchmakingService } from './socket/matchmaking.js';
 import matchmakingRouter from './routes/matchmaking.js';
@@ -95,17 +98,35 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 // Get frontend URL from environment or use default
 const FRONTEND_URL = process.env.FRONTEND_URL || (isProduction ? process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
+  ? (process.env.VERCEL_URL.startsWith('http') ? process.env.VERCEL_URL : `https://${process.env.VERCEL_URL}`)
   : process.env.NETLIFY_URL
-    ? `https://${process.env.NETLIFY_URL}`
+    ? (process.env.NETLIFY_URL.startsWith('http') ? process.env.NETLIFY_URL : `https://${process.env.NETLIFY_URL}`)
     : process.env.REPL_SLUG
       ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
       : 'https://your-domain.com'
   : 'http://localhost:5173');
 
-// In development, allow all origins for easier testing
-// In production, restrict to the configured FRONTEND_URL
-const corsOrigin = isProduction ? FRONTEND_URL : true;
+// Build an explicit allowlist of trusted origins
+// Never use `origin: true` in production when credentials are enabled
+const trustedOrigins = [
+  FRONTEND_URL,
+  process.env.VERCEL_URL ? (process.env.VERCEL_URL.startsWith('http') ? process.env.VERCEL_URL : `https://${process.env.VERCEL_URL}`) : null,
+  process.env.NETLIFY_URL ? (process.env.NETLIFY_URL.startsWith('http') ? process.env.NETLIFY_URL : `https://${process.env.NETLIFY_URL}`) : null,
+  // Allow localhost in development
+  !isProduction ? 'http://localhost:5173' : null,
+  !isProduction ? 'http://localhost:3001' : null,
+].filter(Boolean);
+
+const corsOrigin = isProduction
+  ? (origin, callback) => {
+      // In production, only allow explicitly trusted origins
+      if (!origin || trustedOrigins.includes(origin)) {
+        callback(null, origin || trustedOrigins[0]);
+      } else {
+        callback(null, false);
+      }
+    }
+  : true; // In development, allow all origins for easier testing
 
 const httpServer = createServer(app);
 const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
@@ -142,8 +163,13 @@ app.use(cors({
   origin: corsOrigin,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
 }));
+
+// Better Auth handler must be mounted BEFORE express.json()
+// otherwise the client API may hang on "pending"
+app.all('/api/auth/*', toNodeHandler(auth));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -275,6 +301,9 @@ async function start() {
       // use IF NOT EXISTS so this is safe and idempotent on every cold start.
       console.log('[Server] Initializing database...');
       const timeoutMs = isServerless ? 60000 : 15000;
+
+      // Ensure Better Auth tables exist
+      await ensureAuthTables().catch(err => console.error('[Server] Auth table migration failed:', err));
 
       const checkAction = initDatabase;
       const actionName = 'initialization';

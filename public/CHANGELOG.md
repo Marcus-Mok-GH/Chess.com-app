@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.70 - 2026-05-20
+- Fixed "Load failed" error in Safari during OTP code request.
+- Implemented missing server-side Better Auth (Neon Auth) configuration and handler.
+- Added database migration for Better Auth tables (users, sessions, accounts, verifications).
+- Improved CORS and origin handling for Vercel deployments.
+
 ## 1.1.69 - 2026-05-19
 - Migrated authentication from Supabase to Neon Auth (Better Auth).
 - Replaced `@supabase/supabase-js` with `@neondatabase/auth` and implemented a native Neon Auth client.
@@ -219,9 +225,9 @@
 - Removed invalid client-side `socket.leave(...)` call that could interrupt online game session cleanup in browsers.
 
 ## 1.1.14 - 2026-05-04
-- Fixed OTP flow implementation to match Supabase docs: removed unsupported attempt to force OTP via request payload.
-- Kept explicit send-success UI so OTP requests no longer look like silent failures.
-- Updated success copy to clarify OTP vs magic-link behavior depends on Supabase Email Template configuration.
+- Fixed online multiplayer move sync by binding Socket.IO connections to each player when joining a game created via HTTP APIs.
+- Added explicit game-participant authorization in Socket.IO `join_game` so only players in the match can subscribe and move.
+- Removed invalid client-side `socket.leave(...)` call that could interrupt online game session cleanup in browsers.
 
 ## 1.1.13 - 2026-05-04
 - Added visible success confirmation after OTP send requests so users know the request completed.
