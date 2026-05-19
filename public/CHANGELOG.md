@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.70 - 2025-01-30
+- Fixed "Load failed" error in Safari during OTP code request.
+- Implemented missing server-side Better Auth (Neon Auth) configuration and handler.
+- Added database migration for Better Auth tables (users, sessions, accounts, verifications).
+- Improved CORS and origin handling for Vercel deployments.
+
 ## 1.1.69 - 2026-05-19
 - Migrated authentication from Supabase to Neon Auth (Better Auth).
 - Replaced `@supabase/supabase-js` with `@neondatabase/auth` and implemented a native Neon Auth client.
@@ -68,7 +74,7 @@
 
 ## 1.1.52 - 2026-05-08
 - Improved Stockfish bot reliability by simplifying worker engine path resolution, extending engine startup timeout, and prioritizing consistent UCI initialization before selecting moves.
-- Reduced unintended weak-bot behavior at high ratings by avoiding unnecessary initialization failures that previously triggered fallback legal/random move selection.
+- Reduced unintended weak-bot behavior at high ratings by avoiding unnecessarily initialization failures that previously triggered fallback legal/random move selection.
 
 ## 1.1.51 - 2026-05-07
 - Fixed login "Load failed" error in Safari by removing hardcoded `localhost` fallbacks in `vite.config.js` and normalizing API base URLs to use relative paths in production.
@@ -219,9 +225,9 @@
 - Removed invalid client-side `socket.leave(...)` call that could interrupt online game session cleanup in browsers.
 
 ## 1.1.14 - 2026-05-04
-- Fixed OTP flow implementation to match Supabase docs: removed unsupported attempt to force OTP via request payload.
-- Kept explicit send-success UI so OTP requests no longer look like silent failures.
-- Updated success copy to clarify OTP vs magic-link behavior depends on Supabase Email Template configuration.
+- Fixed online multiplayer move sync by binding Socket.IO connections to each player when joining a game created via HTTP APIs.
+- Added explicit game-participant authorization in Socket.IO `join_game` so only players in the match can subscribe and move.
+- Removed invalid client-side `socket.leave(...)` call that could interrupt online game session cleanup in browsers.
 
 ## 1.1.13 - 2026-05-04
 - Added visible success confirmation after OTP send requests so users know the request completed.
