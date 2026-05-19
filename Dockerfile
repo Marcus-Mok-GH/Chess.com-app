@@ -65,7 +65,6 @@ ENV NODE_ENV=production
 ENV PORT=3001
 ENV DATABASE_URL=${DATABASE_URL:-postgresql://username:password@localhost:5432/chess_db?sslmode=require}
 ENV FRONTEND_URL=${FRONTEND_URL:-http://localhost:3001}
-ENV VITE_SERVER_URL=${VITE_SERVER_URL:-http://localhost:3001}
 
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]

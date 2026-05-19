@@ -1,52 +1,26 @@
 import { io } from 'socket.io-client';
 
 function resolveSocketConfig() {
-  const isBrowser = typeof window !== 'undefined';
-  const devDefault = 'http://localhost:3001';
+  const isVercel = window.location.hostname.includes('.vercel.app');
+  const customUrl = import.meta.env.VITE_SOCKET_URL;
+  const hasCustomUrl = typeof customUrl === 'string' && customUrl.length > 0 && !customUrl.startsWith('/');
 
-  // Check if running in Vercel/Vite environment
-  const isVercel = import.meta.env?.VERCEL === '1' || window?.location?.hostname?.includes('.vercel.app');
-  const isViteDev = import.meta.env?.DEV;
+  // Ignore a localhost URL when the page itself is not on localhost (stale dev config).
+  const isLocalUrl = hasCustomUrl && /localhost|127\.0\.0\.1/i.test(customUrl);
+  const isLocalPage = /localhost|127\.0\.0\.1/i.test(window.location.hostname);
+  const useCustomUrl = hasCustomUrl && !(isLocalUrl && !isLocalPage);
 
-  const urlEnv = isBrowser
-    ? (import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_SERVER_URL || import.meta.env.VITE_API_URL)
-    : (process.env?.VITE_SOCKET_URL || process.env?.VITE_SERVER_URL);
-
-  const pathEnv = isBrowser
-    ? import.meta.env.VITE_SOCKET_PATH
-    : process.env?.VITE_SOCKET_PATH;
-
-  // If someone set VITE_SOCKET_URL="/socket.io" (common mistake), treat it as the path.
-  const inferredPath = typeof urlEnv === 'string' && urlEnv.startsWith('/') ? urlEnv : null;
-  const socketPath = (pathEnv || inferredPath || '/socket.io').toString();
-
-  // Determine base URL (host + protocol), never include the socket.io path here.
-  let baseUrl;
-  const hasCustomUrl = typeof urlEnv === 'string' && urlEnv.length > 0 && !urlEnv.startsWith('/');
-  const looksLikeLocalhost = hasCustomUrl && /localhost|127\.0\.0\.1/i.test(urlEnv);
-  const isLocalPage = isBrowser && /localhost|127\.0\.0\.1/i.test(window.location.hostname);
-
-  if (isVercel && !hasCustomUrl) {
-    // Vercel doesn't support WebSocket connections for Socket.IO
-    // Must use external Socket.IO server via VITE_SOCKET_URL env var
-    console.warn('[Socket] Running on Vercel without external Socket.IO server configured.');
+  if (isVercel && !useCustomUrl) {
+    console.warn('[Socket] Running on Vercel without VITE_SOCKET_URL configured.');
     console.warn('[Socket] Real-time features (matchmaking, online games) will not work.');
-    console.warn('[Socket] To fix: Set VITE_SOCKET_URL environment variable to your external Socket.IO server.');
-    console.warn('[Socket] Example: VITE_SOCKET_URL=https://your-socket-server.railway.app');
-    return { url: null, path: socketPath };
+    console.warn('[Socket] Set VITE_SOCKET_URL to your external Socket.IO server URL.');
+    return { url: null, path: '/socket.io' };
   }
 
-  if (hasCustomUrl && !(isBrowser && looksLikeLocalhost && !isLocalPage)) {
-    baseUrl = urlEnv;
-  } else if (isBrowser) {
-    // In development, use window.location.origin to go through Vite's proxy
-    // This avoids CORS/WebSocket issues when connecting cross-origin
-    baseUrl = import.meta.env.DEV ? window.location.origin : window.location.origin;
-  } else {
-    baseUrl = devDefault;
-  }
-
-  return { url: baseUrl, path: socketPath };
+  return {
+    url: useCustomUrl ? customUrl : window.location.origin,
+    path: '/socket.io',
+  };
 }
 
 const SOCKET_CONFIG = resolveSocketConfig();
@@ -85,12 +59,9 @@ class SocketService {
     console.log('[Socket] Connecting to server:', SOCKET_CONFIG);
 
     this.connectionPromise = new Promise((resolve) => {
-      const transportEnv = import.meta.env.VITE_SOCKET_TRANSPORTS || (typeof process !== 'undefined' ? process.env?.VITE_SOCKET_TRANSPORTS : '');
-      const transports = (transportEnv || '').split(',').map(t => t.trim()).filter(Boolean);
-
       this.socket = io(SOCKET_CONFIG.url, {
         path: SOCKET_CONFIG.path,
-        transports: transports.length ? transports : ['websocket', 'polling'],
+        transports: ['websocket', 'polling'],
         reconnection: true,
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,
