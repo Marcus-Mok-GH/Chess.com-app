@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.69 - 2026-05-19
+- Migrated authentication from Supabase to Neon Auth (Better Auth).
+- Replaced `@supabase/supabase-js` with `@neondatabase/auth` and implemented a native Neon Auth client.
+- Updated the OTP flow to support 6-digit codes; adjusted input constraints, placeholder text, and user-facing messaging in `VerifyEmail.jsx` and `UserContext.jsx`.
+- Removed Supabase-specific routes and hooks, including the `/auth/callback` path and `useMagicLink` helper.
+- Enhanced `UserContext` session restoration to work with Neon's cookie-based session management.
+
 ## 1.1.68 - 2026-05-19
 - Removed startup schema-mismatch reset gating from database initialization to avoid boot-time crashes when legacy columns are detected.
 - Kept startup database initialization focused on idempotent `CREATE TABLE IF NOT EXISTS`/index creation so all required tables are always ensured at boot.

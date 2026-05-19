@@ -41,7 +41,7 @@ export default function VerifyEmail() {
 
   const handleVerifyCode = async () => {
     setError('');
-    if (!/^\d{8}$/.test(otpCode)) return setError('Please enter the full 8-digit code.');
+    if (!/^\d{6}$/.test(otpCode)) return setError('Please enter the full 6-digit code.');
 
     setIsSubmitting(true);
     try {
@@ -86,7 +86,7 @@ export default function VerifyEmail() {
         <div className="login-logo">♟️</div>
         <h1 className="login-title">Check your email</h1>
         <p className="login-subtitle">
-          We sent an 8-digit code to <strong>{pendingOtpEmail}</strong>
+          We sent an 6-digit code to <strong>{pendingOtpEmail}</strong>
         </p>
 
         <form className="login-form" onSubmit={(e) => e.preventDefault()}>
@@ -98,11 +98,11 @@ export default function VerifyEmail() {
               inputMode="numeric"
               pattern="[0-9]*"
               value={otpCode}
-              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
-              placeholder="00000000"
+              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              placeholder="000000"
               autoFocus
               autoComplete="one-time-code"
-              maxLength={8}
+              maxLength={6}
               onKeyDown={(e) => e.key === 'Enter' && handleVerifyCode()}
             />
           </div>
@@ -113,7 +113,7 @@ export default function VerifyEmail() {
           <button
             type="button"
             className="login-btn"
-            disabled={isSubmitting || otpCode.length !== 8}
+            disabled={isSubmitting || otpCode.length !== 6}
             onClick={handleVerifyCode}
           >
             {isSubmitting ? 'Verifying…' : 'Verify Code'}

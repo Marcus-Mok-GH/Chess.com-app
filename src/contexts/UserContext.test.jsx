@@ -20,27 +20,20 @@ vi.mock('../services/socket', () => ({
   },
 }));
 
-const mockSignInWithOtp = vi.fn();
-const mockGetSession = vi.fn().mockResolvedValue({ data: { session: null } });
-const mockOnAuthStateChange = vi.fn().mockReturnValue({
-  data: { subscription: { unsubscribe: vi.fn() } },
-});
-const mockSetSession = vi.fn();
-const mockSignOut = vi.fn();
-const mockVerifyOtp = vi.fn();
-
-vi.mock('../services/supabase', () => ({
-  supabase: {
-    auth: {
-      signInWithOtp: mockSignInWithOtp,
-      getSession: mockGetSession,
-      onAuthStateChange: mockOnAuthStateChange,
-      setSession: mockSetSession,
-      signOut: mockSignOut,
-      verifyOtp: mockVerifyOtp,
+vi.mock('../services/neonAuth', () => ({
+  neonAuth: {
+    emailOtp: {
+      sendVerificationOtp: vi.fn(),
     },
+    signIn: {
+      emailOtp: vi.fn(),
+    },
+    getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
+    signOut: vi.fn(),
   },
 }));
+
+import { neonAuth } from '../services/neonAuth';
 
 // ── Test helper ───────────────────────────────────────────────────────────────
 
@@ -62,20 +55,17 @@ function renderWithUserContext(onValue) {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-describe('UserContext.requestOtp – 8-digit code message (PR #1.1.65)', () => {
+describe('UserContext.requestOtp – 6-digit code message (PR #1.1.65)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetSession.mockResolvedValue({ data: { session: null } });
-    mockOnAuthStateChange.mockReturnValue({
-      data: { subscription: { unsubscribe: vi.fn() } },
-    });
+    neonAuth.getSession.mockResolvedValue({ data: { session: null } });
     // Simulate being online
     Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
     localStorage.clear();
   });
 
-  it('returns a success message referencing an 8-digit verification code', async () => {
-    mockSignInWithOtp.mockResolvedValue({ error: null });
+  it('returns a success message referencing an 6-digit verification code', async () => {
+    neonAuth.emailOtp.sendVerificationOtp.mockResolvedValue({ error: null });
 
     let capturedContext;
     renderWithUserContext((ctx) => { capturedContext = ctx; });
@@ -86,11 +76,11 @@ describe('UserContext.requestOtp – 8-digit code message (PR #1.1.65)', () => {
     });
 
     expect(result.success).toBe(true);
-    expect(result.message).toContain('8-digit');
+    expect(result.message).toContain('6-digit');
   });
 
-  it('success message does NOT reference a 6-digit code (regression)', async () => {
-    mockSignInWithOtp.mockResolvedValue({ error: null });
+  it('success message does NOT reference a 8-digit code (regression)', async () => {
+    neonAuth.emailOtp.sendVerificationOtp.mockResolvedValue({ error: null });
 
     let capturedContext;
     renderWithUserContext((ctx) => { capturedContext = ctx; });
@@ -100,11 +90,11 @@ describe('UserContext.requestOtp – 8-digit code message (PR #1.1.65)', () => {
       result = await capturedContext.requestOtp({ email: 'user@example.com', username: 'testuser' });
     });
 
-    expect(result.message).not.toContain('6-digit');
+    expect(result.message).not.toContain('8-digit');
   });
 
   it('returns the exact success message string', async () => {
-    mockSignInWithOtp.mockResolvedValue({ error: null });
+    neonAuth.emailOtp.sendVerificationOtp.mockResolvedValue({ error: null });
 
     let capturedContext;
     renderWithUserContext((ctx) => { capturedContext = ctx; });
@@ -114,11 +104,11 @@ describe('UserContext.requestOtp – 8-digit code message (PR #1.1.65)', () => {
       result = await capturedContext.requestOtp({ email: 'user@example.com', username: 'testuser' });
     });
 
-    expect(result.message).toBe('Code sent! Check your email for an 8-digit verification code.');
+    expect(result.message).toBe('Code sent! Check your email for an 6-digit verification code.');
   });
 
-  it('calls supabase.auth.signInWithOtp with the correct email', async () => {
-    mockSignInWithOtp.mockResolvedValue({ error: null });
+  it('calls neonAuth.emailOtp.sendVerificationOtp with the correct email', async () => {
+    neonAuth.emailOtp.sendVerificationOtp.mockResolvedValue({ error: null });
 
     let capturedContext;
     renderWithUserContext((ctx) => { capturedContext = ctx; });
@@ -127,13 +117,13 @@ describe('UserContext.requestOtp – 8-digit code message (PR #1.1.65)', () => {
       await capturedContext.requestOtp({ email: 'user@example.com', username: 'testuser' });
     });
 
-    expect(mockSignInWithOtp).toHaveBeenCalledWith(
+    expect(neonAuth.emailOtp.sendVerificationOtp).toHaveBeenCalledWith(
       expect.objectContaining({ email: 'user@example.com' })
     );
   });
 
-  it('returns an error when supabase.auth.signInWithOtp fails', async () => {
-    mockSignInWithOtp.mockResolvedValue({ error: { message: 'Rate limit exceeded' } });
+  it('returns an error when neonAuth.emailOtp.sendVerificationOtp fails', async () => {
+    neonAuth.emailOtp.sendVerificationOtp.mockResolvedValue({ error: { message: 'Rate limit exceeded' } });
 
     let capturedContext;
     renderWithUserContext((ctx) => { capturedContext = ctx; });
@@ -159,7 +149,7 @@ describe('UserContext.requestOtp – 8-digit code message (PR #1.1.65)', () => {
     });
 
     expect(result.error).toBeTruthy();
-    expect(mockSignInWithOtp).not.toHaveBeenCalled();
+    expect(neonAuth.emailOtp.sendVerificationOtp).not.toHaveBeenCalled();
   });
 
   // Boundary / negative cases ─────────────────────────────────────────────
@@ -174,7 +164,7 @@ describe('UserContext.requestOtp – 8-digit code message (PR #1.1.65)', () => {
     });
 
     expect(result.error).toBeTruthy();
-    expect(mockSignInWithOtp).not.toHaveBeenCalled();
+    expect(neonAuth.emailOtp.sendVerificationOtp).not.toHaveBeenCalled();
   });
 
   it('returns an error when username is too short', async () => {
@@ -187,6 +177,6 @@ describe('UserContext.requestOtp – 8-digit code message (PR #1.1.65)', () => {
     });
 
     expect(result.error).toBeTruthy();
-    expect(mockSignInWithOtp).not.toHaveBeenCalled();
+    expect(neonAuth.emailOtp.sendVerificationOtp).not.toHaveBeenCalled();
   });
 });
