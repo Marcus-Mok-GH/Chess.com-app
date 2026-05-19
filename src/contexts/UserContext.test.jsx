@@ -64,7 +64,7 @@ describe('UserContext.requestOtp – 6-digit code message (PR #1.1.65)', () => {
     localStorage.clear();
   });
 
-  it('returns a success message referencing an 6-digit verification code', async () => {
+  it('returns a success message referencing a 6-digit verification code', async () => {
     neonAuth.emailOtp.sendVerificationOtp.mockResolvedValue({ error: null });
 
     let capturedContext;
@@ -104,7 +104,7 @@ describe('UserContext.requestOtp – 6-digit code message (PR #1.1.65)', () => {
       result = await capturedContext.requestOtp({ email: 'user@example.com', username: 'testuser' });
     });
 
-    expect(result.message).toBe('Code sent! Check your email for an 6-digit verification code.');
+    expect(result.message).toBe('Code sent! Check your email for a 6-digit verification code.');
   });
 
   it('calls neonAuth.emailOtp.sendVerificationOtp with the correct email', async () => {

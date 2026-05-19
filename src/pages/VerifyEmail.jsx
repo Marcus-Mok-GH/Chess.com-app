@@ -86,7 +86,7 @@ export default function VerifyEmail() {
         <div className="login-logo">♟️</div>
         <h1 className="login-title">Check your email</h1>
         <p className="login-subtitle">
-          We sent an 6-digit code to <strong>{pendingOtpEmail}</strong>
+          We sent a 6-digit code to <strong>{pendingOtpEmail}</strong>
         </p>
 
         <form className="login-form" onSubmit={(e) => e.preventDefault()}>
