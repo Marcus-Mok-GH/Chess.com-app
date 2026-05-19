@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.72 - 2026-05-19
+- Fixed database connection timeouts on Vercel deployment by implementing a robust retry mechanism with exponential backoff in schema initialization.
+- Consolidated database migration and initialization logic into a single transaction in `server/db/init.js`.
+- Aligned `users` table and related auth tables with Better Auth standard schema (including `name`, `email`, and camelCase identifiers).
+- Updated SSL configuration and increased connection timeouts for improved stability on serverless cold starts.
+
 ## 1.1.71 - 2026-05-21
 - Removed automatic redirect from landing page for authenticated users.
 - Updated app logo to always link to the landing page.

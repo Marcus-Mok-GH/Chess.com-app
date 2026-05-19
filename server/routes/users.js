@@ -30,7 +30,7 @@ router.post('/login', async (req, res) => {
     
     // Try to find existing user
     let result = await query(
-      'SELECT id, username, elo, games_played, wins, losses, draws, created_at FROM users WHERE LOWER(username) = LOWER($1)',
+      'SELECT id, username, elo, games_played, wins, losses, draws, "createdAt" FROM users WHERE LOWER(username) = LOWER($1)',
       [trimmedUsername]
     );
     
@@ -55,16 +55,20 @@ router.post('/login', async (req, res) => {
           wins: user.wins,
           losses: user.losses,
           draws: user.draws,
-          createdAt: user.created_at
+          createdAt: user["createdAt"]
         },
         isNewUser: false
       });
     }
     
-    // Create new user
+    // Create new user - Note: Better Auth should handle the initial user creation normally.
+    // This /login endpoint seems to be a sync/fallback.
+    // For a new user here, we need name and email which we don't have.
+    // This endpoint might need to be adjusted to only sync existing users or handle Better Auth session.
+    // However, I will just fix the column names for now to maintain existing logic.
     result = await query(
-      'INSERT INTO users (username, elo) VALUES ($1, $2) RETURNING id, username, elo, games_played, wins, losses, draws, created_at',
-      [trimmedUsername, 1200]
+      'INSERT INTO users (id, name, email, username, elo) VALUES ($1, $2, $3, $4, $5) RETURNING id, username, elo, games_played, wins, losses, draws, "createdAt"',
+      [globalThis.crypto?.randomUUID?.() || Date.now().toString(), trimmedUsername, `${trimmedUsername}@placeholder.com`, trimmedUsername, 1200]
     );
 
     await query(
@@ -85,7 +89,7 @@ router.post('/login', async (req, res) => {
         wins: newUser.wins,
         losses: newUser.losses,
         draws: newUser.draws,
-        createdAt: newUser.created_at
+        createdAt: newUser["createdAt"]
       },
       isNewUser: true
     });
@@ -96,7 +100,7 @@ router.post('/login', async (req, res) => {
       // Unique violation - race condition, try to fetch
       try {
         const result = await query(
-          'SELECT id, username, elo, games_played, wins, losses, draws, created_at FROM users WHERE LOWER(username) = LOWER($1)',
+          'SELECT id, username, elo, games_played, wins, losses, draws, "createdAt" FROM users WHERE LOWER(username) = LOWER($1)',
           [req.body.username.trim()]
         );
         if (result.rows.length > 0) {
@@ -111,7 +115,7 @@ router.post('/login', async (req, res) => {
               wins: user.wins,
               losses: user.losses,
               draws: user.draws,
-              createdAt: user.created_at
+              createdAt: user["createdAt"]
             },
             isNewUser: false
           });
@@ -192,7 +196,7 @@ router.get('/:username', async (req, res) => {
     const { username } = req.params;
     
     const result = await query(
-      'SELECT id, username, elo, games_played, wins, losses, draws, created_at FROM users WHERE LOWER(username) = LOWER($1)',
+      'SELECT id, username, elo, games_played, wins, losses, draws, "createdAt" FROM users WHERE LOWER(username) = LOWER($1)',
       [username]
     );
     
@@ -209,7 +213,7 @@ router.get('/:username', async (req, res) => {
       wins: user.wins,
       losses: user.losses,
       draws: user.draws,
-      createdAt: user.created_at
+      createdAt: user["createdAt"]
     });
     
   } catch (error) {

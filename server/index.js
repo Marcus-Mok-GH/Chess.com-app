@@ -19,7 +19,6 @@ import { initDatabase, cleanupStaleMatchmakingEntries, cleanupOldActiveGames, qu
 import { checkDatabaseConnection } from './db/init.js';
 import { setDatabaseReady, isDatabaseReady, ensureDatabaseReady } from './db/status.js';
 import { errorResponse } from './middleware/errors.js';
-import { ensureAuthTables } from './db/migrations.js';
 import { auth } from './auth.js';
 import { registerSocketHandlers } from './socket/index.js';
 import { getMatchmakingService } from './socket/matchmaking.js';
@@ -300,10 +299,7 @@ async function start() {
       // Always run schema initialization on startup. All CREATE TABLE statements
       // use IF NOT EXISTS so this is safe and idempotent on every cold start.
       console.log('[Server] Initializing database...');
-      const timeoutMs = isServerless ? 60000 : 15000;
-
-      // Ensure Better Auth tables exist
-      await ensureAuthTables().catch(err => console.error('[Server] Auth table migration failed:', err));
+      const timeoutMs = isServerless ? 60000 : 30000;
 
       const checkAction = initDatabase;
       const actionName = 'initialization';
