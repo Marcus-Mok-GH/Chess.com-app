@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.70 - 2025-01-30
+## 1.1.70 - 2026-05-20
 - Fixed "Load failed" error in Safari during OTP code request.
 - Implemented missing server-side Better Auth (Neon Auth) configuration and handler.
 - Added database migration for Better Auth tables (users, sessions, accounts, verifications).
@@ -74,7 +74,7 @@
 
 ## 1.1.52 - 2026-05-08
 - Improved Stockfish bot reliability by simplifying worker engine path resolution, extending engine startup timeout, and prioritizing consistent UCI initialization before selecting moves.
-- Reduced unintended weak-bot behavior at high ratings by avoiding unnecessarily initialization failures that previously triggered fallback legal/random move selection.
+- Reduced unintended weak-bot behavior at high ratings by avoiding unnecessary initialization failures that previously triggered fallback legal/random move selection.
 
 ## 1.1.51 - 2026-05-07
 - Fixed login "Load failed" error in Safari by removing hardcoded `localhost` fallbacks in `vite.config.js` and normalizing API base URLs to use relative paths in production.

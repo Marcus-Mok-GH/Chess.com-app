@@ -57,14 +57,24 @@ export async function ensureAuthTables() {
     )`
   ];
 
+  let migrationFailed = false;
+  const failedTables = [];
+
   for (const tableSql of tables) {
     try {
       await query(tableSql);
     } catch (error) {
-      console.error('[Auth] Failed to ensure table:', error.message);
-      // We don't exit here as some tables might already exist with different structures
-      // and we want to try the others.
+      migrationFailed = true;
+      const tableName = tableSql.match(/CREATE TABLE IF NOT EXISTS (\w+)/)?.[1] || 'unknown';
+      failedTables.push(tableName);
+      console.error(`[Auth] Failed to ensure table ${tableName}:`, error.message);
     }
+  }
+
+  if (migrationFailed) {
+    const errorMsg = `[Auth] FATAL: Database migration failed for tables: ${failedTables.join(', ')}`;
+    console.error(errorMsg);
+    process.exit(1);
   }
 
   console.log('[Auth] Database tables verified.');

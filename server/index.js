@@ -106,12 +106,27 @@ const FRONTEND_URL = process.env.FRONTEND_URL || (isProduction ? process.env.VER
       : 'https://your-domain.com'
   : 'http://localhost:5173');
 
-// In development, allow all origins for easier testing
-// In production, restrict to the configured FRONTEND_URL
-// If on Vercel, we often need to allow multiple origins (preview vs production)
+// Build an explicit allowlist of trusted origins
+// Never use `origin: true` in production when credentials are enabled
+const trustedOrigins = [
+  FRONTEND_URL,
+  process.env.VERCEL_URL ? (process.env.VERCEL_URL.startsWith('http') ? process.env.VERCEL_URL : `https://${process.env.VERCEL_URL}`) : null,
+  process.env.NETLIFY_URL ? (process.env.NETLIFY_URL.startsWith('http') ? process.env.NETLIFY_URL : `https://${process.env.NETLIFY_URL}`) : null,
+  // Allow localhost in development
+  !isProduction ? 'http://localhost:5173' : null,
+  !isProduction ? 'http://localhost:3001' : null,
+].filter(Boolean);
+
 const corsOrigin = isProduction
-  ? (process.env.VERCEL ? true : FRONTEND_URL)
-  : true;
+  ? (origin, callback) => {
+      // In production, only allow explicitly trusted origins
+      if (!origin || trustedOrigins.includes(origin)) {
+        callback(null, origin || trustedOrigins[0]);
+      } else {
+        callback(null, false);
+      }
+    }
+  : true; // In development, allow all origins for easier testing
 
 const httpServer = createServer(app);
 const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
