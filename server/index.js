@@ -6,7 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { config } from 'dotenv';
-import { toNodeHandler } from 'better-auth/node';
+
 
 // Load local environment variables only in non-production environments.
 // On Vercel, rely on project env vars instead of bundled .env files.
@@ -20,7 +20,7 @@ import { checkDatabaseConnection } from './db/init.js';
 import { setDatabaseReady, isDatabaseReady, ensureDatabaseReady } from './db/status.js';
 import { errorResponse } from './middleware/errors.js';
 import { ensureAuthTables } from './db/migrations.js';
-import { auth } from './auth.js';
+import authRouter from './routes/auth.js';
 import { registerSocketHandlers } from './socket/index.js';
 import { getMatchmakingService } from './socket/matchmaking.js';
 import matchmakingRouter from './routes/matchmaking.js';
@@ -166,10 +166,6 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
 }));
 
-// Better Auth handler must be mounted BEFORE express.json()
-// otherwise the client API may hang on "pending"
-app.all('/api/auth/*', toNodeHandler(auth));
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -202,6 +198,7 @@ const mountApi = (pathPrefix, router) => {
   });
 };
 
+mountApi('/auth', authRouter);
 mountApi('/users', usersRouter);
 mountApi('/matchmaking', matchmakingRouter);
 mountApi('/games', gamesRouter);
@@ -302,7 +299,7 @@ async function start() {
       console.log('[Server] Initializing database...');
       const timeoutMs = isServerless ? 60000 : 15000;
 
-      // Ensure Better Auth tables exist
+      // Ensure auth tables exist (verifications, sessions, users, accounts)
       await ensureAuthTables().catch(err => console.error('[Server] Auth table migration failed:', err));
 
       const checkAction = initDatabase;

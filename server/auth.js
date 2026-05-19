@@ -1,51 +1,159 @@
-import { betterAuth } from 'better-auth';
-import { getPool } from './db/pool.js';
+import crypto from 'crypto';
+import { query } from './db/query.js';
+
+const OTP_EXPIRY_MINUTES = 15;
+const SESSION_DAYS = 30;
+
+function hashToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
 
 /**
- * Better Auth configuration for the server.
- * Uses the existing database pool and provides Email OTP functionality.
+ * Generates a 6-digit OTP, stores it in the verifications table, and returns it.
+ * Any existing OTP for this email is replaced.
  */
-export const auth = betterAuth({
-  database: {
-    db: getPool(),
-    type: 'postgres',
-    schema: {
-      user: 'users',
-      session: 'sessions',
-      account: 'accounts',
-      verification: 'verifications',
-    }
-  },
-  emailOtp: {
-    enabled: true,
-    sendVerificationOtp: async ({ email, otp, type }) => {
-      // In a real production app, you would integrate with an email service like Resend, SendGrid, or AWS SES.
-      // For development/testing purposes, log only non-PII metadata
-      console.log('[AUTH] Verification email dispatched', { type, timestamp: new Date().toISOString() });
+export async function generateAndStoreOtp(email) {
+  const otp = String(crypto.randomInt(100000, 999999));
+  const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
+  const id = crypto.randomUUID();
 
-      // TODO: Integrate with actual email service (e.g., Resend, SendGrid, AWS SES)
-      // Example integration:
-      // await emailService.send({
-      //   to: email,
-      //   subject: 'Your verification code',
-      //   text: `Your verification code is: ${otp}`
-      // });
-    },
-  },
-  // BETTER_AUTH_SECRET is required. In production, we must fail fast if it's missing.
-  secret: (() => {
-    const secret = process.env.BETTER_AUTH_SECRET;
-    if (!secret && process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') {
-      throw new Error('BETTER_AUTH_SECRET environment variable is required in production. Please set it to a secure random string.');
+  await query(
+    `INSERT INTO verifications (id, identifier, value, expires_at)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (identifier) DO UPDATE
+       SET id = EXCLUDED.id, value = EXCLUDED.value, expires_at = EXCLUDED.expires_at`,
+    [id, email, otp, expiresAt]
+  );
+
+  return otp;
+}
+
+/**
+ * Validates an OTP for a given email.
+ * Deletes the record on success (one-time use) or expiry.
+ * Returns true if valid, false otherwise.
+ */
+export async function validateOtp(email, otp) {
+  const result = await query(
+    'SELECT value, expires_at FROM verifications WHERE identifier = $1',
+    [email]
+  );
+
+  if (result.rows.length === 0) return false;
+
+  const { value: storedOtp, expires_at: expiresAt } = result.rows[0];
+
+  if (new Date() > new Date(expiresAt)) {
+    await query('DELETE FROM verifications WHERE identifier = $1', [email]);
+    return false;
+  }
+
+  if (storedOtp !== otp) return false;
+
+  // Consume the OTP — it's single-use
+  await query('DELETE FROM verifications WHERE identifier = $1', [email]);
+  return true;
+}
+
+/**
+ * Sends an OTP email via Resend.
+ * If RESEND_API_KEY is not set, logs the code to the console for development.
+ */
+export async function sendOtpEmail({ to, otp }) {
+  if (!process.env.RESEND_API_KEY) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Missing RESEND_API_KEY in production');
     }
-    return secret || 'development-secret-key-1234567890';
-  })(),
-  // The base URL for the auth endpoints.
-  baseURL: process.env.BETTER_AUTH_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/api/auth` : 'http://localhost:3001/api/auth'),
-  // Allow these origins to make cross-origin requests to the auth API.
-  trustedOrigins: [
-    process.env.FRONTEND_URL,
-    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
-    'http://localhost:5173',
-  ].filter(Boolean),
-});
+    console.log('\n[Auth] ============ OTP CODE (dev — no email sent) ============');
+    console.log(`[Auth] Email : ${to}`);
+    console.log(`[Auth] Code  : ${otp}`);
+    console.log('[Auth] Set RESEND_API_KEY + EMAIL_FROM to send real emails.');
+    console.log('[Auth] =======================================================\n');
+    return;
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: process.env.EMAIL_FROM || 'onboarding@resend.dev',
+        to: [to],
+        subject: '♟ Your Chess sign-in code',
+        text: `Your sign-in code is: ${otp}\n\nThis code expires in ${OTP_EXPIRY_MINUTES} minutes.\n\nIf you didn't request this, you can safely ignore this email.`,
+        html: `
+        <div style="font-family:sans-serif;max-width:420px;margin:0 auto;padding:24px">
+          <h2 style="margin:0 0 16px">♟ Chess Sign-In</h2>
+          <p style="margin:0 0 8px;color:#444">Your sign-in code:</p>
+          <p style="font-size:36px;font-weight:700;letter-spacing:10px;color:#111;margin:0 0 16px">${otp}</p>
+          <p style="color:#666;font-size:14px;margin:0 0 8px">Expires in ${OTP_EXPIRY_MINUTES} minutes.</p>
+          <p style="color:#999;font-size:12px;margin:0">If you didn't request this, you can safely ignore this email.</p>
+        </div>`,
+      }),
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Resend API error: ${err}`);
+    }
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/**
+ * Creates a 30-day session for a user. Returns the opaque session token.
+ */
+export async function createSession(userId, { ipAddress, userAgent } = {}) {
+  const token = crypto.randomBytes(32).toString('hex');
+  const tokenHash = hashToken(token);
+  const id = crypto.randomUUID();
+  const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
+
+  await query(
+    'INSERT INTO sessions (id, user_id, token, expires_at, ip_address, user_agent) VALUES ($1, $2, $3, $4, $5, $6)',
+    [id, userId, tokenHash, expiresAt, ipAddress ?? null, userAgent ?? null]
+  );
+
+  return token;
+}
+
+/**
+ * Validates a Bearer session token.
+ * Returns the user_id if valid, null if missing/expired/invalid.
+ */
+export async function validateSession(token) {
+  if (!token) return null;
+
+  const tokenHash = hashToken(token);
+  const result = await query(
+    'SELECT user_id, expires_at FROM sessions WHERE token = $1',
+    [tokenHash]
+  );
+
+  if (result.rows.length === 0) return null;
+
+  const { user_id, expires_at } = result.rows[0];
+
+  if (new Date() > new Date(expires_at)) {
+    await query('DELETE FROM sessions WHERE token = $1', [tokenHash]);
+    return null;
+  }
+
+  return user_id;
+}
+
+/**
+ * Deletes a session by token (sign out). Silent no-op if token is missing.
+ */
+export async function deleteSession(token) {
+  if (!token) return;
+  const tokenHash = hashToken(token);
+  await query('DELETE FROM sessions WHERE token = $1', [tokenHash]);
+}

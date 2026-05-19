@@ -13,7 +13,7 @@ const UserContext = createContext(null);
 /**
  * Provides user authentication state, session management, OTP flow state, and related actions to descendant components via UserContext.
  *
- * Manages localStorage session persistence, Supabase auth integration, socket-based remote login handling, online/offline status, OTP request/verification, and exposes actions like login, logout, requestOtp, verifyEmailOtp, updateElo, and refreshUser.
+ * Manages localStorage session persistence, Neon Auth (Stack Auth) integration, socket-based remote login handling, online/offline status, OTP request/verification, and exposes actions like login, logout, requestOtp, verifyEmailOtp, updateElo, and refreshUser.
  *
  * @param {{ children: import('react').ReactNode }} props - Provider children to receive the context.
  * @returns {import('react').ReactElement} The UserContext.Provider element supplying auth state and actions.
@@ -80,9 +80,8 @@ export function UserProvider({ children }) {
       console.log('📱 REMOTE LOGIN SUCCESS RECEIVED');
 
       try {
-        // NOTE: Neon Auth (Better Auth) typically handles session via cookies or its own internal state.
-        // If we need to manually set it from a remote broadcast, we'd need to see if neonAuth has a setSession equivalent.
-        // For now, we update the user state.
+        // NOTE: Neon Auth (Stack Auth) handles session via cookies or its own internal state.
+        // Update user state from the remote broadcast.
 
         setUser(userData);
         persistUser(userData);
@@ -145,13 +144,14 @@ export function UserProvider({ children }) {
           return;
         }
 
-        // Neon Auth (Better Auth) stores user data in session.user
-        if (!sessionUsername && sessionResult.data.user?.username) {
-          sessionUsername = sessionResult.data.user.username;
+        // Neon Auth stores the display name in user.name (not user.username).
+        if (!sessionUsername) {
+          const neonUser = sessionResult.data.user;
+          sessionUsername = neonUser?.name || '';
         }
 
         if (!sessionUsername) {
-          console.warn('[UserContext] Supabase session exists but no username found');
+          console.warn('[UserContext] Neon Auth session exists but no username found');
           return;
         }
 
@@ -183,9 +183,8 @@ export function UserProvider({ children }) {
 
     init();
 
-    // Neon Auth might not have a direct onAuthStateChange equivalent in the basic client,
-    // but we can poll or use their event system if available.
-    // For now, we rely on the init() and manual login/logout calls.
+    // Neon Auth (Stack Auth) does not expose a direct onAuthStateChange equivalent.
+    // Session state is managed via init() on mount and manual login/logout calls.
 
     return () => {
       isMounted = false;
@@ -309,6 +308,10 @@ export function UserProvider({ children }) {
       const { data, error } = await neonAuth.signIn.emailOtp({
         email: email.trim(),
         otp: token.trim(),
+        // `name` is only applied on first registration; ignored for returning users.
+        // Storing the username here lets us recover it from the Neon Auth session
+        // if localStorage is ever cleared.
+        name: pendingData?.username?.trim() || undefined,
       });
 
       if (error) throw error;
@@ -330,7 +333,7 @@ export function UserProvider({ children }) {
         setPendingOtpEmail('');
       }
       // Always clear localStorage keys regardless of backend outcome.
-      // The Supabase OTP token is consumed once verifyOtp() succeeds, so
+      // The Neon Auth OTP token is consumed once signIn.emailOtp() succeeds, so
       // retaining PENDING_OTP_KEY after a backend failure would trap the
       // user on /verify-email after a page refresh with an invalid code.
       // isAwaitingVerification stays true on failure so the error message
