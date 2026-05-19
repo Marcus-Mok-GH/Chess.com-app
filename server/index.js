@@ -97,17 +97,24 @@ app.get('/api/stats/public', async (req, res) => {
 const PORT = process.env.PORT || 3001;
 const isProduction = process.env.NODE_ENV === 'production';
 
+// Startup validation: fail fast in production when no FRONTEND_URL/VERCEL_URL is set
+if (isProduction && !process.env.FRONTEND_URL && !process.env.VERCEL_URL) {
+  console.error('[Server] ERROR: Production mode requires FRONTEND_URL or VERCEL_URL to be set.');
+  console.error('[Server] Please set one of these environment variables in your deployment configuration.');
+  process.exit(1);
+}
+
 // FRONTEND_URL must be set explicitly in production.
 // On Vercel, VERCEL_URL is injected automatically (without protocol).
-const FRONTEND_URL = process.env.FRONTEND_URL ||
+const FRONTEND_URL = (process.env.FRONTEND_URL ||
   (isProduction
-    ? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://your-domain.com')
-    : 'http://localhost:5173');
+    ? `https://${process.env.VERCEL_URL}`
+    : 'http://localhost:5173')).replace(/\/+$/, '');
 
 // Explicit allowlist of trusted CORS origins.
 const trustedOrigins = [
   FRONTEND_URL,
-  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
+  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}`.replace(/\/+$/, '') : null,
   !isProduction ? 'http://localhost:5173' : null,
   !isProduction ? 'http://localhost:3001' : null,
 ].filter(Boolean);
