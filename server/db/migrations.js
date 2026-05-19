@@ -47,14 +47,9 @@ export async function ensureAuthTables() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
     )`,
-    `CREATE TABLE IF NOT EXISTS verifications (
-      id TEXT PRIMARY KEY,
-      identifier TEXT NOT NULL,
-      value TEXT NOT NULL,
-      expires_at TIMESTAMP NOT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )`
+    // NOTE: verifications table intentionally omitted.
+    // OTP delivery and validation is handled entirely by Neon Auth (Stack Auth).
+    // No server-side OTP storage is required.
   ];
 
   let migrationFailed = false;

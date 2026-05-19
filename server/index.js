@@ -36,6 +36,7 @@ if (!hasDatabase) {
   console.log('[Server] Database URL detected.');
 }
 
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -93,26 +94,20 @@ app.get('/api/stats/public', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || process.env.SERVER_PORT || 3001;
+const PORT = process.env.PORT || 3001;
 const isProduction = process.env.NODE_ENV === 'production';
 
-// Get frontend URL from environment or use default
-const FRONTEND_URL = process.env.FRONTEND_URL || (isProduction ? process.env.VERCEL_URL
-  ? (process.env.VERCEL_URL.startsWith('http') ? process.env.VERCEL_URL : `https://${process.env.VERCEL_URL}`)
-  : process.env.NETLIFY_URL
-    ? (process.env.NETLIFY_URL.startsWith('http') ? process.env.NETLIFY_URL : `https://${process.env.NETLIFY_URL}`)
-    : process.env.REPL_SLUG
-      ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
-      : 'https://your-domain.com'
-  : 'http://localhost:5173');
+// FRONTEND_URL must be set explicitly in production.
+// On Vercel, VERCEL_URL is injected automatically (without protocol).
+const FRONTEND_URL = process.env.FRONTEND_URL ||
+  (isProduction
+    ? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://your-domain.com')
+    : 'http://localhost:5173');
 
-// Build an explicit allowlist of trusted origins
-// Never use `origin: true` in production when credentials are enabled
+// Explicit allowlist of trusted CORS origins.
 const trustedOrigins = [
   FRONTEND_URL,
-  process.env.VERCEL_URL ? (process.env.VERCEL_URL.startsWith('http') ? process.env.VERCEL_URL : `https://${process.env.VERCEL_URL}`) : null,
-  process.env.NETLIFY_URL ? (process.env.NETLIFY_URL.startsWith('http') ? process.env.NETLIFY_URL : `https://${process.env.NETLIFY_URL}`) : null,
-  // Allow localhost in development
+  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
   !isProduction ? 'http://localhost:5173' : null,
   !isProduction ? 'http://localhost:3001' : null,
 ].filter(Boolean);

@@ -29,7 +29,7 @@ export const normalizeApiBaseUrl = (rawBaseUrl) => {
   return `${base.replace(/\/$/, '')}/api`
 }
 
-const clientApiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_SERVER_URL;
+const clientApiUrl = import.meta.env.VITE_API_URL;
 
 export const API_BASE_URL = normalizeApiBaseUrl(clientApiUrl)
 
