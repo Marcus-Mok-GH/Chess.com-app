@@ -60,70 +60,13 @@ router.post('/login', async (req, res) => {
         isNewUser: false
       });
     }
-    
-    // Create new user - Note: Better Auth should handle the initial user creation normally.
-    // This /login endpoint seems to be a sync/fallback.
-    // For a new user here, we need name and email which we don't have.
-    // This endpoint might need to be adjusted to only sync existing users or handle Better Auth session.
-    // However, I will just fix the column names for now to maintain existing logic.
-    result = await query(
-      'INSERT INTO users (id, name, email, username, elo) VALUES ($1, $2, $3, $4, $5) RETURNING id, username, elo, games_played, wins, losses, draws, "createdAt"',
-      [globalThis.crypto?.randomUUID?.() || Date.now().toString(), trimmedUsername, `${trimmedUsername}@placeholder.com`, trimmedUsername, 1200]
-    );
 
-    await query(
-      `INSERT INTO user_settings (user_id, settings)
-       VALUES ($1, '{}'::jsonb)
-       ON CONFLICT (user_id) DO NOTHING`,
-      [result.rows[0].id]
-    );
-    
-    const newUser = result.rows[0];
-    res.status(201).json({
-      success: true,
-      user: {
-        id: newUser.id,
-        username: newUser.username,
-        elo: newUser.elo,
-        gamesPlayed: newUser.games_played,
-        wins: newUser.wins,
-        losses: newUser.losses,
-        draws: newUser.draws,
-        createdAt: newUser["createdAt"]
-      },
-      isNewUser: true
-    });
+    // User not found - do NOT create synthetic users
+    // User creation should only happen through Better Auth authentication flow
+    return errorResponse(res, 404, 'User not found. Please authenticate first.');
     
   } catch (error) {
     console.error('Login error:', error?.message, error?.code, error?.stack);
-    if (error.code === '23505') {
-      // Unique violation - race condition, try to fetch
-      try {
-        const result = await query(
-          'SELECT id, username, elo, games_played, wins, losses, draws, "createdAt" FROM users WHERE LOWER(username) = LOWER($1)',
-          [req.body.username.trim()]
-        );
-        if (result.rows.length > 0) {
-          const user = result.rows[0];
-          return res.json({
-            success: true,
-            user: {
-              id: user.id,
-              username: user.username,
-              elo: user.elo,
-              gamesPlayed: user.games_played,
-              wins: user.wins,
-              losses: user.losses,
-              draws: user.draws,
-              createdAt: user["createdAt"]
-            },
-            isNewUser: false
-          });
-        }
-      } catch (e) {
-        console.error('Retry fetch error:', e);
-      }
-    }
     return handleRouteError(res, error, 'Failed to login');
   }
 });

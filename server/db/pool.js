@@ -39,7 +39,7 @@ if (!isServerless && unpooledUrl && unpooledUrl !== pooledUrl) {
   console.log('[DB] DATABASE_URL_UNPOOLED ignored on serverless — using pooled connection for DDL.');
 }
 
-const sslConfig = isProduction ? { rejectUnauthorized: true, sslmode: 'require' } : false;
+const sslConfig = isProduction ? { rejectUnauthorized: true } : false;
 const timeoutMs = isProduction ? 30000 : 15000;
 const pooledHost = resolveHost(pooledUrl);
 const isNeonOnVercel = isVercel && Boolean(pooledUrl) && isNeonPooler(pooledUrl);

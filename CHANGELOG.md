@@ -11,7 +11,7 @@
 - Added database migration for Better Auth tables (users, sessions, accounts, verifications).
 - Improved CORS and origin handling for Vercel deployments.
 
-## [1.1.72] - 2026-05-19
+## [1.1.72] - 2026-05-21
 - Fixed database connection timeouts on Vercel deployment by implementing a robust retry mechanism with exponential backoff in schema initialization.
 - Consolidated database migration and initialization logic into a single transaction in `server/db/init.js`.
 - Aligned `users` table and related auth tables with Better Auth standard schema (including `name`, `email`, and camelCase identifiers).

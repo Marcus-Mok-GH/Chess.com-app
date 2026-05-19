@@ -21,6 +21,77 @@ export async function initDatabase() {
           // Ensure UUID extension is available
           await client.query('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
 
+          // Migration: Convert existing users table if needed
+          // First, check if users table exists
+          const tableExists = await client.query(`
+            SELECT EXISTS (
+              SELECT FROM information_schema.tables
+              WHERE table_name = 'users'
+            )
+          `);
+
+          if (tableExists.rows[0].exists) {
+            // Add missing columns to existing users table
+            await client.query(`
+              DO $$
+              BEGIN
+                -- Add emailVerified if missing
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='emailVerified') THEN
+                  ALTER TABLE users ADD COLUMN "emailVerified" BOOLEAN DEFAULT FALSE;
+                END IF;
+
+                -- Add createdAt if missing
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='createdAt') THEN
+                  ALTER TABLE users ADD COLUMN "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+                END IF;
+
+                -- Add updatedAt if missing
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='updatedAt') THEN
+                  ALTER TABLE users ADD COLUMN "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+                END IF;
+
+                -- Add username if missing
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='username') THEN
+                  ALTER TABLE users ADD COLUMN username VARCHAR(20) UNIQUE;
+                END IF;
+
+                -- Add name if missing
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='name') THEN
+                  ALTER TABLE users ADD COLUMN name TEXT;
+                END IF;
+
+                -- Add email if missing
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='email') THEN
+                  ALTER TABLE users ADD COLUMN email TEXT UNIQUE;
+                END IF;
+
+                -- Add image if missing
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='image') THEN
+                  ALTER TABLE users ADD COLUMN image TEXT;
+                END IF;
+
+                -- Convert id column from UUID to TEXT if needed
+                IF EXISTS (
+                  SELECT 1 FROM information_schema.columns
+                  WHERE table_name='users' AND column_name='id' AND data_type='uuid'
+                ) THEN
+                  -- Add temporary text column
+                  ALTER TABLE users ADD COLUMN id_text TEXT;
+                  -- Backfill with UUID cast to text
+                  UPDATE users SET id_text = id::text;
+                  -- Drop old primary key constraint
+                  ALTER TABLE users DROP CONSTRAINT IF EXISTS users_pkey;
+                  -- Drop old id column
+                  ALTER TABLE users DROP COLUMN id;
+                  -- Rename id_text to id
+                  ALTER TABLE users RENAME COLUMN id_text TO id;
+                  -- Recreate primary key
+                  ALTER TABLE users ADD PRIMARY KEY (id);
+                END IF;
+              END $$;
+            `);
+          }
+
           // Combined users table aligned with Better Auth standard schema
           await client.query(`
             CREATE TABLE IF NOT EXISTS users (
@@ -41,6 +112,59 @@ export async function initDatabase() {
           `);
 
           // Better Auth Tables
+          // Migration: Update sessions table if needed
+          const sessionsExists = await client.query(`
+            SELECT EXISTS (
+              SELECT FROM information_schema.tables
+              WHERE table_name = 'sessions'
+            )
+          `);
+
+          if (sessionsExists.rows[0].exists) {
+            await client.query(`
+              DO $$
+              BEGIN
+                -- Add missing columns to sessions
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sessions' AND column_name='userId') THEN
+                  ALTER TABLE sessions ADD COLUMN "userId" TEXT;
+                END IF;
+
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sessions' AND column_name='token') THEN
+                  ALTER TABLE sessions ADD COLUMN token TEXT UNIQUE;
+                END IF;
+
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sessions' AND column_name='expiresAt') THEN
+                  ALTER TABLE sessions ADD COLUMN "expiresAt" TIMESTAMP;
+                END IF;
+
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sessions' AND column_name='ipAddress') THEN
+                  ALTER TABLE sessions ADD COLUMN "ipAddress" TEXT;
+                END IF;
+
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sessions' AND column_name='userAgent') THEN
+                  ALTER TABLE sessions ADD COLUMN "userAgent" TEXT;
+                END IF;
+
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sessions' AND column_name='createdAt') THEN
+                  ALTER TABLE sessions ADD COLUMN "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+                END IF;
+
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sessions' AND column_name='updatedAt') THEN
+                  ALTER TABLE sessions ADD COLUMN "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+                END IF;
+
+                -- Add foreign key constraint if it doesn't exist
+                IF NOT EXISTS (
+                  SELECT 1 FROM information_schema.table_constraints
+                  WHERE constraint_name = 'fk_sessions_user'
+                  AND table_name = 'sessions'
+                ) THEN
+                  ALTER TABLE sessions ADD CONSTRAINT fk_sessions_user FOREIGN KEY("userId") REFERENCES users(id) ON DELETE CASCADE;
+                END IF;
+              END $$;
+            `);
+          }
+
           await client.query(`
             CREATE TABLE IF NOT EXISTS sessions (
               id TEXT PRIMARY KEY,
@@ -53,6 +177,75 @@ export async function initDatabase() {
               "updatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
           `);
+
+          // Migration: Update accounts table if needed
+          const accountsExists = await client.query(`
+            SELECT EXISTS (
+              SELECT FROM information_schema.tables
+              WHERE table_name = 'accounts'
+            )
+          `);
+
+          if (accountsExists.rows[0].exists) {
+            await client.query(`
+              DO $$
+              BEGIN
+                -- Add missing columns to accounts
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='userId') THEN
+                  ALTER TABLE accounts ADD COLUMN "userId" TEXT;
+                END IF;
+
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='accountId') THEN
+                  ALTER TABLE accounts ADD COLUMN "accountId" TEXT;
+                END IF;
+
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='providerId') THEN
+                  ALTER TABLE accounts ADD COLUMN "providerId" TEXT;
+                END IF;
+
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='accessToken') THEN
+                  ALTER TABLE accounts ADD COLUMN "accessToken" TEXT;
+                END IF;
+
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='refreshToken') THEN
+                  ALTER TABLE accounts ADD COLUMN "refreshToken" TEXT;
+                END IF;
+
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='accessTokenExpiresAt') THEN
+                  ALTER TABLE accounts ADD COLUMN "accessTokenExpiresAt" TIMESTAMP;
+                END IF;
+
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='refreshTokenExpiresAt') THEN
+                  ALTER TABLE accounts ADD COLUMN "refreshTokenExpiresAt" TIMESTAMP;
+                END IF;
+
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='scope') THEN
+                  ALTER TABLE accounts ADD COLUMN scope TEXT;
+                END IF;
+
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='password') THEN
+                  ALTER TABLE accounts ADD COLUMN password TEXT;
+                END IF;
+
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='createdAt') THEN
+                  ALTER TABLE accounts ADD COLUMN "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+                END IF;
+
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='accounts' AND column_name='updatedAt') THEN
+                  ALTER TABLE accounts ADD COLUMN "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+                END IF;
+
+                -- Add foreign key constraint if it doesn't exist
+                IF NOT EXISTS (
+                  SELECT 1 FROM information_schema.table_constraints
+                  WHERE constraint_name = 'fk_accounts_user'
+                  AND table_name = 'accounts'
+                ) THEN
+                  ALTER TABLE accounts ADD CONSTRAINT fk_accounts_user FOREIGN KEY("userId") REFERENCES users(id) ON DELETE CASCADE;
+                END IF;
+              END $$;
+            `);
+          }
 
           await client.query(`
             CREATE TABLE IF NOT EXISTS accounts (
@@ -70,6 +263,42 @@ export async function initDatabase() {
               "updatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
           `);
+
+          // Migration: Update verifications table if needed
+          const verificationsExists = await client.query(`
+            SELECT EXISTS (
+              SELECT FROM information_schema.tables
+              WHERE table_name = 'verifications'
+            )
+          `);
+
+          if (verificationsExists.rows[0].exists) {
+            await client.query(`
+              DO $$
+              BEGIN
+                -- Add missing columns to verifications
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='verifications' AND column_name='identifier') THEN
+                  ALTER TABLE verifications ADD COLUMN identifier TEXT;
+                END IF;
+
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='verifications' AND column_name='value') THEN
+                  ALTER TABLE verifications ADD COLUMN value TEXT;
+                END IF;
+
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='verifications' AND column_name='expiresAt') THEN
+                  ALTER TABLE verifications ADD COLUMN "expiresAt" TIMESTAMP;
+                END IF;
+
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='verifications' AND column_name='createdAt') THEN
+                  ALTER TABLE verifications ADD COLUMN "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+                END IF;
+
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='verifications' AND column_name='updatedAt') THEN
+                  ALTER TABLE verifications ADD COLUMN "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+                END IF;
+              END $$;
+            `);
+          }
 
           await client.query(`
             CREATE TABLE IF NOT EXISTS verifications (
