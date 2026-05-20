@@ -172,6 +172,21 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// API Routes
+// Vercel serverless functions strip the "/api" prefix from req.url. To keep
+// routes working both locally (with "/api") and on Vercel (without it),
+// mount the routers on both prefixes when running serverless.
+const apiPrefixes = isServerless ? ['', '/api'] : ['/api'];
+const mountApi = (pathPrefix, router) => {
+  apiPrefixes.forEach((prefix) => {
+    const fullPath = `${prefix}${pathPrefix}` || '/';
+    app.use(fullPath, router);
+  });
+};
+
+// Mount engine routes outside the database gate so they work independently
+mountApi('/engine', engineRouter);
+
 // Ensure the database is ready before handling API routes (skip health).
 app.use('/api', async (req, res, next) => {
   if (req.path === '/health') {
@@ -189,24 +204,11 @@ app.use('/api', async (req, res, next) => {
   return next();
 });
 
-// API Routes
-// Vercel serverless functions strip the "/api" prefix from req.url. To keep
-// routes working both locally (with "/api") and on Vercel (without it),
-// mount the routers on both prefixes when running serverless.
-const apiPrefixes = isServerless ? ['', '/api'] : ['/api'];
-const mountApi = (pathPrefix, router) => {
-  apiPrefixes.forEach((prefix) => {
-    const fullPath = `${prefix}${pathPrefix}` || '/';
-    app.use(fullPath, router);
-  });
-};
-
 mountApi('/auth', authRouter);
 mountApi('/users', usersRouter);
 mountApi('/matchmaking', matchmakingRouter);
 mountApi('/games', gamesRouter);
 mountApi('/coach', coachRouter);
-mountApi('/engine', engineRouter);
 
 // Serve static files from Vite dist directory
 const distPath = path.join(__dirname, '../dist');

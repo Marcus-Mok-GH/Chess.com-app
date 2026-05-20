@@ -5,7 +5,7 @@
 - Integrated a new backend route `/api/engine/move` for move calculation and hints.
 - Optimized engine initialization and search parameters for serverless environments.
 
-## 1.1.72 - 2026-05-22
+## 1.1.72 - 2026-05-20
 - Fixed a bug where clicking "Logout" or "Sign Out" had no effect by making the `logout` function more robust.
 - Added automated unit tests to ensure local session state is cleared even if remote sign-out fails.
 - Guaranteed navigation to the landing page after logout to provide immediate feedback and reset the UI state.

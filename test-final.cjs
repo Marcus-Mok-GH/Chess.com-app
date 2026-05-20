@@ -5,6 +5,8 @@ async function testFinal() {
 
   const result = await new Promise((resolve, reject) => {
     let resolved = false;
+    let engine = null;
+
     stockfish(null, {
       listener: (line) => {
         console.log('[Output]', line);
@@ -16,13 +18,28 @@ async function testFinal() {
         }
       }
     }).then(eng => {
+      engine = eng;
       eng.sendCommand('uci');
       eng.sendCommand('position startpos');
       eng.sendCommand('go depth 1');
+    }).catch(error => {
+      if (!resolved) {
+        resolved = true;
+        if (engine) {
+          try { engine.terminate(); } catch(e) {}
+        }
+        reject(error);
+      }
     });
 
     setTimeout(() => {
-        if (!resolved) reject(new Error('Timeout'));
+        if (!resolved) {
+          resolved = true;
+          if (engine) {
+            try { engine.terminate(); } catch(e) {}
+          }
+          reject(new Error('Timeout'));
+        }
     }, 10000);
   });
 
@@ -30,4 +47,7 @@ async function testFinal() {
   process.exit(0);
 }
 
-testFinal();
+testFinal().catch(error => {
+  console.error('Test failed:', error);
+  process.exit(1);
+});

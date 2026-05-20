@@ -5,6 +5,18 @@ import { errorResponse, handleRouteError } from '../middleware/errors.js';
 
 const router = Router();
 
+// Configurable timeout with buffer for serverless environments
+const getFunctionTimeoutMs = () => {
+  const envTimeout = parseInt(process.env.FUNCTION_TIMEOUT_MS, 10);
+  if (!isNaN(envTimeout) && envTimeout > 0) {
+    // Reserve 20% buffer to respond before platform timeout
+    return Math.max(Math.floor(envTimeout * 0.8), 5000);
+  }
+  return 5000; // Safe default
+};
+
+const TIMEOUT_MS = getFunctionTimeoutMs();
+
 function isValidFen(fen) {
   if (!fen || typeof fen !== 'string') return false;
   try {
@@ -25,8 +37,17 @@ router.post('/move', async (req, res) => {
     const collectedMoves = [];
     const getSearchParams = (bot) => {
       if (!bot) return 'go depth 10';
-      const nodes = bot.nodes || 10000;
-      const depth = bot.depth || 10;
+
+      // Coerce and validate nodes parameter
+      let nodes = Number(bot.nodes);
+      if (isNaN(nodes) || nodes < 0) nodes = 10000;
+      nodes = Math.min(nodes, 1000000); // Upper limit
+
+      // Coerce and validate depth parameter
+      let depth = Number(bot.depth);
+      if (isNaN(depth) || depth < 1) depth = 10;
+      depth = Math.min(depth, 20); // Upper limit
+
       if (nodes < 5000) return `go nodes ${nodes}`;
       if (nodes < 50000) return `go movetime ${Math.min(nodes / 10, 1000)}`;
       return `go depth ${Math.min(depth, 12)}`;
@@ -40,13 +61,22 @@ router.post('/move', async (req, res) => {
       const hardAbortTimeout = setTimeout(() => {
         if (!resolved) {
           resolved = true;
-          if (engine) try { engine.terminate(); } catch(e) {}
+          if (engine) {
+            try { engine.terminate(); } catch(e) {}
+          }
           reject(new Error('Search timed out'));
         }
-      }, 15000); // 15 seconds to be sure
+      }, TIMEOUT_MS);
 
-      stockfish(null, {
-        listener: (line) => {
+      stockfish().then(eng => {
+        // Check if already resolved (timed out)
+        if (resolved) {
+          try { eng.terminate(); } catch(e) {}
+          return;
+        }
+        engine = eng;
+
+        eng.onmessage = (line) => {
           const trimmed = String(line).trim();
           if (debug) console.log('[Stockfish Output]', trimmed);
 
@@ -87,19 +117,18 @@ router.post('/move', async (req, res) => {
               }
             }
           }
-        }
-      }).then(eng => {
-        engine = eng;
-        eng.sendCommand('setoption name Hash value 16');
-        eng.sendCommand('setoption name Threads value 1');
+        };
+
+        eng.postMessage('setoption name Hash value 16');
+        eng.postMessage('setoption name Threads value 1');
         if (bot && bot.playStyle) {
           const skillLevel = Math.floor((bot.depth || 1) * 3.33);
-          eng.sendCommand(`setoption name Skill Level value ${Math.min(20, skillLevel)}`);
+          eng.postMessage(`setoption name Skill Level value ${Math.min(20, skillLevel)}`);
         }
-        eng.sendCommand('uci');
-        eng.sendCommand('ucinewgame');
-        eng.sendCommand(`position fen ${fen}`);
-        eng.sendCommand(searchParams);
+        eng.postMessage('uci');
+        eng.postMessage('ucinewgame');
+        eng.postMessage(`position fen ${fen}`);
+        eng.postMessage(searchParams);
       }).catch(err => {
         if (!resolved) {
           resolved = true;
