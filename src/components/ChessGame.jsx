@@ -17,7 +17,6 @@ import { generateGameId } from '../engine/game/gameId';
 import { normalizeMoveHistory, toSanHistory, toStoredMoveHistory, buildGameFromHistory } from '../engine/game/moveHistory';
 import { useUser } from '../contexts/UserContext';
 import api from '../services/api';
-import StockfishWorker from '../engine/workers/stockfishWorker.js?worker';
 import './ChessGame.css';
 
 const UCI_MOVE_REGEX = /^[a-h][1-8][a-h][1-8][qrbn]?$/i;
@@ -145,8 +144,6 @@ function ChessGame(
   const victoryTimeoutRef = useRef(null);
   const lastVictoryKeyRef = useRef(null);
 
-  const workerRef = useRef(null);
-  const botMoveHandlerRef = useRef(null);
   const engineErrorRef = useRef(false);
   const busyRetryCountRef = useRef(0);
 
@@ -271,15 +268,6 @@ function ChessGame(
     };
   }, [gameId, hasLoadedPersistedState, initialGameId, user]);
 
-  // Initialize web worker
-  useEffect(() => {
-    workerRef.current = new StockfishWorker();
-    return () => {
-      if (workerRef.current) {
-        workerRef.current.terminate();
-      }
-    };
-  }, []);
 
   useEffect(() => {
     if (moveHistory.length === 0 && selectedBot) {
@@ -450,145 +438,81 @@ function ChessGame(
     return captured;
   }, [game]);
 
-  const makeAIMove = useCallback(() => {
-    if (gameRef.current.isGameOver() || !workerRef.current || isThinkingRef.current || engineErrorRef.current) return;
+  const makeAIMove = useCallback(async () => {
+    if (gameRef.current.isGameOver() || isThinkingRef.current || engineErrorRef.current) return;
 
     setIsThinking(true);
-
-    // Update the ref immediately to reflect the new state
     isThinkingRef.current = true;
 
-    // Get the actual bot config (may be custom bot with ELO)
     let bot = selectedBotRef.current;
     if (bot.id === 'custom') {
       bot = createCustomBot(customEloRef.current);
     }
 
     const fen = gameRef.current.fen();
-
-    // Show thinking message
     setBotMessage(getRandomQuote(bot, 'thinking'));
 
-    // Remove any previously registered handler before attaching a new one
-    if (botMoveHandlerRef.current && workerRef.current) {
-      workerRef.current.removeEventListener('message', botMoveHandlerRef.current);
-      botMoveHandlerRef.current = null;
-    }
+    try {
+      const response = await api.getEngineMove({
+        fen,
+        bot: {
+          name: bot.name,
+          depth: bot.depth,
+          nodes: bot.nodes,
+          blunderChance: bot.blunderChance,
+          missedTacticsChance: bot.missedTacticsChance,
+          playStyle: bot.playStyle,
+        },
+        debug: settingsRef.current.debugMode,
+      });
 
-    const clearHandler = () => {
-      if (workerRef.current && botMoveHandlerRef.current) {
-        workerRef.current.removeEventListener('message', botMoveHandlerRef.current);
-      }
-      botMoveHandlerRef.current = null;
-    };
+      const { bestMove, candidates, debugInfo: newDebugInfo } = response;
 
-    // Define message handler
-    const handleMessage = (e) => {
-      const { type, bestMove, debugInfo: newDebugInfo } = e.data;
-
-      // Handle progress updates
-      if (type === 'progress' && newDebugInfo && settingsRef.current.debugMode) {
+      if (newDebugInfo && settingsRef.current.debugMode) {
         setDebugInfo(newDebugInfo);
-        return;
       }
 
-      // Handle final result
-      if (type === 'result') {
-        busyRetryCountRef.current = 0; // Reset retry counter on success
-        clearHandler();
+      if (bestMove) {
+        const history = Array.isArray(moveHistoryRef.current) ? moveHistoryRef.current : [];
+        const newGame = buildGameFromHistory(history, fen);
+        const moveResult = applyEngineMove(newGame, bestMove);
 
-        if (newDebugInfo && settingsRef.current.debugMode) {
-          setDebugInfo(newDebugInfo);
-        }
-
-        if (bestMove) {
-          const history = Array.isArray(moveHistoryRef.current) ? moveHistoryRef.current : [];
-          const newGame = buildGameFromHistory(history, fen);
-          const moveResult = applyEngineMove(newGame, bestMove);
-          if (!moveResult) {
-            console.warn('[ChessGame] Engine move could not be applied:', bestMove);
-            setIsThinking(false);
-            isThinkingRef.current = false;
-            return;
-          }
-
-          // Trigger animation before updating state
-          triggerAnimation(moveResult, newGame);
-
-          // Delay state update to allow animation to start
-          setTimeout(() => {
-            setGame(newGame);
-            setMoveHistory([...history, moveResult]);
-
-            if (newGame.isCheckmate()) {
-              setBotMessage(getRandomQuote(bot, 'win'));
-            } else if (newGame.isDraw()) {
-              setBotMessage(getRandomQuote(bot, 'draw'));
-            } else if (newGame.inCheck()) {
-              setBotMessage(getRandomQuote(bot, 'check'));
-            } else if (moveResult.captured) {
-              setBotMessage(getRandomQuote(bot, 'capture'));
-            } else if (Math.random() < 0.15) {
-              const categories = ['thinking', 'blunder', 'goodMove'];
-              setBotMessage(getRandomQuote(bot, categories[Math.floor(Math.random() * categories.length)]));
-            }
-          }, 50);
-        }
-
-        setIsThinking(false);
-        isThinkingRef.current = false;
-      }
-
-      // Handle transient "busy" responses — engine was already searching.
-      // Retry automatically up to 3 times without disabling the AI.
-      if (type === 'busy') {
-        clearHandler();
-        busyRetryCountRef.current += 1;
-        if (busyRetryCountRef.current <= 3) {
-          console.warn(`[ChessGame] Engine busy — retry ${busyRetryCountRef.current}/3`);
-          setTimeout(() => {
-            setIsThinking(false);
-            isThinkingRef.current = false;
-            // useEffect dependency on isThinking will re-trigger makeAIMove
-          }, 800);
-        } else {
-          console.error('[ChessGame] Engine busy after max retries — giving up.');
-          engineErrorRef.current = true;
-          setEngineError('Engine is unresponsive. Start a new game to reset.');
+        if (!moveResult) {
+          console.warn('[ChessGame] Engine move could not be applied:', bestMove);
           setIsThinking(false);
           isThinkingRef.current = false;
+          // Don't show error to user, just stop thinking
+          return;
         }
-        return;
+
+        triggerAnimation(moveResult, newGame);
+
+        setTimeout(() => {
+          setGame(newGame);
+          setMoveHistory([...history, moveResult]);
+
+          if (newGame.isCheckmate()) {
+            setBotMessage(getRandomQuote(bot, 'win'));
+          } else if (newGame.isDraw()) {
+            setBotMessage(getRandomQuote(bot, 'draw'));
+          } else if (newGame.inCheck()) {
+            setBotMessage(getRandomQuote(bot, 'check'));
+          } else if (moveResult.captured) {
+            setBotMessage(getRandomQuote(bot, 'capture'));
+          } else if (Math.random() < 0.15) {
+            const categories = ['thinking', 'blunder', 'goodMove'];
+            setBotMessage(getRandomQuote(bot, categories[Math.floor(Math.random() * categories.length)]));
+          }
+        }, 50);
       }
-
-      // Handle fatal engine errors — surface in UI.
-      if (type === 'error') {
-        const msg = e.data.error || 'Unknown engine error';
-        console.error('[ChessGame] Engine error:', msg);
-        clearHandler();
-        engineErrorRef.current = true;
-        setEngineError(msg);
-        setIsThinking(false);
-        isThinkingRef.current = false;
-      }
-    };
-
-    botMoveHandlerRef.current = handleMessage;
-    workerRef.current.addEventListener('message', handleMessage);
-
-    // Send work to the worker - pass full bot config for Stockfish
-    workerRef.current.postMessage({
-      fen,
-      bot: {
-        name: bot.name,
-        depth: bot.depth,
-        nodes: bot.nodes,
-        blunderChance: bot.blunderChance,
-        missedTacticsChance: bot.missedTacticsChance,
-        playStyle: bot.playStyle,
-      },
-      debug: settingsRef.current.debugMode,
-    });
+    } catch (err) {
+      console.error('[ChessGame] Engine error:', err);
+      engineErrorRef.current = true;
+      setEngineError(err.message || 'Failed to connect to chess engine');
+    } finally {
+      setIsThinking(false);
+      isThinkingRef.current = false;
+    }
   }, [triggerAnimation]);
 
   useEffect(() => {
@@ -907,34 +831,31 @@ function ChessGame(
     setCustomElo(newElo);
   }, []);
 
-  const handleGetHint = useCallback(() => {
+  const handleGetHint = useCallback(async () => {
     if (!settingsRef.current.showHints) return;
-    if (!workerRef.current || game.isGameOver() || isThinking) return;
+    if (game.isGameOver() || isThinking) return;
     
     setHintMove(null);
-    const worker = workerRef.current;
     
-    const handleMessage = (e) => {
-      if (e.data.type === 'result' && e.data.bestMove) {
-        const move = e.data.bestMove;
-        const coords = getMoveCoords(game, move);
+    try {
+      // Use a fast but decent configuration for quick hints
+      // depth: 8 and nodes: 5000 gives good moves in ~200-500ms
+      const response = await api.getEngineMove({
+        fen: game.fen(),
+        bot: { name: 'Hint', depth: 8, nodes: 5000 },
+        debug: false,
+      });
+
+      if (response && response.bestMove) {
+        const coords = getMoveCoords(game, response.bestMove);
         if (coords) {
           setHintMove({ from: coords.from, to: coords.to });
           setTimeout(() => setHintMove(null), 3000);
         }
-        worker.removeEventListener('message', handleMessage);
       }
-    };
-    
-    worker.addEventListener('message', handleMessage);
-    
-    // Use a fast but decent configuration for quick hints
-    // depth: 8 and nodes: 5000 gives good moves in ~200-500ms
-    worker.postMessage({
-      fen: game.fen(),
-      bot: { name: 'Hint', depth: 8, nodes: 5000 },
-      debug: false,
-    });
+    } catch (err) {
+      console.error('[ChessGame] Hint error:', err);
+    }
   }, [game, isThinking]);
 
   const handleReview = useCallback(() => {

@@ -216,6 +216,14 @@ class ApiService {
       }),
     });
   }
+
+  // Engine endpoints
+  async getEngineMove({ fen, bot, debug }) {
+    return this.request('/engine/move', {
+      method: 'POST',
+      body: JSON.stringify({ fen, bot, debug }),
+    });
+  }
 }
 
 export const api = new ApiService();
