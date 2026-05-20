@@ -69,7 +69,7 @@ export default function VerifyEmail() {
     try {
       const result = await requestOtp({ email: pending.email, username: pending.username });
       if (!result.success) return setError(result.error);
-      setSuccessMsg('New code sent! Check your email.');
+      setSuccessMsg('New code sent! Check your email for a 6-digit code.');
     } finally {
       setIsSubmitting(false);
     }

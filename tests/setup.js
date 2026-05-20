@@ -3,12 +3,14 @@ import { cleanup } from '@testing-library/react';
 import { JSDOM } from 'jsdom';
 
 // Setup JSDOM environment
-const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
-  url: 'http://localhost/',
-});
-global.window = dom.window;
-global.document = dom.window.document;
-global.navigator = dom.window.navigator;
+if (typeof global.window === 'undefined') {
+  const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
+    url: 'http://localhost/',
+  });
+  global.window = dom.window;
+  global.document = dom.window.document;
+  global.navigator = dom.window.navigator;
+}
 
 // Mock IntersectionObserver
 global.IntersectionObserver = class IntersectionObserver {

@@ -26,7 +26,7 @@ export default function LoginModal({ onClose, onContinueAsGuest, mode = 'ranked'
     try {
       const result = await requestOtp({ email, username });
       if (!result.success) return setError(result.error);
-      setSuccessMsg(result.message || 'Code sent! Check your email.');
+      setSuccessMsg(result.message || 'Code sent! Check your email for a 6-digit code.');
       setStep('verify');
     } finally {
       setIsLoading(false);
@@ -35,7 +35,7 @@ export default function LoginModal({ onClose, onContinueAsGuest, mode = 'ranked'
 
   const handleVerifyCode = async () => {
     setError('');
-    if (!otpCode.trim()) return setError('Please enter the 8-digit code.');
+    if (otpCode.length !== 6) return setError('Please enter the 6-digit code.');
 
     setIsLoading(true);
     try {
@@ -55,7 +55,7 @@ export default function LoginModal({ onClose, onContinueAsGuest, mode = 'ranked'
     try {
       const result = await requestOtp({ email, username });
       if (!result.success) return setError(result.error);
-      setSuccessMsg('New code sent! Check your email.');
+      setSuccessMsg('New code sent! Check your email for a 6-digit code.');
     } finally {
       setIsLoading(false);
     }
@@ -95,7 +95,7 @@ export default function LoginModal({ onClose, onContinueAsGuest, mode = 'ranked'
                   autoComplete="email"
                   onKeyDown={(e) => e.key === 'Enter' && handleSendCode()}
                 />
-                <small>We'll send an 8-digit code to your email — no link to click.</small>
+                <small>We'll send a 6-digit code to your email — no link to click.</small>
                 {error && <span className="error-text">{error}</span>}
               </div>
 
@@ -135,7 +135,7 @@ export default function LoginModal({ onClose, onContinueAsGuest, mode = 'ranked'
             <div className="login-header">
               <h2>Check your email</h2>
               <p>
-                We sent an 8-digit code to <strong>{email}</strong>.
+                We sent a 6-digit code to <strong>{email}</strong>.
                 Enter it below to sign in.
               </p>
             </div>
@@ -149,11 +149,11 @@ export default function LoginModal({ onClose, onContinueAsGuest, mode = 'ranked'
                   inputMode="numeric"
                   pattern="[0-9]*"
                   value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
-                  placeholder="00000000"
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="000000"
                   autoFocus
                   autoComplete="one-time-code"
-                  maxLength={8}
+                  maxLength={6}
                   onKeyDown={(e) => e.key === 'Enter' && handleVerifyCode()}
                 />
                 {error && <span className="error-text">{error}</span>}
@@ -163,7 +163,7 @@ export default function LoginModal({ onClose, onContinueAsGuest, mode = 'ranked'
               <button
                 type="button"
                 className="btn btn-secondary btn-full"
-                disabled={isLoading || otpCode.length !== 8}
+                disabled={isLoading || otpCode.length !== 6}
                 onClick={handleVerifyCode}
               >
                 {isLoading ? 'Verifying...' : 'Verify Code'}

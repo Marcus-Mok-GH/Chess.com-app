@@ -284,12 +284,18 @@ export function UserProvider({ children }) {
         email: trimmedEmail,
       }));
 
+      console.log('[UserContext] Sending OTP to:', trimmedEmail);
       const result = await neonAuth.emailOtp.sendVerificationOtp({
         email: trimmedEmail,
         type: 'sign-in',
       });
 
-      if (result.error) throw result.error;
+      if (result.error) {
+        console.error('🔴 Neon Auth OTP error object:', result.error);
+        // Ensure we extract the message even if result.error is a nested object
+        const message = result.error.message || (typeof result.error === 'string' ? result.error : 'Failed to send verification code.');
+        throw new Error(message);
+      }
 
       setIsAwaitingVerification(true);
       setPendingOtpEmail(trimmedEmail);
@@ -299,7 +305,7 @@ export function UserProvider({ children }) {
         message: 'Code sent! Check your email for a 6-digit verification code.',
       };
     } catch (error) {
-      console.error('🔴 OTP REQUEST FAILED:', error);
+      console.error('🔴 OTP REQUEST FAILED:', error.message || error);
       localStorage.removeItem(PENDING_OTP_KEY);
       return { error: error.message || 'Failed to send verification code.' };
     }
@@ -332,7 +338,11 @@ export function UserProvider({ children }) {
         name: pendingData?.username?.trim() || undefined,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('🔴 Neon Auth verification error object:', error);
+        const message = error.message || (typeof error === 'string' ? error : 'Invalid or expired code.');
+        throw new Error(message);
+      }
 
       const resolvedUsername =
         pendingData?.username?.trim() ||
