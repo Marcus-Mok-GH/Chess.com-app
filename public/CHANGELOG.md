@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.72 - 2026-05-22
+- Fixed a bug where clicking "Logout" or "Sign Out" had no effect by making the `logout` function more robust.
+- Added automated unit tests to ensure local session state is cleared even if remote sign-out fails.
+- Guaranteed navigation to the landing page after logout to provide immediate feedback and reset the UI state.
+
 ## 1.1.71 - 2026-05-21
 - Removed automatic redirect from landing page for authenticated users.
 - Updated app logo to always link to the landing page.
