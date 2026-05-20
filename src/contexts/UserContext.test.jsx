@@ -179,4 +179,97 @@ describe('UserContext.requestOtp – 6-digit code message (PR #1.1.65)', () => {
     expect(result.error).toBeTruthy();
     expect(neonAuth.emailOtp.sendVerificationOtp).not.toHaveBeenCalled();
   });
+
+  describe('logout', () => {
+    it('clears local state even if remote signOut fails', async () => {
+      // Mock failure
+      neonAuth.signOut.mockRejectedValue(new Error('Network error'));
+
+      // Setup some session data in localStorage
+      localStorage.setItem('chess_user_session', 'testuser');
+
+      let capturedContext;
+      renderWithUserContext((ctx) => { capturedContext = ctx; });
+
+      // Mock window.location.href to prevent actual navigation in JSDOM
+      const assignMock = vi.fn();
+      const originalLocation = window.location;
+
+      vi.stubGlobal('location', {
+        ...originalLocation,
+        assign: assignMock,
+        href: 'http://localhost/settings',
+        pathname: '/settings'
+      });
+
+      // In JSDOM, setting location.href doesn't update location.pathname automatically
+      // when stubbed like this. We mock the behavior.
+      const locationStub = {
+        ...originalLocation,
+        assign: assignMock,
+        href: 'http://localhost/settings',
+        pathname: '/settings'
+      };
+
+      Object.defineProperty(locationStub, 'href', {
+        set: (val) => {
+          if (val === '/') locationStub.pathname = '/';
+          return val;
+        },
+        get: () => 'http://localhost' + locationStub.pathname
+      });
+
+      vi.stubGlobal('location', locationStub);
+
+      await act(async () => {
+        await capturedContext.logout();
+      });
+
+      // Local state should be cleared
+      expect(capturedContext.user).toBeNull();
+      expect(localStorage.getItem('chess_user_session')).toBeNull();
+      expect(window.location.pathname).toBe('/');
+
+      vi.unstubAllGlobals();
+    });
+
+    it('clears local state when remote signOut succeeds', async () => {
+      neonAuth.signOut.mockResolvedValue();
+
+      localStorage.setItem('chess_user_session', 'testuser');
+
+      let capturedContext;
+      renderWithUserContext((ctx) => { capturedContext = ctx; });
+
+      const assignMock = vi.fn();
+      const originalLocation = window.location;
+
+      const locationStub = {
+        ...originalLocation,
+        assign: assignMock,
+        href: 'http://localhost/settings',
+        pathname: '/settings'
+      };
+
+      Object.defineProperty(locationStub, 'href', {
+        set: (val) => {
+          if (val === '/') locationStub.pathname = '/';
+          return val;
+        },
+        get: () => 'http://localhost' + locationStub.pathname
+      });
+
+      vi.stubGlobal('location', locationStub);
+
+      await act(async () => {
+        await capturedContext.logout();
+      });
+
+      expect(capturedContext.user).toBeNull();
+      expect(localStorage.getItem('chess_user_session')).toBeNull();
+      expect(window.location.pathname).toBe('/');
+
+      vi.unstubAllGlobals();
+    });
+  });
 });

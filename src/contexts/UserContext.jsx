@@ -236,14 +236,32 @@ export function UserProvider({ children }) {
   }, []);
 
   const logout = useCallback(async () => {
-    await neonAuth.signOut();
-    localStorage.removeItem(SESSION_USER_KEY);
-    localStorage.removeItem(SESSION_USER_DATA_KEY);
-    localStorage.removeItem(PENDING_OTP_KEY);
-    setUser(null);
-    setIsAwaitingVerification(false);
-    setPendingOtpEmail('');
-    console.log('[UserContext] Logged out');
+    try {
+      console.log('[UserContext] Attempting sign out...');
+      // Always attempt to sign out from the remote provider, but don't let it block local logout
+      await neonAuth.signOut().catch(err => {
+        console.warn('[UserContext] Remote sign out failed, proceeding with local logout:', err.message);
+      });
+    } catch (error) {
+      console.error('[UserContext] Unexpected error during signOut:', error);
+    } finally {
+      // Guaranteed local cleanup
+      localStorage.removeItem(SESSION_USER_KEY);
+      localStorage.removeItem(SESSION_USER_DATA_KEY);
+      localStorage.removeItem(PENDING_OTP_KEY);
+      localStorage.removeItem(AUTH_REQUEST_ID_KEY);
+
+      setUser(null);
+      setIsAwaitingVerification(false);
+      setPendingOtpEmail('');
+
+      console.log('[UserContext] Local session cleared');
+
+      // Force navigation to landing page to ensure UI reset
+      if (window.location.pathname !== '/') {
+        window.location.href = '/';
+      }
+    }
   }, []);
 
   /**
