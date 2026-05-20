@@ -10,7 +10,9 @@ const getFunctionTimeoutMs = () => {
   const envTimeout = parseInt(process.env.FUNCTION_TIMEOUT_MS, 10);
   if (!isNaN(envTimeout) && envTimeout > 0) {
     // Reserve 20% buffer to respond before platform timeout
-    return Math.max(Math.floor(envTimeout * 0.8), 5000);
+    const buffered = Math.floor(envTimeout * 0.8);
+    const withLowerBound = Math.max(buffered, 1000);
+    return Math.min(withLowerBound, envTimeout);
   }
   return 5000; // Safe default
 };
@@ -122,7 +124,10 @@ router.post('/move', async (req, res) => {
         eng.postMessage('setoption name Hash value 16');
         eng.postMessage('setoption name Threads value 1');
         if (bot && bot.playStyle) {
-          const skillLevel = Math.floor((bot.depth || 1) * 3.33);
+          let safeDepth = Number(bot.depth);
+          if (isNaN(safeDepth) || safeDepth < 1) safeDepth = 1;
+          safeDepth = Math.min(safeDepth, 20);
+          const skillLevel = Math.floor((safeDepth || 1) * 3.33);
           eng.postMessage(`setoption name Skill Level value ${Math.min(20, skillLevel)}`);
         }
         eng.postMessage('uci');
