@@ -27,6 +27,7 @@ import matchmakingRouter from './routes/matchmaking.js';
 import gamesRouter from './routes/games.js';
 import usersRouter from './routes/users.js';
 import coachRouter from './routes/coach.js';
+import engineRouter from './routes/engine.js';
 
 // Validate environment variables
 const hasDatabase = Boolean(process.env.DATABASE_URL);
@@ -205,6 +206,7 @@ mountApi('/users', usersRouter);
 mountApi('/matchmaking', matchmakingRouter);
 mountApi('/games', gamesRouter);
 mountApi('/coach', coachRouter);
+mountApi('/engine', engineRouter);
 
 // Serve static files from Vite dist directory
 const distPath = path.join(__dirname, '../dist');

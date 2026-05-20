@@ -36,4 +36,4 @@
 - Adjust CORS via `FRONTEND_URL` before deploying; coach endpoints proxy paid Mistral API—consider rate limiting for public exposure.
 
 ## Architecture Overview
-- Vite React client ↔ Express/Socket.IO API ↔ PostgreSQL; Stockfish runs in web workers; Mistral AI powers coaching endpoints. Health checks at `/health` and `/api/health` assist readiness probes.
+- Vite React client ↔ Express/Socket.IO API ↔ PostgreSQL; Stockfish runs on the server-side via Node.js; Mistral AI powers coaching endpoints. Health checks at `/health` and `/api/health` assist readiness probes.

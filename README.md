@@ -17,7 +17,7 @@ A sophisticated, full-stack React chess platform featuring real-time multiplayer
 - **Real-time**: Socket.IO (Event-driven state sync)
 - **Database**: PostgreSQL with `@neondatabase/serverless` for edge compatibility
 - **Auth**: Supabase Auth (PKCE/Magic Link flows)
-- **Workers**: Stockfish.js running in dedicated Web Workers
+- **Engine**: Stockfish.js running on the server-side via Node.js API
 
 ## 🛡️ Architecture & Data Flow
 
