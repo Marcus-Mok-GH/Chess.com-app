@@ -54,9 +54,9 @@ export function getPlayerElo(user = null) {
 }
 
 export function setPlayerElo(elo) {
-  // ELO is now managed by database via UserContext.updateElo()
-  // This function is kept for backward compatibility but does nothing
-  console.warn('[Matchmaking] setPlayerElo is deprecated - use UserContext.updateElo() instead');
+  // ELO is now managed server-side via POST /api/games/save → computeAndApplyElo().
+  // This function is kept for backward compatibility but does nothing.
+  console.warn('[Matchmaking] setPlayerElo is deprecated - ELO is now computed server-side on game save.');
 }
 
 export function getUserStats(user = null) {

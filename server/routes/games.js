@@ -10,6 +10,74 @@ function generateGameCode() {
   return crypto.randomBytes(4).toString('hex').toUpperCase();
 }
 
+/**
+ * Computes and persists an ELO update for a completed game.
+ * Uses elo_history.game_code as an idempotency key — safe to call multiple
+ * times for the same game (e.g. on autosave retries); only the first call
+ * writes to the DB.
+ *
+ * @param {{ userId: string, opponentElo: number, gameResult: 'win'|'loss'|'draw', gameCode: string, gameMode: string }} opts
+ * @returns {Promise<{previousElo: number, newElo: number, change: number, gamesPlayed: number, wins: number, losses: number, draws: number}|null>}
+ */
+async function computeAndApplyElo({ userId, opponentElo, gameResult, gameCode, gameMode }) {
+  // Idempotency guard — only update once per completed game
+  const existing = await query(
+    'SELECT id FROM elo_history WHERE game_code = $1 AND user_id = $2',
+    [gameCode, userId]
+  );
+  if (existing.rows.length > 0) {
+    console.log(`[Games] ELO already recorded for game ${gameCode}, skipping`);
+    return null;
+  }
+
+  const userRecord = await query(
+    'SELECT elo, games_played, wins, losses, draws FROM users WHERE id = $1',
+    [userId]
+  );
+  if (userRecord.rows.length === 0) return null;
+
+  const { elo: currentElo } = userRecord.rows[0];
+  const K_FACTOR = 32;
+  const expectedScore = 1 / (1 + Math.pow(10, (opponentElo - currentElo) / 400));
+  const actualScore = gameResult === 'win' ? 1 : gameResult === 'draw' ? 0.5 : 0;
+  const eloChange = Math.round(K_FACTOR * (actualScore - expectedScore));
+  const newElo = currentElo + eloChange;
+
+  const isWin = gameResult === 'win' ? 1 : 0;
+  const isLoss = gameResult === 'loss' ? 1 : 0;
+  const isDraw = gameResult === 'draw' ? 1 : 0;
+
+  const updated = await query(
+    `UPDATE users
+     SET elo = $1,
+         games_played = games_played + 1,
+         wins         = wins + $2,
+         losses       = losses + $3,
+         draws        = draws + $4,
+         updated_at   = CURRENT_TIMESTAMP
+     WHERE id = $5
+     RETURNING elo, games_played, wins, losses, draws`,
+    [newElo, isWin, isLoss, isDraw, userId]
+  );
+
+  await query(
+    `INSERT INTO elo_history (user_id, elo, change, game_code, game_mode, opponent_elo, result)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [userId, newElo, eloChange, gameCode, gameMode || 'local', opponentElo, gameResult]
+  );
+
+  const row = updated.rows[0];
+  return {
+    previousElo: currentElo,
+    newElo,
+    change: eloChange,
+    gamesPlayed: row.games_played,
+    wins: row.wins,
+    losses: row.losses,
+    draws: row.draws,
+  };
+}
+
 // Save game result
 router.post('/save', async (req, res) => {
   try {
@@ -88,11 +156,33 @@ router.post('/save', async (req, res) => {
 
     console.log(`[Games] Game saved - code: ${gameCode}, mode: ${gameMode}, result: ${result}, moves: ${moveHistory.length}`);
 
+    // Server-side ELO update — only for completed games with a real user and opponent ELO.
+    // 'unknown' results (e.g. abandoned games) do not affect ratings.
+    let eloResult = null;
+    if (
+      status === 'completed' &&
+      userId &&
+      typeof opponentElo === 'number' &&
+      result !== 'unknown' &&
+      result !== 'in_progress'
+    ) {
+      try {
+        const playerWon = result === playerColor;
+        const drawGame = result === 'draw';
+        const gameResult = drawGame ? 'draw' : playerWon ? 'win' : 'loss';
+        eloResult = await computeAndApplyElo({ userId, opponentElo, gameResult, gameCode, gameMode });
+      } catch (eloError) {
+        // Non-fatal: game record is already persisted; log and continue.
+        console.error('[Games] ELO update failed (non-fatal):', eloError.message);
+      }
+    }
+
     res.json({
       success: true,
       message: 'Game saved successfully',
       gameId: insertResult.rows[0].id,
-      gameCode: insertResult.rows[0].game_code
+      gameCode: insertResult.rows[0].game_code,
+      ...(eloResult && { elo: eloResult }),
     });
   } catch (error) {
     console.error('Save game error:', error);

@@ -69,13 +69,6 @@ class ApiService {
     });
   }
 
-  async updateElo(username, opponentElo, result) {
-    return this.request(`/users/${encodeURIComponent(username)}/elo`, {
-      method: 'POST',
-      body: JSON.stringify({ opponentElo, result }),
-    });
-  }
-
   async getLeaderboard(limit = 10) {
     return this.request(`/users/leaderboard/top?limit=${limit}`);
   }

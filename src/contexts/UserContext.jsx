@@ -13,7 +13,7 @@ const UserContext = createContext(null);
 /**
  * Provides user authentication state, session management, OTP flow state, and related actions to descendant components via UserContext.
  *
- * Manages localStorage session persistence, Neon Auth (Stack Auth) integration, socket-based remote login handling, online/offline status, OTP request/verification, and exposes actions like login, logout, requestOtp, verifyEmailOtp, updateElo, and refreshUser.
+ * Manages localStorage session persistence, Neon Auth (Stack Auth) integration, socket-based remote login handling, online/offline status, OTP request/verification, and exposes actions like login, logout, requestOtp, verifyEmailOtp, and refreshUser.
  *
  * @param {{ children: import('react').ReactNode }} props - Provider children to receive the context.
  * @returns {import('react').ReactElement} The UserContext.Provider element supplying auth state and actions.
@@ -380,37 +380,8 @@ export function UserProvider({ children }) {
   /** @deprecated Use requestOtp instead. */
   const requestMagicLink = requestOtp;
 
-  const updateElo = useCallback(async (opponentElo, gameResult) => {
-    if (!user) return;
-    if (!navigator.onLine) {
-      const error = new Error('[Database Error] Cannot update ELO while offline');
-      console.error('🔴 ELO UPDATE FAILED:', error.message);
-      throw error;
-    }
-    try {
-      console.log('[UserContext] Updating ELO for:', user.username);
-      const response = await api.updateElo(user.username, opponentElo, gameResult);
-      const updatedUser = {
-        ...user,
-        elo: response.newElo,
-        gamesPlayed: response.gamesPlayed,
-        wins: response.wins,
-        losses: response.losses,
-        draws: response.draws,
-      };
-      setUser(updatedUser);
-      persistUser(updatedUser);
-      console.log('✅ ELO UPDATED:', response.previousElo, '→', response.newElo);
-      return {
-        previousElo: response.previousElo,
-        newElo: response.newElo,
-        eloChange: response.change,
-      };
-    } catch (error) {
-      console.error('🔴 ELO UPDATE FAILED:', error.message);
-      throw error;
-    }
-  }, [user]);
+  // updateElo() has been removed. ELO is now computed server-side in POST /api/games/save.
+  // Use refreshUser() to sync local user state after a game completes.
 
   const refreshUser = useCallback(async () => {
     if (!user) return;
@@ -452,7 +423,6 @@ export function UserProvider({ children }) {
     verifyEmailOtp,
     requestMagicLink, // deprecated alias
     logout,
-    updateElo,
     refreshUser,
   };
 

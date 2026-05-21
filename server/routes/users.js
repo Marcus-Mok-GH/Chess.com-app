@@ -218,68 +218,9 @@ router.get('/:username', async (req, res) => {
   }
 });
 
-// Update user ELO after a game
-router.post('/:username/elo', async (req, res) => {
-  try {
-    const { username } = req.params;
-    const { opponentElo, result: gameResult } = req.body;
-    
-    if (typeof opponentElo !== 'number' || !['win', 'loss', 'draw'].includes(gameResult)) {
-      return errorResponse(res, 400, 'Invalid parameters');
-    }
-    
-    // Get current user
-    const userResult = await query(
-      'SELECT id, elo, games_played, wins, losses, draws FROM users WHERE LOWER(username) = LOWER($1)',
-      [username]
-    );
-    
-    if (userResult.rows.length === 0) {
-      return errorResponse(res, 404, 'User not found');
-    }
-    
-    const user = userResult.rows[0];
-    const K_FACTOR = 32;
-    
-    // Calculate new ELO
-    const expectedScore = 1 / (1 + Math.pow(10, (opponentElo - user.elo) / 400));
-    const actualScore = gameResult === 'win' ? 1 : gameResult === 'draw' ? 0.5 : 0;
-    const newElo = Math.round(user.elo + K_FACTOR * (actualScore - expectedScore));
-    
-    // Update stats
-    const wins = user.wins + (gameResult === 'win' ? 1 : 0);
-    const losses = user.losses + (gameResult === 'loss' ? 1 : 0);
-    const draws = user.draws + (gameResult === 'draw' ? 1 : 0);
-    const gamesPlayed = user.games_played + 1;
-    
-    await query(
-      'UPDATE users SET elo = $1, games_played = $2, wins = $3, losses = $4, draws = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6',
-      [newElo, gamesPlayed, wins, losses, draws, user.id]
-    );
-
-    // Record ELO history
-    await query(
-      `INSERT INTO elo_history (user_id, elo, change, game_mode, opponent_elo, result)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [user.id, newElo, newElo - user.elo, 'ranked', opponentElo, gameResult]
-    );
-
-    res.json({
-      success: true,
-      previousElo: user.elo,
-      newElo,
-      change: newElo - user.elo,
-      gamesPlayed,
-      wins,
-      losses,
-      draws
-    });
-    
-  } catch (error) {
-    console.error('Update ELO error:', error);
-    return handleRouteError(res, error, 'Failed to update ELO');
-  }
-});
+// POST /api/users/:username/elo — REMOVED (security: unauthenticated ELO manipulation).
+// ELO is now computed server-side inside POST /api/games/save using the game record
+// as ground truth. See server/routes/games.js → computeAndApplyElo().
 
 // Get leaderboard
 router.get('/leaderboard/top', async (req, res) => {
