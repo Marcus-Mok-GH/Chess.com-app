@@ -2278,6 +2278,11 @@ body {
    ======================================== */
 
 @media (orientation: landscape) and (max-height: 500px) {
+  .app {
+    --header-height: 36px;
+    --bottom-nav-height: 46px;
+  }
+
   /* Revert to side-by-side layout; portrait flips to column at ≤768px */
   .game-container {
     flex-direction: row !important;
@@ -2308,13 +2313,13 @@ body {
   .chess-game,
   .online-chess-game {
     padding: 4px 8px !important;
-    padding-bottom: calc(46px + env(safe-area-inset-bottom)) !important;
+    padding-bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom)) !important;
     gap: 6px !important;
     overflow-y: hidden;
   }
 
   .hide-bottom-nav .chess-game {
-    padding-bottom: calc(4px + env(safe-area-inset-bottom)) !important;
+    padding-bottom: calc(4px + var(--safe-area-bottom)) !important;
   }
 
   /* Sidebar: vertical column on the right, scrollable if needed */
@@ -2359,8 +2364,8 @@ body {
 
   /* Compact bottom nav */
   .bottom-nav {
-    padding: 3px 0 !important;
-    padding-bottom: calc(3px + env(safe-area-inset-bottom)) !important;
+    padding: 0 !important;
+    height: calc(var(--bottom-nav-height) + var(--safe-area-bottom)) !important;
   }
 
   .nav-tab {
@@ -2379,6 +2384,6 @@ body {
 
   /* App container padding for the shorter landscape nav */
   .app {
-    padding-bottom: calc(46px + env(safe-area-inset-bottom)) !important;
+    padding-bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom)) !important;
   }
 }
