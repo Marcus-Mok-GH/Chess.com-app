@@ -111,7 +111,6 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   letter-spacing: -0.02em;
-  word-wrap: break-word;
   overflow-wrap: break-word;
 }
 
