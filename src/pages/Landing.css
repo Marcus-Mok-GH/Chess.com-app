@@ -22,23 +22,24 @@
 
 .landing-glow {
   position: absolute;
-  width: min(80vw, 500px); /* cap size so it doesn't cause horizontal scroll on narrow screens */
+  width: min(80vw, 500px);
   height: min(80vw, 500px);
   border-radius: 50%;
   filter: blur(80px);
   opacity: 0.12;
   pointer-events: none;
+  overflow: hidden; /* Prevent glow from expanding container */
 }
 
 .glow-1 {
-  top: -20%;
-  right: -10%;
+  top: -100px;
+  right: -100px;
   background: radial-gradient(circle, var(--color-accent-primary), transparent);
 }
 
 .glow-2 {
-  bottom: -20%;
-  left: -10%;
+  bottom: -100px;
+  left: -100px;
   background: radial-gradient(circle, var(--color-accent-blue), transparent);
 }
 
@@ -101,15 +102,17 @@
 }
 
 .hero-title {
-  font-size: clamp(2rem, 6vw, 5rem); /* floor lowered to 2rem so it doesn't overflow 320px screens */
+  font-size: clamp(2.25rem, 8vw, 5rem);
   font-weight: 700;
   font-family: var(--font-display);
-  line-height: 1;
+  line-height: 1.1;
   margin-bottom: 24px;
-  background: linear-gradient(135deg, #fff 0%, #a0a0a0 100%);
+  background: linear-gradient(135deg, #fff 0%, #d0d0d0 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   letter-spacing: -0.02em;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .hero-subtitle {
@@ -284,11 +287,12 @@
 
 .stat-number {
   display: block;
-  font-size: 3rem;
+  font-size: clamp(2rem, 8vw, 3rem);
   font-weight: 800;
   color: var(--color-accent-primary);
   margin-bottom: 8px;
   font-family: var(--font-display);
+  line-height: 1;
 }
 
 .stat-label {
@@ -477,7 +481,13 @@
 
 @media (max-width: 480px) {
   .landing-hero {
-    padding: 0 16px;
+    padding: 80px 16px 40px;
+    min-height: auto;
+  }
+
+  .hero-title {
+    font-size: 2.25rem;
+    margin-bottom: 16px;
   }
 
   .hero-subtitle {
@@ -499,10 +509,19 @@
 
   .features-section,
   .stats-section {
-    padding: 60px 16px;
+    padding: 48px 16px;
   }
 
   .section-header {
-    margin-bottom: 40px;
+    margin-bottom: 32px;
+  }
+
+  .feature-card {
+    padding: 24px;
+    border-radius: 20px;
+  }
+
+  .stat-card {
+    padding: 24px 16px;
   }
 }

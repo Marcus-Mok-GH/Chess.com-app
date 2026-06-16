@@ -3,13 +3,13 @@
    ======================================== */
 
 .home-page {
-  min-height: 100vh;
+  min-height: calc(100vh - var(--header-height, 60px) - var(--bottom-nav-height, 70px));
   background:
     radial-gradient(circle at 12% -10%, rgba(127, 166, 80, 0.2), transparent 45%),
     radial-gradient(circle at 88% 8%, rgba(240, 185, 11, 0.14), transparent 38%),
     radial-gradient(circle at 50% 120%, rgba(93, 156, 236, 0.12), transparent 45%),
-    linear-gradient(180deg, #17181c 0%, #1b1d21 45%, #141519 100%);
-  padding-bottom: 80px;
+    linear-gradient(180deg, #17181c 0%, #1b1d22 45%, #141519 100%);
+  padding-bottom: 24px;
   position: relative;
   overflow: hidden;
 }
@@ -679,7 +679,7 @@
 
 @media (max-width: 768px) {
   .home-page {
-    padding-bottom: 110px;
+    padding-bottom: 40px;
   }
 
   .home-container {

@@ -1,6 +1,13 @@
 # Changelog
 
-## 1.1.73 - Unreleased
+## 1.1.74 - 2026-06-15
+- Optimized mobile and desktop UI for a more professional look.
+- Fixed horizontal overflow on the landing page (hero title, stats grid).
+- Refined chessboard sizing to dynamically account for header, bottom navigation, and safe area insets.
+- Improved bottom navigation design with a modern active state indicator and better spacing.
+- Fixed layout clipping issues on small devices (320px width) and landscape orientations.
+
+## 1.1.73 - 2026-06-12
 - Moved Stockfish engine to the server-side to resolve initialization errors and improve reliability across devices.
 - Integrated a new backend route `/api/engine/move` for move calculation and hints.
 - Optimized engine initialization and search parameters for serverless environments.
