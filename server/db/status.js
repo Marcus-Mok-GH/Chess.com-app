@@ -31,7 +31,7 @@ export async function ensureDatabaseReady(initFn) {
             if (attempt < maxAttempts) {
               const delayMs = DB_INIT_RETRY_DELAYS_MS[attempt - 1];
               console.warn(
-                `[DB] Init attempt ${attempt}/${maxAttempts} failed: ${error.message}. ` +
+                `[DB] Init attempt ${attempt}/${maxAttempts} failed: ${error instanceof Error ? error.message : String(error)}. ` +
                 `Waiting ${delayMs / 1000}s for DB to wake up before retrying...`
               );
               await new Promise((resolve) => setTimeout(resolve, delayMs));
