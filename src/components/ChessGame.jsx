@@ -468,6 +468,11 @@ function ChessGame(
 
       const { bestMove, candidates, debugInfo: newDebugInfo } = response;
 
+      // Successful response — reset consecutive-failure counter so future isolated
+      // timeouts don't accumulate toward the permanent-block threshold.
+      busyRetryCountRef.current = 0;
+      setEngineError(null);
+
       if (newDebugInfo && settingsRef.current.debugMode) {
         setDebugInfo(newDebugInfo);
       }
@@ -507,8 +512,15 @@ function ChessGame(
       }
     } catch (err) {
       console.error('[ChessGame] Engine error:', err);
-      engineErrorRef.current = true;
-      setEngineError(err.message || 'Failed to connect to chess engine');
+      busyRetryCountRef.current = (busyRetryCountRef.current || 0) + 1;
+      // Only permanently block after 3 consecutive failures to allow recovery from
+      // transient serverless cold-start timeouts without silencing the bot forever.
+      if (busyRetryCountRef.current >= 3) {
+        engineErrorRef.current = true;
+        setEngineError(err.message || 'Failed to connect to chess engine');
+      } else {
+        setEngineError(`Engine error (attempt ${busyRetryCountRef.current}/3): ${err.message}`);
+      }
     } finally {
       setIsThinking(false);
       isThinkingRef.current = false;
