@@ -468,6 +468,11 @@ function ChessGame(
 
       const { bestMove, candidates, debugInfo: newDebugInfo } = response;
 
+      // Successful response — reset consecutive-failure counter so future isolated
+      // timeouts don't accumulate toward the permanent-block threshold.
+      busyRetryCountRef.current = 0;
+      setEngineError(null);
+
       if (newDebugInfo && settingsRef.current.debugMode) {
         setDebugInfo(newDebugInfo);
       }
