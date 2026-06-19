@@ -10,8 +10,12 @@
   ],
   "functions": {
     "api/[...path].js": {
-      "includeFiles": "server/**"
+      "includeFiles": "{server/**,node_modules/stockfish/bin/**}",
+      "maxDuration": 15
     }
+  },
+  "env": {
+    "FUNCTION_TIMEOUT_MS": "12000"
   },
   "routes": [
     {

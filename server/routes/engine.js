@@ -70,7 +70,9 @@ router.post('/move', async (req, res) => {
         }
       }, TIMEOUT_MS);
 
-      stockfish().then(eng => {
+      // Use lite-single variant in serverless (no SharedArrayBuffer, faster cold start)
+      const engineVariant = process.env.VERCEL ? 'lite-single' : undefined;
+      stockfish(engineVariant).then(eng => {
         // Check if already resolved (timed out)
         if (resolved) {
           try { eng.terminate(); } catch(e) {}
