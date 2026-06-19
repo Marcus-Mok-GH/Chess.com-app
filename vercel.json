@@ -10,7 +10,7 @@
   ],
   "functions": {
     "api/[...path].js": {
-      "includeFiles": "{server/**,node_modules/stockfish/bin/**}",
+      "includeFiles": "{server/**,node_modules/stockfish/bin/stockfish-18-lite-single.js,node_modules/stockfish/bin/stockfish-18-lite-single.wasm}",
       "maxDuration": 15
     }
   },
