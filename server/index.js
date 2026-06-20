@@ -208,6 +208,11 @@ if (_neonAuthProxyUrl) {
       const qs = Object.keys(req.query).length
         ? '?' + new URLSearchParams(req.query).toString()
         : '';
+
+      // Add 30-second timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+
       const upstreamRes = await fetch(
         `${_neonAuthProxyUrl}/api/auth${req.path}${qs}`,
         {
@@ -223,17 +228,33 @@ if (_neonAuthProxyUrl) {
             ? JSON.stringify(req.body)
             : undefined,
           redirect: 'manual',
+          signal: controller.signal,
         }
       );
 
-      // Forward response headers (including Set-Cookie for session handling)
+      clearTimeout(timeoutId);
+
+      // Forward response headers (excluding hop-by-hop headers and set-cookie)
       upstreamRes.headers.forEach((val, key) => {
-        if (key !== 'transfer-encoding' && key !== 'connection') {
+        if (key !== 'transfer-encoding' && key !== 'connection' && key !== 'set-cookie') {
           res.setHeader(key, val);
         }
       });
+
+      // Handle Set-Cookie headers separately to preserve multiple cookies
+      const setCookieHeaders = upstreamRes.headers.getSetCookie();
+      if (setCookieHeaders && setCookieHeaders.length > 0) {
+        setCookieHeaders.forEach(cookie => {
+          res.appendHeader('set-cookie', cookie);
+        });
+      }
+
       res.status(upstreamRes.status).send(await upstreamRes.text());
     } catch (err) {
+      if (err.name === 'AbortError') {
+        console.error('[Auth proxy] Request timeout after 30 seconds');
+        return res.status(504).json({ error: 'Auth service timeout. Please try again.' });
+      }
       console.error('[Auth proxy]', err.message);
       res.status(502).json({ error: 'Auth service unavailable. Please try again.' });
     }
