@@ -187,6 +187,66 @@ const mountApi = (pathPrefix, router) => {
 // Mount engine routes outside the database gate so they work independently
 mountApi('/engine', engineRouter);
 
+// ── Neon Auth proxy ──────────────────────────────────────────────────────────────────
+// Better Auth (Neon) validates the browser's Origin header as a CSRF guard.
+// Since the frontend runs on a different origin (e.g. localhost:5173 vs the
+// Neon Auth URL), it rejects the request with "Invalid origin".
+//
+// Fix: proxy all Better Auth calls through Express. The upstream fetch has no
+// browser Origin header, so Neon's origin check passes. Custom app routes
+// (/session, /signout) are forwarded to authRouter via next() as normal.
+const _neonAuthProxyUrl = (process.env.NEON_AUTH_URL || process.env.VITE_NEON_AUTH_URL)
+  ?.replace(/\/+$/, '');
+
+if (_neonAuthProxyUrl) {
+  console.log('[Server] Neon Auth proxy enabled →', _neonAuthProxyUrl);
+  const _neonAuthProxy = async (req, res, next) => {
+    // /session and /signout are handled by the custom authRouter — don't proxy them
+    if (req.path === '/session' || req.path === '/signout') return next();
+
+    try {
+      const qs = Object.keys(req.query).length
+        ? '?' + new URLSearchParams(req.query).toString()
+        : '';
+      const upstreamRes = await fetch(
+        `${_neonAuthProxyUrl}/api/auth${req.path}${qs}`,
+        {
+          method: req.method,
+          headers: {
+            'content-type': 'application/json',
+            // Forward cookies (Better Auth session cookies) and auth header if present
+            ...(req.headers.cookie ? { cookie: req.headers.cookie } : {}),
+            ...(req.headers.authorization ? { authorization: req.headers.authorization } : {}),
+            // 'origin' is intentionally omitted — this is the fix for "Invalid origin"
+          },
+          body: req.method !== 'GET' && req.method !== 'HEAD'
+            ? JSON.stringify(req.body)
+            : undefined,
+          redirect: 'manual',
+        }
+      );
+
+      // Forward response headers (including Set-Cookie for session handling)
+      upstreamRes.headers.forEach((val, key) => {
+        if (key !== 'transfer-encoding' && key !== 'connection') {
+          res.setHeader(key, val);
+        }
+      });
+      res.status(upstreamRes.status).send(await upstreamRes.text());
+    } catch (err) {
+      console.error('[Auth proxy]', err.message);
+      res.status(502).json({ error: 'Auth service unavailable. Please try again.' });
+    }
+  };
+
+  apiPrefixes.forEach(prefix => app.use(`${prefix}/auth`, _neonAuthProxy));
+} else {
+  console.warn(
+    '[Auth] NEON_AUTH_URL not set — auth requests will not be proxied. ' +
+    'Set NEON_AUTH_URL to your Neon Auth URL to fix "Invalid origin" login errors.'
+  );
+}
+
 // Ensure the database is ready before handling API routes (skip health).
 app.use('/api', async (req, res, next) => {
   if (req.path === '/health') {
