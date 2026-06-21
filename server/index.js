@@ -196,7 +196,8 @@ mountApi('/engine', engineRouter);
 // browser Origin header, so Neon's origin check passes. Custom app routes
 // (/session, /signout) are forwarded to authRouter via next() as normal.
 const _neonAuthProxyUrl = (process.env.NEON_AUTH_URL || process.env.VITE_NEON_AUTH_URL)
-  ?.replace(/\/+$/, '');
+  ?.replace(/\/+$/, '')           // strip trailing slashes
+  ?.replace(/\/api\/auth\/?$/, ''); // strip /api/auth suffix if user included it in the URL
 
 if (_neonAuthProxyUrl) {
   console.log('[Server] Neon Auth proxy enabled →', _neonAuthProxyUrl);
@@ -248,6 +249,15 @@ if (_neonAuthProxyUrl) {
 
       clearTimeout(timeoutId);
 
+      // Log upstream failures so they appear in Vercel / server logs for debugging
+      if (!upstreamRes.ok) {
+        const bodyPreview = await upstreamRes.clone().text().catch(() => '(unreadable)');
+        console.error(
+          `[Auth proxy] Upstream ${req.method} ${req.path} → ${upstreamRes.status} ${upstreamRes.statusText}`,
+          '| body:', bodyPreview.slice(0, 500)
+        );
+      }
+
       // Forward response headers (excluding hop-by-hop headers and set-cookie)
       upstreamRes.headers.forEach((val, key) => {
         if (key !== 'transfer-encoding' && key !== 'connection' && key !== 'set-cookie') {
@@ -280,6 +290,20 @@ if (_neonAuthProxyUrl) {
     '[Auth] NEON_AUTH_URL not set — auth requests will not be proxied. ' +
     'Set NEON_AUTH_URL to your Neon Auth URL to fix "Invalid origin" login errors.'
   );
+  // Without NEON_AUTH_URL the proxy is not mounted, so OTP and other Better Auth
+  // requests would fall through to Express's default 404 HTML handler. The
+  // Better Auth client can't parse HTML as a JSON error, which causes
+  // result.error.message to be undefined and the client to show the generic
+  // "Failed to send verification code" fallback. Return a proper JSON 503 so
+  // the client always gets a human-readable error message.
+  apiPrefixes.forEach(prefix => {
+    app.use(`${prefix}/auth`, (req, res, next) => {
+      if (req.path === '/session' || req.path === '/signout') return next();
+      res.status(503).json({
+        error: 'Auth service is not configured on this server. Please set the NEON_AUTH_URL environment variable.',
+      });
+    });
+  });
 }
 
 // Ensure the database is ready before handling API routes (skip health).

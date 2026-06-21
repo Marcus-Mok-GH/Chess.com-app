@@ -292,8 +292,16 @@ export function UserProvider({ children }) {
 
       if (result.error) {
         console.error('🔴 Neon Auth OTP error object:', result.error);
-        // Ensure we extract the message even if result.error is a nested object
-        const message = result.error.message || (typeof result.error === 'string' ? result.error : 'Failed to send verification code.');
+        // Extract message from the various error shapes Better Auth may return.
+        // result.error can be a BetterAuthError, a plain object, or a string.
+        // Falling through all options ensures the user always sees a real message
+        // instead of the generic "Failed to send verification code" fallback.
+        const message =
+          result.error.message ||
+          result.error.error ||
+          result.error.statusText ||
+          (typeof result.error === 'string' ? result.error : null) ||
+          'Failed to send verification code. Please check your connection and try again.';
         throw new Error(message);
       }
 
