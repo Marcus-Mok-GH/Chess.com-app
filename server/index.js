@@ -219,19 +219,21 @@ if (_neonAuthProxyUrl) {
           method: req.method,
           headers: {
             'content-type': 'application/json',
-            // Forward the browser's Origin header to Neon's Better Auth so it can
-            // validate it against the trusted-origins allowlist configured in the
-            // Neon Console (Auth → Configuration → Domains).
+            // Spoof the Origin header to the auth server's own domain so Better Auth
+            // treats this as a same-origin server-side call and passes its CSRF check.
             //
-            // Omitting origin entirely should allow server-side calls per the
-            // Better Auth spec, but Neon's hosted instance still validates it —
-            // so we forward the real origin and let the allowlist do the work.
-            // Add your Vercel domain (e.g. https://chess-com-app.vercel.app) to
-            // the Neon Console allowlist if you haven't already.
+            // Better Auth validates Origin on every POST request (including email OTP).
+            // Stripping Origin entirely should mark the call as trusted (non-browser),
+            // but Neon's hosted instance still rejects it. Forwarding the real browser
+            // Origin requires adding the app domain to Neon's trustedOrigins config —
+            // not possible for OTP flows since the Neon Domains allowlist only covers
+            // OAuth/redirect URIs, not the Better Auth CSRF trustedOrigins list.
             //
-            // Docs: https://neon.tech/docs/guides/neon-auth
-            //       https://www.better-auth.com/docs/reference/options#trustedorigins
-            ...(req.headers.origin ? { origin: req.headers.origin } : {}),
+            // Spoofing Origin to the auth server's own baseURL origin is the cleanest
+            // no-config workaround: Better Auth always trusts its own origin.
+            //
+            // Ref: https://www.better-auth.com/docs/reference/options#trustedorigins
+            'origin': new URL(_neonAuthProxyUrl).origin,
             // Forward cookies (Better Auth session cookies) and auth header if present
             ...(req.headers.cookie ? { cookie: req.headers.cookie } : {}),
             ...(req.headers.authorization ? { authorization: req.headers.authorization } : {}),
