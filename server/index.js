@@ -195,9 +195,13 @@ mountApi('/engine', engineRouter);
 // Fix: proxy all Better Auth calls through Express. The upstream fetch has no
 // browser Origin header, so Neon's origin check passes. Custom app routes
 // (/session, /signout) are forwarded to authRouter via next() as normal.
-const _neonAuthProxyUrl = (process.env.NEON_AUTH_URL || process.env.VITE_NEON_AUTH_URL)
-  ?.replace(/\/+$/, '')           // strip trailing slashes
-  ?.replace(/\/api\/auth\/?$/, ''); // strip /api/auth suffix if user included it in the URL
+// Neon's docs name the variable NEON_AUTH_BASE_URL (e.g. https://ep-xxx.neonauth.../neondb/auth).
+// Fall back to NEON_AUTH_URL for backward compatibility with earlier setups.
+const _neonAuthProxyUrl = (
+  process.env.NEON_AUTH_BASE_URL ||
+  process.env.NEON_AUTH_URL ||
+  process.env.VITE_NEON_AUTH_URL
+)?.replace(/\/+$/, ''); // strip trailing slashes only
 
 if (_neonAuthProxyUrl) {
   console.log('[Server] Neon Auth proxy enabled →', _neonAuthProxyUrl);
@@ -214,8 +218,11 @@ if (_neonAuthProxyUrl) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
 
+      // NEON_AUTH_BASE_URL already includes the full base path (e.g. /neondb/auth).
+      // Better Auth endpoints are relative to that base, so we append req.path directly.
+      // Do NOT add /api/auth here — the Neon Auth URL already IS the auth base.
       const upstreamRes = await fetch(
-        `${_neonAuthProxyUrl}/api/auth${req.path}${qs}`,
+        `${_neonAuthProxyUrl}${req.path}${qs}`,
         {
           method: req.method,
           headers: {
@@ -287,10 +294,10 @@ if (_neonAuthProxyUrl) {
   apiPrefixes.forEach(prefix => app.use(`${prefix}/auth`, _neonAuthProxy));
 } else {
   console.warn(
-    '[Auth] NEON_AUTH_URL not set — auth requests will not be proxied. ' +
-    'Set NEON_AUTH_URL to your Neon Auth URL to fix "Invalid origin" login errors.'
+    '[Auth] NEON_AUTH_BASE_URL not set — auth requests will not be proxied. ' +
+    'Set NEON_AUTH_BASE_URL to your Neon Auth URL to fix login errors.'
   );
-  // Without NEON_AUTH_URL the proxy is not mounted, so OTP and other Better Auth
+  // Without NEON_AUTH_BASE_URL the proxy is not mounted, so OTP and other Better Auth
   // requests would fall through to Express's default 404 HTML handler. The
   // Better Auth client can't parse HTML as a JSON error, which causes
   // result.error.message to be undefined and the client to show the generic
@@ -300,7 +307,7 @@ if (_neonAuthProxyUrl) {
     app.use(`${prefix}/auth`, (req, res, next) => {
       if (req.path === '/session' || req.path === '/signout') return next();
       res.status(503).json({
-        error: 'Auth service is not configured on this server. Please set the NEON_AUTH_URL environment variable.',
+        error: 'Auth service is not configured on this server. Please set the NEON_AUTH_BASE_URL environment variable.',
       });
     });
   });
