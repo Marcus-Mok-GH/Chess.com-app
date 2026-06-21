@@ -187,7 +187,7 @@ const mountApi = (pathPrefix, router) => {
 // Mount engine routes outside the database gate so they work independently
 mountApi('/engine', engineRouter);
 
-// ── Neon Auth proxy ──────────────────────────────────────────────────────────────────
+// ── Neon Auth proxy ─────────────────────────────────────────────────────────────────────────────────
 // Better Auth (Neon) validates the browser's Origin header as a CSRF guard.
 // Since the frontend runs on a different origin (e.g. localhost:5173 vs the
 // Neon Auth URL), it rejects the request with "Invalid origin".
@@ -219,10 +219,22 @@ if (_neonAuthProxyUrl) {
           method: req.method,
           headers: {
             'content-type': 'application/json',
+            // Forward the browser's Origin header to Neon's Better Auth so it can
+            // validate it against the trusted-origins allowlist configured in the
+            // Neon Console (Auth → Configuration → Domains).
+            //
+            // Omitting origin entirely should allow server-side calls per the
+            // Better Auth spec, but Neon's hosted instance still validates it —
+            // so we forward the real origin and let the allowlist do the work.
+            // Add your Vercel domain (e.g. https://chess-com-app.vercel.app) to
+            // the Neon Console allowlist if you haven't already.
+            //
+            // Docs: https://neon.tech/docs/guides/neon-auth
+            //       https://www.better-auth.com/docs/reference/options#trustedorigins
+            ...(req.headers.origin ? { origin: req.headers.origin } : {}),
             // Forward cookies (Better Auth session cookies) and auth header if present
             ...(req.headers.cookie ? { cookie: req.headers.cookie } : {}),
             ...(req.headers.authorization ? { authorization: req.headers.authorization } : {}),
-            // 'origin' is intentionally omitted — this is the fix for "Invalid origin"
           },
           body: req.method !== 'GET' && req.method !== 'HEAD'
             ? JSON.stringify(req.body)
