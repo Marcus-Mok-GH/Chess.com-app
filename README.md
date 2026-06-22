@@ -51,7 +51,7 @@ Copy `.env.example` to `.env` and fill in the values below.
 | Variable | Description |
 |----------|-------------|
 | `DATABASE_URL` | PostgreSQL pooled connection string |
-| `NEON_AUTH_URL` | Neon Auth URL for OTP sign-in — server-side only (Neon Console → Auth tab) |
+| `NEON_AUTH_BASE_URL` | Neon Auth URL for OTP sign-in — server-side only (Neon Console → Auth tab → Auth URL). Full path e.g. `https://ep-xxx.neonauth.../neondb/auth`. Do NOT append `/api/auth`. |
 
 ### Production only
 
