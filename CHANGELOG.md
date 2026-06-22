@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.1 - 2026-06-21
+- Fixed Stockfish AI hanging on Vercel by shimming the engine API to support both `postMessage/onmessage` and `sendCommand/print` interfaces.
+- Implemented a robust initialization fallback strategy to handle Stockfish module caching issues in serverless environments.
+- Increased default engine timeout to 10 seconds to better accommodate serverless cold starts.
+- Added enhanced server-side logging for engine communication to assist with production troubleshooting.
+
 ## 2.0.0 - 2026-06-20
 - Major architectural refactor: split monolithic files into modular components, hooks, and services.
 - Bot engine modularization: extracted individual bot personalities into separate files for easier contribution and maintenance.
