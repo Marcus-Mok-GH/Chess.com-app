@@ -12,12 +12,9 @@ router.get('/public', async (req, res) => {
     const gameCount = await query('SELECT COUNT(*) FROM games');
 
     res.json({
-      success: true,
-      stats: {
-        totalUsers: parseInt(userCount.rows[0].count, 10),
-        totalGames: parseInt(gameCount.rows[0].count, 10),
-        activePlayers: 0 // Placeholder for real-time tracking
-      }
+      totalUsers: parseInt(userCount.rows[0].count, 10),
+      totalGames: parseInt(gameCount.rows[0].count, 10),
+      livePlayers: 0 // Placeholder for real-time tracking
     });
   } catch (error) {
     console.error('[Stats] Public stats error:', error);

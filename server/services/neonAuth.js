@@ -14,7 +14,11 @@ export const neonAuth = createAuth({
   emailOtp: {
     sendVerificationOtp: async ({ email, otp }) => {
       // In a real app, you would use an email provider like Resend or SendGrid
-      console.log(`[NeonAuth] Sending OTP ${otp} to ${email}`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[NeonAuth] Sending OTP ${otp} to ${email}`);
+      } else {
+        console.log(`[NeonAuth] Sending OTP to ${email}`);
+      }
     },
   },
 });

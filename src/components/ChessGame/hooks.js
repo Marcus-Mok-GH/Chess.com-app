@@ -2,6 +2,10 @@ import { useState, useCallback, useRef, useMemo } from 'react';
 
 export function useCapturedPieces(game) {
   return useMemo(() => {
+    if (!game) {
+      return { w: [], b: [] };
+    }
+
     const initial = { w: { p: 8, n: 2, b: 2, r: 2, q: 1 }, b: { p: 8, n: 2, b: 2, r: 2, q: 1 } };
     const current = { w: { p: 0, n: 0, b: 0, r: 0, q: 0 }, b: { p: 0, n: 0, b: 0, r: 0, q: 0 } };
 

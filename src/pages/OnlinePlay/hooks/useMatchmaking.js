@@ -74,6 +74,14 @@ export function useMatchmaking(user, isLoggedIn, settings) {
     return true;
   }, [isLoggedIn, user]);
 
+  useEffect(() => {
+    return () => {
+      if (searchTimeInterval.current) {
+        clearInterval(searchTimeInterval.current);
+      }
+    };
+  }, []);
+
   return {
     error,
     setError,

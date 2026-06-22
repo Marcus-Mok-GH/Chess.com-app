@@ -25,7 +25,7 @@ import fs from 'fs';
       fs.writeFileSync('online_debug.html', html);
     }
 
-    await page.screenshot({ path: '/home/jules/verification/online_play_final.png' });
+    await page.screenshot({ path: `${process.env.VERIFICATION_OUTPUT_DIR || './verification'}/online_play_final.png` });
   } catch (e) {
     console.error('Online Play navigation failed:', e.message);
   }
@@ -35,17 +35,17 @@ import fs from 'fs';
     await page.goto('http://localhost:5173/play', { waitUntil: 'networkidle' });
     await page.waitForSelector('.setup-container', { timeout: 15000 });
     console.log('Found .setup-container');
-    await page.screenshot({ path: '/home/jules/verification/local_setup_final.png' });
+    await page.screenshot({ path: `${process.env.VERIFICATION_OUTPUT_DIR || './verification'}/local_setup_final.png` });
 
     // Try to click a bot and start
     await page.click('.bot-card:first-child');
     await page.click('.start-game-btn');
     await page.waitForSelector('.chess-board', { timeout: 15000 });
     console.log('Found .chess-board');
-    await page.screenshot({ path: '/home/jules/verification/local_game_final.png' });
+    await page.screenshot({ path: `${process.env.VERIFICATION_OUTPUT_DIR || './verification'}/local_game_final.png` });
   } catch (e) {
     console.error('Local Play failed:', e.message);
-    await page.screenshot({ path: '/home/jules/verification/error_local_final.png' });
+    await page.screenshot({ path: `${process.env.VERIFICATION_OUTPUT_DIR || './verification'}/error_local_final.png` });
   }
 
   await browser.close();

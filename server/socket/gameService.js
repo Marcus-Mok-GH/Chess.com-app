@@ -223,3 +223,12 @@ export class GameService {
     }
   }
 }
+
+let gameServiceInstance = null;
+
+export function getGameService(io) {
+  if (!gameServiceInstance) {
+    gameServiceInstance = new GameService(io);
+  }
+  return gameServiceInstance;
+}

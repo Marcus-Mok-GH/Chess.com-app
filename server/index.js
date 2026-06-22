@@ -87,10 +87,11 @@ const cleanupStaleGames = async () => {
 };
 
 // Run initial check and set up periodic cleanup
-checkDbConnection();
-setInterval(cleanupStaleGames, 1000 * 60 * 30); // Every 30 minutes
-
 const PORT = process.env.PORT || 3001;
-httpServer.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+(async () => {
+  await checkDbConnection();
+  setInterval(cleanupStaleGames, 1000 * 60 * 30); // Every 30 minutes
+  httpServer.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+  });
+})();

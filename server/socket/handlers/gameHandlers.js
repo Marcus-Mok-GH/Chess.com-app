@@ -410,6 +410,16 @@ export function setupGameHandlers(io, socket) {
       return;
     }
 
+    if (!message || typeof message !== 'string') {
+      socket.emit('move_error', { message: 'Invalid message' });
+      return;
+    }
+
+    if (message.length > 500) {
+      socket.emit('move_error', { message: 'Message too long (max 500 characters)' });
+      return;
+    }
+
     const game = await service.getGame(gameId);
 
     if (!game || game.status !== 'playing') {

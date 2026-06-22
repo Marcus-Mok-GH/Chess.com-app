@@ -15,19 +15,19 @@ export const userIdFromPlayerId = (playerId) => {
 
   const parsed = Number(match[1]);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
-};
+};;
 
 export const hasValidEloPair = (game) =>
   typeof game?.white_elo === 'number'
   && Number.isFinite(game.white_elo)
   && typeof game?.black_elo === 'number'
-  && Number.isFinite(game.black_elo);
+  && Number.isFinite(game.black_elo);;
 
 export const buildPlayerMoveHistory = (moveHistory, isWhite) => {
   if (!Array.isArray(moveHistory)) return [];
   const parity = isWhite ? 0 : 1;
   return moveHistory.filter((_, index) => index % 2 === parity);
-};
+};;
 
 export const resolveMatchMoveOwner = (game, socketId, playerId) => {
   if (!game) return { username: null, isWhite: null };
@@ -49,7 +49,7 @@ export const resolveMatchMoveOwner = (game, socketId, playerId) => {
   }
 
   return { username: null, isWhite: null };
-};
+};;
 
 export const verifyPlayerAuth = (socket, game, playerId) => {
   const isWhiteSocket = game.white_socket_id === socket.id;
@@ -59,11 +59,11 @@ export const verifyPlayerAuth = (socket, game, playerId) => {
     return { valid: false, error: 'Unauthorized - not your game' };
   }
 
-  if (isWhiteSocket && game.white_player_id !== playerId) {
+  if (isWhiteSocket && game.white_player_id != null && game.white_player_id !== playerId) {
     return { valid: false, error: 'Player ID mismatch' };
   }
 
-  if (isBlackSocket && game.black_player_id !== playerId) {
+  if (isBlackSocket && game.black_player_id != null && game.black_player_id !== playerId) {
     return { valid: false, error: 'Player ID mismatch' };
   }
 

@@ -240,9 +240,13 @@ export default function OnlinePlay() {
         />
       )}
       {showLoginModal && (
-        <LoginModal 
-          onClose={() => setShowLoginModal(false)}
-          onSuccess={() => { setShowLoginModal(false); handleSelectMode(pendingMode); }}
+        <LoginModal
+          onClose={() => {
+            setShowLoginModal(false);
+            if (pendingMode) {
+              handleSelectMode(pendingMode);
+            }
+          }}
         />
       )}
     </div>
