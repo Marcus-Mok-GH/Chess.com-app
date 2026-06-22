@@ -12,73 +12,16 @@ import DebugPanel from './DebugPanel';
 import AnimatedPiece from './AnimatedPiece';
 import CoachingTip from './CoachingTip';
 import { BOTS, getRandomQuote, createCustomBot } from '../engine/bots/bots';
-import { getCoachingFeedback, explainCoachMove } from '../engine/coach/coachAI';
+import { getCoachingFeedback } from '../engine/coach/coachAI';
 import { generateGameId } from '../engine/game/gameId';
 import { normalizeMoveHistory, toSanHistory, toStoredMoveHistory, buildGameFromHistory } from '../engine/game/moveHistory';
 import { useUser } from '../contexts/UserContext';
 import api from '../services/api';
+
+import { findKingSquare, applyEngineMove, getMoveCoords } from './ChessGame/utils';
+import { useCapturedPieces, usePieceAnimations } from './ChessGame/hooks';
+import GameStatus from './ChessGame/subcomponents/GameStatus';
 import './ChessGame.css';
-
-const UCI_MOVE_REGEX = /^[a-h][1-8][a-h][1-8][qrbn]?$/i;
-
-function findKingSquare(game, color) {
-  const board = game.board();
-  for (let row = 0; row < 8; row++) {
-    for (let col = 0; col < 8; col++) {
-      const piece = board[row][col];
-      if (piece && piece.type === 'k' && piece.color === color) {
-        return String.fromCharCode(97 + col) + (8 - row);
-      }
-
-    }
-  }
-  return null;
-}
-
-function parseEngineMove(move) {
-  if (!move || typeof move !== 'string') return move;
-  const trimmed = move.trim();
-  if (UCI_MOVE_REGEX.test(trimmed)) {
-    return {
-      from: trimmed.slice(0, 2),
-      to: trimmed.slice(2, 4),
-      promotion: trimmed.length > 4 ? trimmed[4].toLowerCase() : undefined,
-    };
-  }
-  return trimmed;
-}
-
-function applyEngineMove(gameInstance, move) {
-  if (!gameInstance || !move) return null;
-  const parsed = parseEngineMove(move);
-  if (typeof parsed === 'string') {
-    return gameInstance.move(parsed);
-  }
-  if (parsed && typeof parsed === 'object') {
-    const moveObj = {
-      from: parsed.from,
-      to: parsed.to,
-      ...(parsed.promotion ? { promotion: parsed.promotion } : {}),
-    };
-    return gameInstance.move(moveObj);
-  }
-  return null;
-}
-
-function getMoveCoords(gameInstance, move) {
-  const parsed = parseEngineMove(move);
-  if (parsed && typeof parsed === 'object') {
-    return { from: parsed.from, to: parsed.to };
-  }
-  if (typeof parsed === 'string') {
-    const tempGame = new Chess(gameInstance.fen());
-    const applied = tempGame.move(parsed);
-    if (applied) {
-      return { from: applied.from, to: applied.to };
-    }
-  }
-  return null;
-}
 
 function ChessGame(
   {
@@ -129,7 +72,6 @@ function ChessGame(
   const [hasLoadedPersistedState, setHasLoadedPersistedState] = useState(false);
   const navigate = useNavigate();
   const [debugInfo, setDebugInfo] = useState(null);
-  const [animatingPieces, setAnimatingPieces] = useState([]);
   const [coachingTip, setCoachingTip] = useState(null);
   const [isCoachingLoading, setIsCoachingLoading] = useState(false);
   const [hasResigned, setHasResigned] = useState(false);
@@ -147,9 +89,11 @@ function ChessGame(
   const engineErrorRef = useRef(false);
   const busyRetryCountRef = useRef(0);
 
-  const animationIdRef = useRef(0);
   const persistTimeoutRef = useRef(null);
   const suppressPersistRef = useRef(false);
+
+  const { animatingPieces, triggerAnimation, removeAnimation } = usePieceAnimations();
+  const capturedPieces = useCapturedPieces(game);
 
   // Define getGameStatus early so it can be used in useEffect
   const getGameStatus = useMemo(() => {
@@ -339,105 +283,6 @@ function ChessGame(
     };
   }, [boardOrientation, game, gameId, hasLoadedPersistedState, initialGameId, isOnline, moveHistory, playerColor, user]);
 
-  // Function to trigger piece animations
-  const triggerAnimation = useCallback((moveData, gameCopy) => {
-    const animations = [];
-    
-    // Handle castling - need to animate both king and rook
-    if (moveData.flags && moveData.flags.includes('k')) {
-      // Kingside castling
-      const kingFrom = moveData.from;
-      const kingTo = moveData.to;
-      const rookFrom = moveData.color === 'w' ? 'h1' : 'h8';
-      const rookTo = moveData.color === 'w' ? 'f1' : 'f8';
-      
-      animations.push({
-        id: animationIdRef.current++,
-        piece: { type: 'k', color: moveData.color },
-        fromSquare: kingFrom,
-        toSquare: kingTo,
-      });
-      
-      animations.push({
-        id: animationIdRef.current++,
-        piece: { type: 'r', color: moveData.color },
-        fromSquare: rookFrom,
-        toSquare: rookTo,
-      });
-    } else if (moveData.flags && moveData.flags.includes('q')) {
-      // Queenside castling
-      const kingFrom = moveData.from;
-      const kingTo = moveData.to;
-      const rookFrom = moveData.color === 'w' ? 'a1' : 'a8';
-      const rookTo = moveData.color === 'w' ? 'd1' : 'd8';
-      
-      animations.push({
-        id: animationIdRef.current++,
-        piece: { type: 'k', color: moveData.color },
-        fromSquare: kingFrom,
-        toSquare: kingTo,
-      });
-      
-      animations.push({
-        id: animationIdRef.current++,
-        piece: { type: 'r', color: moveData.color },
-        fromSquare: rookFrom,
-        toSquare: rookTo,
-      });
-    } else {
-      // Normal move
-      animations.push({
-        id: animationIdRef.current++,
-        piece: { type: moveData.piece, color: moveData.color },
-        fromSquare: moveData.from,
-        toSquare: moveData.to,
-      });
-      
-      // If there's a capture, animate the captured piece disappearing
-      if (moveData.captured) {
-        animations.push({
-          id: animationIdRef.current++,
-          piece: { type: moveData.captured, color: moveData.color === 'w' ? 'b' : 'w' },
-          fromSquare: moveData.to,
-          toSquare: moveData.to,
-          captured: true,
-        });
-      }
-    }
-    
-    setAnimatingPieces(prev => [...prev, ...animations]);
-  }, []);
-
-  const removeAnimation = useCallback((animationId) => {
-    setAnimatingPieces(prev => prev.filter(anim => anim.id !== animationId));
-  }, []);
-
-  // Calculate captured pieces
-  const capturedPieces = useMemo(() => {
-    const initial = { w: { p: 8, n: 2, b: 2, r: 2, q: 1 }, b: { p: 8, n: 2, b: 2, r: 2, q: 1 } };
-    const current = { w: { p: 0, n: 0, b: 0, r: 0, q: 0 }, b: { p: 0, n: 0, b: 0, r: 0, q: 0 } };
-    
-    const board = game.board();
-    for (const row of board) {
-      for (const piece of row) {
-        if (piece && piece.type !== 'k') {
-          current[piece.color][piece.type]++;
-        }
-      }
-    }
-
-    const captured = { w: [], b: [] };
-    for (const color of ['w', 'b']) {
-      for (const piece of ['q', 'r', 'b', 'n', 'p']) {
-        const diff = initial[color][piece] - current[color][piece];
-        for (let i = 0; i < diff; i++) {
-          captured[color].push(piece);
-        }
-      }
-    }
-    return captured;
-  }, [game]);
-
   const makeAIMove = useCallback(async () => {
     if (gameRef.current.isGameOver() || isThinkingRef.current || engineErrorRef.current) return;
 
@@ -466,7 +311,7 @@ function ChessGame(
         debug: settingsRef.current.debugMode,
       });
 
-      const { bestMove, candidates, debugInfo: newDebugInfo } = response;
+      const { bestMove, debugInfo: newDebugInfo } = response;
 
       // Successful response — reset consecutive-failure counter so future isolated
       // timeouts don't accumulate toward the permanent-block threshold.
@@ -806,7 +651,7 @@ function ChessGame(
     setEngineError(null);
     engineErrorRef.current = false;
     busyRetryCountRef.current = 0;
-  }, [gameId, selectedBot]);
+  }, [selectedBot]);
 
   const handleResign = useCallback(() => {
     if (hasResigned || game.isGameOver()) return;
@@ -998,23 +843,7 @@ function ChessGame(
               capturedPieces={capturedPieces[bottomPlayer.color === 'w' ? 'b' : 'w']}
               botMessage={bottomPlayer.isBot ? botMessage : null}
             />
-            {engineError && (
-              <div
-                role="alert"
-                style={{
-                  margin: '8px 0',
-                  padding: '10px 14px',
-                  background: '#3a0000',
-                  border: '1px solid #ff4444',
-                  borderRadius: '6px',
-                  color: '#ff8080',
-                  fontSize: '13px',
-                  lineHeight: '1.4',
-                }}
-              >
-                <strong>⚠️ Engine error:</strong> {engineError}
-              </div>
-            )}
+            <GameStatus engineError={engineError} />
             {settings.debugMode && (
               <DebugPanel debugInfo={debugInfo} isThinking={isThinking} />
             )}

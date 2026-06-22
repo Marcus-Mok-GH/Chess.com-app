@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.0 - 2026-06-20
+- Major architectural refactor: split monolithic files into modular components, hooks, and services.
+- Bot engine modularization: extracted individual bot personalities into separate files for easier contribution and maintenance.
+- Local and Online Play refactoring: deconstructed massive React components into manageable sub-units.
+- Backend deconstruction: decoupled socket handlers, database services, and server configuration.
+- Simplified `server/index.js` and consolidated middleware for improved readability and security.
+- Version 2.0.0 marks a significant milestone in code quality and maintainability.
+
 ## 1.1.74 - 2026-06-15
 - Optimized mobile and desktop UI for a more professional look.
 - Fixed horizontal overflow on the landing page (hero title, stats grid).
