@@ -7,14 +7,15 @@ const router = Router();
 
 // Configurable timeout with buffer for serverless environments
 const getFunctionTimeoutMs = () => {
+  // Vercel's default is usually 10-15s, but we should be safe.
+  // If FUNCTION_TIMEOUT_MS is set (e.g. 12000), we use it with a buffer.
   const envTimeout = parseInt(process.env.FUNCTION_TIMEOUT_MS, 10);
   if (!isNaN(envTimeout) && envTimeout > 0) {
-    // Reserve 20% buffer to respond before platform timeout
-    const buffered = Math.floor(envTimeout * 0.8);
-    const withLowerBound = Math.max(buffered, 1000);
-    return Math.min(withLowerBound, envTimeout);
+    // Reserve 1.5s buffer to respond before platform timeout
+    const buffered = envTimeout - 1500;
+    return Math.max(buffered, 1000);
   }
-  return 5000; // Safe default
+  return 10000; // 10s default is better than 5s for Stockfish cold starts
 };
 
 const TIMEOUT_MS = getFunctionTimeoutMs();
@@ -57,30 +58,66 @@ router.post('/move', async (req, res) => {
 
     const searchParams = getSearchParams(bot);
 
-    const result = await new Promise((resolve, reject) => {
+    const result = await new Promise(async (resolve, reject) => {
       let resolved = false;
 
       const hardAbortTimeout = setTimeout(() => {
         if (!resolved) {
           resolved = true;
           if (engine) {
-            try { engine.terminate(); } catch(e) {}
+            try {
+              if (debug || process.env.VERCEL) console.log('[Engine] Terminating engine due to timeout');
+              engine.terminate();
+            } catch(e) {}
           }
-          reject(new Error('Search timed out'));
+          reject(new Error(`Search timed out after ${TIMEOUT_MS}ms`));
         }
       }, TIMEOUT_MS);
 
       // Use lite-single variant in serverless (no SharedArrayBuffer, faster cold start)
       const engineVariant = process.env.VERCEL ? 'lite-single' : undefined;
-      stockfish(engineVariant).then(eng => {
+      if (debug || process.env.VERCEL) console.log(`[Engine] Initializing Stockfish (${engineVariant || 'default'})...`);
+
+      try {
+        let eng;
+        try {
+          eng = await stockfish(engineVariant);
+        } catch (initialError) {
+          // If we encounter the "INIT_ENGINE is not a function" bug, it's likely due to
+          // Stockfish's internal module caching. In a serverless environment, we may need
+          // to fallback or retry without the variant if it fails.
+          if (debug || process.env.VERCEL) console.warn('[Engine] Initial stockfish() call failed, retrying...', initialError.message);
+
+          try {
+            eng = await stockfish(); // Try default variant
+          } catch (retryError) {
+            // Last resort: If even the retry fails (e.g. Memory object error),
+            // we should throw a more descriptive error.
+            console.error('[Engine] Critical Stockfish initialization failure:', retryError);
+            throw retryError;
+          }
+        }
+
         // Check if already resolved (timed out)
         if (resolved) {
+          if (debug || process.env.VERCEL) console.log('[Engine] Engine initialized but request already timed out/resolved');
           try { eng.terminate(); } catch(e) {}
           return;
         }
         engine = eng;
 
-        eng.onmessage = (line) => {
+        // Shim for different Stockfish API versions in Node.js
+        const sendCommand = (cmd) => {
+          if (typeof eng.postMessage === 'function') {
+            eng.postMessage(cmd);
+          } else if (typeof eng.sendCommand === 'function') {
+            eng.sendCommand(cmd);
+          } else {
+            console.error('[Engine] No command method found on engine object');
+          }
+        };
+
+        const handleMessage = (line) => {
           const trimmed = String(line).trim();
           if (debug) console.log('[Stockfish Output]', trimmed);
 
@@ -115,6 +152,7 @@ router.post('/move', async (req, res) => {
               clearTimeout(hardAbortTimeout);
               const match = trimmed.match(/bestmove ([a-h][1-8][a-h][1-8][qrbnQRBN]?)/);
               if (match) {
+                if (debug || process.env.VERCEL) console.log('[Engine] Found bestmove:', match[1]);
                 resolve({ bestMove: match[1], candidates: collectedMoves });
               } else {
                 reject(new Error('No bestmove found in output: ' + trimmed));
@@ -123,26 +161,36 @@ router.post('/move', async (req, res) => {
           }
         };
 
-        eng.postMessage('setoption name Hash value 16');
-        eng.postMessage('setoption name Threads value 1');
+        // Attach message handler based on API version
+        if (typeof eng.onmessage !== 'undefined' || 'onmessage' in eng) {
+          eng.onmessage = handleMessage;
+        } else {
+          // Some versions use 'print' for output
+          eng.print = handleMessage;
+          eng.printErr = (err) => console.error('[Stockfish Error]', err);
+        }
+
+        sendCommand('setoption name Hash value 16');
+        sendCommand('setoption name Threads value 1');
         if (bot && bot.playStyle) {
           let safeDepth = Number(bot.depth);
           if (isNaN(safeDepth) || safeDepth < 1) safeDepth = 1;
           safeDepth = Math.min(safeDepth, 20);
           const skillLevel = Math.floor((safeDepth || 1) * 3.33);
-          eng.postMessage(`setoption name Skill Level value ${Math.min(20, skillLevel)}`);
+          sendCommand(`setoption name Skill Level value ${Math.min(20, skillLevel)}`);
         }
-        eng.postMessage('uci');
-        eng.postMessage('ucinewgame');
-        eng.postMessage(`position fen ${fen}`);
-        eng.postMessage(searchParams);
-      }).catch(err => {
+        sendCommand('uci');
+        sendCommand('ucinewgame');
+        sendCommand(`position fen ${fen}`);
+        if (debug || process.env.VERCEL) console.log('[Engine] Sending search command:', searchParams);
+        sendCommand(searchParams);
+      } catch (err) {
         if (!resolved) {
           resolved = true;
           clearTimeout(hardAbortTimeout);
           reject(err);
         }
-      });
+      }
     });
 
     if (engine) {

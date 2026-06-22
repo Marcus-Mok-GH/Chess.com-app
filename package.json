@@ -1,6 +1,6 @@
 {
   "name": "react-javascript",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "author": "",
   "description": "React Chess Application with Real-time Multiplayer",
   "keywords": [
@@ -76,7 +76,7 @@
     "recharts": "^3.7.0",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
-    "stockfish": "^18.0.7",
+    "stockfish": "^18.0.8",
     "stockfish.js": "^10.0.2",
     "vercel": "^50.14.0",
     "ws": "^8.19.0"
