@@ -201,7 +201,9 @@ const _neonAuthProxyUrl = (
   process.env.NEON_AUTH_BASE_URL ||
   process.env.NEON_AUTH_URL ||
   process.env.VITE_NEON_AUTH_URL
-)?.replace(/\/+$/, ''); // strip trailing slashes only
+)
+  ?.replace(/\/+$/, '')           // strip trailing slashes
+  ?.replace(/\/api\/auth\/?$/i, ''); // strip /api/auth suffix if accidentally included
 
 if (_neonAuthProxyUrl) {
   console.log('[Server] Neon Auth proxy enabled →', _neonAuthProxyUrl);
