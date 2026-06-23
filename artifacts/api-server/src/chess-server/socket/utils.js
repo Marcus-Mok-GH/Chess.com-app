@@ -3,18 +3,23 @@ export const userIdFromPlayerId = (playerId) => {
     return playerId > 0 ? playerId : null;
   }
 
-  if (typeof playerId !== 'string') return null;
+  if (typeof playerId !== 'string' || !playerId) return null;
 
+  // Numeric string
   if (/^\d+$/.test(playerId)) {
     const parsed = Number(playerId);
     return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
   }
 
+  // Legacy user_<number> format
   const match = playerId.match(/^user_(\d+)(?:_.+)?$/);
-  if (!match) return null;
+  if (match) {
+    const parsed = Number(match[1]);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  }
 
-  const parsed = Number(match[1]);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  // String UUID / any other non-empty string ID — return as-is
+  return playerId;
 };;
 
 export const hasValidEloPair = (game) =>

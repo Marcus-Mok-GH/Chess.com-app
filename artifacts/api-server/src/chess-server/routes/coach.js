@@ -315,7 +315,7 @@ router.post('/analyze', async (req, res) => {
 router.get('/status', (req, res) => {
   const hasApiKey = !!process.env.FIREWORKS_API_KEY;
   res.json({ 
-    available: hasBaseUrl,
+    available: !!FIREWORKS_BASE_URL,
     model: COACH_MODEL,
     provider: 'fireworks',
     endpoint: FIREWORKS_API_URL,
