@@ -1,24 +1,23 @@
+/**
+ * Neon Auth server instance (powered by Better Auth with email OTP).
+ *
+ * Required environment variables:
+ *   NEON_AUTH_BASE_URL — copy from Neon Console → your project → Auth tab.
+ *   DATABASE_URL       — pooled Neon/Postgres connection string.
+ *
+ * Neon Auth includes a built-in shared SMTP provider, so OTP emails are
+ * delivered automatically when NEON_AUTH_BASE_URL is configured — no
+ * external email service required.
+ */
 import { createAuth } from '@neondatabase/auth/server';
-import { Pool } from 'pg';
+import { getPool } from '../db/pool.js';
 
-const isProduction = process.env.NODE_ENV === 'production';
-
-// Use the pooled connection for auth operations
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: isProduction ? { rejectUnauthorized: true } : false,
-});
+const pool = getPool();
 
 export const neonAuth = createAuth({
   db: pool,
-  emailOtp: {
-    sendVerificationOtp: async ({ email, otp }) => {
-      // In a real app, you would use an email provider like Resend or SendGrid
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[NeonAuth] Sending OTP ${otp} to ${email}`);
-      } else {
-        console.log(`[NeonAuth] Sending OTP to ${email}`);
-      }
-    },
-  },
+  // Do NOT override emailOtp.sendVerificationOtp here.
+  // Omitting it lets Neon Auth use its built-in SMTP provider.
+  // If you ever want a custom sender (e.g. Resend, SendGrid),
+  // add it here: emailOtp: { sendVerificationOtp: async ({ email, otp }) => { ... } }
 });
