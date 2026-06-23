@@ -153,6 +153,41 @@ export async function initDatabase() {
           CREATE INDEX IF NOT EXISTS idx_elo_history_user_id ON elo_history(user_id)
         `);
 
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS sessions (
+            id VARCHAR(100) PRIMARY KEY,
+            user_id VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            token VARCHAR(100) UNIQUE NOT NULL,
+            expires_at TIMESTAMP NOT NULL,
+            ip_address VARCHAR(100),
+            user_agent TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+
+        await client.query(`
+          CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token)
+        `);
+
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS otp_codes (
+            id SERIAL PRIMARY KEY,
+            email VARCHAR(255) NOT NULL,
+            code VARCHAR(10) NOT NULL,
+            expires_at TIMESTAMP NOT NULL,
+            used BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+
+        await client.query(`
+          CREATE INDEX IF NOT EXISTS idx_otp_codes_email ON otp_codes(email)
+        `);
+
+        await client.query(`
+          ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)
+        `);
+
         await client.query('COMMIT');
       } catch (error) {
         await client.query('ROLLBACK');
