@@ -32,6 +32,14 @@ export async function sendOtpEmail({ to, code }) {
   const transport = createTransport();
 
   if (!transport) {
+    if (process.env.NODE_ENV === 'production') {
+      // In production, silently sending nothing would confuse users — throw so
+      // the caller returns a clear "Failed to send code" response instead.
+      throw new Error(
+        'SMTP is not configured. Set SMTP_HOST, SMTP_USER, and SMTP_PASS in your Vercel environment variables.'
+      );
+    }
+    // In development: print the code to the console so devs can still test.
     console.log(`\n[OTP] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     console.log(`[OTP]  No SMTP configured — code for ${to}:`);
     console.log(`[OTP]  >>>  ${code}  <<<`);

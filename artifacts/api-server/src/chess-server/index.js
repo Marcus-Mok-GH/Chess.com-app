@@ -7,7 +7,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 import { corsOptions } from './config/cors.js';
-import { neonAuthProxy } from './middleware/authProxy.js';
 import matchmakingRoutes from './routes/matchmaking.js';
 import gameRoutes from './routes/games.js';
 import userRoutes from './routes/users.js';
@@ -42,9 +41,6 @@ app.use('/api/coach', coachRoutes);
 app.use('/api/engine', engineRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/stats', statsRoutes);
-
-// Proxy Neon Auth requests
-app.all('/api/auth/*', neonAuthProxy);
 
 // Health check
 app.get('/health', (req, res) => res.status(200).json({ status: 'ok' }));

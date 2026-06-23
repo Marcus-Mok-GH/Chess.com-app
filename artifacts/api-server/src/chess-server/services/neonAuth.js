@@ -1,23 +1,12 @@
 /**
- * Neon Auth server instance (powered by Better Auth with email OTP).
+ * Neon Auth server — DEPRECATED.
  *
- * Required environment variables:
- *   NEON_AUTH_BASE_URL — copy from Neon Console → your project → Auth tab.
- *   DATABASE_URL       — pooled Neon/Postgres connection string.
+ * The app now uses a custom native OTP flow (routes/auth.js + mailer.js)
+ * instead of @neondatabase/auth. This file is kept as a stub so any
+ * remaining imports don't crash at build time, but it is no longer wired
+ * into the Express router.
  *
- * Neon Auth includes a built-in shared SMTP provider, so OTP emails are
- * delivered automatically when NEON_AUTH_BASE_URL is configured — no
- * external email service required.
+ * The neonAuthProxy middleware (middleware/authProxy.js) has also been
+ * removed from index.js because it is no longer needed.
  */
-import { createAuth } from '@neondatabase/auth/server';
-import { getPool } from '../db/pool.js';
-
-const pool = getPool();
-
-export const neonAuth = createAuth({
-  db: pool,
-  // Do NOT override emailOtp.sendVerificationOtp here.
-  // Omitting it lets Neon Auth use its built-in SMTP provider.
-  // If you ever want a custom sender (e.g. Resend, SendGrid),
-  // add it here: emailOtp: { sendVerificationOtp: async ({ email, otp }) => { ... } }
-});
+export const neonAuth = null;
