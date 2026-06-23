@@ -317,10 +317,10 @@ class SocketService {
     return true;
   }
 
-  endGame(gameId, result, reason) {
+  endGame(gameId, result, reason, playerId) {
     if (!this.socket?.connected) return false;
 
-    this.socket.emit('game_over', { gameId, result, reason });
+    this.socket.emit('game_over', { gameId, result, reason, playerId });
     return true;
   }
 

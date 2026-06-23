@@ -47,7 +47,7 @@ export function useGameCore(gameId, playerId, playerColor, settings) {
         } else if (gameCopy.isStalemate()) {
           reason = 'stalemate';
         }
-        socketService.endGame(gameId, result, reason);
+        socketService.endGame(gameId, result, reason, playerId);
       }
       return true;
     }
