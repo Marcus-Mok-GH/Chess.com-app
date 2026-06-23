@@ -86,12 +86,19 @@ const cleanupStaleGames = async () => {
   }
 };
 
-// Run initial check and set up periodic cleanup
+// In serverless environments (Vercel) the module is imported as a handler —
+// binding a port is unnecessary and will fail silently. Only start the HTTP
+// listener when running as a standalone process.
 const PORT = process.env.PORT || 3001;
-(async () => {
-  await checkDbConnection();
-  setInterval(cleanupStaleGames, 1000 * 60 * 30); // Every 30 minutes
-  httpServer.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-  });
-})();
+if (!process.env.VERCEL) {
+  (async () => {
+    await checkDbConnection();
+    setInterval(cleanupStaleGames, 1000 * 60 * 30); // Every 30 minutes
+    httpServer.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
+  })();
+}
+
+// Export app so api/[...path].js can use it as a Vercel serverless handler.
+export default app;
