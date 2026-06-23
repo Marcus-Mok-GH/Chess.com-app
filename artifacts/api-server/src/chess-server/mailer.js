@@ -32,14 +32,9 @@ export async function sendOtpEmail({ to, code }) {
   const transport = createTransport();
 
   if (!transport) {
-    if (process.env.NODE_ENV === 'production') {
-      // In production, silently sending nothing would confuse users — throw so
-      // the caller returns a clear "Failed to send code" response instead.
-      throw new Error(
-        'SMTP is not configured. Set SMTP_HOST, SMTP_USER, and SMTP_PASS in your Vercel environment variables.'
-      );
-    }
-    // In development: print the code to the console so devs can still test.
+    // No SMTP configured — log the code locally (useful for dev/testing).
+    // OTP emails in production are now sent natively by Neon Auth, so this
+    // path is only hit if sendOtpEmail() is called outside the OTP flow.
     console.log(`\n[OTP] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     console.log(`[OTP]  No SMTP configured — code for ${to}:`);
     console.log(`[OTP]  >>>  ${code}  <<<`);

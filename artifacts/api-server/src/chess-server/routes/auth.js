@@ -6,36 +6,48 @@ import {
   validateSession,
   deleteSession,
 } from '../auth.js';
-import { sendOtpEmail } from '../mailer.js';
 
 const router = express.Router();
 
-const OTP_TTL_MINUTES = 10;
-
-function generateOtp() {
-  return String(Math.floor(100000 + crypto.randomInt(900000))).padStart(6, '0');
+/**
+ * Returns the Neon Auth base URL from environment variables.
+ * Neon's Vercel integration injects NEON_AUTH_BASE_URL automatically when
+ * Auth is enabled on the project (Neon Console → project → Auth tab).
+ */
+function getNeonAuthUrl() {
+  return process.env.NEON_AUTH_BASE_URL || process.env.NEON_AUTH_URL || null;
 }
 
 // POST /api/auth/email-otp/send-verification-otp
-// Called by better-auth/client emailOTPClient — sends a 6-digit code to the given email.
+// Proxies to Neon Auth — Neon generates the OTP and delivers the email natively.
+// No SMTP configuration required; Neon's built-in mail provider handles delivery.
 router.post('/email-otp/send-verification-otp', async (req, res) => {
   const { email } = req.body || {};
   if (!email || typeof email !== 'string') {
     return res.status(400).json({ error: { message: 'Email is required.' } });
   }
 
+  const neonAuthUrl = getNeonAuthUrl();
+  if (!neonAuthUrl) {
+    console.error('[Auth] NEON_AUTH_BASE_URL is not set');
+    return res.status(503).json({
+      error: {
+        message:
+          'Auth service is not configured. Add NEON_AUTH_BASE_URL to your environment variables ' +
+          '(Neon Console → your project → Auth tab → copy the Auth URL).',
+      },
+    });
+  }
+
   try {
-    const code = generateOtp();
-    const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
+    const response = await fetch(`${neonAuthUrl}/email-otp/send-verification-otp`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: email.toLowerCase().trim(), type: 'sign-in' }),
+    });
 
-    await query(
-      `INSERT INTO otp_codes (email, code, expires_at) VALUES ($1, $2, $3)`,
-      [email.toLowerCase().trim(), code, expiresAt]
-    );
-
-    await sendOtpEmail({ to: email, code });
-
-    return res.json({ data: null, error: null });
+    const data = await response.json().catch(() => ({}));
+    return res.status(response.status).json(data);
   } catch (err) {
     console.error('[Auth] send-otp error:', err);
     return res.status(500).json({ error: { message: 'Failed to send code. Please try again.' } });
@@ -43,39 +55,41 @@ router.post('/email-otp/send-verification-otp', async (req, res) => {
 });
 
 // POST /api/auth/sign-in/email-otp
-// Called by better-auth/client signIn.emailOtp — verifies the code and signs the user in.
+// Proxies the OTP check to Neon Auth. On success, upserts the user in the local
+// DB and issues a local session token (keeping the rest of the app's session
+// validation unchanged).
 router.post('/sign-in/email-otp', async (req, res) => {
   const { email, otp, name } = req.body || {};
   if (!email || !otp) {
     return res.status(400).json({ error: { message: 'Email and code are required.' } });
   }
 
+  const neonAuthUrl = getNeonAuthUrl();
+  if (!neonAuthUrl) {
+    console.error('[Auth] NEON_AUTH_BASE_URL is not set');
+    return res.status(503).json({
+      error: { message: 'Auth service is not configured. Set NEON_AUTH_BASE_URL.' },
+    });
+  }
+
   const normalizedEmail = email.toLowerCase().trim();
 
   try {
-    const otpResult = await query(
-      `SELECT id, code, expires_at, used FROM otp_codes
-       WHERE email = $1 AND used = FALSE
-       ORDER BY created_at DESC LIMIT 1`,
-      [normalizedEmail]
-    );
+    // Step 1 — verify the OTP with Neon Auth
+    const neonResponse = await fetch(`${neonAuthUrl}/sign-in/email-otp`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: normalizedEmail, otp }),
+    });
 
-    if (otpResult.rows.length === 0) {
-      return res.status(400).json({ error: { message: 'No active code found. Please request a new one.' } });
+    const neonData = await neonResponse.json().catch(() => ({}));
+
+    if (!neonResponse.ok || neonData.error) {
+      // Forward Neon's error response verbatim so the client sees the real reason
+      return res.status(neonResponse.status).json(neonData);
     }
 
-    const row = otpResult.rows[0];
-
-    if (new Date() > new Date(row.expires_at)) {
-      return res.status(400).json({ error: { message: 'Code has expired. Please request a new one.' } });
-    }
-
-    if (row.code !== String(otp).trim()) {
-      return res.status(400).json({ error: { message: 'Invalid code. Please try again.' } });
-    }
-
-    await query(`UPDATE otp_codes SET used = TRUE WHERE id = $1`, [row.id]);
-
+    // Step 2 — OTP verified; upsert the user in the local DB
     let user;
     const existing = await query(
       `SELECT id, username, elo, games_played, wins, losses, draws, created_at, email FROM users WHERE email = $1`,
@@ -87,7 +101,6 @@ router.post('/sign-in/email-otp', async (req, res) => {
     } else {
       const username = (name || '').trim() || `player_${crypto.randomBytes(4).toString('hex')}`;
       const safeUsername = username.slice(0, 20).replace(/[^a-zA-Z0-9_-]/g, '_');
-
       const finalUsername = await resolveUniqueUsername(safeUsername);
       const newUser = await query(
         `INSERT INTO users (id, username, email) VALUES (gen_random_uuid()::TEXT, $1, $2)
@@ -97,6 +110,7 @@ router.post('/sign-in/email-otp', async (req, res) => {
       user = newUser.rows[0];
     }
 
+    // Step 3 — issue a local session token
     const token = await createSession(user.id, {
       ipAddress: req.ip,
       userAgent: req.headers['user-agent'],
