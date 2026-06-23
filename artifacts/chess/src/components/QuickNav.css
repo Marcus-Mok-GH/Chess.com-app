@@ -1,0 +1,132 @@
+.quick-nav-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 10vh;
+  z-index: 1000;
+}
+
+.quick-nav-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  max-width: 400px;
+  overflow: hidden;
+  animation: quickNavSlideIn 0.2s ease-out;
+}
+
+@keyframes quickNavSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.quick-nav-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f8f9fa;
+}
+
+.quick-nav-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #2c3e50;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.close-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.quick-nav-items {
+  padding: 0.5rem 0;
+}
+
+.quick-nav-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.2s ease;
+}
+
+.quick-nav-item:hover {
+  background: #f0f7ff;
+}
+
+.nav-icon {
+  font-size: 1.25rem;
+  width: 24px;
+  text-align: center;
+}
+
+.nav-title {
+  font-weight: 500;
+  color: #2c3e50;
+  margin-bottom: 0.25rem;
+}
+
+.nav-shortcut {
+  font-size: 0.8rem;
+  color: #666;
+  font-family: monospace;
+  background: #f0f0f0;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+}
+
+.quick-nav-footer {
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid #e0e0e0;
+  background: #f8f9fa;
+  text-align: center;
+}
+
+.quick-nav-footer small {
+  color: #666;
+}
+
+@media (max-width: 480px) {
+  .quick-nav-overlay {
+    padding: 5vh 1rem;
+  }
+  
+  .quick-nav-modal {
+    max-width: none;
+  }
+}

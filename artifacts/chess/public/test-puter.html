@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="shortcut icon" href="/favicon.svg" />
+  <title>Puter.js AI Coach Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+      background: #1a1a1a;
+      color: #e0e0e0;
+    }
+    .container {
+      background: #2b2b2b;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    h1 {
+      color: #fff;
+      margin-bottom: 20px;
+      font-size: 1.8rem;
+    }
+    .status {
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-weight: 500;
+    }
+    .status.loading {
+      background: #2a2a4a;
+      color: #a0a0ff;
+      border: 1px solid #3a3a5a;
+    }
+    .status.ready {
+      background: #2a4a2a;
+      color: #a0ffa0;
+      border: 1px solid #3a5a3a;
+    }
+    .status.error {
+      background: #4a2a2a;
+      color: #ffa0a0;
+      border: 1px solid #5a3a3a;
+    }
+    .test-section {
+      margin-bottom: 25px;
+      padding: 20px;
+      background: #333;
+      border-radius: 8px;
+    }
+    .test-section h3 {
+      margin-top: 0;
+      color: #4a9eff;
+    }
+    textarea {
+      width: 100%;
+      min-height: 120px;
+      background: #1a1a1a;
+      color: #e0e0e0;
+      border: 1px solid #555;
+      border-radius: 6px;
+      padding: 12px;
+      font-family: 'Courier New', monospace;
+      resize: vertical;
+    }
+    button {
+      background: #4a9eff;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    button:hover:not(:disabled) {
+      background: #3a8eef;
+    }
+    button:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+    .response {
+      background: #1a1a1a;
+      border-radius: 6px;
+      padding: 15px;
+      min-height: 150px;
+      white-space: pre-wrap;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #444;
+      border-top: 3px solid #4a9eff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 10px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .info {
+      background: #2a3a4a;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border-left: 4px solid #4a9eff;
+    }
+    .info p {
+      margin: 5px 0;
+    }
+    .move-examples {
+      margin-top: 15px;
+    }
+    .move-examples h4 {
+      margin-bottom: 10px;
+      color: #a0a0ff;
+    }
+    .move-examples p {
+      margin: 5px 0;
+      font-family: 'Courier New', monospace;
+      background: #1a1a1a;
+      padding: 8px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧠 Puter.js AI Coach Test</h1>
+
+    <div id="status" class="status loading">
+      <span class="spinner"></span>
+      Checking Puter.js connection...
+    </div>
+
+    <div class="info">
+      <p><strong>This tool tests the AI coach functionality using Puter.js v2.</strong></p>
+      <p>The AI coach uses Claude Sonnet 4.5 Thinking to analyze chess games.</p>
+      <p>Test with sample chess moves or enter your own game.</p>
+    </div>
+
+    <div class="test-section">
+      <h3>Sample Game Analysis</h3>
+      <p>Test with a sample game (e1e4 e7e5 b1c3 b8c6 f1b5...):</p>
+      <textarea id="sampleMoves" placeholder="Paste your chess moves here...">e2e4 e7e5 g1f3 b8c6 f1c4 g8f6 e2e4 d7d5 e4d5 qd5d1 d2d1b b1c3 d5c6 b2b3 c6b7 f1b5 f8d6 c1e3 o-o o-o e7e5 b5c6 b7c6 d1d8 f6d7 e3d4 e5d4 b3d4 d6d4</textarea>
+      <button onclick="testAnalysis()" id="testBtn" disabled>🔍 Analyze Game</button>
+      <button onclick="clearResponse()">Clear</button>
+      <div id="response" class="response"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>Quick Test</h3>
+      <p>Test basic AI chat functionality:</p>
+      <textarea id="quickTest" placeholder="Enter a quick message to test the AI...">Hello! Can you help me improve my chess game?</textarea>
+      <button onclick="testQuickChat()" id="quickBtn" disabled>💬 Quick Chat Test</button>
+      <button onclick="clearQuickResponse()">Clear</button>
+      <div id="quickResponse" class="response"></div>
+    </div>
+
+    <div class="move-examples">
+      <h4>Sample Move Formats:</h4>
+      <p>e2e4 (algebraic)</p>
+      <p>e4 (short algebraic)</p>
+      <p>Nf3 (piece notation)</p>
+    </div>
+  </div>
+
+  <script src="https://js.puter.com/v2/"></script>
+  <script>
+    let puterReady = false;
+
+    function updateStatus(message, type = 'loading') {
+      const status = document.getElementById('status');
+      status.className = `status ${type}`;
+
+      if (type === 'loading') {
+        status.innerHTML = `<span class="spinner"></span>${message}`;
+      } else {
+        status.textContent = message;
+      }
+    }
+
+    function checkPuter() {
+      if (window.puter && window.puter.ai && window.puter.ai.chat) {
+        puterReady = true;
+        updateStatus('✅ Puter.js is ready! AI coach functionality available.', 'ready');
+        document.getElementById('testBtn').disabled = false;
+        document.getElementById('quickBtn').disabled = false;
+        return true;
+      }
+      return false;
+    }
+
+    // Check periodically for Puter.js
+    function checkPeriodically() {
+      if (!checkPuter()) {
+        setTimeout(checkPeriodically, 1000);
+      }
+    }
+
+    // Test analysis
+    async function testAnalysis() {
+      const moves = document.getElementById('sampleMoves').value;
+      const response = document.getElementById('response');
+
+      if (!moves.trim()) {
+        response.textContent = '❌ Please enter some chess moves to analyze.';
+        return;
+      }
+
+      document.getElementById('testBtn').disabled = true;
+      response.textContent = '🤔 AI is analyzing your game...\n';
+
+      try {
+        const prompt = `You are a chess grandmaster analyzing a game. Analyze this chess game move by move.
+
+Moves played: ${moves}
+
+Provide:
+1. **Opening Analysis**: Identify the opening and evaluate both players' handling
+2. **Critical Moments**: Highlight 3-5 key positions with tactical/strategic insights
+3. **Mistakes & Improvements**: Point out errors and suggest better moves
+4. **Endgame Assessment**: If applicable, evaluate technique
+5. **Overall Verdict**: Who played better and why
+
+Format with clear headers and be concise but insightful.`;
+
+        const result = await window.puter.ai.chat(prompt, {
+          model: 'claude-sonnet-4-5-thinking',
+          stream: true
+        });
+
+        let fullResponse = '';
+        for await (const chunk of result) {
+          if (chunk?.text) {
+            fullResponse += chunk.text;
+            response.textContent = fullResponse;
+          }
+        }
+      } catch (error) {
+        console.error('Analysis error:', error);
+        response.textContent = `❌ Error: ${error.message}`;
+      } finally {
+        document.getElementById('testBtn').disabled = false;
+      }
+    }
+
+    // Test quick chat
+    async function testQuickChat() {
+      const message = document.getElementById('quickTest').value;
+      const response = document.getElementById('quickResponse');
+
+      if (!message.trim()) {
+        response.textContent = '❌ Please enter a message to test.';
+        return;
+      }
+
+      document.getElementById('quickBtn').disabled = true;
+      response.textContent = '🤔 AI is responding...\n';
+
+      try {
+        const result = await window.puter.ai.chat(message, {
+          model: 'claude-sonnet-4-5-thinking',
+          stream: true
+        });
+
+        let fullResponse = '';
+        for await (const chunk of result) {
+          if (chunk?.text) {
+            fullResponse += chunk.text;
+            response.textContent = fullResponse;
+          }
+        }
+      } catch (error) {
+        console.error('Chat error:', error);
+        response.textContent = `❌ Error: ${error.message}`;
+      } finally {
+        document.getElementById('quickBtn').disabled = false;
+      }
+    }
+
+    function clearResponse() {
+      document.getElementById('response').textContent = '';
+    }
+
+    function clearQuickResponse() {
+      document.getElementById('quickResponse').textContent = '';
+    }
+
+    // Start checking
+    checkPeriodically();
+
+    // Also check when Puter loads
+    window.addEventListener('load', () => {
+      setTimeout(checkPeriodically, 1000);
+    });
+  </script>
+</body>
+</html>

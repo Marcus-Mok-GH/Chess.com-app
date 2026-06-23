@@ -1,0 +1,160 @@
+.changelog-page {
+  min-height: 100vh;
+  background: #302e2b;
+  color: #dcddde;
+  padding: 24px;
+}
+
+.changelog-container {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.changelog-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.changelog-header h1 {
+  font-size: 2.1rem;
+  color: #fff;
+  margin: 0 0 8px;
+}
+
+.changelog-header p {
+  margin: 0;
+  color: #b8b8b8;
+}
+
+.changelog-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 24px;
+}
+
+.changelog-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.changelog-version {
+  background: #262421;
+  border: 1px solid #3a3937;
+  border-radius: 10px;
+  padding: 12px 16px;
+  text-align: left;
+  cursor: pointer;
+  color: #dad5d0;
+  transition: all 0.2s;
+}
+
+.changelog-version:hover {
+  border-color: #4a4744;
+  transform: translateY(-1px);
+}
+
+.changelog-version.active {
+  border-color: rgba(129, 182, 76, 0.7);
+  background: rgba(129, 182, 76, 0.15);
+  box-shadow: 0 0 0 1px rgba(129, 182, 76, 0.35);
+}
+
+.version-label {
+  display: block;
+  font-weight: 600;
+  color: #fff;
+}
+
+.version-date {
+  display: block;
+  font-size: 0.8rem;
+  color: #9a9a9a;
+  margin-top: 4px;
+}
+
+.changelog-entries {
+  background: #262421;
+  border: 1px solid #3a3937;
+  border-radius: 12px;
+  padding: 24px 28px;
+}
+
+.changelog-entry header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 1px solid #3a3937;
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+}
+
+.changelog-entry h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  color: #fff;
+}
+
+.changelog-entry header span {
+  color: #9a9a9a;
+}
+
+.changelog-section {
+  margin-bottom: 20px;
+}
+
+.changelog-section:last-child {
+  margin-bottom: 0;
+}
+
+.changelog-section h3 {
+  font-size: 1rem;
+  color: #81b64c;
+  margin: 0 0 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.changelog-section ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #dad5d0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.changelog-section li {
+  line-height: 1.5;
+}
+
+@media (max-width: 800px) {
+  .changelog-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .changelog-sidebar {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .changelog-version {
+    flex: 1 1 150px;
+  }
+}
+
+@media (max-width: 600px) {
+  .changelog-page {
+    padding: 16px;
+  }
+
+  .changelog-entries {
+    padding: 20px;
+  }
+
+  .changelog-entry header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+}

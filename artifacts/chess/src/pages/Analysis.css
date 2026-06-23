@@ -1,0 +1,445 @@
+/* Chess.com-style Game Review / Analysis page */
+
+.analysis-page {
+  min-height: calc(100vh - 56px - 70px);
+  min-height: calc(100dvh - 56px - 70px);
+  background:
+    radial-gradient(circle at 12% -10%, rgba(127, 166, 80, 0.2), transparent 45%),
+    radial-gradient(circle at 88% 8%, rgba(93, 156, 236, 0.16), transparent 40%),
+    linear-gradient(180deg, #17181c 0%, #1b1d22 45%, #141519 100%);
+  display: flex;
+  flex-direction: column;
+  color: #dcddde;
+  flex: 1;
+  /* Ensure visibility - prevent content from collapsing */
+  height: auto;
+  position: relative;
+  overflow: hidden;
+}
+
+.analysis-page::before,
+.analysis-page::after {
+  content: '';
+  position: absolute;
+  width: 420px;
+  height: 420px;
+  border-radius: 999px;
+  pointer-events: none;
+  opacity: 0.45;
+  filter: blur(12px);
+}
+
+.analysis-page::before {
+  top: -200px;
+  right: -160px;
+  background: radial-gradient(circle, rgba(127, 166, 80, 0.28), transparent 65%);
+}
+
+.analysis-page::after {
+  bottom: -240px;
+  left: -180px;
+  background: radial-gradient(circle, rgba(93, 156, 236, 0.22), transparent 70%);
+}
+
+/* Header bar */
+.analysis-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: rgba(26, 27, 31, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+  backdrop-filter: blur(12px);
+}
+
+.analysis-back {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #dcddde;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 44px;
+}
+
+.analysis-back:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.analysis-title {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 400;
+  font-family: var(--font-display);
+  color: #fff;
+  letter-spacing: 0.01em;
+}
+
+.analysis-game-id {
+  font-weight: 600;
+  color: #81b64c;
+  letter-spacing: 0.04em;
+}
+
+.analysis-header-spacer {
+  width: 72px;
+}
+
+/* Empty state */
+.analysis-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.analysis-empty-card {
+  background: rgba(28, 30, 35, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 32px;
+  max-width: 420px;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(12px);
+}
+
+.analysis-empty-card h2 {
+  margin: 0 0 12px;
+  font-size: 1.35rem;
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 400;
+}
+
+.analysis-empty-card p {
+  margin: 0 0 24px;
+  color: #b8b8b8;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+/* Main layout: board left, panel right */
+.analysis-layout {
+  flex: 1;
+  display: flex;
+  gap: 0;
+  min-height: 300px;
+  overflow: visible;
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 900px) {
+  .analysis-layout {
+    flex-direction: column;
+  }
+}
+
+.analysis-board-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: transparent;
+  min-width: 0;
+  flex: 1;
+}
+
+.analysis-board-wrap {
+  width: 100%;
+  /* Use dvh when available (accounts for mobile browser chrome); fall back to vh */
+  max-width: min(calc(100svh - 180px), 560px);
+  min-width: 260px;
+  min-height: 260px;
+  aspect-ratio: 1;
+  max-height: min(calc(100svh - 180px), 560px);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.analysis-board-wrap .chess-board {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.analysis-board-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.analysis-move-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.analysis-move-label {
+  font-size: 0.875rem;
+  color: #b0b0b0;
+  min-width: 64px;
+  text-align: center;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.8125rem;
+  min-height: 44px; /* WCAG touch target */
+}
+
+/* Right panel - tabs + content */
+.analysis-panel {
+  width: 400px;
+  min-width: 320px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  background: rgba(24, 25, 29, 0.96);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  backdrop-filter: blur(12px);
+}
+
+@media (max-width: 900px) {
+  .analysis-panel {
+    width: 100%;
+    min-width: 0;
+    border-left: none;
+    border-top: 1px solid rgba(0, 0, 0, 0.2);
+  }
+}
+
+.analysis-tabs {
+  display: flex;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.analysis-tab {
+  flex: 1;
+  padding: 14px 16px;
+  background: transparent;
+  border: none;
+  color: #a4a4a4;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.analysis-tab:hover {
+  color: #dcddde;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.analysis-tab.active {
+  color: var(--color-accent-primary);
+  background: transparent;
+  border-bottom: 2px solid var(--color-accent-primary);
+  margin-bottom: -1px;
+}
+
+.analysis-tab-content {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+}
+
+.analysis-panel-loading {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #b0b0b0;
+  font-size: 0.875rem;
+}
+
+/* Report pane - AI coach */
+.analysis-report-pane {
+  height: 100%;
+  min-height: 280px;
+}
+
+.analysis-report-pane .analysis-inline {
+  padding: 0;
+}
+
+/* Moves list */
+.analysis-moves-pane {
+  padding: 0 8px 16px;
+}
+
+.analysis-moves-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.analysis-move-row {
+  display: grid;
+  grid-template-columns: 28px 1fr 1fr;
+  gap: 4px;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+.analysis-move-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.analysis-move-num {
+  font-size: 0.8125rem;
+  color: #7a7775;
+  user-select: none;
+}
+
+.analysis-move {
+  background: transparent;
+  border: none;
+  color: #dcddde;
+  font-size: 0.9375rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.analysis-move.white {
+  color: #e8e8e8;
+}
+
+.analysis-move.black {
+  color: #b0b0b0;
+}
+
+.analysis-move:hover:not(:disabled) {
+  background: rgba(129, 182, 76, 0.2);
+  color: #fff;
+}
+
+.analysis-move.active {
+  background: rgba(129, 182, 76, 0.35);
+  color: #fff;
+  font-weight: 600;
+}
+
+.analysis-move:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.no-moves {
+  color: #7a7775;
+  font-size: 0.9375rem;
+  margin: 0;
+  padding: 16px 0;
+}
+
+@media (max-width: 900px) {
+  .analysis-header-bar {
+    padding: 10px 16px;
+  }
+
+  .analysis-title {
+    font-size: 1.2rem;
+  }
+
+  .analysis-board-section {
+    padding: 20px 16px 12px;
+  }
+
+  .analysis-board-wrap {
+    max-width: min(92vw, 560px);
+    min-width: 240px;
+  }
+
+  .analysis-panel {
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+}
+
+@media (max-width: 600px) {
+  .analysis-header-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .analysis-back {
+    flex: 1 1 120px;
+  }
+
+  .analysis-title {
+    flex: 1 1 100%;
+    text-align: center;
+  }
+
+  .analysis-header-spacer {
+    display: none;
+  }
+
+  .analysis-board-actions {
+    gap: 10px;
+  }
+
+  .analysis-move-nav {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .analysis-tab {
+    padding: 12px 10px;
+    font-size: 0.875rem;
+    min-height: 44px;
+  }
+
+  .analysis-move-row {
+    grid-template-columns: 24px 1fr 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .analysis-board-wrap {
+    max-width: min(94vw, 420px);
+    min-width: 240px;
+  }
+
+  .analysis-board-section {
+    padding: 12px 10px;
+  }
+
+  .analysis-move-row {
+    grid-template-columns: 20px 1fr 1fr;
+    font-size: 0.8125rem;
+  }
+
+  .analysis-title {
+    font-size: 1rem;
+  }
+
+  .btn-sm {
+    padding: 8px 10px;
+    font-size: 0.8125rem;
+  }
+}

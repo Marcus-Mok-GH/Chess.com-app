@@ -1,0 +1,253 @@
+.analysis-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(12, 13, 16, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(6px);
+}
+
+.analysis-modal {
+  background: rgba(28, 30, 35, 0.96);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 700px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(14px);
+}
+
+.analysis-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.analysis-header h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 1.6rem;
+  font-weight: 400;
+  font-family: var(--font-display);
+}
+
+.analysis-content {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.analysis-start {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.analysis-start p {
+  color: #ccc;
+  margin-bottom: 20px;
+  font-size: 1.1rem;
+}
+
+.analysis-loading {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.spinner {
+  border: 4px solid #444;
+  border-top: 4px solid #4a9eff;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.analysis-loading p {
+  color: #ccc;
+}
+
+.analysis-result {
+  color: #e0e0e0;
+  line-height: 1.6;
+}
+
+.analysis-summary {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: var(--font-sans);
+  margin: 0 0 12px;
+  padding: 12px 15px;
+  background: rgba(17, 18, 22, 0.9);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.analysis-text {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: var(--font-sans);
+  margin: 0;
+  padding: 15px;
+  background: rgba(17, 18, 22, 0.9);
+  border-radius: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.analysis-move-reviews {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding: 12px;
+  background: rgba(17, 18, 22, 0.9);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.analysis-move-review {
+  background: rgba(28, 30, 35, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.analysis-move-review-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  color: #f0f0f0;
+}
+
+.analysis-move-review-color {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #9aa7ff;
+}
+
+.analysis-move-review-color::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+  border: 1px solid #555;
+  background: #f4f4f4;
+}
+
+.analysis-move-review-color.black {
+  color: #c7c7c7;
+}
+
+.analysis-move-review-color.black::before {
+  background: #1a1a1a;
+}
+
+.analysis-move-review-san {
+  font-family: 'SFMono-Regular', 'Menlo', 'Consolas', monospace;
+  font-size: 0.95rem;
+  padding: 2px 8px;
+  background: rgba(45, 46, 50, 0.9);
+  border-radius: 6px;
+  color: #fff;
+}
+
+.analysis-move-review-text {
+  margin: 8px 0 0;
+  color: #d6d6d6;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.model-selector {
+  margin-bottom: 20px;
+}
+
+.model-selector label {
+  display: block;
+  color: #aaa;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.model-selector select {
+  background: rgba(45, 46, 50, 0.9);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 10px 15px;
+  font-size: 1rem;
+  cursor: pointer;
+  min-width: 200px;
+}
+
+.model-selector select:hover {
+  border-color: #4a9eff;
+}
+
+.coach-note,
+.puter-note {
+  font-size: 0.8rem;
+  color: var(--neutral-600);
+  margin-top: var(--space-4);
+}
+
+.btn-secondary {
+  background: rgba(45, 46, 50, 0.9);
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 15px;
+  font-size: 0.9rem;
+}
+
+.btn-secondary:hover {
+  background: var(--neutral-700);
+}
+
+@media (max-width: 600px) {
+  .analysis-modal {
+    width: 94%;
+    max-height: 86vh;
+  }
+
+  .analysis-header {
+    padding: 16px;
+  }
+
+  .analysis-header h3 {
+    font-size: 1.3rem;
+  }
+
+  .analysis-content {
+    padding: 16px;
+  }
+}
+
+/* Inline variant (inside Analysis page) */
+.analysis-inline {
+  min-height: 200px;
+}
