@@ -1,0 +1,5 @@
+{
+  "installCommand": "pnpm install --frozen-lockfile --ignore-scripts",
+  "buildCommand": "pnpm run typecheck && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/chess run build && cp -r artifacts/chess/dist/public ./dist",
+  "outputDirectory": "dist"
+}
