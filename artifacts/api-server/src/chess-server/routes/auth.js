@@ -10,12 +10,20 @@ import {
 const router = express.Router();
 
 /**
- * Returns the Neon Auth base URL from environment variables.
+ * Returns the normalized Neon Auth base URL.
  * Neon's Vercel integration injects NEON_AUTH_BASE_URL automatically when
  * Auth is enabled on the project (Neon Console → project → Auth tab).
+ *
+ * Tolerates values with or without a trailing /api/auth or trailing slash,
+ * since different Neon/Vercel configurations have shipped both.
  */
 function getNeonAuthUrl() {
-  return process.env.NEON_AUTH_BASE_URL || process.env.NEON_AUTH_URL || null;
+  const raw = process.env.NEON_AUTH_BASE_URL || process.env.NEON_AUTH_URL;
+  if (!raw) return null;
+  let url = raw.trim().replace(/\/+$/, '');
+  // Strip a duplicated sub-path if the env var was set to include it.
+  url = url.replace(/\/(api\/auth|email-otp\/send-verification-otp|sign-in\/email-otp)\/?$/i, '');
+  return url;
 }
 
 // POST /api/auth/email-otp/send-verification-otp
@@ -39,17 +47,32 @@ router.post('/email-otp/send-verification-otp', async (req, res) => {
     });
   }
 
+  const upstreamUrl = `${neonAuthUrl}/email-otp/send-verification-otp`;
   try {
-    const response = await fetch(`${neonAuthUrl}/email-otp/send-verification-otp`, {
+    const response = await fetch(upstreamUrl, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        origin: req.headers.origin || `https://${req.headers.host}`,
+      },
       body: JSON.stringify({ email: email.toLowerCase().trim(), type: 'sign-in' }),
     });
 
-    const data = await response.json().catch(() => ({}));
+    const text = await response.text();
+    let data;
+    try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
+
+    if (!response.ok) {
+      console.error(
+        `[Auth] send-otp upstream ${response.status} for ${email} → ${upstreamUrl}`,
+        { status: response.status, body: data }
+      );
+      return res.status(response.status).json(data);
+    }
+
     return res.status(response.status).json(data);
   } catch (err) {
-    console.error('[Auth] send-otp error:', err);
+    console.error('[Auth] send-otp error:', err, { upstreamUrl });
     return res.status(500).json({ error: { message: 'Failed to send code. Please try again.' } });
   }
 });
@@ -74,17 +97,27 @@ router.post('/sign-in/email-otp', async (req, res) => {
 
   const normalizedEmail = email.toLowerCase().trim();
 
+  const upstreamUrl = `${neonAuthUrl}/sign-in/email-otp`;
   try {
     // Step 1 — verify the OTP with Neon Auth
-    const neonResponse = await fetch(`${neonAuthUrl}/sign-in/email-otp`, {
+    const neonResponse = await fetch(upstreamUrl, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        origin: req.headers.origin || `https://${req.headers.host}`,
+      },
       body: JSON.stringify({ email: normalizedEmail, otp }),
     });
 
-    const neonData = await neonResponse.json().catch(() => ({}));
+    const text = await neonResponse.text();
+    let neonData;
+    try { neonData = text ? JSON.parse(text) : {}; } catch { neonData = { raw: text }; }
 
     if (!neonResponse.ok || neonData.error) {
+      console.error(
+        `[Auth] sign-in/email-otp upstream ${neonResponse.status} for ${normalizedEmail} → ${upstreamUrl}`,
+        { status: neonResponse.status, body: neonData }
+      );
       // Forward Neon's error response verbatim so the client sees the real reason
       return res.status(neonResponse.status).json(neonData);
     }
