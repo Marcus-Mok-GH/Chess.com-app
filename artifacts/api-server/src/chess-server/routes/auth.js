@@ -9,21 +9,58 @@ import {
 
 const router = express.Router();
 
+// HTTP timeout for any upstream Neon Auth call. Vercel serverless functions
+// have a hard execution ceiling; bound the upstream call so we don't waste it.
+const UPSTREAM_TIMEOUT_MS = 8000;
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const OTP_RE = /^\d{4,8}$/;
+
+// Mask an email so logs don't leak PII. Keeps the domain for debugging.
+//   alice@example.com -> a***@example.com
+function maskEmail(email) {
+  if (typeof email !== 'string') return '<invalid>';
+  const at = email.indexOf('@');
+  if (at < 1) return '<invalid>';
+  const local = email.slice(0, at);
+  const domain = email.slice(at);
+  return `${local[0]}***${domain}`;
+}
+
 /**
  * Returns the normalized Neon Auth base URL.
  * Neon's Vercel integration injects NEON_AUTH_BASE_URL automatically when
  * Auth is enabled on the project (Neon Console → project → Auth tab).
  *
- * Tolerates values with or without a trailing /api/auth or trailing slash,
- * since different Neon/Vercel configurations have shipped both.
+ * Tolerates values with or without any combination of trailing:
+ *   /api/auth
+ *   /email-otp/send-verification-otp
+ *   /sign-in/email-otp
+ * Different Neon/Vercel configurations have shipped all of these suffixes
+ * (sometimes stacked). We strip them in a loop until none remain.
  */
 function getNeonAuthUrl() {
   const raw = process.env.NEON_AUTH_BASE_URL || process.env.NEON_AUTH_URL;
   if (!raw) return null;
+
   let url = raw.trim().replace(/\/+$/, '');
-  // Strip a duplicated sub-path if the env var was set to include it.
-  url = url.replace(/\/(api\/auth|email-otp\/send-verification-otp|sign-in\/email-otp)\/?$/i, '');
+
+  // Tail patterns to strip (case-insensitive, can stack).
+  const tailRe = /\/(api\/auth|email-otp\/send-verification-otp|sign-in\/email-otp)\/?$/i;
+
+  // Strip repeatedly until stable (handles paths like
+  // ".../neondb/auth/api/auth/email-otp/send-verification-otp").
+  let prev;
+  do {
+    prev = url;
+    url = url.replace(tailRe, '');
+  } while (url !== prev);
+
   return url;
+}
+
+async function fetchWithTimeout(url, init) {
+  return fetch(url, { ...init, signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS) });
 }
 
 // POST /api/auth/email-otp/send-verification-otp
@@ -31,8 +68,8 @@ function getNeonAuthUrl() {
 // No SMTP configuration required; Neon's built-in mail provider handles delivery.
 router.post('/email-otp/send-verification-otp', async (req, res) => {
   const { email } = req.body || {};
-  if (!email || typeof email !== 'string') {
-    return res.status(400).json({ error: { message: 'Email is required.' } });
+  if (typeof email !== 'string' || !EMAIL_RE.test(email.trim())) {
+    return res.status(400).json({ error: { message: 'A valid email is required.' } });
   }
 
   const neonAuthUrl = getNeonAuthUrl();
@@ -47,33 +84,39 @@ router.post('/email-otp/send-verification-otp', async (req, res) => {
     });
   }
 
+  const normalizedEmail = email.toLowerCase().trim();
   const upstreamUrl = `${neonAuthUrl}/email-otp/send-verification-otp`;
+
   try {
-    const response = await fetch(upstreamUrl, {
+    const response = await fetchWithTimeout(upstreamUrl, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
         origin: req.headers.origin || `https://${req.headers.host}`,
       },
-      body: JSON.stringify({ email: email.toLowerCase().trim(), type: 'sign-in' }),
+      body: JSON.stringify({ email: normalizedEmail, type: 'sign-in' }),
     });
 
     const text = await response.text();
     let data;
-    try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
+    try { data = text ? JSON.parse(text) : {}; } catch { data = {}; }
 
     if (!response.ok) {
       console.error(
-        `[Auth] send-otp upstream ${response.status} for ${email} → ${upstreamUrl}`,
-        { status: response.status, body: data }
+        `[Auth] send-otp upstream ${response.status} (${maskEmail(normalizedEmail)})`
       );
       return res.status(response.status).json(data);
     }
 
     return res.status(response.status).json(data);
   } catch (err) {
-    console.error('[Auth] send-otp error:', err, { upstreamUrl });
-    return res.status(500).json({ error: { message: 'Failed to send code. Please try again.' } });
+    const timedOut = err?.name === 'TimeoutError' || err?.name === 'AbortError';
+    console.error(
+      `[Auth] send-otp ${timedOut ? 'timeout' : 'error'} (${maskEmail(normalizedEmail)})`
+    );
+    return res.status(timedOut ? 504 : 500).json({
+      error: { message: timedOut ? 'Auth provider timed out. Please try again.' : 'Failed to send code. Please try again.' },
+    });
   }
 });
 
@@ -83,8 +126,12 @@ router.post('/email-otp/send-verification-otp', async (req, res) => {
 // validation unchanged).
 router.post('/sign-in/email-otp', async (req, res) => {
   const { email, otp, name } = req.body || {};
-  if (!email || !otp) {
-    return res.status(400).json({ error: { message: 'Email and code are required.' } });
+
+  if (typeof email !== 'string' || !EMAIL_RE.test(email.trim())) {
+    return res.status(400).json({ error: { message: 'A valid email is required.' } });
+  }
+  if (typeof otp !== 'string' || !OTP_RE.test(otp.trim())) {
+    return res.status(400).json({ error: { message: 'A valid code is required.' } });
   }
 
   const neonAuthUrl = getNeonAuthUrl();
@@ -96,29 +143,28 @@ router.post('/sign-in/email-otp', async (req, res) => {
   }
 
   const normalizedEmail = email.toLowerCase().trim();
-
+  const normalizedOtp = otp.trim();
   const upstreamUrl = `${neonAuthUrl}/sign-in/email-otp`;
+
   try {
     // Step 1 — verify the OTP with Neon Auth
-    const neonResponse = await fetch(upstreamUrl, {
+    const neonResponse = await fetchWithTimeout(upstreamUrl, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
         origin: req.headers.origin || `https://${req.headers.host}`,
       },
-      body: JSON.stringify({ email: normalizedEmail, otp }),
+      body: JSON.stringify({ email: normalizedEmail, otp: normalizedOtp }),
     });
 
     const text = await neonResponse.text();
     let neonData;
-    try { neonData = text ? JSON.parse(text) : {}; } catch { neonData = { raw: text }; }
+    try { neonData = text ? JSON.parse(text) : {}; } catch { neonData = {}; }
 
     if (!neonResponse.ok || neonData.error) {
       console.error(
-        `[Auth] sign-in/email-otp upstream ${neonResponse.status} for ${normalizedEmail} → ${upstreamUrl}`,
-        { status: neonResponse.status, body: neonData }
+        `[Auth] sign-in/email-otp upstream ${neonResponse.status} (${maskEmail(normalizedEmail)})`
       );
-      // Forward Neon's error response verbatim so the client sees the real reason
       return res.status(neonResponse.status).json(neonData);
     }
 
@@ -168,8 +214,13 @@ router.post('/sign-in/email-otp', async (req, res) => {
       error: null,
     });
   } catch (err) {
-    console.error('[Auth] sign-in/email-otp error:', err);
-    return res.status(500).json({ error: { message: 'Sign-in failed. Please try again.' } });
+    const timedOut = err?.name === 'TimeoutError' || err?.name === 'AbortError';
+    console.error(
+      `[Auth] sign-in/email-otp ${timedOut ? 'timeout' : 'error'} (${maskEmail(normalizedEmail)})`
+    );
+    return res.status(timedOut ? 504 : 500).json({
+      error: { message: timedOut ? 'Auth provider timed out. Please try again.' : 'Sign-in failed. Please try again.' },
+    });
   }
 });
 
@@ -238,7 +289,7 @@ router.get('/session', async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('[Auth] session error:', error);
+    console.error('[Auth] session error');
     res.json({ session: null, user: null });
   }
 });
