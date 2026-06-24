@@ -1,0 +1,4 @@
+{
+  "installCommand": "pnpm install --frozen-lockfile --ignore-scripts",
+  "buildCommand": "pnpm run build"
+}
