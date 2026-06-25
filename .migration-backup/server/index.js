@@ -30,8 +30,23 @@ const io = new Server(httpServer, {
   cors: corsOptions,
 });
 
-// Middleware
+// CORS — must come first so preflight OPTIONS requests are handled.
 app.use(cors(corsOptions));
+
+// Custom auth sub-routes (GET /session, POST /signout).
+// These are header-based and don't need a parsed body, so they're safe
+// to register before express.json().  Requests that don't match either
+// route (e.g. OTP endpoints) fall through to neonAuthProxy below.
+app.use('/api/auth', authRoutes);
+
+// Better Auth / Neon Auth catch-all.
+// Per the Better Auth docs, this MUST be mounted before express.json().
+// express.json() consumes the raw body stream; if it runs first, Better Auth's
+// toNodeHandler finds an empty stream and the auth client hangs on "pending".
+app.all('/api/auth/*', neonAuthProxy);
+
+// Body parsing for all remaining routes — safe here because Better Auth
+// has already handled (and short-circuited) any /api/auth/* requests above.
 app.use(express.json());
 
 // Routes
@@ -40,11 +55,7 @@ app.use('/api/games', gameRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/coach', coachRoutes);
 app.use('/api/engine', engineRoutes);
-app.use('/api/auth', authRoutes);
 app.use('/api/stats', statsRoutes);
-
-// Proxy Neon Auth requests
-app.all('/api/auth/*', neonAuthProxy);
 
 // Health check
 app.get('/health', (req, res) => res.status(200).json({ status: 'ok' }));
