@@ -1,5 +1,6 @@
 import express from 'express';
 import { query } from '../db.js';
+import { getPool } from '../db/pool.js';
 import crypto from 'crypto';
 import { errorResponse, handleRouteError } from '../middleware/errors.js';
 
@@ -17,51 +18,68 @@ function generateGameCode() {
  * POST /api/users/:username/elo endpoint has been removed to prevent
  * unauthenticated rating manipulation.
  *
- * An idempotency guard on elo_history.game_code ensures autosave retries
- * and duplicate requests don't double-count a game.
+ * An idempotency guard on elo_history(user_id, game_code) ensures autosave retries
+ * and duplicate requests don't double-count a game. The unique constraint and
+ * ON CONFLICT DO NOTHING make the insert atomic, preventing race conditions.
  */
 async function computeAndApplyElo(userId, gameCode, gameResult, opponentElo, gameMode) {
   if (!['win', 'loss', 'draw'].includes(gameResult)) return;
 
-  const existing = await query(
-    'SELECT id FROM elo_history WHERE user_id = $1 AND game_code = $2 LIMIT 1',
-    [userId, gameCode]
-  );
-  if (existing.rows.length > 0) return;
+  const pool = getPool();
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
 
-  const userResult = await query(
-    'SELECT id, elo, games_played, wins, losses, draws FROM users WHERE id = $1',
-    [userId]
-  );
-  if (userResult.rows.length === 0) return;
+    const userResult = await client.query(
+      'SELECT id, elo, games_played, wins, losses, draws FROM users WHERE id = $1',
+      [userId]
+    );
+    if (userResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return;
+    }
 
-  const user = userResult.rows[0];
-  const K = 32;
-  const oppElo = typeof opponentElo === 'number' ? opponentElo : 1200;
-  const expected = 1 / (1 + Math.pow(10, (oppElo - user.elo) / 400));
-  const actual = gameResult === 'win' ? 1 : gameResult === 'draw' ? 0.5 : 0;
-  const newElo = Math.round(user.elo + K * (actual - expected));
+    const user = userResult.rows[0];
+    const K = 32;
+    const oppElo = typeof opponentElo === 'number' ? opponentElo : 1200;
+    const expected = 1 / (1 + Math.pow(10, (oppElo - user.elo) / 400));
+    const actual = gameResult === 'win' ? 1 : gameResult === 'draw' ? 0.5 : 0;
+    const newElo = Math.round(user.elo + K * (actual - expected));
 
-  const wins   = user.wins   + (gameResult === 'win'  ? 1 : 0);
-  const losses = user.losses + (gameResult === 'loss' ? 1 : 0);
-  const draws  = user.draws  + (gameResult === 'draw' ? 1 : 0);
-  const played = user.games_played + 1;
+    const wins   = user.wins   + (gameResult === 'win'  ? 1 : 0);
+    const losses = user.losses + (gameResult === 'loss' ? 1 : 0);
+    const draws  = user.draws  + (gameResult === 'draw' ? 1 : 0);
+    const played = user.games_played + 1;
 
-  await query(
-    `UPDATE users
-     SET elo = $1, games_played = $2, wins = $3, losses = $4, draws = $5,
-         updated_at = CURRENT_TIMESTAMP
-     WHERE id = $6`,
-    [newElo, played, wins, losses, draws, user.id]
-  );
+    const historyInsert = await client.query(
+      `INSERT INTO elo_history (user_id, elo, change, game_code, game_mode, opponent_elo, result)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (user_id, game_code) DO NOTHING
+       RETURNING id`,
+      [user.id, newElo, newElo - user.elo, gameCode, gameMode, oppElo, gameResult]
+    );
 
-  await query(
-    `INSERT INTO elo_history (user_id, elo, change, game_code, game_mode, opponent_elo, result)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [user.id, newElo, newElo - user.elo, gameCode, gameMode, oppElo, gameResult]
-  );
+    if (historyInsert.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return;
+    }
 
-  console.log(`[ELO] ${user.id} ${user.elo} → ${newElo} (${gameResult}, game ${gameCode})`);
+    await client.query(
+      `UPDATE users
+       SET elo = $1, games_played = $2, wins = $3, losses = $4, draws = $5,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $6`,
+      [newElo, played, wins, losses, draws, user.id]
+    );
+
+    await client.query('COMMIT');
+    console.log(`[ELO] ${user.id} ${user.elo} → ${newElo} (${gameResult}, game ${gameCode})`);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 // Save game result
@@ -285,7 +303,7 @@ router.post('/online/leave', async (req, res) => {
 router.get('/history/:username', async (req, res) => {
   try {
     const { username } = req.params;
-    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+    const limit = Math.max(1, Math.min(parseInt(req.query.limit) || 20, 100));
     const result = await query(
       `SELECT game_code, result, fen, move_history, game_mode, created_at
        FROM games WHERE white_player_name = $1 OR black_player_name = $1

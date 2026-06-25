@@ -7,6 +7,9 @@ const router = express.Router();
 // Login/Register
 router.post('/login', async (req, res) => {
   try {
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+      return errorResponse(res, 400, 'Invalid request body');
+    }
     const { username } = req.body;
     if (!username || typeof username !== 'string') return errorResponse(res, 400, 'Username is required');
     const trimmedUsername = username.trim();
@@ -90,9 +93,14 @@ router.get('/:username/settings', async (req, res) => {
 // Update user settings
 router.post('/:username/settings', async (req, res) => {
   try {
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+      return errorResponse(res, 400, 'Invalid request body');
+    }
     const { username } = req.params;
     const { settings } = req.body;
-    if (!settings || typeof settings !== 'object') return errorResponse(res, 400, 'Settings payload is required');
+    if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+      return errorResponse(res, 400, 'Settings payload is required');
+    }
     const userResult = await query('SELECT id FROM users WHERE LOWER(username) = LOWER($1)', [username]);
     if (userResult.rows.length === 0) return errorResponse(res, 404, 'User not found');
     await query(
@@ -129,7 +137,7 @@ router.get('/:username', async (req, res) => {
 // Get leaderboard
 router.get('/leaderboard/top', async (req, res) => {
   try {
-    const limit = Math.min(parseInt(req.query.limit) || 10, 100);
+    const limit = Math.max(1, Math.min(parseInt(req.query.limit) || 10, 100));
     const result = await query(
       'SELECT username, elo, games_played, wins, losses, draws FROM users ORDER BY elo DESC LIMIT $1',
       [limit]
@@ -149,7 +157,7 @@ router.get('/leaderboard/top', async (req, res) => {
 router.get('/:username/elo-history', async (req, res) => {
   try {
     const { username } = req.params;
-    const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+    const limit = Math.max(1, Math.min(parseInt(req.query.limit) || 100, 500));
     const result = await query(
       `SELECT eh.elo, eh.change, eh.game_code, eh.game_mode, eh.opponent_elo, eh.result, eh.created_at
        FROM elo_history eh
