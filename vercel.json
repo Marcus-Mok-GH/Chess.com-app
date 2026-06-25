@@ -1,5 +1,16 @@
 {
   "installCommand": "pnpm install --frozen-lockfile --ignore-scripts",
   "buildCommand": "pnpm run typecheck && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/chess run build && cp -r artifacts/chess/dist/public ./dist",
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "functions": {
+    "api/[...path].js": {
+      "includeFiles": "{artifacts/api-server/src/**,node_modules/stockfish/bin/stockfish-18-lite-single.js,node_modules/stockfish/bin/stockfish-18-lite-single.wasm}",
+      "maxDuration": 15
+    }
+  },
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/[...path]" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
 }
