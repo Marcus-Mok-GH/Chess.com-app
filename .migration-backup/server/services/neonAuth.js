@@ -21,13 +21,15 @@ const pool = getPool();
 // so every request fails the CSRF check with a 403 unless we explicitly list the
 // app's origin here.
 //
-// Vercel injects two relevant system env vars automatically (no setup needed):
-//   VERCEL_URL                  — current deployment URL (changes on every preview deploy)
+// Vercel injects these system env vars automatically (no manual setup needed):
+//   VERCEL_URL                    — per-commit preview URL (changes every deploy)
+//   VERCEL_BRANCH_URL             — per-branch URL (stable across commits on the same branch)
 //   VERCEL_PROJECT_PRODUCTION_URL — stable production URL (e.g. chess-com-app.vercel.app)
-// Neither includes a protocol prefix, so we add https:// manually.
+// None of them include a protocol prefix, so we add https:// manually.
 const trustedOrigins = [
   process.env.FRONTEND_URL,
   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
+  process.env.VERCEL_BRANCH_URL ? `https://${process.env.VERCEL_BRANCH_URL}` : undefined,
   process.env.VERCEL_PROJECT_PRODUCTION_URL
     ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
     : undefined,
@@ -35,6 +37,23 @@ const trustedOrigins = [
   'http://localhost:5173',
   'http://localhost:3001',
 ].filter(Boolean);
+
+// Warn at startup if there is no durable production origin in the list.
+// In that case every request from the live app would fail the CSRF check, which
+// is very hard to diagnose. localhost entries don't count as "production".
+const hasDurableProductionOrigin =
+  process.env.FRONTEND_URL ||
+  process.env.VERCEL_PROJECT_PRODUCTION_URL ||
+  process.env.VERCEL_BRANCH_URL;
+
+if (!hasDurableProductionOrigin && process.env.NODE_ENV !== 'development') {
+  console.warn(
+    '[NeonAuth] No durable production origin configured. ' +
+    'Set FRONTEND_URL (or rely on Vercel system vars VERCEL_PROJECT_PRODUCTION_URL / ' +
+    'VERCEL_BRANCH_URL) so that Better Auth accepts requests from your live domain. ' +
+    'Auth will only work on localhost and the current ephemeral deployment URL.',
+  );
+}
 
 export const neonAuth = createAuth({
   db: pool,
