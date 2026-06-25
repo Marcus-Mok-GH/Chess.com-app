@@ -154,6 +154,10 @@ export async function initDatabase() {
         `);
 
         await client.query(`
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_elo_history_user_game ON elo_history(user_id, game_code)
+        `);
+
+        await client.query(`
           CREATE TABLE IF NOT EXISTS sessions (
             id VARCHAR(100) PRIMARY KEY,
             user_id VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
