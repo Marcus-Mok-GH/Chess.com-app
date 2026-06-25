@@ -1,27 +1,11 @@
+import { toNodeHandler } from 'better-auth/node';
 import { neonAuth } from '../services/neonAuth.js';
 
-export const neonAuthProxy = async (req, res) => {
-  try {
-    const url = new URL(req.url, \`http://\${req.headers.host}\`);
-    const searchParams = url.searchParams;
-
-    // Convert Headers object to a plain object
-    const headers = {};
-    for (const [key, value] of Object.entries(req.headers)) {
-      headers[key] = value;
-    }
-
-    const response = await neonAuth.handler({
-      method: req.method,
-      path: req.path,
-      query: Object.fromEntries(searchParams.entries()),
-      headers: headers,
-      body: req.body,
-    });
-
-    res.status(response.status).set(response.headers).send(response.body);
-  } catch (error) {
-    console.error('[NeonAuth Proxy] Error:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-};
+// Better Auth's official Node.js/Express adapter.
+// toNodeHandler handles the Web Fetch API ↔ Node.js req/res conversion
+// internally — no manual body/header marshalling needed.
+//
+// IMPORTANT: this handler must be mounted BEFORE express.json() in server/index.js.
+// express.json() consumes the request body stream; if it runs first, Better Auth
+// has nothing to read and the auth client hangs on "pending".
+export const neonAuthProxy = toNodeHandler(neonAuth);
