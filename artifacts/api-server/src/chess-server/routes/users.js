@@ -77,6 +77,25 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Get leaderboard  (literal path — must come before :username routes)
+router.get('/leaderboard/top', async (req, res) => {
+  try {
+    const limit = Math.max(1, Math.min(parseInt(req.query.limit) || 10, 100));
+    const result = await query(
+      'SELECT username, elo, games_played, wins, losses, draws FROM users ORDER BY elo DESC LIMIT $1',
+      [limit]
+    );
+    res.json({
+      leaderboard: result.rows.map((row, index) => ({
+        rank: index + 1, username: row.username, elo: row.elo,
+        gamesPlayed: row.games_played, wins: row.wins, losses: row.losses, draws: row.draws,
+      })),
+    });
+  } catch (error) {
+    return handleRouteError(res, error, 'Failed to get leaderboard');
+  }
+});
+
 // Get user settings
 router.get('/:username/settings', async (req, res) => {
   try {
@@ -133,25 +152,6 @@ router.get('/:username', async (req, res) => {
 });
 
 // NOTE: POST /:username/elo removed — ELO is now server-side in games.js.
-
-// Get leaderboard
-router.get('/leaderboard/top', async (req, res) => {
-  try {
-    const limit = Math.max(1, Math.min(parseInt(req.query.limit) || 10, 100));
-    const result = await query(
-      'SELECT username, elo, games_played, wins, losses, draws FROM users ORDER BY elo DESC LIMIT $1',
-      [limit]
-    );
-    res.json({
-      leaderboard: result.rows.map((row, index) => ({
-        rank: index + 1, username: row.username, elo: row.elo,
-        gamesPlayed: row.games_played, wins: row.wins, losses: row.losses, draws: row.draws,
-      })),
-    });
-  } catch (error) {
-    return handleRouteError(res, error, 'Failed to get leaderboard');
-  }
-});
 
 // Get ELO history
 router.get('/:username/elo-history', async (req, res) => {
