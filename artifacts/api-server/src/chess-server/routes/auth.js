@@ -40,7 +40,18 @@ function maskEmail(email) {
  * (sometimes stacked). We strip them in a loop until none remain.
  */
 function getNeonAuthUrl() {
-  const raw = process.env.NEON_AUTH_BASE_URL || process.env.NEON_AUTH_URL;
+  // Check every env var name that Vercel's Neon integration may inject.
+  // The integration sets the name automatically and it can vary by project
+  // configuration, so we probe all known variants in priority order.
+  const raw =
+    process.env.NEON_AUTH_BASE_URL ||      // primary — Neon Vercel integration
+    process.env.NEON_AUTH_URL ||           // legacy alias
+    process.env.AUTH_BASE_URL ||           // generic fallback
+    process.env.AUTH_URL ||               // generic fallback
+    process.env.STACK_AUTH_URL ||         // Stack Auth (underlying provider)
+    process.env.NEON_API_BASE_URL ||      // alternative Neon naming
+    process.env.DATABASE_AUTH_URL ||      // another possible Vercel injection
+    process.env.NEXT_PUBLIC_NEON_AUTH_URL; // Next.js convention variant
   if (!raw) return null;
 
   let url = raw.trim().replace(/\/+$/, '');
