@@ -11,7 +11,7 @@
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index?path=$1" },
     {
-      "source": "/((?!api/|assets/|favicon\\.ico|robots\\.txt|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|css|js|map|woff2?))",
+      "source": "/((?!api/|assets/|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|css|js|map|woff2?|json|ico|txt)$).*)",
       "destination": "/index.html"
     }
   ]
