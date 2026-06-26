@@ -3,12 +3,13 @@
   "buildCommand": "pnpm run typecheck && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/chess run build && cp -r artifacts/chess/dist/public ./dist",
   "outputDirectory": "dist",
   "functions": {
-    "api/[...path].js": {
+    "api/index.js": {
       "includeFiles": "{artifacts/api-server/src/**,node_modules/stockfish/bin/stockfish-18-lite-single.js,node_modules/stockfish/bin/stockfish-18-lite-single.wasm}",
       "maxDuration": 15
     }
   },
   "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index?path=$1" },
     {
       "source": "/((?!api/|assets/|favicon\\.ico|robots\\.txt|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|css|js|map|woff2?))",
       "destination": "/index.html"

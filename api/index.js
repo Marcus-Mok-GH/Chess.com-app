@@ -89,11 +89,25 @@ app.use(async (_req, res, next) => {
 });
 
 export default function handler(req, res) {
-  const original = req.url || '/';
-  if (!original.startsWith('/api')) {
-    const qs = original.includes('?') ? original.slice(original.indexOf('?')) : '';
-    req.url = '/api' + (original === '/' ? '/' : original) + qs;
-    req.url = req.url.replace(/\/api\/api(\/|\?|$)/, '/api$1');
+  // Vercel's `api/[...path].js` catch-all only matches single-level paths, so we
+  // forward all `/api/*` to this `api/index.js` via a rewrite and pass the
+  // original sub-path through as `?path=...`. Rebuild `req.url` from that so
+  // Express routers mounted at /api/auth, /api/users, /api/games, etc. resolve.
+  const capturePath = (req.query && typeof req.query.path === 'string') ? req.query.path : '';
+
+  // Strip any query string the capture group may have included (defensive).
+  const cleanPath = capturePath.split('?')[0];
+
+  const originalQuery = (req.url && req.url.includes('?'))
+    ? req.url.slice(req.url.indexOf('?'))
+    : '';
+
+  if (cleanPath) {
+    req.url = `/api/${cleanPath}${originalQuery}`;
+  } else {
+    // No capture group (e.g. request to `/api/` itself) — fall back to /api.
+    req.url = `/api${originalQuery}`;
   }
+
   return app(req, res);
 }
