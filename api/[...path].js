@@ -1,15 +1,16 @@
 // Vercel serverless function handler.
 //
-// Routes all /api/* requests to the chess-server Express app.
-// Socket.IO is NOT supported in serverless functions — point VITE_SOCKET_URL
-// at a persistent server (Railway, Render, Replit, etc.) for real-time play.
+// Vercel invokes `api/[...path].js` with a Node (req, res) where the original
+// URL has been stripped of the /api prefix. For example, a request to
+//   /api/users/login  ->  req.url = "/users/login"
+// We re-prepend /api before handing the request to Express so the routers
+// mounted at /api/auth, /api/users, /api/games, etc. resolve correctly.
 
 import express from 'express';
 import cors from 'cors';
 
 const app = express();
 
-// ── CORS ──────────────────────────────────────────────────────────────────────
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
@@ -22,26 +23,21 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, cb) => {
-    // Allow requests with no origin (curl, Postman, same-origin)
     if (!origin) return cb(null, true);
     if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
       return cb(null, true);
     }
-    cb(null, true); // permissive for now; tighten if needed
+    cb(null, true);
   },
   credentials: true,
 }));
 
-// ── Body parsing ───────────────────────────────────────────────────────────────
-// Mount BEFORE all routes.
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// ── Health ─────────────────────────────────────────────────────────────────────
-app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
+app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
-// ── Route loading (lazy, once per cold start) ──────────────────────────────────
 let routesReady = false;
 let routesPromise = null;
 
@@ -69,22 +65,20 @@ function ensureRoutes() {
     console.log('[vercel] Chess routes loaded');
   }).catch(err => {
     console.error('[vercel] Failed to load routes:', err);
-    routesPromise = null; // reset so next request retries
+    routesPromise = null;
     throw err;
   });
 
   return routesPromise;
 }
 
-// Kick off route loading + DB init immediately at cold start (non-blocking).
 Promise.all([
   ensureRoutes(),
   import('../artifacts/api-server/src/chess-server/db/init.js')
     .then(({ initDatabase }) => initDatabase())
     .catch(err => console.warn('[vercel] DB init warning:', err?.message)),
-]).catch(() => {/* errors surfaced per-request below */});
+]).catch(() => {});
 
-// ── Middleware: wait for routes before handling any request ────────────────────
 app.use(async (_req, res, next) => {
   try {
     await ensureRoutes();
@@ -94,4 +88,12 @@ app.use(async (_req, res, next) => {
   }
 });
 
-export default app;
+export default function handler(req, res) {
+  const original = req.url || '/';
+  if (!original.startsWith('/api')) {
+    const qs = original.includes('?') ? original.slice(original.indexOf('?')) : '';
+    req.url = '/api' + (original === '/' ? '/' : original) + qs;
+    req.url = req.url.replace(/\/api\/api(\/|\?|$)/, '/api$1');
+  }
+  return app(req, res);
+}
