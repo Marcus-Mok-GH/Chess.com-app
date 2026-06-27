@@ -11,4 +11,16 @@
 
 import app from '../artifacts/api-server/src/chess-server/index.js';
 
+/**
+ * Vercel serverless handler for `/api/*` requests.
+ *
+ * Vercel invokes this as `handler(req, res)`. The Express app returned from
+ * `chess-server/index.js` is itself a `(req, res, next)` request handler, so
+ * passing it through unchanged satisfies every `/api/*` route in one
+ * serverless function.
+ *
+ * @param {import('http').IncomingMessage} req  Incoming HTTP request.
+ * @param {import('http').ServerResponse}   res Outgoing HTTP response.
+ * @returns {void}
+ */
 export default app;

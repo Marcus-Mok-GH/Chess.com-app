@@ -16,9 +16,29 @@ const _dirname = path.dirname(fileURLToPath(import.meta.url));
 // module is loaded directly under Node (dev / local tests); the bundle entry
 // path is the production runtime. To handle both, look in the same directory
 // first, then fall back to the parent directory (one level up from routes/).
+/**
+ * Preferred location for the bundled Stockfish worker script (sits next to
+ * the route module when the package is consumed as source).
+ * @type {string}
+ */
 const PRIMARY_WORKER_SCRIPT = path.resolve(_dirname, 'stockfish-worker.cjs');
+/**
+ * Fallback location used when the package is consumed from the esbuild
+ * bundle output (`dist/`), where the worker is hoisted one level up.
+ * @type {string}
+ */
 const FALLBACK_WORKER_SCRIPT = path.resolve(_dirname, '..', 'stockfish-worker.cjs');
-const WORKER_SCRIPT = existsSync(PRIMARY_WORKER_SCRIPT) ? PRIMARY_WORKER_SCRIPT : FALLBACK_WORKER_SCRIPT;
+/**
+ * Resolved worker script path. Stays `null` when neither candidate exists on
+ * disk so {@link runEngine} can fail fast through its not-found guard instead
+ * of attempting to spawn a non-existent file.
+ * @type {string|null}
+ */
+const WORKER_SCRIPT = existsSync(PRIMARY_WORKER_SCRIPT)
+  ? PRIMARY_WORKER_SCRIPT
+  : existsSync(FALLBACK_WORKER_SCRIPT)
+    ? FALLBACK_WORKER_SCRIPT
+    : null;
 
 // Stockfish binary path (single-threaded WASM, no SharedArrayBuffer needed)
 let STOCKFISH_BIN;
