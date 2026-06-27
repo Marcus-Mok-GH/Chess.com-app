@@ -14,7 +14,7 @@ import coachRoutes from './routes/coach.js';
 import engineRoutes from './routes/engine.js';
 import authRoutes from './routes/auth.js';
 import statsRoutes from './routes/stats.js';
-import { setupSocketHandlers } from './socket/index.js';
+import { registerSocketHandlers } from './socket/index.js';
 import { query } from './db.js';
 import { initDatabase } from './db/init.js';
 
@@ -55,7 +55,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Socket.IO
-setupSocketHandlers(io);
+io.on('connection', (socket) => registerSocketHandlers(io, socket));
 
 // Database connection check and cleanup job
 const checkDbConnection = async () => {

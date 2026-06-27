@@ -16,11 +16,19 @@ async function buildAll() {
 
   // Copy the stockfish worker script (CJS, not bundled — must stay as-is so
   // it can require() the stockfish binary at runtime in its own process).
+  // Place it next to the bundled output AND under dist/chess-server/ so that
+  // either resolution strategy works in dev (running chess-server/index.js
+  // directly) and prod (running dist/index.mjs).
   const { copyFile, mkdir } = await import("node:fs/promises");
   await mkdir(distDir, { recursive: true });
+  await mkdir(path.resolve(distDir, "chess-server"), { recursive: true });
   await copyFile(
     path.resolve(artifactDir, "src/chess-server/stockfish-worker.cjs"),
     path.resolve(distDir, "stockfish-worker.cjs"),
+  );
+  await copyFile(
+    path.resolve(artifactDir, "src/chess-server/stockfish-worker.cjs"),
+    path.resolve(distDir, "chess-server", "stockfish-worker.cjs"),
   );
 
   await esbuild({

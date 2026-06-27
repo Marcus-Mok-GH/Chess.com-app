@@ -11,10 +11,14 @@ import { errorResponse, handleRouteError } from '../middleware/errors.js';
 const _require = createRequire(import.meta.url);
 const _dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Worker script lives at dist/stockfish-worker.cjs (copied by build.mjs).
-// _dirname is the directory of the bundled dist/index.mjs, so the worker
-// sits in the SAME directory — no ".." needed.
-const WORKER_SCRIPT = path.resolve(_dirname, 'stockfish-worker.cjs');
+// Worker script is copied to the same directory as the bundle entry (dist/)
+// by build.mjs. The source `_dirname` (this file's location) is used when the
+// module is loaded directly under Node (dev / local tests); the bundle entry
+// path is the production runtime. To handle both, look in the same directory
+// first, then fall back to the parent directory (one level up from routes/).
+const PRIMARY_WORKER_SCRIPT = path.resolve(_dirname, 'stockfish-worker.cjs');
+const FALLBACK_WORKER_SCRIPT = path.resolve(_dirname, '..', 'stockfish-worker.cjs');
+const WORKER_SCRIPT = existsSync(PRIMARY_WORKER_SCRIPT) ? PRIMARY_WORKER_SCRIPT : FALLBACK_WORKER_SCRIPT;
 
 // Stockfish binary path (single-threaded WASM, no SharedArrayBuffer needed)
 let STOCKFISH_BIN;
