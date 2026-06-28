@@ -55,7 +55,13 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Socket.IO
-io.on('connection', (socket) => registerSocketHandlers(io, socket));
+io.on('connection', (socket) => {
+  try {
+    registerSocketHandlers(io, socket);
+  } catch (err) {
+    console.error('[Socket Error]:', err);
+  }
+});
 
 // Database connection check and cleanup job
 const checkDbConnection = async () => {
