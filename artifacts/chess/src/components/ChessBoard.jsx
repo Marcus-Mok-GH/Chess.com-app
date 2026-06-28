@@ -21,7 +21,7 @@ const customPieces = Object.entries(PIECE_IMAGES).reduce((acc, [piece, src]) => 
       <img src={src} width={squareWidth} height={squareWidth} alt={piece} draggable={false} />
     </div>
   );
-  return acc;Checkboard
+  return acc;
 }, {});
 
 const themeColors = {
