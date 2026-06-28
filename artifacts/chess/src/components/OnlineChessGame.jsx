@@ -1,3 +1,4 @@
+import haptics from '../utils/haptics';
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../contexts/SettingsContext';
@@ -51,7 +52,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
         const history = normalizeMoveHistory(data.moveHistory);
         const lastMove = history[history.length - 1];
         if (lastMove) {
-          triggerAnimation(lastMove);
+          haptics.move();
         }
         setGame(buildGameFromHistory(history, data.fen));
         setMoveHistory(history);
@@ -121,7 +122,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
         if (makeMove(moveAttempt)) {
           const piece = game.get(selectedSquare);
           if (piece) {
-            triggerAnimation({ piece: piece.type, color: piece.color, from: selectedSquare, to: square });
+            haptics.move(); // triggerAnimation({ piece: piece.type, color: piece.color, from: selectedSquare, to: square });
           }
           setSelectedSquare(null);
           setPossibleMoves([]);
@@ -130,7 +131,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
       }
       const piece = game.get(square);
       if (piece && piece.color === colorCode) {
-        setSelectedSquare(square);
+        setSelectedSquare(square); haptics.select();
         setPossibleMoves(game.moves({ square, verbose: true }).map(m => m.to));
       }
   };
@@ -145,7 +146,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
       // We can use the moveAttempt if we want to be immediate.
       const piece = game.get(source);
       if (piece) {
-        triggerAnimation({ piece: piece.type, color: piece.color, from: source, to: target });
+        haptics.move(); // triggerAnimation({ piece: piece.type, color: piece.color, from: source, to: target });
       }
     }
     return success;

@@ -1,3 +1,4 @@
+import haptics from '../utils/haptics';
 import { forwardRef, useImperativeHandle, useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ChessBoard from './ChessBoard';
@@ -335,7 +336,7 @@ function ChessGame(
           return;
         }
 
-        triggerAnimation(moveResult, newGame);
+        
 
         setTimeout(() => {
           setGame(newGame);
@@ -517,13 +518,13 @@ function ChessGame(
         if (move) {
           const fenBefore = game.fen();
           // Trigger animation before updating state
-          triggerAnimation(move, gameCopy);
+          
 
           // Delay state update to allow animation to start
           setTimeout(() => {
             setGame(gameCopy);
             const nextHistory = [...moveHistory, move];
-            setMoveHistory(nextHistory);
+            setMoveHistory(nextHistory); haptics.move(); 
             setSelectedSquare(null);
             setPossibleMoves([]);
 
@@ -556,7 +557,7 @@ function ChessGame(
       }
 
       if (piece && piece.color === playerColor) {
-        setSelectedSquare(square);
+        setSelectedSquare(square); haptics.select();
         const moves = game.moves({ square, verbose: true });
         setPossibleMoves(moves.map((m) => m.to));
       } else {
@@ -594,13 +595,13 @@ function ChessGame(
       if (move === null) return false;
 
       // Trigger animation before updating state
-      triggerAnimation(move, gameCopy);
+      
 
       // Delay state update to allow animation to start
       setTimeout(() => {
         setGame(gameCopy);
         const nextHistory = [...moveHistory, move];
-        setMoveHistory(nextHistory);
+        setMoveHistory(nextHistory); haptics.move(); 
         setSelectedSquare(null);
         setPossibleMoves([]);
 
@@ -819,7 +820,7 @@ function ChessGame(
                 showCoordinates={settings.showCoordinates}
                 boardTheme={settings.boardTheme}
               />
-              {animatingPieces.map((anim) => (
+              /* {animatingPieces.map((anim) => (
                 <AnimatedPiece
                   key={anim.id}
                   piece={anim.piece}
@@ -829,7 +830,7 @@ function ChessGame(
                   captured={anim.captured}
                   onComplete={() => removeAnimation(anim.id)}
                 />
-              ))}
+              ))} */
               {showVictory && (
                 <div className="victory-burst" role="status" aria-live="polite">
                   <span className="victory-spark" />
