@@ -1,19 +1,35 @@
-import { useState, useEffect, useRef } from 'react';
-import { ChessPiece } from './ChessPieces';
+import { Chessboard } from 'react-chessboard';
 
-function getSquareColor(row, col) {
-  return (row + col) % 2 === 0 ? 'light' : 'dark';
-}
+const PIECE_IMAGES = {
+  wK: '/custom-pieces/wK.svg',
+  wQ: '/custom-pieces/wQ.svg',
+  wR: '/custom-pieces/wR.svg',
+  wB: '/custom-pieces/wB.svg',
+  wN: '/custom-pieces/wN.svg',
+  wP: '/custom-pieces/wP.svg',
+  bK: '/custom-pieces/bK.svg',
+  bQ: '/custom-pieces/bQ.svg',
+  bR: '/custom-pieces/bR.svg',
+  bB: '/custom-pieces/bB.svg',
+  bN: '/custom-pieces/bN.svg',
+  bP: '/custom-pieces/bP.svg',
+};
 
-function getSquareName(row, col) {
-  return String.fromCharCode(97 + col) + (8 - row);
-}
+const customPieces = Object.entries(PIECE_IMAGES).reduce((acc, [piece, src]) => {
+  acc[piece] = ({ squareWidth }) => (
+    <div style={{ width: squareWidth, height: squareWidth }}>
+      <img src={src} width={squareWidth} height={squareWidth} alt={piece} draggable={false} />
+    </div>
+  );
+  return acc;Checkboard
+}, {});
 
-function squareToCoords(square) {
-  const col = square.charCodeAt(0) - 97;
-  const row = 8 - parseInt(square[1]);
-  return { row, col };
-}
+const themeColors = {
+  green: { light: '#eeeed2', dark: '#769656' },
+  brown: { light: '#f0d9b5', dark: '#b58863' },
+  blue: { light: '#dee3e6', dark: '#8ca2ad' },
+  purple: { light: '#e8e0f0', dark: '#9070a0' },
+};
 
 export default function ChessBoard({
   position,
@@ -24,166 +40,28 @@ export default function ChessBoard({
   showCoordinates = true,
   boardTheme = 'green',
 }) {
-  const [draggedFrom, setDraggedFrom] = useState(null);
-  const [animatingPiece, setAnimatingPiece] = useState(null);
-  const prevPositionRef = useRef(null);
+  const colors = themeColors[boardTheme] || themeColors.green;
 
-  // Validate position prop
-  if (!position || typeof position.board !== 'function' || typeof position.fen !== 'function') {
-    console.error('[ChessBoard] Invalid position prop:', position);
-    return (
-      <div className={`chess-board theme-${boardTheme}`} style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        background: '#262421',
-        color: '#ff6b6b',
-        fontSize: '14px',
-        padding: '20px',
-        textAlign: 'center'
-      }}>
-        ⚠️ Error: Invalid chess position data
-      </div>
-    );
-  }
-
-  let board;
-  let currentFen;
-  
-  try {
-    board = position.board();
-    currentFen = position.fen();
-  } catch (error) {
-    console.error('[ChessBoard] Error getting board/fen:', error);
-    return (
-      <div className={`chess-board theme-${boardTheme}`} style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        background: '#262421',
-        color: '#ff6b6b',
-        fontSize: '14px',
-        padding: '20px',
-        textAlign: 'center'
-      }}>
-        ⚠️ Error loading chess position
-      </div>
-    );
-  }
-  const isFlipped = boardOrientation === 'black';
-
-  useEffect(() => {
-    const history = position.history({ verbose: true });
-    const lastMove = history[history.length - 1];
-
-    if (lastMove && prevPositionRef.current !== currentFen) {
-      setAnimatingPiece({
-        square: lastMove.to,
-        startX: 0,
-        startY: 0,
-      });
-
-      const timer = setTimeout(() => setAnimatingPiece(null), 200);
-      prevPositionRef.current = currentFen;
-      return () => clearTimeout(timer);
-    }
-
-    prevPositionRef.current = currentFen;
-  }, [currentFen, position]);
-
-  const handleDragStart = (e, row, col, piece) => {
-    if (!piece) return;
-    const square = getSquareName(row, col);
-    setDraggedFrom(square);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', square);
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const handleDrop = (e, row, col) => {
-    e.preventDefault();
-    const targetSquare = getSquareName(row, col);
-    if (draggedFrom && draggedFrom !== targetSquare) {
-      onPieceDrop(draggedFrom, targetSquare);
-    }
-    setDraggedFrom(null);
-  };
-
-  const handleDragEnd = () => {
-    setDraggedFrom(null);
-  };
-
-  const handleClick = (row, col) => {
-    const square = getSquareName(row, col);
-    onSquareClick(square);
-  };
-
-  const renderSquare = (row, col) => {
-    const actualRow = isFlipped ? 7 - row : row;
-    const actualCol = isFlipped ? 7 - col : col;
-    const piece = board[actualRow][actualCol];
-    const squareName = getSquareName(actualRow, actualCol);
-    const squareColor = getSquareColor(actualRow, actualCol);
-    const customStyle = customSquareStyles[squareName] || {};
-    
-    const isAnimating = animatingPiece && animatingPiece.square === squareName;
-    const animationStyle = isAnimating ? {
-      transition: 'transform 0.2s ease',
-    } : {};
-
-    return (
-      <div
-        key={`${row}-${col}`}
-        className={`chess-square ${squareColor}`}
-        style={customStyle}
-        onClick={() => handleClick(actualRow, actualCol)}
-        onDragOver={handleDragOver}
-        onDrop={(e) => handleDrop(e, actualRow, actualCol)}
-      >
-        {piece && (
-          <div
-            className={`chess-piece-wrapper ${isAnimating ? 'animating' : ''}`}
-            draggable
-            onDragStart={(e) => handleDragStart(e, actualRow, actualCol, piece)}
-            onDragEnd={handleDragEnd}
-            style={animationStyle}
-          >
-            <ChessPiece piece={piece} />
-          </div>
-        )}
-        {showCoordinates && col === 0 && (
-          <span className="rank-label">{isFlipped ? row + 1 : 8 - row}</span>
-        )}
-        {showCoordinates && row === 7 && (
-          <span className="file-label">
-            {String.fromCharCode(97 + (isFlipped ? 7 - col : col))}
-          </span>
-        )}
-      </div>
-    );
-  };
-
-  const rows = [];
-  for (let row = 0; row < 8; row++) {
-    const squares = [];
-    for (let col = 0; col < 8; col++) {
-      squares.push(renderSquare(row, col));
-    }
-    rows.push(
-      <div key={row} className="chess-row">
-        {squares}
-      </div>
-    );
-  }
+  // react-chessboard expects a FEN string or position object
+  // The position prop passed from parent is a chess.js object
+  const currentFen = typeof position.fen === 'function' ? position.fen() : position;
 
   return (
-    <div className={`chess-board theme-${boardTheme}`}>
-      {rows}
+    <div className={`chess-board-wrapper theme-${boardTheme}`} style={{ width: '100%', height: '100%' }}>
+      <Chessboard
+        id="MainChessboard"
+        position={currentFen}
+        onPieceDrop={onPieceDrop}
+        onSquareClick={onSquareClick}
+        boardOrientation={boardOrientation}
+        customDarkSquareStyle={{ backgroundColor: colors.dark }}
+        customLightSquareStyle={{ backgroundColor: colors.light }}
+        customPieces={customPieces}
+        customSquareStyles={customSquareStyles}
+        showBoardNotation={showCoordinates}
+        animationDuration={300}
+        autoPromoteToQueen={true}
+      />
     </div>
   );
 }
-
