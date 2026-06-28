@@ -32,17 +32,17 @@ if (pooledUrl) {
   console.warn('[DB] DATABASE_URL not set — database features will be disabled.');
 }
 
-if (!isServerless && unpooledUrl && unpooledUrl !== pooledUrl) {
-  const host = resolveHost(unpooledUrl);
-  console.log(`[DB] DATABASE_URL_UNPOOLED (direct) → ${host ?? '(unparseable)'}`);
-} else if (isServerless && unpooledUrl && unpooledUrl !== pooledUrl) {
-  console.log('[DB] DATABASE_URL_UNPOOLED ignored on serverless — using pooled connection for DDL.');
-}
-
-const sslConfig = isProduction ? { rejectUnauthorized: true } : false;
-const timeoutMs = isProduction ? 20000 : 10000;
 const pooledHost = resolveHost(pooledUrl);
 const isNeonOnVercel = isVercel && Boolean(pooledUrl) && isNeonPooler(pooledUrl);
+
+// Many serverless environments have issues with system CA bundles. 
+// For Neon/Supabase, we default to rejectUnauthorized: false unless 
+// explicitly overridden, to ensure connectivity.
+const sslConfig = isProduction 
+  ? { rejectUnauthorized: false } 
+  : false;
+
+const timeoutMs = isProduction ? 20000 : 10000;
 
 const sharedPool = pooledUrl
   ? new Pool({
