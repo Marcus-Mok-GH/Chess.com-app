@@ -30,7 +30,7 @@ const PRIMARY_WORKER_SCRIPT = path.resolve(_dirname, 'stockfish-worker.cjs');
 const FALLBACK_WORKER_SCRIPT = path.resolve(_dirname, '..', 'stockfish-worker.cjs');
 /**
  * Resolved worker script path. Stays `null` when neither candidate exists on
- * disk so {@link runEngine} can fail fast through its not-found guard instead
+ * disk so runEngine can fail fast through its not-found guard instead
  * of attempting to spawn a non-existent file.
  * @type {string|null}
  */
@@ -43,10 +43,29 @@ const WORKER_SCRIPT = existsSync(PRIMARY_WORKER_SCRIPT)
 // Stockfish binary path (single-threaded WASM, no SharedArrayBuffer needed)
 let STOCKFISH_BIN;
 try {
-  const pkgDir = path.dirname(_require.resolve('stockfish/package.json'));
-  const single = path.join(pkgDir, 'bin', 'stockfish-18-single.js');
-  const full   = path.join(pkgDir, 'bin', 'stockfish-18.js');
-  STOCKFISH_BIN = existsSync(single) ? single : full;
+  let pkgDir;
+  try {
+    pkgDir = path.dirname(_require.resolve('stockfish/package.json'));
+  } catch (e) {
+    // Fallback for Vercel/Serverless environments where package.json might not be bundled
+    pkgDir = path.resolve(process.cwd(), 'node_modules', 'stockfish');
+    if (!existsSync(pkgDir)) {
+      pkgDir = path.resolve(_dirname, '..', '..', '..', 'node_modules', 'stockfish');
+    }
+  }
+  
+  const candidates = [
+    path.join(pkgDir, 'bin', 'stockfish-18-lite-single.js'),
+    path.join(pkgDir, 'bin', 'stockfish-18-single.js'),
+    path.join(pkgDir, 'bin', 'stockfish-18.js'),
+    path.join(process.cwd(), 'node_modules', 'stockfish', 'bin', 'stockfish-18-lite-single.js')
+  ];
+  
+  STOCKFISH_BIN = candidates.find(c => existsSync(c));
+  
+  if (!STOCKFISH_BIN) {
+     console.warn('[Engine] Stockfish binary not found in candidates. Tried:', candidates);
+  }
 } catch (e) {
   console.error('[Engine] Could not resolve stockfish binary:', e.message);
 }
@@ -76,7 +95,7 @@ function getSearchParams(bot) {
 function runEngine(fen, searchParams, bot, timeoutMs) {
   return new Promise((resolve, reject) => {
     if (!STOCKFISH_BIN || !WORKER_SCRIPT) {
-      return reject(new Error('Stockfish binary or worker script not found'));
+      return reject(new Error(`Stockfish binary or worker script not found. BIN: ${STOCKFISH_BIN}, WORKER: ${WORKER_SCRIPT}`));
     }
 
     const child = spawn(process.execPath, [WORKER_SCRIPT, STOCKFISH_BIN], {

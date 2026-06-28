@@ -5,7 +5,6 @@ import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
 import { rm } from "node:fs/promises";
 
-// Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
 globalThis.require = createRequire(import.meta.url);
 
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
@@ -14,11 +13,6 @@ async function buildAll() {
   const distDir = path.resolve(artifactDir, "dist");
   await rm(distDir, { recursive: true, force: true });
 
-  // Copy the stockfish worker script (CJS, not bundled — must stay as-is so
-  // it can require() the stockfish binary at runtime in its own process).
-  // Place it next to the bundled output AND under dist/chess-server/ so that
-  // either resolution strategy works in dev (running chess-server/index.js
-  // directly) and prod (running dist/index.mjs).
   const { copyFile, mkdir } = await import("node:fs/promises");
   await mkdir(distDir, { recursive: true });
   await mkdir(path.resolve(distDir, "chess-server"), { recursive: true });
@@ -39,11 +33,8 @@ async function buildAll() {
     outdir: distDir,
     outExtension: { ".js": ".mjs" },
     logLevel: "info",
-    // Some packages may not be bundleable, so we externalize them, we can add more here as needed.
-    // Some of the packages below may not be imported or installed, but we're adding them in case they are in the future.
-    // Examples of unbundleable packages:
-    // - uses native modules and loads them dynamically (e.g. sharp)
-    // - use path traversal to read files (e.g. @google-cloud/secret-manager loads sibling .proto files)
+    minify: true,
+    treeShaking: true,
     external: [
       "*.node",
       "sharp",
@@ -120,12 +111,10 @@ async function buildAll() {
       "puppeteer-core",
       "electron",
     ],
-    sourcemap: "linked",
+    sourcemap: false,
     plugins: [
-      // pino relies on workers to handle logging, instead of externalizing it we use a plugin to handle it
       esbuildPluginPino({ transports: ["pino-pretty"] })
     ],
-    // Make sure packages that are cjs only (e.g. express) but are bundled continue to work in our esm output file
     banner: {
       js: `import { createRequire as __bannerCrReq } from 'node:module';
 import __bannerPath from 'node:path';

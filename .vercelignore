@@ -1,0 +1,5 @@
+.git
+node_modules
+artifacts/mockup-sandbox
+.migration-backup
+scripts
