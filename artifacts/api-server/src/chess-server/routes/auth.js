@@ -133,12 +133,19 @@ router.post('/sign-in/email-otp', async (req, res) => {
     const token = await createSession(user.id, { ipAddress: req.ip, userAgent: req.headers['user-agent'] });
     const needsUsername = user.username.startsWith('player_');
 
+    // Root-level objects as expected by Better Auth client and session flow
     return res.json({
-      data: {
-        session: { id: token, token: token, userId: user.id, expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() },
-        user: { ...user, name: user.username, needsUsername },
+      session: { 
+        id: token,
+        token: token,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
       },
-      error: null,
+      user: {
+        ...user,
+        name: user.username,
+        needsUsername
+      }
     });
   } catch (err) {
     return res.status(500).json({ error: { message: 'Sign-in failed. Please try again.' } });
@@ -159,13 +166,11 @@ router.post('/update-username', async (req, res) => {
 
   try {
     const userId = await validateSession(token);
-    if (!userId) return res.status(401).json({ error: { message: 'Session expired or invalid. Please log in again.' } });
+    if (!userId) return res.status(401).json({ error: { message: 'Session expired. Please log in again.' } });
 
-    // Check if username is taken by ANY OTHER user
-    // We use a robust comparison to handle both string and integer IDs
     const check = await query('SELECT id FROM users WHERE LOWER(username) = LOWER($1) AND id::TEXT != $2::TEXT', [trimmed, userId]);
     if (check.rows.length > 0) {
-      return res.status(400).json({ error: { message: 'That username is already taken. Please try another one.' } });
+      return res.status(400).json({ error: { message: 'That username is already taken.' } });
     }
 
     const result = await query(
@@ -173,10 +178,7 @@ router.post('/update-username', async (req, res) => {
       [trimmed, userId]
     );
 
-    if (result.rows.length === 0) {
-      console.error(`[Auth] User ID ${userId} not found in database during username update`);
-      return res.status(404).json({ error: { message: 'User account not found. Please contact support.' } });
-    }
+    if (result.rows.length === 0) return res.status(404).json({ error: { message: 'User not found.' } });
 
     const u = result.rows[0];
     return res.json({
@@ -184,8 +186,7 @@ router.post('/update-username', async (req, res) => {
       user: { ...u, name: u.username, needsUsername: false }
     });
   } catch (error) {
-    console.error('[Auth] update-username database error:', error);
-    return res.status(500).json({ error: { message: 'Database error while checking username. Please try again.' } });
+    return res.status(500).json({ error: { message: 'Failed to update username.' } });
   }
 });
 
@@ -193,42 +194,37 @@ async function resolveUniqueUsername(base) {
   const check = await query(`SELECT id FROM users WHERE LOWER(username) = LOWER($1)`, [base]);
   if (check.rows.length === 0) return base;
   const suffix = crypto.randomBytes(2).toString('hex');
-  const candidate = `${base.slice(0, 15)}_${suffix}`;
-  return candidate;
+  return `${base.slice(0, 15)}_${suffix}`;
 }
 
 router.get('/session', async (req, res) => {
   const authHeader = req.headers.authorization;
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  if (!token) return res.json({ data: { session: null, user: null } });
+  if (!token) return res.json({ session: null, user: null });
 
   try {
     const userId = await validateSession(token);
-    if (!userId) return res.json({ data: { session: null, user: null } });
+    if (!userId) return res.json({ session: null, user: null });
 
     const result = await query('SELECT id, username, email, elo, games_played, wins, losses, draws, created_at FROM users WHERE id::TEXT = $1::TEXT', [userId]);
-    if (result.rows.length === 0) return res.json({ data: { session: null, user: null } });
+    if (result.rows.length === 0) return res.json({ session: null, user: null });
 
     const u = result.rows[0];
     const needsUsername = u.username.startsWith('player_');
 
-    res.json({
-      data: {
-        session: { id: token, token: token, userId: u.id },
-        user: { ...u, name: u.username, needsUsername },
-      }
+    return res.json({
+      session: { id: token, token: token, userId: u.id },
+      user: { ...u, name: u.username, needsUsername }
     });
   } catch (error) {
-    res.json({ data: { session: null, user: null } });
+    return res.json({ session: null, user: null });
   }
 });
 
 router.post('/signout', async (req, res) => {
   const authHeader = req.headers.authorization;
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : req.body?.token;
-  try {
-    await deleteSession(token);
-  } catch { }
+  try { await deleteSession(token); } catch { }
   res.json({ success: true });
 });
 

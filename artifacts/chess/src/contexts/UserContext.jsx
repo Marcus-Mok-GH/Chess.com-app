@@ -43,9 +43,7 @@ export function UserProvider({ children }) {
 
   useEffect(() => {
     const requestId = localStorage.getItem(AUTH_REQUEST_ID_KEY);
-    if (requestId) {
-      socket.joinAuthRoom(requestId);
-    }
+    if (requestId) socket.joinAuthRoom(requestId);
   }, []);
 
   useEffect(() => {
@@ -64,21 +62,18 @@ export function UserProvider({ children }) {
     async function init() {
       try {
         const sessionUserRaw = localStorage.getItem(SESSION_USER_DATA_KEY);
-        if (sessionUserRaw) {
+        if (sessionUserRaw && isMounted) {
           try {
-            const sessionUser = JSON.parse(sessionUserRaw);
-            if (sessionUser?.username && isMounted) {
-              setUser(sessionUser);
-            }
-          } catch (e) {
-            localStorage.removeItem(SESSION_USER_DATA_KEY);
-          }
+            const saved = JSON.parse(sessionUserRaw);
+            if (saved?.username) setUser(saved);
+          } catch { localStorage.removeItem(SESSION_USER_DATA_KEY); }
         }
 
         const sessionResult = await neonAuth.getSession();
-        const data = sessionResult?.data;
-        const session = data?.session;
-        const serverUser = data?.user;
+        // Support both direct body result and { data: body } wrapper
+        const body = sessionResult?.data?.session ? sessionResult.data : sessionResult?.data;
+        const session = body?.session;
+        const serverUser = body?.user;
 
         if (!session || !serverUser) {
           if (isMounted && !localStorage.getItem(PENDING_OTP_KEY)) {
@@ -106,12 +101,12 @@ export function UserProvider({ children }) {
 
         if (isMounted) {
           setUser(userData);
-          persistUser(userData, session.token);
+          persistUser(userData, session.token || session.id);
           setIsAwaitingVerification(false);
           localStorage.removeItem(PENDING_OTP_KEY);
         }
       } catch (e) {
-        console.error('[UserContext] Session init error:', e);
+        console.error('[UserContext] Init error:', e);
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -122,13 +117,9 @@ export function UserProvider({ children }) {
 
   const requestOtp = useCallback(async ({ email }) => {
     if (!email) return { error: 'Email is required' };
-    if (!navigator.onLine) return { error: 'You must be online' };
     try {
       localStorage.setItem(PENDING_OTP_KEY, JSON.stringify({ email }));
-      const result = await neonAuth.emailOtp.sendVerificationOtp({
-        email: email.trim(),
-        type: 'sign-in',
-      });
+      const result = await neonAuth.emailOtp.sendVerificationOtp({ email: email.trim(), type: 'sign-in' });
       if (result.error) throw new Error(result.error.message || 'Failed to send code');
       setIsAwaitingVerification(true);
       setPendingOtpEmail(email);
@@ -141,18 +132,14 @@ export function UserProvider({ children }) {
 
   const verifyEmailOtp = useCallback(async ({ email, token: otpToken }) => {
     try {
-      const { data, error } = await neonAuth.signIn.emailOtp({
-        email: email.trim(),
-        otp: otpToken.trim(),
-      });
-      if (error) throw new Error(error.message || 'Invalid code');
+      const result = await neonAuth.signIn.emailOtp({ email: email.trim(), otp: otpToken.trim() });
+      if (result.error) throw new Error(result.error.message || 'Invalid code');
       
-      const serverUser = data?.user;
-      const session = data?.session;
+      const body = result.data?.session ? result.data : result.data?.data;
+      const serverUser = body?.user;
+      const session = body?.session;
       
-      if (!serverUser || !session) {
-        throw new Error('Authentication response was incomplete.');
-      }
+      if (!serverUser || !session) throw new Error('Authentication response was incomplete.');
 
       const userData = {
         id: serverUser.id,
@@ -168,7 +155,7 @@ export function UserProvider({ children }) {
       };
 
       setUser(userData);
-      persistUser(userData, session.token);
+      persistUser(userData, session.token || session.id);
       setIsAwaitingVerification(false);
       localStorage.removeItem(PENDING_OTP_KEY);
       return { success: true, userData };
@@ -178,19 +165,16 @@ export function UserProvider({ children }) {
   }, [persistUser]);
 
   const updateUsername = useCallback(async (newUsername) => {
+    if (!token) return { error: 'Session lost. Please log in again.' };
     try {
       const response = await api.updateUsername(newUsername, token);
       if (response.success && response.user) {
-        const updatedUser = {
-          ...user,
-          username: response.user.username,
-          needsUsername: false,
-        };
+        const updatedUser = { ...user, username: response.user.username, needsUsername: false };
         setUser(updatedUser);
-        persistUser(updatedUser);
+        persistUser(updatedUser, token);
         return { success: true };
       }
-      return { error: response.error?.message || 'Failed to update username' };
+      return { error: response.error?.message || 'Failed to update username.' };
     } catch (error) {
       return { error: error.message };
     }
@@ -198,26 +182,16 @@ export function UserProvider({ children }) {
 
   const logout = useCallback(async () => {
     await neonAuth.signOut().catch(() => {});
-    localStorage.removeItem(SESSION_USER_KEY);
-    localStorage.removeItem(SESSION_USER_DATA_KEY);
-    localStorage.removeItem(SESSION_TOKEN_KEY);
-    localStorage.removeItem(PENDING_OTP_KEY);
+    localStorage.clear();
     setUser(null);
     setToken(null);
     window.location.href = '/';
   }, []);
 
   const value = {
-    user,
-    isLoggedIn: !!user,
-    isLoading,
-    isOnline,
-    isAwaitingVerification,
-    pendingOtpEmail,
-    requestOtp,
-    verifyEmailOtp,
-    updateUsername,
-    logout,
+    user, token, isLoggedIn: !!user, isLoading, isOnline,
+    isAwaitingVerification, pendingOtpEmail,
+    requestOtp, verifyEmailOtp, updateUsername, logout,
   };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
