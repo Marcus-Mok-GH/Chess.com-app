@@ -19,6 +19,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     makeMove, colorCode
   } = useGameCore(gameId, playerId, playerColor, settings);
 
+  const [chatMessages, setChatMessages] = useState([]);
   const [selectedSquare, setSelectedSquare] = useState(null);
   const [possibleMoves, setPossibleMoves] = useState([]);
   const [animatingPieces, setAnimatingPieces] = useState([]);
@@ -69,6 +70,9 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     socketService.on('elo_updated', (data) => setEloChange(data.change));
     socketService.on('draw_offered', (data) => data.offeredBy !== playerId && setDrawOffered(true));
     socketService.on('move_error', (data) => setMoveError(data.message));
+    socketService.on('chat_message', (data) => {
+      setChatMessages(prev => [...prev, data]);
+    });
 
     return () => {
       socketService.off('game_state');
@@ -78,6 +82,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
       socketService.off('elo_updated');
       socketService.off('draw_offered');
       socketService.off('move_error');
+      socketService.off('chat_message');
       socketService.leaveGame(gameId, playerId);
     };
   }, [gameId, playerId, setGame, setMoveHistory, setGameStatus, setEndReason, setWinner, setMoveError]);
@@ -197,6 +202,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
         eloChange={eloChange} moveError={moveError} getStatusMessage={getStatusMessage}
         drawOffered={drawOffered} handleRespondDraw={(acc) => socketService.respondDraw(gameId, playerId, acc)}
         REACTIONS={REACTIONS} handleSendReaction={(r) => socketService.sendMessage(gameId, playerId, r)}
+        chatMessages={chatMessages} handleSendMessage={(m) => socketService.sendMessage(gameId, playerId, m)} playerId={playerId}
         moveHistory={moveHistory} gameStatus={gameStatus}
         handleOfferDraw={() => socketService.offerDraw(gameId, playerId)}
         handleResign={() => socketService.resignGame(gameId, playerId)}

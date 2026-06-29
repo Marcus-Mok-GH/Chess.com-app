@@ -13,8 +13,24 @@ export default function GameUI({
   moveError, getStatusMessage, drawOffered, handleRespondDraw,
   REACTIONS, handleSendReaction, moveHistory, gameStatus,
   handleOfferDraw, handleResign, navigate, canReview, onLeave,
-  capturedPieces
+  capturedPieces, chatMessages, handleSendMessage, playerId
 }) {
+
+  const [chatInput, setChatInput] = React.useState('');
+  const chatEndRef = React.useRef(null);
+
+  React.useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
+
+  const onSend = (e) => {
+    e.preventDefault();
+    if (chatInput.trim()) {
+      handleSendMessage(chatInput);
+      setChatInput('');
+    }
+  };
+
   return (
     <div className="game-container">
       <div className="board-section">
@@ -75,6 +91,28 @@ export default function GameUI({
         </div>
 
         <MoveHistory history={moveHistory} />
+        <div className="chat-container">
+          <div className="chat-messages">
+            {chatMessages.map((msg, i) => (
+              <div key={i} className={"chat-message " + (msg.playerId === playerId ? "mine" : "theirs")}>
+                <span className="chat-sender">{msg.playerId === playerId ? 'You' : 'Opponent'}:</span>
+                <span className="chat-text">{msg.message}</span>
+              </div>
+            ))}
+            <div ref={chatEndRef} />
+          </div>
+          <form onSubmit={onSend} className="chat-input-form">
+            <input 
+              type="text" 
+              value={chatInput} 
+              onChange={(e) => setChatInput(e.target.value)}
+              placeholder="Type a message..."
+              maxLength={500}
+            />
+            <button type="submit">Send</button>
+          </form>
+        </div>
+
 
         <div className="controls">
           {gameStatus === 'playing' && (

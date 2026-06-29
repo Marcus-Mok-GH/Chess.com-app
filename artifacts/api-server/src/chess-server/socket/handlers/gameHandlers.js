@@ -6,6 +6,7 @@ import {
   buildPlayerMoveHistory
 } from '../utils.js';
 import { getGameService } from '../gameService.js';
+import { censorMessage } from '../profanity.js';
 
 const upsertMatchMoves = async ({ gameId, username, moveHistory, isWhite }) => {
   if (!gameId || !username || typeof isWhite !== 'boolean') return;
@@ -433,10 +434,11 @@ export function setupGameHandlers(io, socket) {
       return;
     }
 
+    const censoredMessage = censorMessage(message);
     io.to(gameId).emit('chat_message', {
       gameId,
       playerId,
-      message,
+      message: censoredMessage,
       timestamp: Date.now()
     });
   });
