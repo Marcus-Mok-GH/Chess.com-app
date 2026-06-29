@@ -4,10 +4,10 @@ import { useUser } from '../contexts/UserContext';
 import './Login.css';
 
 /**
- * Render the sign-in page that collects a username and email and initiates an OTP request.
+ * Render the sign-in page that collects an email and initiates an OTP request.
  *
  * The component redirects authenticated users to /home when loading completes, validates inputs,
- * calls `requestOtp` with `{ email, username }`, shows validation or request errors, and navigates
+ * calls `requestOtp` with `{ email }`, shows validation or request errors, and navigates
  * to /verify-email after a successful OTP request.
  * @returns {JSX.Element} The login page UI.
  */
@@ -16,7 +16,6 @@ export default function Login() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
 
   const [error, setError] = useState(searchParams.get('error') || '');
@@ -32,11 +31,10 @@ export default function Login() {
   const handleSendCode = async () => {
     setError('');
     if (!email.trim()) return setError('Please enter your email address.');
-    if (!username.trim()) return setError('Please choose a username.');
 
     setIsSubmitting(true);
     try {
-      const result = await requestOtp({ email, username });
+      const result = await requestOtp({ email });
       if (!result.success) return setError(result.error);
       // GlobalVerificationGuard picks up isAwaitingVerification and navigates to /verify-email
       navigate('/verify-email', { replace: true });
@@ -61,23 +59,9 @@ export default function Login() {
         <div className="login-logo">♟️</div>
 
         <h1 className="login-title">Sign in to Chess</h1>
-        <p className="login-subtitle">Enter your username and email to receive a sign-in code</p>
+        <p className="login-subtitle">Enter your email to receive a sign-in code</p>
 
         <form className="login-form" onSubmit={(e) => e.preventDefault()}>
-          <div className="login-field">
-            <label htmlFor="username">Username</label>
-            <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Choose a username"
-              autoFocus
-              autoComplete="off"
-              maxLength={20}
-            />
-          </div>
-
           <div className="login-field">
             <label htmlFor="email">Email</label>
             <input
@@ -87,6 +71,7 @@ export default function Login() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="your@email.com"
               autoComplete="email"
+              autoFocus
               onKeyDown={(e) => e.key === 'Enter' && handleSendCode()}
             />
           </div>
@@ -96,7 +81,7 @@ export default function Login() {
           <button
             type="button"
             className="login-btn"
-            disabled={isSubmitting || !username.trim() || !email.trim()}
+            disabled={isSubmitting || !email.trim()}
             onClick={handleSendCode}
           >
             {isSubmitting ? 'Sending…' : 'Send Code'}

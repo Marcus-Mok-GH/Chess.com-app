@@ -4,6 +4,7 @@ import { UserProvider, useUser } from './contexts/UserContext'
 import { SettingsProvider } from './contexts/SettingsContext'
 import { FeedbackPanel } from './components/FeedbackPanel'
 import ErrorBoundary from './components/ErrorBoundary'
+import SetUsernameModal from "./components/SetUsernameModal"
 import UserBadge from './components/UserBadge'
 import GuestBlocked from './components/GuestBlocked'
 import { usePuter } from './hooks/usePuter'
@@ -208,7 +209,7 @@ export default function App() {
       <ErrorBoundary>
         <UserProvider>
           <SettingsProvider>
-            <BrowserRouter>
+            <BrowserRouter><SetUsernameModal />
               <GlobalVerificationGuard />
               <Routes>
                 {/* Headerless routes — full-screen layouts */}

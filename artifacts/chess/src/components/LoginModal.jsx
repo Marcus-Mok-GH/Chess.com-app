@@ -5,7 +5,6 @@ import './LoginModal.css';
 export default function LoginModal({ onClose, onContinueAsGuest, mode = 'ranked' }) {
   const { requestOtp, verifyEmailOtp } = useUser();
 
-  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
 
@@ -20,11 +19,10 @@ export default function LoginModal({ onClose, onContinueAsGuest, mode = 'ranked'
     setError('');
     setSuccessMsg('');
     if (!email.trim()) return setError('Please enter your email address.');
-    if (!username.trim()) return setError('Please choose a username.');
 
     setIsLoading(true);
     try {
-      const result = await requestOtp({ email, username });
+      const result = await requestOtp({ email });
       if (!result.success) return setError(result.error);
       setSuccessMsg(result.message || 'Code sent! Check your email for a 6-digit code.');
       setStep('verify');
@@ -53,7 +51,7 @@ export default function LoginModal({ onClose, onContinueAsGuest, mode = 'ranked'
     setOtpCode('');
     setIsLoading(true);
     try {
-      const result = await requestOtp({ email, username });
+      const result = await requestOtp({ email });
       if (!result.success) return setError(result.error);
       setSuccessMsg('New code sent! Check your email for a 6-digit code.');
     } finally {
@@ -65,7 +63,7 @@ export default function LoginModal({ onClose, onContinueAsGuest, mode = 'ranked'
     <div className="login-overlay" onKeyDown={(e) => e.key === 'Escape' && onClose?.()}>
       <div className="login-modal">
 
-        {/* Step 1: email + username */}
+        {/* Step 1: email */}
         {step === 'email' && (
           <>
             <div className="login-header">
@@ -75,24 +73,15 @@ export default function LoginModal({ onClose, onContinueAsGuest, mode = 'ranked'
 
             <form onSubmit={(e) => e.preventDefault()} className="login-form">
               <div className="input-group">
-                <label htmlFor="username">Choose a username</label>
-                <input
-                  id="username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter your username"
-                  autoFocus
-                  autoComplete="off"
-                  maxLength={20}
-                />
+                <label htmlFor="email">Email address</label>
                 <input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Email"
+                  placeholder="your@email.com"
                   autoComplete="email"
+                  autoFocus
                   onKeyDown={(e) => e.key === 'Enter' && handleSendCode()}
                 />
                 <small>We'll send a 6-digit code to your email — no link to click.</small>
@@ -102,7 +91,7 @@ export default function LoginModal({ onClose, onContinueAsGuest, mode = 'ranked'
               <button
                 type="button"
                 className="btn btn-secondary btn-full"
-                disabled={isLoading || !username.trim() || !email.trim()}
+                disabled={isLoading || !email.trim()}
                 onClick={handleSendCode}
               >
                 {isLoading ? 'Sending code...' : 'Send Code'}
