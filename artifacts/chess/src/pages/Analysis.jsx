@@ -151,8 +151,6 @@ export default function Analysis() {
 
   const handleSquareClick = useCallback(() => {}, []);
 
-  const handlePieceDrop = useCallback(() => false);
-
   const normalizedMoveHistory = useMemo(
     () => toDetailedMoveHistory(moveHistory),
     [moveHistory]
@@ -206,8 +204,7 @@ export default function Analysis() {
             <div className="analysis-board-wrap">
               <ChessBoard
                 position={position}
-                onPieceDrop={handlePieceDrop}
-                onSquareClick={handleSquareClick}
+                                onSquareClick={handleSquareClick}
                 boardOrientation={boardOrientation}
                 customSquareStyles={customSquareStyles}
               />
