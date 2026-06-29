@@ -160,8 +160,8 @@ router.post('/update-username', async (req, res) => {
   const { username } = req.body || {};
   const trimmed = (username || '').trim();
   
-  if (trimmed.length < 2 || trimmed.length > 20 || !/^[a-zA-Z0-9_]+$/.test(trimmed)) {
-    return res.status(400).json({ error: { message: 'Username must be 2-20 characters (letters, numbers, underscores).' } });
+  if (trimmed.length < 2 || trimmed.length > 20 || !/^[a-zA-Z0-9._-]+$/.test(trimmed)) {
+    return res.status(400).json({ error: { message: 'Username must be 2-20 characters (letters, numbers, dots, hyphens, underscores).' } });
   }
 
   try {

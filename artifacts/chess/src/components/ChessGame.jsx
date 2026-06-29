@@ -482,14 +482,12 @@ function ChessGame(
     return 'q';
   }, []);
 
+  
   const onSquareClick = useCallback(
     (square) => {
       if (game.turn() !== playerColor || isThinking || game.isGameOver()) return;
 
-      const piece = game.get(square);
-
       if (selectedSquare) {
-        // If clicking the same square, deselect it
         if (square === selectedSquare) {
           setSelectedSquare(null);
           setPossibleMoves([]);
@@ -497,67 +495,45 @@ function ChessGame(
         }
 
         const promotion = resolvePromotion(selectedSquare, square, game.get(selectedSquare)?.type);
-        if (promotion === null && game.get(selectedSquare)?.type === 'p' && settingsRef.current.confirmMoves) {
-          const proceed = window.confirm('Make this move?');
-          if (!proceed) {
-            setSelectedSquare(null);
-            setPossibleMoves([]);
-            return;
-          }
-        }
-
         const moveAttempt = {
           from: selectedSquare,
           to: square,
           promotion: promotion || 'q',
         };
 
-        const gameCopy = buildGameFromHistory(moveHistory, game.fen());
-        const move = gameCopy.move(moveAttempt);
+        try {
+          const gameCopy = new Chess(game.fen());
+          const move = gameCopy.move(moveAttempt);
 
-        if (move) {
-          const fenBefore = game.fen();
-          // Trigger animation before updating state
-          
-
-          // Delay state update to allow animation to start
-          setTimeout(() => {
+          if (move) {
+            const fenBefore = game.fen();
             setGame(gameCopy);
             const nextHistory = [...moveHistory, move];
-            setMoveHistory(nextHistory); haptics.move(); 
+            setMoveHistory(nextHistory);
+            haptics.move();
             setSelectedSquare(null);
             setPossibleMoves([]);
 
             const bot = selectedBotRef.current;
-            if (gameCopy.isCheckmate()) {
-              setBotMessage(getRandomQuote(bot, 'lose'));
-            } else if (gameCopy.isDraw()) {
-              setBotMessage(getRandomQuote(bot, 'draw'));
-            } else if (move.captured) {
-              setBotMessage(getRandomQuote(bot, 'capture'));
-            } else if (Math.random() < 0.2) {
-              setBotMessage(getRandomQuote(bot, 'goodMove'));
-            }
-
-            if (move.captured) {
-              playSoundEffect(settingsRef.current, { type: 'capture' });
-            } else {
-              playSoundEffect(settingsRef.current, { type: 'move' });
-            }
-
-            if (gameCopy.inCheck()) {
-              playSoundEffect(settingsRef.current, { type: 'check' });
-            }
-
-            // Request coaching feedback for Coach bot
+            if (gameCopy.isCheckmate()) setBotMessage(getRandomQuote(bot, 'lose'));
+            else if (gameCopy.isDraw()) setBotMessage(getRandomQuote(bot, 'draw'));
+            else if (move.captured) setBotMessage(getRandomQuote(bot, 'capture'));
+            
+            playSoundEffect(settingsRef.current, { type: move.captured ? 'capture' : 'move' });
+            if (gameCopy.inCheck()) playSoundEffect(settingsRef.current, { type: 'check' });
+            
             requestCoachingFeedback(fenBefore, move.san, nextHistory);
-          }, 50);
-          return;
+            return;
+          }
+        } catch (e) {
+          console.error("Invalid move", e);
         }
       }
 
+      const piece = game.get(square);
       if (piece && piece.color === playerColor) {
-        setSelectedSquare(square); haptics.select();
+        setSelectedSquare(square);
+        haptics.select();
         const moves = game.moves({ square, verbose: true });
         setPossibleMoves(moves.map((m) => m.to));
       } else {
@@ -565,74 +541,15 @@ function ChessGame(
         setPossibleMoves([]);
       }
     },
-    [game, playerColor, selectedSquare, isThinking, triggerAnimation, requestCoachingFeedback, resolvePromotion, moveHistory]
+    [game, playerColor, selectedSquare, isThinking, requestCoachingFeedback, resolvePromotion, moveHistory]
   );
 
   const onPieceDrop = useCallback(
-    (sourceSquare, targetSquare) => {
-      if (game.turn() !== playerColor || isThinking || game.isGameOver()) {
-        return false;
-      }
-
-      const fenBefore = game.fen();
-      const gameCopy = buildGameFromHistory(moveHistory, fenBefore);
-      const promotion = resolvePromotion(sourceSquare, targetSquare, game.get(sourceSquare)?.type);
-      if (promotion === null && game.get(sourceSquare)?.type === 'p' && settingsRef.current.confirmMoves) {
-        const proceed = window.confirm('Make this move?');
-        if (!proceed) {
-          setSelectedSquare(null);
-          setPossibleMoves([]);
-          return false;
-        }
-      }
-
-      const move = gameCopy.move({
-        from: sourceSquare,
-        to: targetSquare,
-        promotion: promotion || 'q',
-      });
-
-      if (move === null) return false;
-
-      // Trigger animation before updating state
-      
-
-      // Delay state update to allow animation to start
-      setTimeout(() => {
-        setGame(gameCopy);
-        const nextHistory = [...moveHistory, move];
-        setMoveHistory(nextHistory); haptics.move(); 
-        setSelectedSquare(null);
-        setPossibleMoves([]);
-
-        const bot = selectedBotRef.current;
-        if (gameCopy.isCheckmate()) {
-          setBotMessage(getRandomQuote(bot, 'lose'));
-        } else if (gameCopy.isDraw()) {
-          setBotMessage(getRandomQuote(bot, 'draw'));
-        } else if (move.captured) {
-          setBotMessage(getRandomQuote(bot, 'capture'));
-        } else if (Math.random() < 0.2) {
-          setBotMessage(getRandomQuote(bot, 'goodMove'));
-        }
-
-        if (move.captured) {
-          playSoundEffect(settingsRef.current, { type: 'capture' });
-        } else {
-          playSoundEffect(settingsRef.current, { type: 'move' });
-        }
-
-        if (gameCopy.inCheck()) {
-          playSoundEffect(settingsRef.current, { type: 'check' });
-        }
-
-        // Request coaching feedback for Coach bot
-        requestCoachingFeedback(fenBefore, move.san, nextHistory);
-      }, 50);
-
-      return true;
+    () => {
+      // Tap to move only - disable drag and drop
+      return false;
     },
-    [game, playerColor, isThinking, triggerAnimation, requestCoachingFeedback, resolvePromotion, moveHistory]
+    []
   );
 
   const handleNewGame = useCallback(() => {

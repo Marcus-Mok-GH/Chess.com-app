@@ -17,7 +17,7 @@ export default function SetUsernameModal() {
     const trimmed = username.trim();
     if (trimmed.length < 2) return setError('Username must be at least 2 characters.');
     if (trimmed.length > 20) return setError('Username must be 20 characters or less.');
-    if (!/^[a-zA-Z0-9_]+$/.test(trimmed)) return setError('Letters, numbers, and underscores only.');
+    if (!/^[a-zA-Z0-9._-]+$/.test(trimmed)) return setError('Letters, numbers, dots, hyphens, and underscores only.');
 
     setIsLoading(true);
     try {
@@ -34,7 +34,7 @@ export default function SetUsernameModal() {
     <div className="username-overlay">
       <div className="username-modal">
         <div className="username-header">
-          <h2>👟 One last step!</h2>
+          <h2>\ud83d\udc5f One last step!</h2>
           <p>Please choose a username for your account.</p>
         </div>
 

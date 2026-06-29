@@ -53,6 +53,7 @@ export default function ChessBoard({
         position={currentFen}
         onPieceDrop={onPieceDrop}
         onSquareClick={onSquareClick}
+        arePiecesDraggable={false}
         boardOrientation={boardOrientation}
         customDarkSquareStyle={{ backgroundColor: colors.dark }}
         customLightSquareStyle={{ backgroundColor: colors.light }}
