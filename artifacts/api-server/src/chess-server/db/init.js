@@ -14,10 +14,14 @@ export async function initDatabase() {
         // Ensure UUID extension is available
         await client.query('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
 
+        // Users table
         await client.query(`
           CREATE TABLE IF NOT EXISTS users (
             id VARCHAR(100) PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
             username VARCHAR(20) UNIQUE NOT NULL,
+            email VARCHAR(255) UNIQUE,
+            email_verified BOOLEAN DEFAULT FALSE,
+            image TEXT,
             elo INTEGER DEFAULT 1200,
             games_played INTEGER DEFAULT 0,
             wins INTEGER DEFAULT 0,
@@ -28,6 +32,12 @@ export async function initDatabase() {
           )
         `);
 
+        // Ensure missing columns in users if it existed before
+        await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)');
+        await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE');
+        await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS image TEXT');
+        
+        // Games table
         await client.query(`
           CREATE TABLE IF NOT EXISTS games (
             id SERIAL PRIMARY KEY,
@@ -46,6 +56,7 @@ export async function initDatabase() {
           )
         `);
 
+        // User settings table
         await client.query(`
           CREATE TABLE IF NOT EXISTS user_settings (
             user_id VARCHAR(100) PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -54,18 +65,39 @@ export async function initDatabase() {
           )
         `);
 
+        // Sessions table
         await client.query(`
-          CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)
+          CREATE TABLE IF NOT EXISTS sessions (
+            id VARCHAR(100) PRIMARY KEY,
+            user_id VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            token VARCHAR(100) UNIQUE NOT NULL,
+            expires_at TIMESTAMP NOT NULL,
+            ip_address VARCHAR(100),
+            user_agent TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
         `);
 
+        // Accounts table (Better Auth/Neon Auth requirements)
         await client.query(`
-          CREATE INDEX IF NOT EXISTS idx_games_code ON games(game_code)
+          CREATE TABLE IF NOT EXISTS accounts (
+            id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
+            user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            account_id TEXT NOT NULL,
+            provider_id TEXT NOT NULL,
+            access_token TEXT,
+            refresh_token TEXT,
+            access_token_expires_at TIMESTAMP,
+            refresh_token_expires_at TIMESTAMP,
+            scope TEXT,
+            password TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
         `);
 
-        await client.query(`
-          CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id)
-        `);
-
+        // Other tables
         await client.query(`
           CREATE TABLE IF NOT EXISTS matchmaking_queue (
             id SERIAL PRIMARY KEY,
@@ -77,14 +109,6 @@ export async function initDatabase() {
             joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             last_heartbeat TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           )
-        `);
-
-        await client.query(`
-          CREATE INDEX IF NOT EXISTS idx_matchmaking_player_id ON matchmaking_queue(player_id)
-        `);
-
-        await client.query(`
-          CREATE INDEX IF NOT EXISTS idx_matchmaking_elo ON matchmaking_queue(elo)
         `);
 
         await client.query(`
@@ -120,22 +144,6 @@ export async function initDatabase() {
         `);
 
         await client.query(`
-          CREATE INDEX IF NOT EXISTS idx_active_games_game_id ON active_games(game_id)
-        `);
-
-        await client.query(`
-          CREATE INDEX IF NOT EXISTS idx_active_games_status ON active_games(status)
-        `);
-
-        await client.query(`
-          CREATE INDEX IF NOT EXISTS idx_match_moves_game_id ON match_moves(game_id)
-        `);
-
-        await client.query(`
-          CREATE INDEX IF NOT EXISTS idx_match_moves_username ON match_moves(username)
-        `);
-
-        await client.query(`
           CREATE TABLE IF NOT EXISTS elo_history (
             id SERIAL PRIMARY KEY,
             user_id VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -149,48 +157,19 @@ export async function initDatabase() {
           )
         `);
 
-        await client.query(`
-          CREATE INDEX IF NOT EXISTS idx_elo_history_user_id ON elo_history(user_id)
-        `);
-
-        await client.query(`
-          CREATE UNIQUE INDEX IF NOT EXISTS idx_elo_history_user_game ON elo_history(user_id, game_code)
-        `);
-
-        await client.query(`
-          CREATE TABLE IF NOT EXISTS sessions (
-            id VARCHAR(100) PRIMARY KEY,
-            user_id VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            token VARCHAR(100) UNIQUE NOT NULL,
-            expires_at TIMESTAMP NOT NULL,
-            ip_address VARCHAR(100),
-            user_agent TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-          )
-        `);
-
-        await client.query(`
-          CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token)
-        `);
-
-        await client.query(`
-          CREATE TABLE IF NOT EXISTS otp_codes (
-            id SERIAL PRIMARY KEY,
-            email VARCHAR(255) NOT NULL,
-            code VARCHAR(10) NOT NULL,
-            expires_at TIMESTAMP NOT NULL,
-            used BOOLEAN DEFAULT FALSE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-          )
-        `);
-
-        await client.query(`
-          CREATE INDEX IF NOT EXISTS idx_otp_codes_email ON otp_codes(email)
-        `);
-
-        await client.query(`
-          ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)
-        `);
+        // Indexes
+        await client.query('CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_games_code ON games(game_code)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_matchmaking_player_id ON matchmaking_queue(player_id)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_matchmaking_elo ON matchmaking_queue(elo)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_active_games_game_id ON active_games(game_id)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_active_games_status ON active_games(status)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_match_moves_game_id ON match_moves(game_id)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_match_moves_username ON match_moves(username)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_elo_history_user_id ON elo_history(user_id)');
+        await client.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_elo_history_user_game ON elo_history(user_id, game_code)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token)');
 
         await client.query('COMMIT');
       } catch (error) {
