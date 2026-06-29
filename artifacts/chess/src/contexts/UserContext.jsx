@@ -65,15 +65,22 @@ export function UserProvider({ children }) {
       try {
         const sessionUserRaw = localStorage.getItem(SESSION_USER_DATA_KEY);
         if (sessionUserRaw) {
-          const sessionUser = JSON.parse(sessionUserRaw);
-          if (sessionUser?.username && isMounted) {
-            setUser(sessionUser);
+          try {
+            const sessionUser = JSON.parse(sessionUserRaw);
+            if (sessionUser?.username && isMounted) {
+              setUser(sessionUser);
+            }
+          } catch (e) {
+            localStorage.removeItem(SESSION_USER_DATA_KEY);
           }
         }
 
         const sessionResult = await neonAuth.getSession();
-        const session = sessionResult?.data?.session;
-        if (!session) {
+        const data = sessionResult?.data;
+        const session = data?.session;
+        const serverUser = data?.user;
+
+        if (!session || !serverUser) {
           if (isMounted && !localStorage.getItem(PENDING_OTP_KEY)) {
             setUser(null);
             setToken(null);
@@ -84,18 +91,17 @@ export function UserProvider({ children }) {
           return;
         }
 
-        const serverUser = sessionResult.data.user;
         const userData = {
           id: serverUser.id,
-          username: serverUser.username,
+          username: serverUser.username || serverUser.name,
           email: serverUser.email,
-          elo: serverUser.elo,
-          gamesPlayed: serverUser.gamesPlayed,
-          wins: serverUser.wins,
-          losses: serverUser.losses,
-          draws: serverUser.draws,
+          elo: serverUser.elo || 1200,
+          gamesPlayed: serverUser.gamesPlayed || 0,
+          wins: serverUser.wins || 0,
+          losses: serverUser.losses || 0,
+          draws: serverUser.draws || 0,
           createdAt: serverUser.createdAt,
-          needsUsername: serverUser.needsUsername,
+          needsUsername: !!serverUser.needsUsername,
         };
 
         if (isMounted) {
@@ -105,7 +111,7 @@ export function UserProvider({ children }) {
           localStorage.removeItem(PENDING_OTP_KEY);
         }
       } catch (e) {
-        console.error('Session init error:', e);
+        console.error('[UserContext] Session init error:', e);
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -141,19 +147,24 @@ export function UserProvider({ children }) {
       });
       if (error) throw new Error(error.message || 'Invalid code');
       
-      const serverUser = data.user;
-      const session = data.session;
+      const serverUser = data?.user;
+      const session = data?.session;
+      
+      if (!serverUser || !session) {
+        throw new Error('Authentication response was incomplete.');
+      }
+
       const userData = {
         id: serverUser.id,
-        username: serverUser.username,
+        username: serverUser.username || serverUser.name,
         email: serverUser.email,
-        elo: serverUser.elo,
-        gamesPlayed: serverUser.gamesPlayed,
-        wins: serverUser.wins,
-        losses: serverUser.losses,
-        draws: serverUser.draws,
+        elo: serverUser.elo || 1200,
+        gamesPlayed: serverUser.gamesPlayed || 0,
+        wins: serverUser.wins || 0,
+        losses: serverUser.losses || 0,
+        draws: serverUser.draws || 0,
         createdAt: serverUser.createdAt,
-        needsUsername: serverUser.needsUsername,
+        needsUsername: !!serverUser.needsUsername,
       };
 
       setUser(userData);
@@ -169,7 +180,7 @@ export function UserProvider({ children }) {
   const updateUsername = useCallback(async (newUsername) => {
     try {
       const response = await api.updateUsername(newUsername, token);
-      if (response.success) {
+      if (response.success && response.user) {
         const updatedUser = {
           ...user,
           username: response.user.username,

@@ -169,12 +169,16 @@ router.post('/sign-in/email-otp', async (req, res) => {
       userAgent: req.headers['user-agent'],
     });
 
-    // A user "needs a username" if their current one is a default "player_..." one.
     const needsUsername = user.username.startsWith('player_');
 
     return res.json({
       data: {
-        session: { token },
+        session: { 
+          id: token,
+          token: token,
+          userId: user.id,
+          expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        },
         user: {
           id: user.id,
           username: user.username,
@@ -213,7 +217,6 @@ router.post('/update-username', async (req, res) => {
     const userId = await validateSession(token);
     if (!userId) return res.status(401).json({ error: { message: 'Unauthorized' } });
 
-    // Check if username is taken
     const check = await query('SELECT id FROM users WHERE LOWER(username) = LOWER($1) AND id != $2', [trimmed, userId]);
     if (check.rows.length > 0) {
       return res.status(400).json({ error: { message: 'Username is already taken.' } });
@@ -278,7 +281,11 @@ router.get('/session', async (req, res) => {
     const needsUsername = u.username.startsWith('player_');
 
     res.json({
-      session: { token },
+      session: { 
+        id: token,
+        token: token,
+        userId: u.id,
+      },
       user: {
         id: u.id,
         username: u.username,
