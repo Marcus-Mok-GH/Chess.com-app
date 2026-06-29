@@ -185,7 +185,10 @@ export default function Landing() {
 
       <footer className="landing-footer">
         <div className="footer-content">
-          <div className="footer-logo">♟️ chess.com-app</div>
+          <div className="footer-logo">
+            ♟️ chess.com-app
+            <span className="footer-inspiration">Inspired by chess.com</span>
+          </div>
           <div className="footer-links">
             <Link to="/play">Play</Link>
             <Link to="/online">Online</Link>

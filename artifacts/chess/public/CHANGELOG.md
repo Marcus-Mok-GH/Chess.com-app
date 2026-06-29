@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.0.4 - 2026-06-29
+- Added "Inspired by chess.com" attribution to the landing page footer.
+
 ## 2.0.3 - 2026-06-29
 - Created `README.md` with project overview and workflow rules.
 - Created `agents.md` with mandatory instructions for AI agents to update the changelog after every change.
