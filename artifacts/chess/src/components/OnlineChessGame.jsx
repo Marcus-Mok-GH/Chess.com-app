@@ -156,11 +156,6 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     }
   };
 
-  const onPieceDrop = () => {
-    // Tap to move only - disable drag and drop
-    return false;
-  };
-
   const customSquareStyles = useMemo(() => {
     const styles = {};
     if (selectedSquare) styles[selectedSquare] = { backgroundColor: 'rgba(255, 255, 0, 0.4)' };
@@ -194,7 +189,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
       <GameUI
         topPlayer={boardOrientation === 'white' ? { ...blackPlayer, color: 'b' } : { ...whitePlayer, color: 'w' }}
         bottomPlayer={boardOrientation === 'white' ? { ...whitePlayer, color: 'w' } : { ...blackPlayer, color: 'b' }}
-        game={game} onPieceDrop={onPieceDrop} onSquareClick={onSquareClick}
+        game={game} onSquareClick={onSquareClick}
         boardOrientation={boardOrientation} customSquareStyles={customSquareStyles}
         settings={settings} animatingPieces={animatingPieces}
         removeAnimation={(id) => setAnimatingPieces(prev => prev.filter(a => a.id !== id))}
