@@ -7,7 +7,7 @@ import ChessPieceIcon from '../../ChessPieceIcon';
 import MoveHistory from '../../MoveHistory';
 
 export default function GameUI({
-  topPlayer, bottomPlayer, game, onPieceDrop, onSquareClick,
+  topPlayer, bottomPlayer, game, onSquareClick,
   boardOrientation, customSquareStyles, settings, animatingPieces,
   removeAnimation, showVictory, gameId, opponentStatus, eloChange,
   moveError, getStatusMessage, drawOffered, handleRespondDraw,
@@ -42,7 +42,7 @@ export default function GameUI({
         <div className="board-wrapper">
           <ChessBoard
             position={game}
-            onPieceDrop={onPieceDrop}
+            
             onSquareClick={onSquareClick}
             boardOrientation={boardOrientation}
             customSquareStyles={customSquareStyles}
