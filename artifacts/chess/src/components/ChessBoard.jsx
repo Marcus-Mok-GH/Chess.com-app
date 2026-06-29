@@ -33,7 +33,7 @@ const themeColors = {
 
 export default function ChessBoard({
   position,
-  onPieceDrop,
+
   onSquareClick,
   boardOrientation = 'white',
   customSquareStyles = {},
@@ -51,7 +51,6 @@ export default function ChessBoard({
       <Chessboard
         id="MainChessboard"
         position={currentFen}
-        onPieceDrop={onPieceDrop}
         onSquareClick={onSquareClick}
         arePiecesDraggable={false}
         boardOrientation={boardOrientation}
