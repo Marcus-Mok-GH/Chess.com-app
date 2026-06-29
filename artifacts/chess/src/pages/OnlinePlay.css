@@ -319,8 +319,7 @@
   0% {
     transform: scale(0.5);
     opacity: 0.6;
-  }
-  100% {
+  }100% {
     transform: scale(1.2);
     opacity: 0;
   }
@@ -903,5 +902,306 @@
 
   .btn {
     width: 100%;
+  }
+}
+
+/* ========================================
+   DESKTOP LANDSCAPE OPTIMIZATIONS
+   ======================================== */
+
+@media (min-width: 1024px) and (orientation: landscape) {
+  .lobby-container {
+    padding: 60px 40px;
+  }
+
+  .lobby-content {
+    max-width: 960px;
+    padding: 64px;
+    background: rgba(28, 30, 35, 0.88);
+    border-width: 2px;
+  }
+
+  .mode-title {
+    font-size: 2.25rem;
+    margin-bottom: 48px;
+    letter-spacing: -0.01em;
+  }
+
+  .elo-display {
+    padding: 24px 48px;
+    margin-bottom: 56px;
+    border-width: 2px;
+  }
+
+  .elo-value {
+    font-size: 3.5rem;
+  }
+
+  .mode-options {
+    flex-direction: row;
+    gap: 24px;
+    align-items: stretch;
+  }
+
+  .mode-option {
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 48px 32px;
+    min-height: 360px;
+    justify-content: center;
+    gap: 24px;
+    background: rgba(45, 46, 50, 0.6);
+  }
+
+  .mode-option:hover {
+    background: rgba(58, 59, 65, 0.9);
+    transform: translateY(-8px);
+  }
+
+  .mode-icon {
+    width: 110px;
+    height: 110px;
+    font-size: 3.5rem;
+    margin-bottom: 8px;
+    background: rgba(26, 27, 31, 0.8);
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .mode-info h3 {
+    font-size: 1.6rem;
+    margin-bottom: 12px;
+  }
+
+  .mode-info p {
+    font-size: 1rem;
+    line-height: 1.6;
+    max-width: 260px;
+    margin: 0 auto;
+    color: var(--color-text-secondary);
+  }
+
+  /* Matchmaking / Waiting Desktop */
+  .waiting-content {
+    max-width: 600px;
+  }
+
+  .matchmaking-title {
+    font-size: 2.5rem;
+    margin-bottom: 16px;
+  }
+
+  .waiting-desc {
+    font-size: 1.125rem;
+    margin-bottom: 40px;
+  }
+
+  .search-stats {
+    padding: 32px;
+    gap: 64px;
+    margin-bottom: 48px;
+  }
+
+  .stat-label {
+    font-size: 0.8125rem;
+    margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-size: 1.75rem;
+  }
+
+  /* Buttons */
+  .btn-large {
+    padding: 16px 40px;
+    font-size: 1.125rem;
+  }
+}
+
+@media (min-width: 1024px) and (orientation: landscape) {
+  .join-form {
+    flex-direction: row;
+    gap: 16px;
+  }
+
+  .join-input {
+    flex: 1;
+    text-align: left;
+    padding-left: 24px;
+    letter-spacing: 0.1em;
+  }
+
+  .lobby-section {
+    margin-bottom: 48px;
+  }
+}
+
+@media (min-width: 1024px) and (orientation: landscape) {
+  .game-code-box {
+    padding: 48px;
+    margin-bottom: 32px;
+  }
+
+  .code-label {
+    font-size: 0.875rem;
+    margin-bottom: 12px;
+  }
+
+  .code-value {
+    font-size: 4rem;
+    margin-bottom: 24px;
+  }
+
+  .share-options {
+    margin-bottom: 32px;
+  }
+}
+
+/* ========================================
+   MOBILE REFINEMENTS (Small Screens)
+   ======================================== */
+
+@media (max-width: 480px) {
+  .lobby-container {
+    padding: 16px 12px;
+  }
+
+  .lobby-content {
+    padding: 24px 16px;
+    border-radius: var(--radius-md);
+  }
+
+  .mode-title {
+    font-size: 1.4rem;
+    margin-bottom: 20px;
+  }
+
+  .elo-display {
+    padding: 12px 20px;
+    margin-bottom: 24px;
+  }
+
+  .elo-value {
+    font-size: 1.75rem;
+  }
+
+  .mode-options {
+    gap: 10px;
+  }
+
+  .mode-option {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .mode-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.25rem;
+  }
+
+  .mode-info h3 {
+    font-size: 1rem;
+    margin-bottom: 2px;
+  }
+
+  .mode-info p {
+    font-size: 0.75rem;
+    line-height: 1.4;
+  }
+
+  .guest-banner {
+    padding: 12px 16px;
+  }
+
+  .guest-banner-text {
+    font-size: 0.8125rem;
+  }
+
+  /* Compact Matchmaking for Mobile */
+  .waiting-content h2 {
+    font-size: 1.5rem;
+  }
+
+  .matchmaking-animation {
+    width: 140px;
+    height: 140px;
+    margin-bottom: 24px;
+  }
+
+  .search-grid-enhanced {
+    width: 100px;
+    height: 100px;
+  }
+
+  .search-stats {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .stat-value {
+    font-size: 1rem;
+  }
+
+  /* Join Form Mobile */
+  .join-input {
+    padding: 12px;
+    font-size: 1rem;
+    letter-spacing: 0.15em;
+  }
+
+  /* Game Code Box Mobile */
+  .game-code-box {
+    padding: 20px 16px;
+  }
+
+  .code-value {
+    font-size: 1.75rem;
+    letter-spacing: 0.1em;
+  }
+}
+
+/* Landscape Mobile (Short screens) */
+@media (orientation: landscape) and (max-height: 500px) {
+  .online-play-page {
+    overflow-y: auto;
+    display: block; /* Allow scrolling */
+  }
+
+  .lobby-container {
+    padding: 20px 16px;
+    align-items: flex-start;
+  }
+
+  .lobby-content {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .elo-display {
+    padding: 8px 16px;
+    margin-bottom: 16px;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .mode-options {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .mode-option {
+    flex: 1 1 calc(50% - 10px);
+    padding: 12px;
+  }
+
+  .mode-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 1.125rem;
   }
 }
