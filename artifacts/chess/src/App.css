@@ -2444,3 +2444,105 @@ button, .btn, .nav-tab {
 .chess-board-wrapper {
   touch-action: none; /* Prevent scrolling while dragging pieces */
 }
+/* Online game landscape optimization: keep the board playable in short viewports. */
+@media (orientation: landscape) and (max-height: 540px) {
+  .online-chess-game {
+    padding: 4px 8px !important;
+    padding-bottom: calc(4px + env(safe-area-inset-bottom)) !important;
+    overflow: hidden;
+  }
+
+  .online-chess-game .game-container {
+    flex-direction: row !important;
+    align-items: stretch;
+    gap: 8px !important;
+  }
+
+  .online-chess-game .board-section {
+    flex: 0 0 auto;
+    width: min(calc(100dvh - var(--header-height, 36px) - 24px), 58vw);
+    max-width: 58vw;
+    gap: 4px;
+  }
+
+  .online-chess-game .board-wrapper {
+    width: min(calc(100dvh - var(--header-height, 36px) - 104px), 58vw) !important;
+    min-width: 180px;
+    min-height: 180px;
+    max-width: 58vw !important;
+    border-radius: 6px !important;
+  }
+
+  .online-chess-game .player-bar {
+    min-height: 34px !important;
+    padding: 4px 8px !important;
+    border-radius: 6px !important;
+  }
+
+  .online-chess-game .player-avatar {
+    width: 26px;
+    height: 26px;
+    font-size: 1rem;
+  }
+
+  .online-chess-game .player-name,
+  .online-chess-game .player-rating,
+  .online-chess-game .captured-pieces {
+    font-size: 0.72rem;
+  }
+
+  .online-chess-game .sidebar {
+    display: flex !important;
+    width: min(240px, 36vw) !important;
+    flex-direction: column !important;
+    gap: 6px;
+    overflow-y: auto;
+    max-height: calc(100dvh - var(--header-height, 36px) - 12px);
+  }
+
+  .online-chess-game .online-game-info,
+  .online-chess-game .status-message,
+  .online-chess-game .error-message,
+  .online-chess-game .draw-offer,
+  .online-chess-game .reactions,
+  .online-chess-game .move-history,
+  .online-chess-game .controls {
+    border-radius: 6px;
+  }
+
+  .online-chess-game .online-game-info,
+  .online-chess-game .status-message,
+  .online-chess-game .error-message,
+  .online-chess-game .draw-offer,
+  .online-chess-game .reactions,
+  .online-chess-game .controls {
+    padding: 8px;
+    font-size: 0.75rem;
+  }
+
+  .online-chess-game .move-history {
+    flex: 1 1 72px;
+    min-height: 60px;
+    max-height: 96px;
+  }
+
+  .online-chess-game .reactions {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(34px, 1fr));
+    gap: 4px;
+  }
+
+  .online-chess-game .reactions button,
+  .online-chess-game .controls button,
+  .online-chess-game .draw-offer button {
+    min-height: 34px;
+    padding: 5px 7px;
+    font-size: 0.72rem;
+  }
+
+  .online-chess-game .controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+}

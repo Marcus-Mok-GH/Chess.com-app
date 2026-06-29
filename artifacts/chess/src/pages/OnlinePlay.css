@@ -905,3 +905,195 @@
     width: 100%;
   }
 }
+
+/* Online play landscape optimization for short mobile viewports. */
+@media (orientation: landscape) and (max-height: 540px) {
+  .online-play-page {
+    min-height: 100dvh;
+    overflow-y: auto;
+  }
+
+  .online-play-page::before,
+  .online-play-page::after {
+    width: 260px;
+    height: 260px;
+    opacity: 0.32;
+  }
+
+  .guest-banner {
+    padding: 6px 12px;
+  }
+
+  .guest-banner-content {
+    max-width: 920px;
+    flex-direction: row;
+    gap: 10px;
+  }
+
+  .guest-banner-icon {
+    font-size: 1.1rem;
+  }
+
+  .guest-banner-text {
+    font-size: 0.8rem;
+  }
+
+  .guest-banner .btn,
+  .guest-banner-action {
+    width: auto;
+    min-height: 34px;
+    padding: 6px 12px;
+    font-size: 0.75rem;
+  }
+
+  .lobby-container,
+  .waiting-container {
+    align-items: flex-start;
+    padding: 10px 14px;
+  }
+
+  .lobby-content {
+    max-width: min(900px, calc(100vw - 28px));
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .mode-select-content {
+    display: grid;
+    grid-template-columns: minmax(150px, 0.7fr) minmax(320px, 1.3fr);
+    grid-template-areas:
+      "rating modes"
+      "title modes"
+      "error error";
+    align-items: center;
+    gap: 10px 16px;
+    text-align: left;
+  }
+
+  .mode-select-content .elo-display {
+    grid-area: rating;
+    margin: 0;
+    width: 100%;
+    padding: 10px 14px;
+    align-items: flex-start;
+  }
+
+  .mode-select-content .mode-title {
+    grid-area: title;
+    margin: 0;
+    font-size: 1.25rem;
+    line-height: 1.15;
+  }
+
+  .mode-select-content .error-message {
+    grid-area: error;
+    margin-top: 0;
+  }
+
+  .mode-options {
+    grid-area: modes;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .mode-option {
+    min-height: 118px;
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .mode-option:hover {
+    transform: none;
+  }
+
+  .mode-icon {
+    width: 42px;
+    height: 42px;
+    font-size: 1.35rem;
+  }
+
+  .mode-info h3 {
+    font-size: 0.95rem;
+  }
+
+  .mode-info p {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 0.75rem;
+    line-height: 1.35;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  .elo-value {
+    font-size: 1.45rem;
+  }
+
+  .waiting-content {
+    max-width: min(760px, calc(100vw - 28px));
+  }
+
+  .matchmaking-animation,
+  .waiting-animation {
+    width: 96px;
+    height: 96px;
+    margin-bottom: 14px;
+  }
+
+  .search-grid-enhanced {
+    width: 86px;
+    height: 86px;
+  }
+
+  .search-stats {
+    flex-direction: row;
+    gap: 14px;
+    padding: 12px;
+  }
+
+  .matchmaking-title,
+  .waiting-content h2 {
+    font-size: 1.25rem;
+    margin-bottom: 6px;
+  }
+
+  .waiting-desc,
+  .matchmaking-info-enhanced {
+    margin-bottom: 14px;
+  }
+
+  .game-code-box {
+    margin-bottom: 12px;
+    padding: 14px;
+  }
+
+  .code-value {
+    font-size: 1.6rem;
+    margin-bottom: 8px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 540px) and (max-width: 720px) {
+  .mode-select-content {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "rating"
+      "title"
+      "modes"
+      "error";
+    text-align: center;
+  }
+
+  .mode-select-content .elo-display {
+    align-items: center;
+  }
+
+  .mode-options {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .mode-option {
+    min-height: 100px;
+  }
+}
