@@ -117,39 +117,43 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
 
   const onSquareClick = (square) => {
     if (game.turn() !== colorCode || gameStatus !== 'playing') return;
-      if (selectedSquare) {
-        const moveAttempt = { from: selectedSquare, to: square, promotion: 'q' };
-        if (makeMove(moveAttempt)) {
-          const piece = game.get(selectedSquare);
-          if (piece) {
-            haptics.move(); // triggerAnimation({ piece: piece.type, color: piece.color, from: selectedSquare, to: square });
-          }
-          setSelectedSquare(null);
-          setPossibleMoves([]);
-          return;
-        }
-      }
-      const piece = game.get(square);
-      if (piece && piece.color === colorCode) {
-        setSelectedSquare(square); haptics.select();
-        setPossibleMoves(game.moves({ square, verbose: true }).map(m => m.to));
-      }
-  };
+    
+    const piece = game.get(square);
 
-  const onPieceDrop = (source, target) => {
-    const moveAttempt = { from: source, to: target, promotion: 'q' };
-    const success = makeMove(moveAttempt);
-    if (success) {
-      // Get the last move from moveHistory to animate it locally
-      // Note: moveHistory might not have updated yet in this tick
-      // but makeMove internally knows the move details.
-      // We can use the moveAttempt if we want to be immediate.
-      const piece = game.get(source);
-      if (piece) {
-        haptics.move(); // triggerAnimation({ piece: piece.type, color: piece.color, from: source, to: target });
+    if (selectedSquare) {
+      if (square === selectedSquare) {
+        setSelectedSquare(null);
+        setPossibleMoves([]);
+        return;
+      }
+
+      // Tap to move: switch selection if clicking another of own pieces
+      if (piece && piece.color === colorCode) {
+        setSelectedSquare(square);
+        haptics.select();
+        setPossibleMoves(game.moves({ square, verbose: true }).map(m => m.to));
+        return;
+      }
+
+      const moveAttempt = { from: selectedSquare, to: square, promotion: 'q' };
+      if (makeMove(moveAttempt)) {
+        haptics.move();
+        setSelectedSquare(null);
+        setPossibleMoves([]);
+        return;
       }
     }
-    return success;
+    
+    if (piece && piece.color === colorCode) {
+      setSelectedSquare(square); 
+      haptics.select();
+      setPossibleMoves(game.moves({ square, verbose: true }).map(m => m.to));
+    }
+  };
+
+  const onPieceDrop = () => {
+    // Tap to move only - disable drag and drop
+    return false;
   };
 
   const customSquareStyles = useMemo(() => {

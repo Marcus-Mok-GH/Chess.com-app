@@ -290,69 +290,95 @@
   border-color: #9a958f;
 }
 
-/* Responsive */
 @media (max-width: 600px) {
   .settings-page {
-    padding: 16px;
-  }
-
-  .settings-section {
-    padding: 16px;
-  }
-
-  .setting-item {
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-
-  .toggle,
-  .theme-selector,
-  .volume-slider {
-    margin-left: 0;
-  }
-
-  .theme-selector {
-    width: 100%;
-    justify-content: flex-start;
-  }
-
-  .volume-slider {
-    width: 100%;
-    max-width: 100%;
-  }
-}
-
-@media (max-width: 480px) {
-  .settings-page {
     padding: 12px;
+    padding-bottom: 80px; /* Space for bottom nav */
+  }
+
+  .settings-container h1 {
+    font-size: 1.5rem;
+    margin-bottom: 16px;
+    padding-left: 4px;
   }
 
   .settings-section {
-    padding: 14px 12px;
+    padding: 16px 14px;
     margin-bottom: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
   }
 
   .settings-section h2 {
-    font-size: 1rem;
+    font-size: 0.75rem;
+    margin-bottom: 12px;
+    opacity: 0.8;
   }
 
   .setting-item {
+    padding: 14px 0;
+    align-items: center;
+  }
+
+  .setting-info label {
+    font-size: 1rem;
+    color: #fff;
+  }
+
+  .setting-desc {
+    font-size: 0.75rem;
+    line-height: 1.3;
+  }
+
+  /* Keep toggle on the right on mobile if possible, or stack cleanly */
+  .setting-item {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+  }
+
+  .setting-info {
+    padding-right: 12px;
+  }
+
+  .theme-selector {
+    margin-top: 8px;
+    width: 100%;
+    justify-content: flex-start;
+    gap: 12px;
+  }
+
+  .theme-option {
+    padding: 6px;
+  }
+
+  .theme-preview {
+    width: 40px;
+    height: 40px;
+  }
+
+  .theme-square {
+    width: 20px;
+    height: 20px;
+  }
+
+  .volume-slider {
+    width: 100%;
+    margin-top: 12px;
+  }
+  
+  .setting-item:has(.volume-slider),
+  .setting-item:has(.theme-selector) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .account-row {
     padding: 10px 0;
   }
 
-  .setting-label {
-    font-size: 0.875rem;
-  }
-
-  .reset-btn,
-  .link-button {
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-
   .logout-btn {
-    min-height: 48px;
+    margin-top: 12px;
+    font-weight: 600;
   }
 }

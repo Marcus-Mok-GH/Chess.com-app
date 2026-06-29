@@ -33,7 +33,7 @@ export default function GameUI({
             showCoordinates={settings.showCoordinates}
             boardTheme={settings.boardTheme}
           />
-          /* {animatingPieces.map((anim) => (
+          {animatingPieces.map((anim) => (
             <AnimatedPiece
               key={anim.id}
               piece={anim.piece}
@@ -43,7 +43,7 @@ export default function GameUI({
               captured={anim.captured}
               onComplete={() => removeAnimation(anim.id)}
             />
-          ))} */
+          ))}
           {showVictory && <div className="victory-burst">Checkmate!</div>}
         </div>
         <PlayerBar

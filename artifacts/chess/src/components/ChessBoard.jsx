@@ -17,8 +17,8 @@ const PIECE_IMAGES = {
 
 const customPieces = Object.entries(PIECE_IMAGES).reduce((acc, [piece, src]) => {
   acc[piece] = ({ squareWidth }) => (
-    <div style={{ width: squareWidth, height: squareWidth }}>
-      <img src={src} width={squareWidth} height={squareWidth} alt={piece} />
+    <div style={{ width: squareWidth, height: squareWidth, pointerEvents: 'none' }}>
+      <img src={src} width={squareWidth} height={squareWidth} alt={piece} style={{ pointerEvents: 'none' }} />
     </div>
   );
   return acc;

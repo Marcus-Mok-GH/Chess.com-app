@@ -487,10 +487,21 @@ function ChessGame(
     (square) => {
       if (game.turn() !== playerColor || isThinking || game.isGameOver()) return;
 
+      const piece = game.get(square);
+
       if (selectedSquare) {
         if (square === selectedSquare) {
           setSelectedSquare(null);
           setPossibleMoves([]);
+          return;
+        }
+
+        // Tap to move: if clicking another piece of the same color, switch selection
+        if (piece && piece.color === playerColor) {
+          setSelectedSquare(square);
+          haptics.select();
+          const moves = game.moves({ square, verbose: true });
+          setPossibleMoves(moves.map((m) => m.to));
           return;
         }
 
@@ -530,8 +541,8 @@ function ChessGame(
         }
       }
 
-      const piece = game.get(square);
-      if (piece && piece.color === playerColor) {
+      const pieceToSelect = game.get(square);
+      if (pieceToSelect && pieceToSelect.color === playerColor) {
         setSelectedSquare(square);
         haptics.select();
         const moves = game.moves({ square, verbose: true });
@@ -737,7 +748,7 @@ function ChessGame(
                 showCoordinates={settings.showCoordinates}
                 boardTheme={settings.boardTheme}
               />
-              /* {animatingPieces.map((anim) => (
+              {animatingPieces.map((anim) => (
                 <AnimatedPiece
                   key={anim.id}
                   piece={anim.piece}
@@ -747,7 +758,7 @@ function ChessGame(
                   captured={anim.captured}
                   onComplete={() => removeAnimation(anim.id)}
                 />
-              ))} */
+              ))}
               {showVictory && (
                 <div className="victory-burst" role="status" aria-live="polite">
                   <span className="victory-spark" />
