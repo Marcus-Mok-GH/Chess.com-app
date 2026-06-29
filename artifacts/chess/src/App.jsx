@@ -192,8 +192,12 @@ function GlobalVerificationGuard() {
  * (via <Outlet>), so navigation never causes a full blank screen.
  */
 function AppShell() {
+  const location = useLocation();
+  const isGameRoute = location.pathname.startsWith('/game/') || 
+                     (location.pathname.startsWith('/online/') && location.pathname.length > 8);
+  
   return (
-    <div className="app">
+    <div className={`app ${isGameRoute ? 'hide-bottom-nav' : ''}`}>
       <AppHeader />
       <Suspense fallback={<RouteFallback />}>
         <Outlet />
