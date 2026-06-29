@@ -28,7 +28,6 @@ export default function ChessPieceIcon({ piece, color, size = 24, className = ''
       width={size}
       height={size}
       style={{ display: 'inline-block', verticalAlign: 'middle' }}
-      draggable={false}
     />
   );
 }
@@ -42,7 +41,6 @@ export function LogoIcon({ size = 28, className = '' }) {
       width={size}
       height={size}
       style={{ display: 'inline-block', verticalAlign: 'middle' }}
-      draggable={false}
     />
   );
 }

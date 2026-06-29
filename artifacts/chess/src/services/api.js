@@ -77,6 +77,26 @@ class ApiService {
     return this.request(`/games/history/${encodeURIComponent(username)}?limit=${limit}`);
   }
 
+  // Get in-progress local game by code and username
+  async getLocalGameByCode(username, gameCode) {
+    return this.request(`/games/local/${encodeURIComponent(username)}/${encodeURIComponent(gameCode)}`);
+  }
+
+  // Create a friendly local game record
+  async createLocalGame({ gameCode, userId, username, opponentName, opponentElo, playerColor }) {
+    return this.request('/games/local/create', {
+      method: 'POST',
+      body: JSON.stringify({
+        gameCode,
+        userId,
+        username,
+        opponentName,
+        opponentElo,
+        playerColor,
+      }),
+    });
+  }
+
   async getEngineMove({ fen, bot }) {
     return this.request('/engine/move', {
       method: 'POST',
