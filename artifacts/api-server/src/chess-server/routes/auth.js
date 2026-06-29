@@ -17,7 +17,6 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const OTP_RE = /^\d{4,8}$/;
 
 // Mask an email so logs don't leak PII. Keeps the domain for debugging.
-//   alice@example.com -> a***@example.com
 function maskEmail(email) {
   if (typeof email !== 'string') return '<invalid>';
   const at = email.indexOf('@');
@@ -67,12 +66,7 @@ router.post('/email-otp/send-verification-otp', async (req, res) => {
 
   const neonAuthUrl = getNeonAuthUrl();
   if (!neonAuthUrl) {
-    console.error('[Auth] NEON_AUTH_BASE_URL is not set');
-    return res.status(503).json({
-      error: {
-        message: 'Auth service is not configured. Set NEON_AUTH_BASE_URL.',
-      },
-    });
+    return res.status(503).json({ error: { message: 'Auth service not configured.' } });
   }
 
   const normalizedEmail = email.toLowerCase().trim();
@@ -92,18 +86,9 @@ router.post('/email-otp/send-verification-otp', async (req, res) => {
     let data;
     try { data = text ? JSON.parse(text) : {}; } catch { data = {}; }
 
-    if (!response.ok) {
-      console.error(`[Auth] send-otp upstream ${response.status} (${maskEmail(normalizedEmail)})`);
-      return res.status(response.status).json(data);
-    }
-
     return res.status(response.status).json(data);
   } catch (err) {
-    const timedOut = err?.name === 'TimeoutError' || err?.name === 'AbortError';
-    console.error(`[Auth] send-otp ${timedOut ? 'timeout' : 'error'} (${maskEmail(normalizedEmail)})`);
-    return res.status(timedOut ? 504 : 500).json({
-      error: { message: timedOut ? 'Auth provider timed out. Please try again.' : 'Failed to send code. Please try again.' },
-    });
+    return res.status(500).json({ error: { message: 'Failed to send code.' } });
   }
 });
 
@@ -120,7 +105,7 @@ router.post('/sign-in/email-otp', async (req, res) => {
 
   const neonAuthUrl = getNeonAuthUrl();
   if (!neonAuthUrl) {
-    return res.status(503).json({ error: { message: 'Auth service is not configured.' } });
+    return res.status(503).json({ error: { message: 'Auth service not configured.' } });
   }
 
   const normalizedEmail = email.toLowerCase().trim();
@@ -171,29 +156,27 @@ router.post('/sign-in/email-otp', async (req, res) => {
 
     const needsUsername = user.username.startsWith('player_');
 
+    // Return the user and session directly at the top level to match Better Auth client expectations.
     return res.json({
-      data: {
-        session: { 
-          id: token,
-          token: token,
-          userId: user.id,
-          expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-        user: {
-          id: user.id,
-          username: user.username,
-          name: user.username,
-          email: user.email,
-          elo: user.elo,
-          gamesPlayed: user.games_played,
-          wins: user.wins,
-          losses: user.losses,
-          draws: user.draws,
-          createdAt: user.created_at,
-          needsUsername,
-        },
+      session: { 
+        id: token,
+        token: token,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       },
-      error: null,
+      user: {
+        id: user.id,
+        username: user.username,
+        name: user.username,
+        email: user.email,
+        elo: user.elo,
+        gamesPlayed: user.games_played,
+        wins: user.wins,
+        losses: user.losses,
+        draws: user.draws,
+        createdAt: user.created_at,
+        needsUsername,
+      },
     });
   } catch (err) {
     return res.status(500).json({ error: { message: 'Sign-in failed. Please try again.' } });
