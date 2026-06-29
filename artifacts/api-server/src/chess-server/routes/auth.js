@@ -113,6 +113,7 @@ router.post('/sign-in/email-otp', async (req, res) => {
   const upstreamUrl = `${neonAuthUrl}/sign-in/email-otp`;
 
   try {
+    console.log(`[Auth] Proxying sign-in for ${maskEmail(normalizedEmail)}`);
     const neonResponse = await fetchWithTimeout(upstreamUrl, {
       method: 'POST',
       headers: {
@@ -127,7 +128,15 @@ router.post('/sign-in/email-otp', async (req, res) => {
     try { neonData = text ? JSON.parse(text) : {}; } catch { neonData = {}; }
 
     if (!neonResponse.ok || neonData.error) {
+      console.error(`[Auth] Upstream error:`, neonData.error);
       return res.status(neonResponse.status).json(neonData);
+    }
+
+    // neonData is { user, session }
+    const neonUser = neonData.user;
+    if (!neonUser) {
+      console.error('[Auth] Upstream returned success but no user data');
+      return res.status(500).json({ error: { message: 'Upstream auth failed to return user.' } });
     }
 
     let user;
@@ -138,6 +147,7 @@ router.post('/sign-in/email-otp', async (req, res) => {
 
     if (existing.rows.length > 0) {
       user = existing.rows[0];
+      console.log(`[Auth] Existing user found: ${user.username}`);
     } else {
       const baseUsername = `player_${crypto.randomBytes(4).toString('hex')}`;
       const finalUsername = await resolveUniqueUsername(baseUsername);
@@ -147,6 +157,7 @@ router.post('/sign-in/email-otp', async (req, res) => {
         [finalUsername, normalizedEmail]
       );
       user = newUser.rows[0];
+      console.log(`[Auth] New user created: ${user.username}`);
     }
 
     const token = await createSession(user.id, {
@@ -156,9 +167,9 @@ router.post('/sign-in/email-otp', async (req, res) => {
 
     const needsUsername = user.username.startsWith('player_');
 
-    // Return the user and session directly at the top level to match Better Auth client expectations.
-    return res.json({
-      session: { 
+    // WRAP in a data property to match what UserContext expectations (sessionResult?.data)
+    const payload = {
+      session: {
         id: token,
         token: token,
         userId: user.id,
@@ -177,9 +188,12 @@ router.post('/sign-in/email-otp', async (req, res) => {
         createdAt: user.created_at,
         needsUsername,
       },
-    });
+    };
+
+    return res.json({ data: payload, error: null });
   } catch (err) {
-    return res.status(500).json({ error: { message: 'Sign-in failed. Please try again.' } });
+    console.error(`[Auth] Sign-in exception:`, err);
+    return res.status(500).json({ error: { message: 'Sign-in failed internally. Please try again.' } });
   }
 });
 
@@ -248,43 +262,45 @@ async function resolveUniqueUsername(base) {
 router.get('/session', async (req, res) => {
   const authHeader = req.headers.authorization;
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  if (!token) return res.json({ session: null, user: null });
+  if (!token) return res.json({ data: { session: null, user: null } });
 
   try {
     const userId = await validateSession(token);
-    if (!userId) return res.json({ session: null, user: null });
+    if (!userId) return res.json({ data: { session: null, user: null } });
 
     const result = await query(
       'SELECT id, username, email, elo, games_played, wins, losses, draws, created_at FROM users WHERE id = $1',
       [userId]
     );
-    if (result.rows.length === 0) return res.json({ session: null, user: null });
+    if (result.rows.length === 0) return res.json({ data: { session: null, user: null } });
 
     const u = result.rows[0];
     const needsUsername = u.username.startsWith('player_');
 
     res.json({
-      session: { 
-        id: token,
-        token: token,
-        userId: u.id,
-      },
-      user: {
-        id: u.id,
-        username: u.username,
-        name: u.username,
-        email: u.email,
-        elo: u.elo,
-        gamesPlayed: u.games_played,
-        wins: u.wins,
-        losses: u.losses,
-        draws: u.draws,
-        createdAt: u.created_at,
-        needsUsername,
-      },
+      data: {
+        session: {
+          id: token,
+          token: token,
+          userId: u.id,
+        },
+        user: {
+          id: u.id,
+          username: u.username,
+          name: u.username,
+          email: u.email,
+          elo: u.elo,
+          gamesPlayed: u.games_played,
+          wins: u.wins,
+          losses: u.losses,
+          draws: u.draws,
+          createdAt: u.created_at,
+          needsUsername,
+        },
+      }
     });
   } catch (error) {
-    res.json({ session: null, user: null });
+    res.json({ data: { session: null, user: null } });
   }
 });
 
