@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.3 - 2026-06-29
+- Created `README.md` with project overview and workflow rules.
+- Created `agents.md` with mandatory instructions for AI agents to update the changelog after every change.
+
 ## 2.0.2 - 2026-06-29
 - Implemented "Tap to Move" chessboard logic and disabled drag-and-drop to improve touch interaction reliability.
 - Optimized Settings and Home screens for mobile devices with enlarged touch targets, responsive layouts, and improved spacing.
@@ -85,7 +89,7 @@
 
 ## 1.1.61 - 2026-05-14
 - Added support for a configurable Supabase magic-link callback URL via `VITE_SUPABASE_AUTH_CALLBACK_URL`.
-- Magic-link requests now prefer the configured callback URL and append `type=magiclink" and `requestId` automatically.
+- Magic-link requests now prefer the configured callback URL and append `type=magiclink` and `requestId` automatically.
 
 ## 1.1.60 - 2026-05-13
 - Fixed magic-link callback handling when redirect URLs only include `requestId` (e.g., ending with `#`) by retrying Supabase session hydration for a short window before failing.
@@ -145,7 +149,7 @@
 - Added API client coverage for `getPublicStats()` to ensure `/stats/public` requests are exercised.
 
 ## 1.1.44 - 2026-05-07
-- Fixed API route wiring so `/api/health" and `/api/stats/public` are registered independently.
+- Fixed API route wiring so `/api/health` and `/api/stats/public` are registered independently.
 - Hardened public stats initialization to auto-run database setup when tables are missing, preventing landing-stat crashes during first boot.
 
 ## 1.1.43 - 2026-05-07
@@ -163,23 +167,23 @@
 
 ## 1.1.38 - 2026-05-06
 - Fixed Supabase magic-link sign-in callback handling so login succeeds even when the redirect omits `username`/`email` query params by caching pending magic-link context locally.
-- Updated magic-link redirect URL to a stable `/login?type=magiclink" callback and clear URL hash tokens after successful callback processing.
+- Updated magic-link redirect URL to a stable `/login?type=magiclink` callback and clear URL hash tokens after successful callback processing.
 
 ## 1.1.37 - 2026-05-06
-- Fixed magic-link login callback handling for implicit-flow redirects containing `#access_token" + `refresh_token" by persisting the returned session before app login.
-- Kept token-hash verification path for query callbacks and continued accepting both `type=magiclink" and `type=email" callback variants.
+- Fixed magic-link login callback handling for implicit-flow redirects containing `#access_token` + `refresh_token` by persisting the returned session before app login.
+- Kept token-hash verification path for query callbacks and continued accepting both `type=magiclink` and `type=email` callback variants.
 - Reduced `/login` auth loop risk by completing sign-in from either callback format used by Supabase email links.
 
 ## 1.1.36 - 2026-05-06
-- Fixed magic-link callback completion when Supabase returns `type=email" by treating both `magiclink" and `email" callback types as valid auth returns.
-- Normalized callback verification payloads to use Supabase-compatible `type=email" for magic-link verification requests.
-- Added regression coverage for query callbacks that arrive with `type=email" to prevent `/login` loops after clicking emailed links.
+- Fixed magic-link callback completion when Supabase returns `type=email` by treating both `magiclink` and `email` callback types as valid auth returns.
+- Normalized callback verification payloads to use Supabase-compatible `type=email` for magic-link verification requests.
+- Added regression coverage for query callbacks that arrive with `type=email` to prevent `/login` loops after clicking emailed links.
 
 ## 1.1.35 - 2026-05-06
-- Fixed magic-link callback reliability so `/login` now completes sign-in when Supabase returns hash-based `access_token" callbacks as well as query token variants.
-- Added authenticated-user auto-redirect on `/login` to guarantee post-auth navigation lands on `/home" instead of remaining on the login screen.
+- Fixed magic-link callback reliability so `/login` now completes sign-in when Supabase returns hash-based `access_token` callbacks as well as query token variants.
+- Added authenticated-user auto-redirect on `/login` to guarantee post-auth navigation lands on `/home` instead of remaining on the login screen.
 - Persisted Supabase auth session locally after OTP verification and reuse it via `getSession()` so startup auth checks no longer clear a freshly-created magic-link session.
-- Added login callback regression tests covering both query `token_hash" and hash `access_token" callback formats.
+- Added login callback regression tests covering both query `token_hash` and hash `access_token` callback formats.
 
 ## 1.1.34 - 2026-05-06
 - Improved startup performance by restoring cached user sessions immediately and moving Supabase/API session refresh into a non-blocking background sync.
@@ -197,7 +201,7 @@
 - Refined `public/favicon.svg` to better match the app's chess theme with board colors and a centered king silhouette.
 
 ## 1.1.30 - 2026-05-06
-- Refined OTP login modal state handling and improved OTP input semantics (`inputMode" + `one-time-code" autocomplete).
+- Refined OTP login modal state handling and improved OTP input semantics (`inputMode` + `one-time-code` autocomplete).
 - Added a new custom chess-themed `public/favicon.svg` app icon.
 
 ## 1.1.29 - 2026-05-06
@@ -214,21 +218,21 @@
 - Added `public/CHANGELOG.md` so production deployments (including Vercel) always serve the changelog file at a stable path.
 
 ## 1.1.26 - 2026-05-06
-- Installed `vite" explicitly with `npm install" and verified local production build succeeds.
+- Installed `vite` explicitly with `npm install` and verified local production build succeeds.
 - Added missing `@testing-library/dom` dev dependency to fix Vitest module resolution errors.
-- Verified both `npm run build" and `npm test" pass locally after dependency updates.
+- Verified both `npm run build` and `npm test` pass locally after dependency updates.
 
 ## 1.1.25 - 2026-05-06
-- Adjusted Vercel install command to `npm ci --include=dev ..." so build-time tools in `devDependencies" are installed during deployment builds.
-- Reverted `vite" and `@vitejs/plugin-react" back to `devDependencies" to keep runtime dependencies lean.
-- Removed `NODE_ENV" from `vercel.example.json" to avoid unintentionally omitting dev dependencies during Vercel installs.
+- Adjusted Vercel install command to `npm ci --include=dev ...` so build-time tools in `devDependencies` are installed during deployment builds.
+- Reverted `vite` and `@vitejs/plugin-react` back to `devDependencies` to keep runtime dependencies lean.
+- Removed `NODE_ENV` from `vercel.example.json` to avoid unintentionally omitting dev dependencies during Vercel installs.
 
 ## 1.1.24 - 2026-05-06
-- Fixed deployment build failure (`Command "npm run build" exited with 1`) caused by missing `vite" binary when hosts install only production dependencies.
-- Moved `vite" and `@vitejs/plugin-react" into runtime `dependencies" so `vite build" is available in CI/CD build environments.
+- Fixed deployment build failure (`Command "npm run build" exited with 1`) caused by missing `vite` binary when hosts install only production dependencies.
+- Moved `vite` and `@vitejs/plugin-react` into runtime `dependencies` so `vite build` is available in CI/CD build environments.
 
 ## 1.1.23 - 2026-05-06
-- Regenerated `package-lock.json" to resolve `npm ci` EINTEGRITY failures on `brace-expansion@1.1.14` tarball verification.
+- Regenerated `package-lock.json` to resolve `npm ci` EINTEGRITY failures on `brace-expansion@1.1.14` tarball verification.
 - Confirmed deterministic install now succeeds with `npm ci --ignore-scripts --no-audit --no-fund --legacy-peer-deps --no-workspaces`.
 
 ## 1.1.22 - 2026-05-04
@@ -246,7 +250,7 @@
 ## 1.1.19 - 2026-05-04
 - Replaced manual OTP code entry with magic-link authentication on both the login page and login modal.
 - Added magic-link request flow with redirect metadata so returning users are automatically signed in and sent to the logged-in home page.
-- Updated Supabase OTP request payload to include `email_redirect_to" for auto-auth callback behavior.
+- Updated Supabase OTP request payload to include `email_redirect_to` for auto-auth callback behavior.
 
 ## 1.1.18 - 2026-05-04
 - Stabilized Vercel dependency installation by switching the deploy install step to lockfile-based `npm ci` with `--legacy-peer-deps`.
@@ -269,7 +273,7 @@
 
 ## 1.1.14 - 2026-05-04
 - Fixed online multiplayer move sync by binding Socket.IO connections to each player when joining a game created via HTTP APIs.
-- Added explicit game-participant authorization in Socket.IO `join_game" so only players in the match can subscribe and move.
+- Added explicit game-participant authorization in Socket.IO `join_game` so only players in the match can subscribe and move.
 - Removed invalid client-side `socket.leave(...)` call that could interrupt online game session cleanup in browsers.
 
 ## 1.1.13 - 2026-05-04
@@ -282,7 +286,7 @@
 - Prevented route crashes when tables are missing by triggering `initDatabase()` on-demand from the shared DB query layer.
 
 ## 1.1.11 - 2026-05-04
-- Aligned OTP request payload shape with Supabase's documented `options` object (`shouldCreateUser" + metadata).
+- Aligned OTP request payload shape with Supabase's documented `options` object (`shouldCreateUser` + metadata).
 - Updated login copy to focus on email OTP code entry only.
 - Removed remaining magic-link wording from login surfaces.
 
@@ -292,7 +296,7 @@
 - Kept explicit OTP code entry flow (no magic link fallback).
 
 ## 1.1.9 - 2026-05-04
-- Fixed Supabase OTP request payload to use documented `create_user" and metadata fields.
+- Fixed Supabase OTP request payload to use documented `create_user` and metadata fields.
 - Improved OTP request UX by separating "send code" and "verify code" loading states.
 - Included username metadata when requesting OTP and added pre-send username validation.
 
@@ -302,8 +306,8 @@
 - Kept username-based game profile provisioning after successful Supabase OTP verification.
 
 ## 1.1.7 - 2026-05-03
-- Unified frontend env variable support to accept both `VITE_*" and `NEXT_PUBLIC_*" names for shared API/socket/Supabase config.
-- Updated Vite env exposure to include `NEXT_PUBLIC_" prefix for cross-frontend compatibility.
+- Unified frontend env variable support to accept both `VITE_*` and `NEXT_PUBLIC_*` names for shared API/socket/Supabase config.
+- Updated Vite env exposure to include `NEXT_PUBLIC_` prefix for cross-frontend compatibility.
 
 ## 1.1.6 - 2026-05-03
 - Updated Fireworks proxy coach endpoint path to OpenAI-compatible `/v1/chat/completions`.
@@ -311,12 +315,12 @@
 ## 1.1.5 - 2026-05-03
 - Updated coach Fireworks integration to use the provided proxy endpoint base URL (`FIREWORKS_BASE_URL`).
 - Made coach auth header optional so the proxy can run with or without `FIREWORKS_API_KEY`.
-- Exposed endpoint details in `/coach/status" and updated coach availability messaging.
+- Exposed endpoint details in `/coach/status` and updated coach availability messaging.
 
 ## 1.1.4 - 2026-05-03
 - Switched AI coach provider from Mistral to Fireworks AI.
 - Updated coach endpoints to use Fireworks chat completions with configurable `FIREWORKS_COACH_MODEL`.
-- Updated coach UI messaging to reference `FIREWORKS_API_KEY" and Fireworks branding.
+- Updated coach UI messaging to reference `FIREWORKS_API_KEY` and Fireworks branding.
 
 ## 1.1.3 - 2026-05-03
 - Switched authentication flow to Supabase Auth with email/password sign-in and auto sign-up fallback.
@@ -326,7 +330,7 @@
 - Fixed Neon serverless driver pool config for Vercel production: separated pg/Neon pool options, dynamic ws import, auto-detect Neon hosts, enabled secure WebSocket.
 
 ## 1.1.1 - 2026-02-10
-- Added missing `elo_history" table creation to database init (fixes 500 on ELO update route).
+- Added missing `elo_history` table creation to database init (fixes 500 on ELO update route).
 - Improved login error logging for easier debugging on Vercel.
 
 ## 1.1.0 - 2026-02-10
