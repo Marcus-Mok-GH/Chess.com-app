@@ -1,4 +1,5 @@
 import './GameBottomBar.css';
+import haptics from "../utils/haptics";
 
 export default function GameBottomBar({
   onNew,
@@ -25,24 +26,24 @@ export default function GameBottomBar({
           </div>
         </div>
       )}
-      <button type="button" className="gbb-btn" onClick={onNew}>
+      <button type="button" className="gbb-btn" onClick={() => { haptics.button(); onNew(); }}>
         New
       </button>
-      <button type="button" className="gbb-btn" onClick={onUndo} disabled={!canUndo || isThinking}>
+      <button type="button" className="gbb-btn" onClick={() => { haptics.button(); onUndo(); }} disabled={!canUndo || isThinking}>
         Undo
       </button>
-      <button type="button" className="gbb-btn" onClick={onFlipBoard}>
+      <button type="button" className="gbb-btn" onClick={() => { haptics.button(); onFlipBoard(); }}>
         Flip
       </button>
       {showHints && (
-        <button type="button" className="gbb-btn" onClick={onHint} disabled={isThinking}>
+        <button type="button" className="gbb-btn" onClick={() => { haptics.button(); onHint(); }} disabled={isThinking}>
           Hint
         </button>
       )}
-      <button type="button" className="gbb-btn" onClick={onReview} disabled={!canReview}>
+      <button type="button" className="gbb-btn" onClick={() => { haptics.button(); onReview(); }} disabled={!canReview}>
         Game Review
       </button>
-      <button type="button" className="gbb-btn danger" onClick={onResign} disabled={isThinking}>
+      <button type="button" className="gbb-btn danger" onClick={() => { haptics.button(); onResign(); }} disabled={isThinking}>
         Resign
       </button>
     </div>
