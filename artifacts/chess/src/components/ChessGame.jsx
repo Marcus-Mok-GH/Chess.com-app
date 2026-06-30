@@ -339,6 +339,7 @@ function ChessGame(
         
 
         setTimeout(() => {
+          if (moveResult.captured) haptics.capture(); else haptics.move();
           setGame(newGame);
           setMoveHistory([...history, moveResult]);
 
@@ -669,7 +670,7 @@ function ChessGame(
           </button>
         </div>
       </div>
-    );
+    ); innerWidth;
   }
 
   const customSquareStyles = {};
