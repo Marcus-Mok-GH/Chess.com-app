@@ -18,7 +18,14 @@ const PIECE_IMAGES = {
 const customPieces = Object.entries(PIECE_IMAGES).reduce((acc, [piece, src]) => {
   acc[piece] = ({ squareWidth }) => (
     <div style={{ width: squareWidth, height: squareWidth, pointerEvents: 'none' }}>
-      <img src={src} width={squareWidth} height={squareWidth} alt={piece} style={{ pointerEvents: 'none' }} />
+      <img
+        src={src}
+        width={squareWidth}
+        height={squareWidth}
+        alt={piece}
+        style={{ pointerEvents: 'none' }}
+        draggable={false}
+      />
     </div>
   );
   return acc;
@@ -33,7 +40,6 @@ const themeColors = {
 
 export default function ChessBoard({
   position,
-
   onSquareClick,
   boardOrientation = 'white',
   customSquareStyles = {},
