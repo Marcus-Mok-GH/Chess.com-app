@@ -555,14 +555,6 @@ function ChessGame(
     [game, playerColor, selectedSquare, isThinking, requestCoachingFeedback, resolvePromotion, moveHistory]
   );
 
-  const onPieceDrop = useCallback(
-    () => {
-      // Tap to move only - disable drag and drop
-      return false;
-    },
-    []
-  );
-
   const handleNewGame = useCallback(() => {
     const newId = generateGameId();
     suppressPersistRef.current = true;
@@ -741,7 +733,6 @@ function ChessGame(
             <div className="board-wrapper">
               <ChessBoard
                 position={game}
-                onPieceDrop={onPieceDrop}
                 onSquareClick={onSquareClick}
                 boardOrientation={boardOrientation}
                 customSquareStyles={customSquareStyles}
