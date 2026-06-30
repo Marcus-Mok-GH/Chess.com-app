@@ -53,7 +53,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
         const history = normalizeMoveHistory(data.moveHistory);
         const lastMove = history[history.length - 1];
         if (lastMove) {
-          haptics.move();
+          if (lastMove.captured) haptics.capture(); else haptics.move();
         }
         setGame(buildGameFromHistory(history, data.fen));
         setMoveHistory(history);
@@ -150,7 +150,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     }
     
     if (piece && piece.color === colorCode) {
-      setSelectedSquare(square); 
+      setSelectedSquare(square);
       haptics.select();
       setPossibleMoves(game.moves({ square, verbose: true }).map(m => m.to));
     }
