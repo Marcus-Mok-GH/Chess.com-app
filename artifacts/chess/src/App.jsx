@@ -72,14 +72,14 @@ function AppHeader() {
         <div className="nav-content">
           <Link
             to="/home"
-            className={`nav-tab ${currentPath === '/home' ? 'active' : ''}`}
+            className={`bottom-nav-item ${currentPath === "/home" ? "active" : ""}`}
           >
             <div className="nav-icon">🏠</div>
             <span className="nav-label">Home</span>
           </Link>
           <Link
             to="/play"
-            className={`nav-tab ${currentPath === '/play' ? 'active' : ''}`}
+            className={`bottom-nav-item ${currentPath === '/play' ? 'active' : ''}`}
           >
             <div className="nav-icon">♟️</div>
             <span className="nav-label">Play</span>
@@ -87,27 +87,27 @@ function AppHeader() {
           {isOnline ? (
             <Link
               to="/online"
-              className={`nav-tab ${currentPath === '/online' ? 'active' : ''}`}
+              className={`bottom-nav-item ${currentPath === '/online' ? 'active' : ''}`}
             >
               <div className="nav-icon">🌐</div>
               <span className="nav-label">Online</span>
             </Link>
           ) : (
-            <span className="nav-tab disabled" title="Online play unavailable while offline">
+            <span className="bottom-nav-item disabled" title="Online play unavailable while offline">
               <div className="nav-icon">🌐</div>
               <span className="nav-label">Offline</span>
             </span>
           )}
           <Link
             to="/history"
-            className={`nav-tab ${currentPath === '/history' ? 'active' : ''}`}
+            className={`bottom-nav-item ${currentPath === '/history' ? 'active' : ''}`}
           >
             <div className="nav-icon">📚</div>
             <span className="nav-label">History</span>
           </Link>
           <Link
             to="/settings"
-            className={`nav-tab ${currentPath === '/settings' ? 'active' : ''}`}
+            className={`bottom-nav-item ${currentPath === '/settings' ? 'active' : ''}`}
           >
             <div className="nav-icon">⚙️</div>
             <span className="nav-label">Settings</span>
