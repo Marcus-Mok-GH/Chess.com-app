@@ -16,17 +16,13 @@ const PIECE_IMAGES = {
 };
 
 const customPieces = Object.entries(PIECE_IMAGES).reduce((acc, [piece, src]) => {
-  acc[piece] = ({ squareWidth }) => (
-    <div style={{ width: squareWidth, height: squareWidth, pointerEvents: 'none' }}>
-      <img
-        src={src}
-        width={squareWidth}
-        height={squareWidth}
-        alt={piece}
-        style={{ pointerEvents: 'none' }}
-        draggable={false}
-      />
-    </div>
+  acc[piece] = () => (
+    <img
+      src={src}
+      alt={piece}
+      style={{ width: '100%', height: '100%', pointerEvents: 'none' }}
+      draggable={false}
+    />
   );
   return acc;
 }, {});
@@ -41,6 +37,8 @@ const themeColors = {
 export default function ChessBoard({
   position,
   onSquareClick,
+  onPieceDrop,
+  canDragPiece,
   boardOrientation = 'white',
   customSquareStyles = {},
   showCoordinates = true,
@@ -52,22 +50,28 @@ export default function ChessBoard({
   // The position prop passed from parent is a chess.js object
   const currentFen = typeof position.fen === 'function' ? position.fen() : position;
 
+  const chessboardOptions = {
+    id: 'MainChessboard',
+    position: currentFen,
+    onSquareClick: ({ square }) => onSquareClick?.(square),
+    onPieceDrop: ({ sourceSquare, targetSquare }) => {
+      if (!targetSquare) return false;
+      return onPieceDrop?.(sourceSquare, targetSquare) ?? false;
+    },
+    allowDragging: Boolean(onPieceDrop),
+    canDragPiece: ({ piece, square }) => canDragPiece?.(piece?.pieceType, square) ?? true,
+    boardOrientation,
+    darkSquareStyle: { backgroundColor: colors.dark },
+    lightSquareStyle: { backgroundColor: colors.light },
+    pieces: customPieces,
+    squareStyles: customSquareStyles,
+    showNotation: showCoordinates,
+    animationDurationInMs: 300,
+  };
+
   return (
     <div className={`chess-board-wrapper theme-${boardTheme}`} style={{ width: '100%', height: '100%' }}>
-      <Chessboard
-        id="MainChessboard"
-        position={currentFen}
-        onSquareClick={onSquareClick}
-        arePiecesDraggable={false}
-        boardOrientation={boardOrientation}
-        customDarkSquareStyle={{ backgroundColor: colors.dark }}
-        customLightSquareStyle={{ backgroundColor: colors.light }}
-        customPieces={customPieces}
-        customSquareStyles={customSquareStyles}
-        showBoardNotation={showCoordinates}
-        animationDuration={300}
-        autoPromoteToQueen={true}
-      />
+      <Chessboard options={chessboardOptions} />
     </div>
   );
 }

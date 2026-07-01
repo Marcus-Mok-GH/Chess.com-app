@@ -120,6 +120,27 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     setAnimatingPieces(prev => [...prev, { id, piece: { type: move.piece, color: move.color }, fromSquare: move.from, toSquare: move.to }]);
   }, []);
 
+  const handlePieceDrop = useCallback((from, to) => {
+    if (game.turn() !== colorCode || gameStatus !== 'playing') return false;
+
+    const piece = game.get(from);
+    if (!piece || piece.color !== colorCode) return false;
+
+    const moved = makeMove({ from, to, promotion: 'q' });
+    if (moved) {
+      haptics.move();
+      setSelectedSquare(null);
+      setPossibleMoves([]);
+    }
+    return moved;
+  }, [game, colorCode, gameStatus, makeMove]);
+
+  const canDragPiece = useCallback((pieceType, square) => {
+    if (game.turn() !== colorCode || gameStatus !== 'playing') return false;
+    const piece = game.get(square);
+    return Boolean(piece && piece.color === colorCode && pieceType?.[0] === colorCode);
+  }, [game, colorCode, gameStatus]);
+
   const onSquareClick = (square) => {
     if (game.turn() !== colorCode || gameStatus !== 'playing') return;
     
@@ -141,10 +162,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
       }
 
       const moveAttempt = { from: selectedSquare, to: square, promotion: 'q' };
-      if (makeMove(moveAttempt)) {
-        haptics.move();
-        setSelectedSquare(null);
-        setPossibleMoves([]);
+      if (handlePieceDrop(moveAttempt.from, moveAttempt.to)) {
         return;
       }
     }
@@ -189,7 +207,8 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
       <GameUI
         topPlayer={boardOrientation === 'white' ? { ...blackPlayer, color: 'b' } : { ...whitePlayer, color: 'w' }}
         bottomPlayer={boardOrientation === 'white' ? { ...whitePlayer, color: 'w' } : { ...blackPlayer, color: 'b' }}
-        game={game} onSquareClick={onSquareClick}
+        game={game} onSquareClick={onSquareClick} onPieceDrop={handlePieceDrop}
+        canDragPiece={canDragPiece}
         boardOrientation={boardOrientation} customSquareStyles={customSquareStyles}
         settings={settings} animatingPieces={animatingPieces}
         removeAnimation={(id) => setAnimatingPieces(prev => prev.filter(a => a.id !== id))}
