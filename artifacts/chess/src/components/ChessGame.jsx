@@ -485,7 +485,7 @@ function ChessGame(
 
 
   const handlePieceDrop = useCallback((from, to) => {
-    if (game.turn() !== playerColor || isThinking || game.isGameOver()) return false;
+    if (game.turn() !== playerColor || isThinking || game.isGameOver() || hasResigned) return false;
 
     const movingPiece = game.get(from);
     if (!movingPiece || movingPiece.color !== playerColor) return false;
@@ -526,17 +526,17 @@ function ChessGame(
     }
 
     return false;
-  }, [game, playerColor, isThinking, requestCoachingFeedback, resolvePromotion, moveHistory]);
+  }, [game, playerColor, isThinking, hasResigned, requestCoachingFeedback, resolvePromotion, moveHistory]);
 
   const canDragPiece = useCallback((pieceType, square) => {
-    if (game.turn() !== playerColor || isThinking || game.isGameOver()) return false;
+    if (game.turn() !== playerColor || isThinking || game.isGameOver() || hasResigned) return false;
     const piece = game.get(square);
     return Boolean(piece && piece.color === playerColor && pieceType?.[0] === playerColor);
-  }, [game, playerColor, isThinking]);
+  }, [game, playerColor, isThinking, hasResigned]);
 
   const onSquareClick = useCallback(
     (square) => {
-      if (game.turn() !== playerColor || isThinking || game.isGameOver()) return;
+      if (game.turn() !== playerColor || isThinking || game.isGameOver() || hasResigned) return;
 
       const piece = game.get(square);
 
@@ -572,7 +572,7 @@ function ChessGame(
         setPossibleMoves([]);
       }
     },
-    [game, playerColor, selectedSquare, isThinking, handlePieceDrop]
+    [game, playerColor, selectedSquare, isThinking, hasResigned, handlePieceDrop]
   );
 
   const handleNewGame = useCallback(() => {
@@ -689,7 +689,7 @@ function ChessGame(
           </button>
         </div>
       </div>
-    ); innerWidth;
+    );
   }
 
   const customSquareStyles = {};
