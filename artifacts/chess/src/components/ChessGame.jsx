@@ -483,10 +483,60 @@ function ChessGame(
     return 'q';
   }, []);
 
-  
+
+  const handlePieceDrop = useCallback((from, to) => {
+    if (game.turn() !== playerColor || isThinking || game.isGameOver() || hasResigned) return false;
+
+    const movingPiece = game.get(from);
+    if (!movingPiece || movingPiece.color !== playerColor) return false;
+
+    const promotion = resolvePromotion(from, to, movingPiece.type);
+    const moveAttempt = {
+      from,
+      to,
+      promotion: promotion || 'q',
+    };
+
+    try {
+      const gameCopy = new Chess(game.fen());
+      const move = gameCopy.move(moveAttempt);
+
+      if (move) {
+        const fenBefore = game.fen();
+        setGame(gameCopy);
+        const nextHistory = [...moveHistory, move];
+        setMoveHistory(nextHistory);
+        haptics.move();
+        setSelectedSquare(null);
+        setPossibleMoves([]);
+
+        const bot = selectedBotRef.current;
+        if (gameCopy.isCheckmate()) setBotMessage(getRandomQuote(bot, 'lose'));
+        else if (gameCopy.isDraw()) setBotMessage(getRandomQuote(bot, 'draw'));
+        else if (move.captured) setBotMessage(getRandomQuote(bot, 'capture'));
+
+        playSoundEffect(settingsRef.current, { type: move.captured ? 'capture' : 'move' });
+        if (gameCopy.inCheck()) playSoundEffect(settingsRef.current, { type: 'check' });
+
+        requestCoachingFeedback(fenBefore, move.san, nextHistory);
+        return true;
+      }
+    } catch (e) {
+      console.error("Invalid move", e);
+    }
+
+    return false;
+  }, [game, playerColor, isThinking, hasResigned, requestCoachingFeedback, resolvePromotion, moveHistory]);
+
+  const canDragPiece = useCallback((pieceType, square) => {
+    if (game.turn() !== playerColor || isThinking || game.isGameOver() || hasResigned) return false;
+    const piece = game.get(square);
+    return Boolean(piece && piece.color === playerColor && pieceType?.[0] === playerColor);
+  }, [game, playerColor, isThinking, hasResigned]);
+
   const onSquareClick = useCallback(
     (square) => {
-      if (game.turn() !== playerColor || isThinking || game.isGameOver()) return;
+      if (game.turn() !== playerColor || isThinking || game.isGameOver() || hasResigned) return;
 
       const piece = game.get(square);
 
@@ -506,39 +556,8 @@ function ChessGame(
           return;
         }
 
-        const promotion = resolvePromotion(selectedSquare, square, game.get(selectedSquare)?.type);
-        const moveAttempt = {
-          from: selectedSquare,
-          to: square,
-          promotion: promotion || 'q',
-        };
-
-        try {
-          const gameCopy = new Chess(game.fen());
-          const move = gameCopy.move(moveAttempt);
-
-          if (move) {
-            const fenBefore = game.fen();
-            setGame(gameCopy);
-            const nextHistory = [...moveHistory, move];
-            setMoveHistory(nextHistory);
-            haptics.move();
-            setSelectedSquare(null);
-            setPossibleMoves([]);
-
-            const bot = selectedBotRef.current;
-            if (gameCopy.isCheckmate()) setBotMessage(getRandomQuote(bot, 'lose'));
-            else if (gameCopy.isDraw()) setBotMessage(getRandomQuote(bot, 'draw'));
-            else if (move.captured) setBotMessage(getRandomQuote(bot, 'capture'));
-            
-            playSoundEffect(settingsRef.current, { type: move.captured ? 'capture' : 'move' });
-            if (gameCopy.inCheck()) playSoundEffect(settingsRef.current, { type: 'check' });
-            
-            requestCoachingFeedback(fenBefore, move.san, nextHistory);
-            return;
-          }
-        } catch (e) {
-          console.error("Invalid move", e);
+        if (handlePieceDrop(selectedSquare, square)) {
+          return;
         }
       }
 
@@ -553,7 +572,7 @@ function ChessGame(
         setPossibleMoves([]);
       }
     },
-    [game, playerColor, selectedSquare, isThinking, requestCoachingFeedback, resolvePromotion, moveHistory]
+    [game, playerColor, selectedSquare, isThinking, hasResigned, handlePieceDrop]
   );
 
   const handleNewGame = useCallback(() => {
@@ -670,7 +689,7 @@ function ChessGame(
           </button>
         </div>
       </div>
-    ); innerWidth;
+    );
   }
 
   const customSquareStyles = {};
@@ -735,6 +754,8 @@ function ChessGame(
               <ChessBoard
                 position={game}
                 onSquareClick={onSquareClick}
+                onPieceDrop={handlePieceDrop}
+                canDragPiece={canDragPiece}
                 boardOrientation={boardOrientation}
                 customSquareStyles={customSquareStyles}
                 showCoordinates={settings.showCoordinates}

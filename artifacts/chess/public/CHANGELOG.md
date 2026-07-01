@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.5 - 2026-07-01
+- Updated the chessboard integration for the current `react-chessboard` options API.
+- Re-enabled drag-and-drop moves while preserving tap-to-move support for local and online games.
+- Limited dragging to movable player pieces and disabled dragging on read-only boards.
+
 ## 2.0.4 - 2026-06-29
 - Added "Inspired by chess.com" attribution to the landing page footer.
 
