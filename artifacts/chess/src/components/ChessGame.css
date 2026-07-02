@@ -9,7 +9,7 @@
 
 .chess-game-error .error-message {
   text-align: center;
-  background: #3c3a37;
+  background: hsl(var(--card));
   padding: 1.5rem;
   border-radius: 8px;
   border: 1px solid #ff6b6b;
@@ -58,13 +58,13 @@
   }
 }
 
-/* ── Game Layout ────────────────────────────────────────── */
+/* ── Game Layout ────────────────────────── */
 .chess-game {
   width: 100%;
   min-height: 0;
   flex: 1;
-  background: #1a1b1f;
-  color: #dcddde;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
 }
 
 .game-container {
@@ -80,7 +80,7 @@
   box-sizing: border-box;
 }
 
-/* ── Board section ──────────────────────────────────────── */
+/* ── Board section ────────────────────────── */
 .board-section {
   display: flex;
   flex-direction: column;
@@ -108,7 +108,7 @@
   touch-action: none;
 }
 
-/* ── Sidebar ────────────────────────────────────────────── */
+/* ── Sidebar ────────────────────────────── */
 .sidebar {
   display: flex;
   flex-direction: column;
@@ -130,7 +130,7 @@
   letter-spacing: 0.05em;
 }
 
-/* ── Victory overlay ────────────────────────────────────── */
+/* ── Victory overlay ────────────────────────── */
 .victory-burst {
   position: absolute;
   inset: 0;
@@ -179,7 +179,7 @@
   }
 }
 
-/* ── Very small phones (<400px) ─────────────────────────── */
+/* ── Very small phones (<400px) ─────────────────────── */
 @media (max-width: 400px) {
   .game-container {
     padding: 0.25rem 0.25rem 0;

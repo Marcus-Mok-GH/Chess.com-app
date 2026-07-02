@@ -423,7 +423,7 @@ function ChessGame(
       
       console.log('✅ Game saved to database');
     } catch (error) {
-      console.error('🔴 Failed to save game:', error);
+      console.error('𳚨 Failed to save game:', error);
     }
   }, [game, gameId, moveHistory, isOnline, user, playerColor]);
 
@@ -697,7 +697,7 @@ function ChessGame(
   if (settings.highlightMoves) {
     if (selectedSquare) {
       customSquareStyles[selectedSquare] = {
-        backgroundColor: 'rgba(255, 255, 0, 0.4)',
+        backgroundColor: 'rgba(247, 247, 105, 0.5)',
       };
     }
 
@@ -705,8 +705,8 @@ function ChessGame(
       const piece = game.get(square);
       customSquareStyles[square] = {
         background: piece
-          ? 'radial-gradient(circle, rgba(255, 0, 0, 0.4) 85%, transparent 85%)'
-          : 'radial-gradient(circle, rgba(0, 0, 0, 0.2) 25%, transparent 25%)',
+          ? 'radial-gradient(circle, rgba(0, 0, 0, 0.1) 85%, transparent 85%)'
+          : 'radial-gradient(circle, rgba(0, 0, 0, 0.1) 25%, transparent 25%)',
         borderRadius: '50%',
       };
     });

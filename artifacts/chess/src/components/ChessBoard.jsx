@@ -28,10 +28,10 @@ const customPieces = Object.entries(PIECE_IMAGES).reduce((acc, [piece, src]) => 
 }, {});
 
 const themeColors = {
-  green: { light: '#eeeed2', dark: '#769656' },
+  green: { light: '#ebecd0', dark: '#779556' },
   brown: { light: '#f0d9b5', dark: '#b58863' },
   blue: { light: '#dee3e6', dark: '#8ca2ad' },
-  purple: { light: '#e8e0f0', dark: '#9070a0' },
+  purple: { light: '#efdcf5', dark: '#8877b7' },
 };
 
 export default function ChessBoard({

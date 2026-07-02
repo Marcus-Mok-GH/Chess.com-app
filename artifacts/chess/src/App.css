@@ -1,6 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap');
 
-/* ── App Shell ─────────────────────────────────────────── */
+/* ── App Shell ────────────────────────── */
 .app {
   display: flex;
   flex-direction: column;
@@ -11,7 +11,7 @@
 .app.hide-bottom-nav .bottom-nav { display: none; }
 .app.hide-bottom-nav { padding-bottom: 0; }
 
-/* ── Top Header ─────────────────────────────────────────── */
+/* ── Top Header ────────────────────────── */
 .app-header {
   background: #262421;
   border-bottom: 1px solid rgba(0,0,0,0.25);
@@ -87,7 +87,7 @@
 }
 .logout-btn:hover { background: rgba(255,255,255,0.22); }
 
-/* ── Bottom Navigation ──────────────────────────────────── */
+/* ── Bottom Navigation ────────────────────────── */
 .bottom-nav {
   background: #262421;
   border-top: 2px solid #7fa650;
@@ -158,7 +158,7 @@
   white-space: nowrap;
 }
 
-/* ── Loading screen ─────────────────────────────────────── */
+/* ── Loading screen ────────────────────────── */
 .loading-screen {
   display: flex;
   flex-direction: column;
@@ -180,7 +180,7 @@
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── Responsive ─────────────────────────────────────────── */
+/* ── Responsive ────────────────────────── */
 @media (max-width: 480px) {
   .page-title { display: none; }
   .bottom-nav-item { font-size: 0.7rem; padding: 0.35rem 0.3rem; }
