@@ -5,8 +5,6 @@ import { SettingsProvider } from './contexts/SettingsContext'
 import { FeedbackPanel } from './components/FeedbackPanel'
 import ErrorBoundary from './components/ErrorBoundary'
 import SetUsernameModal from "./components/SetUsernameModal"
-import UserBadge from './components/UserBadge'
-import GuestBlocked from './components/GuestBlocked'
 import { usePuter } from './hooks/usePuter'
 import './App.css'
 
@@ -19,7 +17,6 @@ const GameHistory = lazy(() => import('./pages/GameHistory'))
 const Game = lazy(() => import('./pages/Game'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Changelog = lazy(() => import('./pages/Changelog'))
-const CloudFlare = lazy(() => import('./pages/CloudFlare'))
 const Landing = lazy(() => import('./pages/Landing'))
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail'))
 
@@ -35,162 +32,128 @@ function getTitle(path) {
 function AppHeader() {
   const location = useLocation()
   const { isOnline, isLoggedIn, user, logout } = useUser()
+  const navigate = useNavigate()
 
   const currentPath = location.pathname.startsWith('/online/') ? '/online' : location.pathname
+  const isLanding = location.pathname === '/'
+
+  if (isLanding) return null
 
   return (
     <>
-      {/* Top header (simplified) */}
-      <header className="app-header">
-        <div className="header-content">
-          <Link to="/" className="app-logo">
-            ♟️ Chess
+      {/* Sidebar for Desktop */}
+      <aside className="sidebar-nav">
+        <div className="sidebar-content">
+          <Link to="/home" className="sidebar-logo">
+            <span className="logo-text">chess.com-app</span>
           </Link>
-          <h1 className="page-title">{getTitle(location.pathname)}</h1>
-          {!isOnline && (
-            <span className="offline-indicator" title="You are currently offline. Online play is disabled.">
-              ⚠️ Offline
-            </span>
-          )}
-          {isLoggedIn && (
-            <div className="header-right">
-              <div className="user-menu">
-                <span className="user-info">
-                  {user.username} ({user.elo})
-                </span>
-                <button onClick={logout} className="logout-btn">
-                  Logout
-                </button>
+
+          <div className="sidebar-links">
+            <Link to="/play" className={`sidebar-item ${currentPath === '/play' ? 'active' : ''}`}>
+              <span className="sidebar-icon">♟️</span>
+              <span className="sidebar-label">Play</span>
+            </Link>
+            <Link to="/online" className={`sidebar-item ${currentPath === '/online' ? 'active' : ''}`}>
+              <span className="sidebar-icon">🌐</span>
+              <span className="sidebar-label">Online Play</span>
+            </Link>
+            <Link to="/history" className={`sidebar-item ${currentPath === '/history' ? 'active' : ''}`}>
+              <span className="sidebar-icon">📚</span>
+              <span className="sidebar-label">Archive</span>
+            </Link>
+            <Link to="/analysis" className={`sidebar-item ${currentPath === '/analysis' ? 'active' : ''}`}>
+              <span className="sidebar-icon">🔬</span>
+              <span className="sidebar-label">Analysis</span>
+            </Link>
+          </div>
+
+          <div className="sidebar-footer">
+            {isLoggedIn ? (
+              <div className="user-profile-mini">
+                <div className="user-info">
+                   <span className="username">{user.username}</span>
+                   <span className="elo">{user.elo}</span>
+                </div>
+                <button onClick={logout} className="sidebar-logout" title="Logout">🚪</button>
               </div>
-            </div>
-          )}
+            ) : (
+              <button onClick={() => navigate('/login')} className="sidebar-login">Log In</button>
+            )}
+            <Link to="/settings" className={`sidebar-item ${currentPath === '/settings' ? 'active' : ''}`} title="Settings">
+              <span className="sidebar-icon">⚙️</span>
+            </Link>
+          </div>
         </div>
+      </aside>
+
+      {/* Top Mobile Header */}
+      <header className="mobile-header">
+        <Link to="/" className="app-logo">♟️ Chess</Link>
+        <h1 className="page-title">{getTitle(location.pathname)}</h1>
+        {!isOnline && <span className="offline-badge">Offline</span>}
       </header>
 
-      {/* Bottom navigation bar */}
+      {/* Bottom Mobile Navigation */}
       <nav className="bottom-nav">
-        <div className="nav-content">
-          <Link
-            to="/home"
-            className={`bottom-nav-item ${currentPath === "/home" ? "active" : ""}`}
-          >
-            <div className="nav-icon">🏠</div>
-            <span className="nav-label">Home</span>
-          </Link>
-          <Link
-            to="/play"
-            className={`bottom-nav-item ${currentPath === '/play' ? 'active' : ''}`}
-          >
-            <div className="nav-icon">♟️</div>
-            <span className="nav-label">Play</span>
-          </Link>
-          {isOnline ? (
-            <Link
-              to="/online"
-              className={`bottom-nav-item ${currentPath === '/online' ? 'active' : ''}`}
-            >
-              <div className="nav-icon">🌐</div>
-              <span className="nav-label">Online</span>
-            </Link>
-          ) : (
-            <span className="bottom-nav-item disabled" title="Online play unavailable while offline">
-              <div className="nav-icon">🌐</div>
-              <span className="nav-label">Offline</span>
-            </span>
-          )}
-          <Link
-            to="/history"
-            className={`bottom-nav-item ${currentPath === '/history' ? 'active' : ''}`}
-          >
-            <div className="nav-icon">📚</div>
-            <span className="nav-label">History</span>
-          </Link>
-          <Link
-            to="/settings"
-            className={`bottom-nav-item ${currentPath === '/settings' ? 'active' : ''}`}
-          >
-            <div className="nav-icon">⚙️</div>
-            <span className="nav-label">Settings</span>
-          </Link>
-        </div>
+        <Link to="/home" className={`nav-item ${currentPath === '/home' ? 'active' : ''}`}>
+          <div className="nav-icon">🏠</div>
+          <span>Home</span>
+        </Link>
+        <Link to="/play" className={`nav-item ${currentPath === '/play' ? 'active' : ''}`}>
+          <div className="nav-icon">♟️</div>
+          <span>Play</span>
+        </Link>
+        <Link to="/online" className={`nav-item ${currentPath === '/online' ? 'active' : ''}`}>
+          <div className="nav-icon">🌐</div>
+          <span>Online</span>
+        </Link>
+        <Link to="/history" className={`nav-item ${currentPath === '/history' ? 'active' : ''}`}>
+          <div className="nav-icon">📚</div>
+          <span>History</span>
+        </Link>
+        <Link to="/settings" className={`nav-item ${currentPath === '/settings' ? 'active' : ''}`}>
+          <div className="nav-icon">⚙️</div>
+          <span>Settings</span>
+        </Link>
       </nav>
     </>
   )
 }
 
-// Puter.js initialization check
 function PuterCheck() {
-  const { isReady, injectPuterScript } = usePuter();
-
+  const { isReady } = usePuter();
   useEffect(() => {
-    // Only run in browser environment
-    if (typeof window === 'undefined') {
-      return;
-    }
-
+    if (typeof window === 'undefined') return;
     if (isReady && import.meta.env.DEV) {
       console.log('✅ Puter.js loaded successfully');
     }
   }, [isReady]);
-
   return null;
 }
 
-function ProtectedRoute({ children, guestRedirect }) {
+function ProtectedRoute({ children }) {
   const { isLoggedIn, isLoading } = useUser();
-
-  if (isLoading) {
-    return (
-      <div className="loading-screen">
-        <div className="spinner"></div>
-        <p>Loading...</p>
-      </div>
-    );
-  }
-
-  if (!isLoggedIn) {
-    if (guestRedirect) {
-      return guestRedirect;
-    }
-    return <Navigate to="/" replace />;
-  }
-
+  if (isLoading) return <div className="loading-screen"><div className="spinner"></div></div>;
+  if (!isLoggedIn) return <Navigate to="/" replace />;
   return children;
 }
 
 function RouteFallback() {
-  return (
-    <div className="loading-screen">
-      <div className="spinner"></div>
-      <p>Loading...</p>
-    </div>
-  )
+  return <div className="loading-screen"><div className="spinner"></div></div>
 }
 
-/**
- * Intercepts all navigations while the user is in the pending-verification state.
- * Rendered as a null component inside BrowserRouter so it always runs,
- * regardless of which route is active.
- */
 function GlobalVerificationGuard() {
   const { isAwaitingVerification } = useUser();
   const location = useLocation();
   const navigate = useNavigate();
-
   useEffect(() => {
     if (isAwaitingVerification && location.pathname !== '/verify-email' && !location.pathname.startsWith('/auth/')) {
       navigate('/verify-email', { replace: true });
     }
   }, [isAwaitingVerification, location.pathname, navigate]);
-
   return null;
 }
 
-/**
- * Persistent app shell — renders AppHeader once and keeps it visible
- * during route transitions. Suspense only covers the page content area
- * (via <Outlet>), so navigation never causes a full blank screen.
- */
 function AppShell() {
   const location = useLocation();
   const isGameRoute = location.pathname.startsWith('/game/') || 
@@ -199,9 +162,11 @@ function AppShell() {
   return (
     <div className={`app ${isGameRoute ? 'hide-bottom-nav' : ''}`}>
       <AppHeader />
-      <Suspense fallback={<RouteFallback />}>
-        <Outlet />
-      </Suspense>
+      <main style={{ flex: 1, minWidth: 0 }}>
+        <Suspense fallback={<RouteFallback />}>
+          <Outlet />
+        </Suspense>
+      </main>
     </div>
   )
 }
@@ -213,17 +178,13 @@ export default function App() {
       <ErrorBoundary>
         <UserProvider>
           <SettingsProvider>
-            <BrowserRouter><SetUsernameModal />
+            <BrowserRouter>
+              <SetUsernameModal />
               <GlobalVerificationGuard />
               <Routes>
-                {/* Headerless routes — full-screen layouts */}
                 <Route path="/" element={<Suspense fallback={<RouteFallback />}><Landing /></Suspense>} />
                 <Route path="/login" element={<Suspense fallback={<RouteFallback />}><Login /></Suspense>} />
-                {/* Verify email — OTP entry after requestOtp; locked until verified or cancelled */}
                 <Route path="/verify-email" element={<Suspense fallback={<RouteFallback />}><VerifyEmail /></Suspense>} />
-                {/* Auth callback — Supabase OTP / magic link redirects here */}
-
-                {/* App routes — share persistent AppHeader via AppShell layout */}
                 <Route element={<AppShell />}>
                   <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
                   <Route path="/play" element={<Play />} />
@@ -236,7 +197,6 @@ export default function App() {
                   <Route path="/changelog" element={<Changelog />} />
                 </Route>
               </Routes>
-              {/* FeedbackPanel lives outside Routes so it persists across all navigations */}
               <FeedbackPanel />
             </BrowserRouter>
           </SettingsProvider>
