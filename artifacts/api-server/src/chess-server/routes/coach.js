@@ -139,7 +139,7 @@ router.post('/feedback', async (req, res) => {
       { role: 'system', content: SYSTEM_PROMPT },
       { 
         role: 'user', 
-        content: `A student just played ${playerMove} in this position.\n\nPosition (FEN before move): ${fen}\nMove history: ${moves}\nLast move: ${playerMove}\n\nThink through the position carefully, then give brief, encouraging feedback (2-3 sentences max). Focus on:\n- If it's a good move, explain why briefly\n- If there was a better move, gently suggest it\n- Mention any tactical or positional concept they should notice\n\nBe concise and supportive. No greetings or sign-offs.` 
+        content: `A student just played ${playerMove} in this position.\n\nPosition (FEN before move): ${fen}\nMove history: ${moves}\nLast move: ${playerMove}\n\nThink through the position carefully, then give short, encouraging feedback (1-2 sentences, max 30 words). Focus on:\n- If it's a good move, explain why briefly\n- If there was a better move, gently suggest it\n- Mention any tactical or positional concept they should notice\n\nBe concise and supportive. No greetings or sign-offs.` 
       }
     ];
 
@@ -162,7 +162,7 @@ router.post('/explain', async (req, res) => {
       { role: 'system', content: SYSTEM_PROMPT },
       { 
         role: 'user', 
-        content: `You are explaining your move to a student.\n\nPosition before: ${fenBefore}\nMove played: ${move}\nPosition after: ${fenAfter || 'N/A'}\n\nThink through why this move is strong, then explain it in 2-3 sentences. Focus on the main idea - is it developing a piece, controlling the center, creating a threat, defending, or setting up a tactic? Be educational but concise.` 
+        content: `You are explaining your move to a student.\n\nPosition before: ${fenBefore}\nMove played: ${move}\nPosition after: ${fenAfter || 'N/A'}\n\nThink through why this move is strong, then explain it in 1-2 very short sentences (max 25 words). Focus on the main idea - is it developing a piece, controlling the center, creating a threat, defending, or setting up a tactic? Be educational but concise.` 
       }
     ];
 

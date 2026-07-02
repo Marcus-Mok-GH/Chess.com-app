@@ -296,7 +296,7 @@ function ChessGame(
     }
 
     const fen = gameRef.current.fen();
-    setBotMessage(getRandomQuote(bot, 'thinking'));
+    if (!bot.isCoach) setBotMessage(getRandomQuote(bot, 'thinking'));
 
     try {
       const response = await api.getEngineMove({
@@ -343,17 +343,19 @@ function ChessGame(
           setGame(newGame);
           setMoveHistory([...history, moveResult]);
 
-          if (newGame.isCheckmate()) {
-            setBotMessage(getRandomQuote(bot, 'win'));
-          } else if (newGame.isDraw()) {
-            setBotMessage(getRandomQuote(bot, 'draw'));
-          } else if (newGame.inCheck()) {
-            setBotMessage(getRandomQuote(bot, 'check'));
-          } else if (moveResult.captured) {
-            setBotMessage(getRandomQuote(bot, 'capture'));
-          } else if (Math.random() < 0.15) {
-            const categories = ['thinking', 'blunder', 'goodMove'];
-            setBotMessage(getRandomQuote(bot, categories[Math.floor(Math.random() * categories.length)]));
+          if (!bot.isCoach) {
+            if (newGame.isCheckmate()) {
+              setBotMessage(getRandomQuote(bot, 'win'));
+            } else if (newGame.isDraw()) {
+              setBotMessage(getRandomQuote(bot, 'draw'));
+            } else if (newGame.inCheck()) {
+              setBotMessage(getRandomQuote(bot, 'check'));
+            } else if (moveResult.captured) {
+              setBotMessage(getRandomQuote(bot, 'capture'));
+            } else if (Math.random() < 0.15) {
+              const categories = ['thinking', 'blunder', 'goodMove'];
+              setBotMessage(getRandomQuote(bot, categories[Math.floor(Math.random() * categories.length)]));
+            }
           }
         }, 50);
       }
