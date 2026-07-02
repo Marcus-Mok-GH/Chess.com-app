@@ -139,7 +139,7 @@ router.post('/sign-in/email-otp', async (req, res) => {
         id: token,
         token: token,
         userId: user.id,
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
       },
       user: {
         ...user,

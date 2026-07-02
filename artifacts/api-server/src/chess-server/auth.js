@@ -1,14 +1,14 @@
 import crypto from 'crypto';
 import { query } from './db/query.js';
 
-const SESSION_DAYS = 30;
+const SESSION_DAYS = 7;
 
 function hashToken(token) {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
 
 /**
- * Creates a 30-day session for a user. Returns the opaque session token.
+ * Creates a 7-day sliding-window session for a user. Returns the opaque session token.
  */
 export async function createSession(userId, { ipAddress, userAgent } = {}) {
   const token = crypto.randomBytes(32).toString('hex');
@@ -45,6 +45,11 @@ export async function validateSession(token) {
     await query('DELETE FROM sessions WHERE token = $1', [tokenHash]);
     return null;
   }
+
+  await query(
+    'UPDATE sessions SET expires_at = $1 WHERE token = $2',
+    [new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000), tokenHash]
+  );
 
   return user_id;
 }
