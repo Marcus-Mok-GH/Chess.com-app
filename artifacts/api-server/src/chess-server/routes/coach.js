@@ -8,12 +8,7 @@ const router = Router();
 const COACH_API_URL = process.env.COACH_API_URL || 'https://text.pollinations.ai/openai/chat/completions';
 const COACH_MODEL = process.env.COACH_MODEL || 'openai';
 
-const SYSTEM_PROMPT = `You are an expert chess coach with deep strategic knowledge. Think carefully about each position before responding. Analyze the position thoroughly, considering:
-- Tactical threats and opportunities
-- Positional factors (piece activity, pawn structure, king safety)
-- Strategic plans for both sides
-
-Provide insightful, educational feedback that helps the student improve their chess understanding.`;
+const SYSTEM_PROMPT = `You are an expert chess coach with deep strategic knowledge. Think carefully about each position before responding. \n\nIMPORTANT: Provide ONLY short to medium length responses (max 2-3 sentences). Do not provide long explanations that take up the screen.\n\nAnalyze the position thoroughly, considering:\n- Tactical threats and opportunities\n- Positional factors (piece activity, pawn structure, king safety)\n- Strategic plans for both sides\n\nProvide insightful, educational, and EXTREMELY CONCISE feedback that helps the student improve their chess understanding.`;
 
 async function callCoach(messages, options = {}) {
   const {
@@ -224,7 +219,10 @@ router.post('/analyze', async (req, res) => {
       { role: 'system', content: SYSTEM_PROMPT },
       { 
         role: 'user', 
-        content: `Review every move in this game for a student who wants to improve.\n\nMoves: ${moves}\nResult: ${result || 'Unknown'}\n\nFor EACH move, write 1-2 concise sentences of feedback, using the previous moves as context.\nFocus on why the move is good or questionable, and mention tactical or positional ideas.\n\nReturn ONLY valid JSON. Output a JSON array with one object per move:\n[\n  {\n    "ply": 1,\n    "moveNumber": 1,\n    "color": "white",\n    "san": "e4",\n    "review": "Brief coaching feedback."\n  }\n]\n\nRules:\n- The array length must match the number of moves.\n- Use "white" for odd plies and "black" for even plies.\n- Keep each review under 30 words.\n- No extra commentary, no markdown, no code fences.` 
+        content: `Review every move in this game for a student who wants to improve.\n\nMoves: ${moves}\nResult: ${result || 'Unknown'}\n\nFor EACH move, write 1-2 concise sentences of feedback, using the previous moves as context.\nFocus on why the move is good or questionable, and mention tactical or positional ideas.\n\nReturn ONLY valid JSON. Output a JSON array with one object per move:\n[\n  {\n    "ply": 1,\n    "moveNumber": 1,
+    "color": "white",
+    "san": "e4",
+    "review": "Brief coaching feedback."\n  }\n]\n\nRules:\n- The array length must match the number of moves.\n- Use "white" for odd plies and "black" for even plies.\n- Keep each review under 30 words.\n- No extra commentary, no markdown, no code fences.` 
       }
     ];
 
