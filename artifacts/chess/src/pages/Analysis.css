@@ -1,16 +1,13 @@
 /* Chess.com-style Game Review / Analysis page */
 
 .analysis-page {
-  min-height: calc(100vh - 56px - 70px);
-  min-height: calc(100dvh - 56px - 70px);
+  min-height: 100svh;
   background-color: var(--color-bg-primary);
   display: flex;
   flex-direction: column;
   color: var(--color-text-secondary);
   flex: 1;
-  height: auto;
-  position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 /* Header bar */
@@ -18,130 +15,85 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px;
+  padding: 12px 24px;
   background: var(--color-bg-secondary);
   border-bottom: 1px solid var(--color-border-default);
   flex-shrink: 0;
   position: relative;
-  z-index: 2;
+  z-index: 10;
   backdrop-filter: blur(12px);
+  background: rgba(47, 45, 42, 0.9);
 }
 
 .analysis-back {
-  background: transparent;
+  background: var(--color-bg-tertiary);
   border: 1px solid var(--color-border-default);
   color: var(--color-text-primary);
-  padding: 8px 14px;
-  border-radius: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
   font-size: 0.9375rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
-  min-height: 44px;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .analysis-back:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: var(--color-bg-hover);
+  border-color: var(--color-accent-primary);
 }
 
 .analysis-title {
   margin: 0;
-  font-size: 1.4rem;
+  font-size: 1.5rem;
   font-weight: 800;
   color: var(--color-text-primary);
-  letter-spacing: 0.01em;
+  letter-spacing: -0.01em;
 }
 
 .analysis-game-id {
   font-weight: 600;
   color: var(--color-accent-primary);
-  letter-spacing: 0.04em;
+  margin-left: 8px;
+  opacity: 0.8;
 }
 
 .analysis-header-spacer {
-  width: 72px;
+  width: 100px;
 }
 
-/* Empty state */
-.analysis-empty {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  position: relative;
-  z-index: 1;
-}
-
-.analysis-empty-card {
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border-default);
-  border-radius: 12px;
-  padding: 32px;
-  max-width: 420px;
-  text-align: center;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-  backdrop-filter: blur(12px);
-}
-
-.analysis-empty-card h2 {
-  margin: 0 0 12px;
-  font-size: 1.35rem;
-  color: var(--color-text-primary);
-}
-
-.analysis-empty-card p {
-  margin: 0 0 24px;
-  color: var(--color-text-secondary);
-  font-size: 0.9375rem;
-  line-height: 1.5;
-}
-
-/* Main layout: board left, panel right */
+/* Main layout */
 .analysis-layout {
   flex: 1;
   display: flex;
+  flex-direction: row;
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
   gap: 0;
-  min-height: 300px;
-  overflow: visible;
-  position: relative;
-  z-index: 1;
-}
-
-@media (max-width: 900px) {
-  .analysis-layout {
-    flex-direction: column;
-  }
 }
 
 .analysis-board-section {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 24px;
-  background: transparent;
+  padding: 2rem;
   min-width: 0;
-  flex: 1;
 }
 
 .analysis-board-wrap {
   width: 100%;
-  max-width: min(calc(100svh - 180px), 560px);
-  min-width: 260px;
-  min-height: 260px;
-  aspect-ratio: 1;
-  max-height: min(calc(100svh - 180px), 560px);
-  border-radius: 12px;
+  max-width: min(700px, 80svh);
+  aspect-ratio: 1 / 1;
+  background-color: var(--color-bg-secondary);
+  border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  box-shadow: var(--shadow-lg);
   border: 1px solid var(--color-border-default);
-}
-
-.analysis-board-wrap .chess-board {
-  width: 100% !important;
-  height: 100% !important;
 }
 
 .analysis-board-actions {
@@ -149,167 +101,129 @@
   align-items: center;
   justify-content: center;
   gap: 16px;
-  margin-top: 16px;
-  flex-wrap: wrap;
+  margin-top: 1.5rem;
+  width: 100%;
+  max-width: 700px;
 }
 
 .analysis-move-nav {
   display: flex;
   align-items: center;
   gap: 12px;
+  background: var(--color-bg-secondary);
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border-default);
 }
 
 .analysis-move-label {
-  font-size: 0.875rem;
-  color: var(--color-text-secondary);
-  min-width: 64px;
+  font-size: 0.9375rem;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  min-width: 80px;
   text-align: center;
 }
 
-.btn-sm {
-  padding: 6px 12px;
-  font-size: 0.8125rem;
-  min-height: 44px;
-}
-
-/* Right panel - tabs + content */
+/* Right panel */
 .analysis-panel {
   width: 400px;
-  min-width: 320px;
-  max-width: 100%;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   background: var(--color-bg-secondary);
   border-left: 1px solid var(--color-border-default);
-  overflow: hidden;
-  backdrop-filter: blur(12px);
-}
-
-@media (max-width: 900px) {
-  .analysis-panel {
-    width: 100%;
-    min-width: 0;
-    border-left: none;
-    border-top: 1px solid var(--color-border-default);
-  }
+  max-height: calc(100vh - 70px);
+  position: sticky;
+  top: 0;
 }
 
 .analysis-tabs {
   display: flex;
-  flex-shrink: 0;
-  border-bottom: 1px solid var(--color-border-default);
+  background: rgba(0,0,0,0.1);
+  padding: 4px;
 }
 
 .analysis-tab {
   flex: 1;
-  padding: 14px 16px;
+  padding: 12px;
   background: transparent;
   border: none;
   color: var(--color-text-secondary);
-  font-size: 0.9375rem;
-  font-weight: 600;
+  font-size: 0.875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.analysis-tab:hover {
-  color: var(--color-text-primary);
-  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  transition: all var(--transition-fast);
 }
 
 .analysis-tab.active {
+  background: var(--color-bg-tertiary);
   color: var(--color-accent-primary);
-  background: transparent;
-  border-bottom: 2px solid var(--color-accent-primary);
-  margin-bottom: -1px;
+  box-shadow: var(--shadow-sm);
 }
 
 .analysis-tab-content {
   flex: 1;
-  overflow: auto;
-  padding: 16px;
+  overflow-y: auto;
+  padding: 1rem;
 }
 
-.analysis-panel-loading {
-  padding: 16px;
+/* Empty states */
+.analysis-empty {
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: 12px;
-  color: var(--color-text-secondary);
-  font-size: 0.875rem;
+  justify-content: center;
+  padding: 2rem;
 }
 
-/* Report pane - AI coach */
-.analysis-report-pane {
-  height: 100%;
-  min-height: 280px;
+.analysis-empty-card {
+  background: var(--color-bg-secondary);
+  border-radius: 12px;
+  padding: 3rem 2rem;
+  max-width: 440px;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--color-border-default);
 }
 
-/* Moves list */
-.analysis-moves-pane {
-  padding: 0 8px 16px;
-}
-
-.analysis-moves-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.analysis-move-row {
-  display: grid;
-  grid-template-columns: 28px 1fr 1fr;
-  gap: 4px;
-  align-items: center;
-  padding: 6px 8px;
-  border-radius: 6px;
-}
-
-.analysis-move-row:hover {
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.analysis-move-num {
-  font-size: 0.8125rem;
-  color: var(--color-text-muted);
-}
-
-.analysis-move {
-  background: transparent;
-  border: none;
-  color: var(--color-text-secondary);
-  font-size: 0.9375rem;
-  padding: 4px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.15s ease;
-}
-
-.analysis-move:hover:not(:disabled) {
-  background: rgba(129, 182, 76, 0.2);
-  color: var(--color-text-primary);
-}
-
-.analysis-move.active {
-  background: rgba(129, 182, 76, 0.35);
-  color: var(--color-text-primary);
-  font-weight: 600;
-}
-
-@media (max-width: 600px) {
-  .analysis-header-bar {
-    flex-wrap: wrap;
-    gap: 8px;
+/* Mobile Adjustments */
+@media (max-width: 1024px) {
+  .analysis-layout {
+    flex-direction: column;
+    align-items: center;
   }
-  .analysis-back {
-    flex: 1 1 120px;
+
+  .analysis-board-section {
+    padding: 1.5rem 1rem;
+    width: 100%;
   }
-  .analysis-title {
-    flex: 1 1 100%;
-    text-align: center;
+
+  .analysis-panel {
+    width: 100%;
+    max-height: none;
+    border-left: none;
+    border-top: 1px solid var(--color-border-default);
   }
+
   .analysis-header-spacer {
     display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .analysis-header-bar {
+    padding: 10px 16px;
+  }
+
+  .analysis-title {
+    font-size: 1.25rem;
+  }
+
+  .analysis-board-actions {
+    flex-direction: column;
+    gap: 12px;
   }
 }

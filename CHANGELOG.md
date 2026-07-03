@@ -1,5 +1,15 @@
 # Changelog
 
+## [2026-07-03] - Deep Layout & Overflow Resolution
+
+### Fixed
+- **Game Page Overflow**: Completely overhauled `ChessGame.css` and `Analysis.css` with flexible flexbox rules (`min-width: 0`, `flex: 1`) to prevent the board and sidebar from exceeding viewport width.
+- **Mobile Board Scaling**: Constrained board dimensions using `max-width: min(700px, 80svh)` to ensure the game remains visible and scroll-free on all mobile devices.
+- **Sidebar Flexibility**: Removed fixed widths from game sidebars, allowing them to shrink gracefully on medium screens before switching to mobile layout.
+- **Online Component Styling**: Added robust CSS for online-only elements (Chat, Reactions, Game Info) to ensure they respect the sidebar container bounds.
+- **Box Model Enforcement**: Applied `box-sizing: border-box` globally to all elements and pseudo-elements to prevent padding-induced overflow.
+- **Bot Grid Responsiveness**: Refined the bot selection grid to use `auto-fit` with smaller minimum widths for better compatibility with small phones.
+
 ## [2026-07-03] - Global Mobile & Desktop Optimization
 
 ### Changed

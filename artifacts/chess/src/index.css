@@ -25,13 +25,13 @@
   --text-dim: #bababa;
   --text-secondary: #b8b8b8;
   --border: #312e2b;
-  
+
   /* Chess.com Specifics */
   --color-bg-dark: #262421;
   --color-bg-light: #312e2b;
   --color-green: #81b64c;
   --color-green-hover: #a3d16e;
-  
+
   /* Shared standard colors for clarity */
   --color-text-primary: #ffffff;
   --color-text-secondary: #bababa;
@@ -59,8 +59,10 @@
 }
 
 @layer base {
-  * {
-    border-color: var(--border);
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
   }
   body {
     background-color: var(--background);
