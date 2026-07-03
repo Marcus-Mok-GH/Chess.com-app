@@ -1,5 +1,15 @@
 # Changelog
 
+## [2026-07-03] - Global Mobile & Desktop Optimization
+
+### Changed
+- **Responsive Shell**: Updated main application layout to use `100svh` for consistent full-screen height across mobile browsers without address bar interference.
+- **Safe Area Integration**: Implemented `env(safe-area-inset-*)` padding for mobile headers and navigation to support modern notched devices.
+- **Theme Variable Migration**: Replaced all remaining hardcoded hex colors in page stylesheets with centralized theme variables (`--color-bg-primary`, etc.).
+- **Touch Targets**: Standardized all buttons and interactive elements to a minimum height of 44px for improved mobile usability.
+- **Premium UI Effects**: Added backdrop-blur and semi-transparent backgrounds to mobile navigation bars.
+- **Layout Scaling**: Refined landing page and setup cards to better handle tablet and small-phone resolutions.
+
 ## [2026-07-03] - Gameplay UI Fix & Theme Integration (Wingman Update)
 
 ### Fixed
