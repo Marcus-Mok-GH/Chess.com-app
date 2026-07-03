@@ -7,7 +7,6 @@ import { useSettings } from '../contexts/SettingsContext';
 import { playSoundEffect } from '../utils/sound';
 import MoveHistory from './MoveHistory';
 import GameControls from './GameControls';
-import BotSelector from './BotSelector';
 import PlayerBar from './PlayerBar';
 import DebugPanel from './DebugPanel';
 import AnimatedPiece from './AnimatedPiece';
@@ -425,7 +424,7 @@ function ChessGame(
       
       console.log('✅ Game saved to database');
     } catch (error) {
-      console.error('𳚨 Failed to save game:', error);
+      console.error('🔸 Failed to save game:', error);
     }
   }, [game, gameId, moveHistory, isOnline, user, playerColor]);
 
@@ -489,10 +488,10 @@ function ChessGame(
   const handlePieceDrop = useCallback((from, to) => {
     if (game.turn() !== playerColor || isThinking || game.isGameOver() || hasResigned) return false;
 
-    const movingPiece = game.get(from);
-    if (!movingPiece || movingPiece.color !== playerColor) return false;
+    const moving_piece = game.get(from);
+    if (!moving_piece || moving_piece.color !== playerColor) return false;
 
-    const promotion = resolvePromotion(from, to, movingPiece.type);
+    const promotion = resolvePromotion(from, to, moving_piece.type);
     const moveAttempt = {
       from,
       to,
@@ -624,11 +623,7 @@ function ChessGame(
 
   const handleSelectBot = useCallback((bot) => {
     setSelectedBot(bot);
-    setBotMessage(getRandomQuote(bot, 'start'));
-  }, []);
-
-  const handleCustomEloChange = useCallback((newElo) => {
-    setCustomElo(newElo);
+    setBotMessage(getRandomQuote(bot, "start"));
   }, []);
 
   const handleGetHint = useCallback(async () => {
@@ -797,13 +792,6 @@ function ChessGame(
             <div className="sidebar-header">
               <span className="game-id-label" title="Game ID">Game {gameId}</span>
             </div>
-            <BotSelector
-              selectedBot={selectedBot}
-              onSelectBot={handleSelectBot}
-              disabled={isThinking}
-              customElo={customElo}
-              onCustomEloChange={handleCustomEloChange}
-            />
             <GameControls
               gameStatus={getGameStatus}
               turn={game.turn()}
