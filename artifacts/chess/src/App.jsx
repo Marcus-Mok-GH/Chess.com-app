@@ -134,7 +134,7 @@ function PuterCheck() {
 function ProtectedRoute({ children }) {
   const { isLoggedIn, isLoading } = useUser();
   if (isLoading) return <div className="loading-screen"><div className="spinner"></div></div>;
-  if (!isLoggedIn) return <Navigate to="/" replace />;
+  if (!isLoggedIn) return <Navigate to="/login" replace />;
   return children;
 }
 

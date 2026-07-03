@@ -1,5 +1,11 @@
 # Changelog
 
+## [2026-07-03] - Login Redirect Fix & Landing Page Enhancement
+
+### Changed
+- **ProtectedRoute Redirect**: Unauthenticated users clicking login-required buttons are now redirected to `/login` instead of the landing page (`/`).
+- **Landing Page Feature Section**: Added a responsive 6-card feature grid below the hero section highlighting Play Computer, Play Online, Analysis Board, Game Archive, ELO Rating, and Custom Settings. Styled to match the chess.com dark theme with a 3→2→1 column responsive layout.
+
 ## [2026-07-02] - Full UI Theme Synchronization
 
 ### Added

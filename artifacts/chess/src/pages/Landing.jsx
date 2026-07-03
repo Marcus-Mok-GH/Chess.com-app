@@ -36,6 +36,15 @@ export default function Landing() {
     }
   }, [])
 
+  const features = [
+    { icon: '♟️', title: 'Play Computer', description: 'Challenge AI bots at any difficulty with Stockfish engine' },
+    { icon: '🌐', title: 'Play Online', description: 'Real-time matchmaking against players at your skill level' },
+    { icon: '🔬', title: 'Analysis Board', description: 'Analyse any game with Stockfish engine evaluation' },
+    { icon: '📚', title: 'Game Archive', description: 'Review and replay all your past games' },
+    { icon: '📈', title: 'ELO Rating', description: 'Track your skill progression with a live rating system' },
+    { icon: '⚙️', title: 'Custom Settings', description: 'Personalise board themes, piece sets, and sounds' },
+  ]
+
   return (
     <div className="landing">
       <main className="landing-hero">
@@ -77,6 +86,19 @@ export default function Landing() {
           </div>
         </div>
       </main>
+
+      <section className="features-section">
+        <h2 className="features-title">Everything You Need to Master Chess</h2>
+        <div className="features-grid">
+          {features.map((feature) => (
+            <div className="feature-card" key={feature.title}>
+              <span className="feature-icon">{feature.icon}</span>
+              <h3 className="feature-card-title">{feature.title}</h3>
+              <p className="feature-card-description">{feature.description}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <section className="stats-section">
         <div className="stats-grid">
