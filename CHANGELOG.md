@@ -1,5 +1,12 @@
 # Changelog
 
+## [2026-07-03] - Global Theme Standardization
+
+### Changed
+- **Unified Chess.com Theme**: Standardized colors and fonts across all pages (Analysis, Changelog, Game History, Login, Online Play, Play, and Settings) using central theme variables in `index.css`.
+- **Global Typography**: Enforced Nunito font and heavy weight (800) for all headings to match the Chess.com brand identity.
+- **Background Consistency**: Set a unified dark background (`#262421`) and card color (`#2f2d2a`) across the entire application for a seamless user experience.
+
 ## [2026-07-03] - UI Refinement & Gameplay Focus
 
 ### Fixed
