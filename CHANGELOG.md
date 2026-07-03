@@ -1,5 +1,12 @@
 # Changelog
 
+## [2026-07-03] - Gameplay UI Fix & Theme Integration
+
+### Fixed
+- **Gameplay Layout**: Restored and standardized the layout for the active gameplay page. Fixed the "unstyle" issue where sub-components (Player Bar, Move History, Game Controls) were missing their CSS rules after the theme migration.
+- **Variable Alignment**: Replaced legacy `hsl(var(...))` calls with the new standardized hex-based theme variables (`var(--color-bg-primary)`, etc.) to ensure consistent rendering across all browsers.
+- **Mobile Responsiveness**: Refined the flexbox stacking for mobile devices, ensuring the board and sidebar adjust correctly on smaller screens.
+
 ## [2026-07-03] - Global Theme Standardization
 
 ### Changed

@@ -3,7 +3,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 2000; /* above app header, feedback trigger, and other fixed UI */
+  z-index: 2000;
 
   display: flex;
   gap: 8px;
@@ -11,11 +11,11 @@
   align-items: center;
   flex-wrap: wrap;
 
-  padding: 12px 12px;
+  padding: 12px;
   padding-bottom: calc(12px + env(safe-area-inset-bottom));
 
-  background: rgba(26, 27, 31, 0.96);
-  border-top: 2px solid rgba(127, 166, 80, 0.6);
+  background: var(--color-bg-secondary);
+  border-top: 2px solid var(--color-accent-primary);
   box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(12px);
 }
@@ -28,14 +28,8 @@
   padding: 8px 12px;
   margin-bottom: 8px;
   background: rgba(0, 0, 0, 0.3);
-  border-left: 3px solid #7fa650;
+  border-left: 3px solid var(--color-accent-primary);
   border-radius: 6px;
-  animation: gbb-fade-in 0.3s ease-out;
-}
-
-@keyframes gbb-fade-in {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
 }
 
 .gbb-bot-avatar {
@@ -47,6 +41,7 @@
   justify-content: center;
   font-size: 1.25rem;
   flex-shrink: 0;
+  background-color: var(--color-bg-primary);
 }
 
 .gbb-bot-text {
@@ -58,35 +53,32 @@
 
 .gbb-bot-name {
   font-size: 0.6875rem;
-  font-weight: 700;
-  color: #b0b0b0;
+  font-weight: 800;
+  color: var(--color-text-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 .gbb-bot-quote {
   font-size: 0.8125rem;
-  color: #dcddde;
+  color: var(--color-text-primary);
   font-style: italic;
   line-height: 1.3;
 }
 
 .gbb-btn {
   flex: 1 1 calc(33.333% - 8px);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(0, 0, 0, 0.22);
-  color: #dcddde;
+  border: 1px solid var(--color-border-default);
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
   padding: 10px 8px;
-  border-radius: 10px;
+  border-radius: 8px;
   cursor: pointer;
   font-weight: 700;
   min-height: 44px;
-  letter-spacing: 0.02em;
 }
 
 .gbb-btn:disabled {
   opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .gbb-btn.danger {
@@ -95,30 +87,7 @@
 }
 
 @media (max-width: 420px) {
-  .game-bottom-bar {
-    gap: 6px;
-    padding: 10px 10px;
-    padding-bottom: calc(10px + env(safe-area-inset-bottom));
-  }
-
-  .gbb-bot-message {
-    padding: 6px 10px;
-    margin-bottom: 6px;
-  }
-
-  .gbb-bot-avatar {
-    width: 28px;
-    height: 28px;
-    font-size: 1rem;
-  }
-
-  .gbb-bot-quote {
-    font-size: 0.8125rem; /* minimum legible — was 0.75rem */
-  }
-
   .gbb-btn {
     flex: 1 1 calc(50% - 6px);
-    min-height: 44px; /* WCAG touch target — was 42px */
-    font-size: 0.85rem;
   }
 }
