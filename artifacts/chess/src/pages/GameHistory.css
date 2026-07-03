@@ -1,5 +1,5 @@
 .game-history-page {
-  min-height: 100vh;
+  min-height: 100svh;
   background: var(--color-bg-primary);
   color: var(--color-text-secondary);
   padding: 24px;
@@ -52,7 +52,7 @@
 }
 
 .game-item:hover {
-  background: #3c3934;
+  background: var(--color-bg-hover);
   border-color: var(--color-accent-primary);
 }
 
@@ -68,7 +68,7 @@
 
 .view-game-btn {
   padding: 10px 16px;
-  background: linear-gradient(180deg, var(--color-accent-primary) 0%, #6fa03d 100%);
+  background: linear-gradient(180deg, var(--color-accent-primary) 0%, var(--color-accent-primary) 100%);
   color: #fff;
   border: none;
   border-radius: 6px;

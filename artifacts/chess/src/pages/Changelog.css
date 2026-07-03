@@ -1,5 +1,5 @@
 .changelog-page {
-  min-height: 100vh;
+  min-height: 100svh;
   background: var(--color-bg-primary);
   color: var(--color-text-secondary);
   padding: 24px;
@@ -50,7 +50,7 @@
 }
 
 .changelog-version:hover {
-  border-color: #4a4744;
+  border-color: var(--color-bg-hover);
   transform: translateY(-1px);
 }
 

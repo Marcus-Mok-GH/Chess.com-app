@@ -3,7 +3,7 @@
   background-color: var(--color-bg-primary);
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  min-height: 100svh;
 }
 
 .lobby-container {
@@ -51,7 +51,7 @@
 }
 
 .mode-option:hover {
-  background: #3c3934;
+  background: var(--color-bg-hover);
   border-color: var(--color-accent-primary);
   transform: translateY(-2px);
 }
@@ -68,7 +68,7 @@
 }
 
 .btn-primary {
-  background: linear-gradient(180deg, var(--color-accent-primary) 0%, #6a9344 100%);
+  background: linear-gradient(180deg, var(--color-accent-primary) 0%, var(--color-accent-primary) 100%);
   color: #fff;
   font-weight: 800;
   border: none;

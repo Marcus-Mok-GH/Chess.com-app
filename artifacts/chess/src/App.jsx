@@ -162,7 +162,7 @@ function AppShell() {
   return (
     <div className={`app ${isGameRoute ? 'hide-bottom-nav' : ''}`}>
       <AppHeader />
-      <main style={{ flex: 1, minWidth: 0 }}>
+      <main style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", minHeight: "100svh" }}>
         <Suspense fallback={<RouteFallback />}>
           <Outlet />
         </Suspense>

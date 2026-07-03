@@ -75,3 +75,45 @@
     font-weight: 800;
   }
 }
+
+/* Global Optimization Utilities */
+.page-container {
+  width: 100%;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .page-container {
+    padding: 1rem;
+  }
+}
+
+/* Ensure full height on mobile without scroll jump */
+.min-h-screen {
+  min-height: 100vh;
+  min-height: 100svh;
+}
+
+/* Touch targets for mobile */
+button, 
+.btn, 
+[role="button"] {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+/* Smooth transitions */
+* {
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+/* Safe area handling */
+.safe-p-top { padding-top: env(safe-area-inset-top); }
+.safe-p-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.safe-m-top { margin-top: env(safe-area-inset-top); }
+.safe-m-bottom { margin-bottom: env(safe-area-inset-bottom); }

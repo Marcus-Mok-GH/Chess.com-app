@@ -271,7 +271,7 @@
 
 .analysis-move-num {
   font-size: 0.8125rem;
-  color: #7a7775;
+  color: var(--color-text-muted);
 }
 
 .analysis-move {

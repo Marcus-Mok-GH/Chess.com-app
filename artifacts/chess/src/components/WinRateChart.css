@@ -1,6 +1,6 @@
 .winrate-chart-container {
-  background: #262421;
-  border: 1px solid #3a3937;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-default);
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 24px;
@@ -18,7 +18,7 @@
 .winrate-chart-title {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--color-text-primary);
   margin: 0;
 }
 
@@ -32,7 +32,7 @@
   align-items: center;
   gap: 6px;
   font-size: 0.875rem;
-  color: #b8b8b8;
+  color: var(--color-text-secondary);
 }
 
 .legend-dot {
@@ -42,7 +42,7 @@
 }
 
 .legend-dot.win {
-  background: #81b64c;
+  background: var(--color-accent-primary);
 }
 
 .legend-dot.loss {
@@ -56,7 +56,7 @@
 .winrate-chart-placeholder {
   text-align: center;
   padding: 48px 24px;
-  color: #9a9a9a;
+  color: var(--color-text-muted);
 }
 
 .winrate-chart-placeholder p {
@@ -69,8 +69,8 @@
 }
 
 .winrate-tooltip {
-  background: #262421;
-  border: 1px solid #3a3937;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-default);
   border-radius: 8px;
   padding: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
@@ -82,12 +82,12 @@
   align-items: center;
   margin-bottom: 8px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #3a3937;
+  border-bottom: 1px solid var(--color-border-default);
 }
 
 .tooltip-games {
   font-weight: 600;
-  color: #b8b8b8;
+  color: var(--color-text-secondary);
 }
 
 .tooltip-winrate {
@@ -95,7 +95,7 @@
 }
 
 .tooltip-winrate.positive {
-  color: #81b64c;
+  color: var(--color-accent-primary);
 }
 
 .tooltip-winrate.negative {
@@ -114,7 +114,7 @@
 }
 
 .stat-item.win {
-  color: #81b64c;
+  color: var(--color-accent-primary);
 }
 
 .stat-item.loss {
@@ -129,7 +129,7 @@
   display: flex;
   gap: 8px;
   font-size: 0.875rem;
-  color: #b8b8b8;
+  color: var(--color-text-secondary);
   margin-bottom: 8px;
 }
 
@@ -138,14 +138,14 @@
 }
 
 .game-code {
-  color: #9a9a9a;
+  color: var(--color-text-muted);
 }
 
 .tooltip-date {
   font-size: 0.75rem;
   color: #6a6767;
   padding-top: 8px;
-  border-top: 1px solid #3a3937;
+  border-top: 1px solid var(--color-border-default);
 }
 
 @media (max-width: 640px) {
