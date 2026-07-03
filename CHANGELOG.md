@@ -1,5 +1,14 @@
 # Changelog
 
+## [2026-07-03] - Gameplay UI Fix & Theme Integration (Wingman Update)
+
+### Fixed
+- **react-chessboard Integration**: Updated `ChessBoard` component to pass props directly to `react-chessboard`, fixing a critical rendering issue where the board appeared unstyled or broken.
+- **Missing Theme Variables**: Defined global CSS variables for radii (`--radius-lg`, etc.), shadows, and transitions in `index.css` to fix "unstyled" elements across the app.
+- **Mobile Layout Overlap**: Implemented CSS rules for `.hide-bottom-nav` in `App.css` to prevent the main navigation from overlapping game controls on mobile devices.
+- **Online Game Styling**: Added missing CSS imports to `OnlineChessGame` to ensure online matches inherit the professional gameplay layout.
+- **Layout Spacing**: Adjusted main content padding to prevent UI elements from being cut off by the navigation bars on smaller screens.
+
 ## [2026-07-03] - Gameplay UI Fix & Theme Integration
 
 ### Fixed
@@ -25,7 +34,7 @@
 
 ### Changed
 - **ProtectedRoute Redirect**: Unauthenticated users clicking login-required buttons are now redirected to `/login` instead of the landing page (`/`).
-- **Landing Page Feature Section**: Added a responsive 6-card feature grid below the hero section highlighting Play Computer, Play Online, Analysis Board, Game Archive, ELO Rating, and Custom Settings. Styled to match the chess.com dark theme with a 3→2→1 column responsive layout.
+- **Landing Page Feature Section**: Added a responsive 6-card feature grid below the hero section highlighting Play Computer, Play Online, Analysis Board, Game Archive, ELO Rating, and Custom Settings. Styled to match the chess.com dark theme with a 3→2↑ column responsive layout.
 
 ## [2026-07-02] - Full UI Theme Synchronization
 

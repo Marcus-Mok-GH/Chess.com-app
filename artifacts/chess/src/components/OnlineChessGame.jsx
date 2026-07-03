@@ -1,3 +1,4 @@
+import "./ChessGame.css";
 import haptics from '../utils/haptics';
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -171,6 +172,9 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
       setSelectedSquare(square);
       haptics.select();
       setPossibleMoves(game.moves({ square, verbose: true }).map(m => m.to));
+    } else {
+      setSelectedSquare(null);
+      setPossibleMoves([]);
     }
   };
 

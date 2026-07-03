@@ -108,7 +108,7 @@
   cursor: pointer;
 }
 
-/* ── Mobile Layout ────────────────────── */
+/* ── Mobile Layout ──────────────────── */
 @media (max-width: 768px) {
   .app { flex-direction: column; }
   .sidebar-nav { display: none; }
@@ -156,4 +156,16 @@
   text-decoration: none;
   font-weight: 800;
   color: var(--color-text-primary);
+}
+
+/* ── Hide Bottom Nav in Game ─────────── */
+.app.hide-bottom-nav .bottom-nav,
+body.hide-bottom-nav .bottom-nav {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .app:not(.hide-bottom-nav) main {
+    padding-bottom: 64px;
+  }
 }

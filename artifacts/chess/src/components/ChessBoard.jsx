@@ -71,7 +71,7 @@ export default function ChessBoard({
 
   return (
     <div className={`chess-board-wrapper theme-${boardTheme}`} style={{ width: '100%', height: '100%' }}>
-      <Chessboard options={chessboardOptions} />
+      <Chessboard {...chessboardOptions} />
     </div>
   );
 }
