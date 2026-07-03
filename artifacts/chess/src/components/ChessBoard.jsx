@@ -51,7 +51,6 @@ export default function ChessBoard({
   const currentFen = typeof position.fen === 'function' ? position.fen() : position;
 
   const chessboardOptions = {
-    id: 'MainChessboard',
     position: currentFen,
     onSquareClick: ({ square }) => onSquareClick?.(square),
     onPieceDrop: ({ sourceSquare, targetSquare }) => {
@@ -71,7 +70,7 @@ export default function ChessBoard({
 
   return (
     <div className={`chess-board-wrapper theme-${boardTheme}`} style={{ width: '100%', height: '100%' }}>
-      <Chessboard {...chessboardOptions} />
+      <Chessboard id="MainChessboard" options={chessboardOptions} />
     </div>
   );
 }
