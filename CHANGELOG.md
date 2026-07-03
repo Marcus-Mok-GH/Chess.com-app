@@ -1,5 +1,12 @@
 # Changelog
 
+## [2026-07-03] - UI Refinement & Gameplay Focus
+
+### Fixed
+- **Bot Selector Styling**: Improved the bot selection grid with more compact, responsive cards and dedicated CSS module (`BotSelector.css`) for better visual balance on the setup page.
+- **Gameplay UI Clutter**: Removed the redundant bot selection list from the in-game sidebar to provide a cleaner, distraction-free environment during active matches.
+
+
 ## [2026-07-03] - Login Redirect Fix & Landing Page Enhancement
 
 ### Changed
