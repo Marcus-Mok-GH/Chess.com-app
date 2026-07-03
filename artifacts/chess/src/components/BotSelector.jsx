@@ -1,4 +1,5 @@
 import { BOTS } from '../engine/bots/bots';
+import './BotSelector.css';
 import EloSlider from './EloSlider';
 
 const REGULAR_BOTS = BOTS.filter((b) => b.id !== 'coach');
