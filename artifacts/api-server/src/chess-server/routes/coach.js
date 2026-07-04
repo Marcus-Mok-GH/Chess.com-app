@@ -10,6 +10,9 @@ const COACH_MODEL = process.env.COACH_MODEL || 'openai';
 
 const SYSTEM_PROMPT = `You are an expert chess coach with deep strategic knowledge. Think carefully about each position before responding. \n\nIMPORTANT: Provide ONLY short to medium length responses (max 2-3 sentences). Do not provide long explanations that take up the screen.\n\nAnalyze the position thoroughly, considering:\n- Tactical threats and opportunities\n- Positional factors (piece activity, pawn structure, king safety)\n- Strategic plans for both sides\n\nProvide insightful, educational, and EXTREMELY CONCISE feedback that helps the student improve their chess understanding.`;
 
+const COACH_TIMEOUT_MS = parseInt(process.env.COACH_TIMEOUT_MS || '12000', 10);
+const COACH_MAX_RETRIES = parseInt(process.env.COACH_MAX_RETRIES || '2', 10);
+
 async function callCoach(messages, options = {}) {
   const {
     stream = false,
@@ -27,24 +30,45 @@ async function callCoach(messages, options = {}) {
     headers.Authorization = `Bearer ${apiKey}`;
   }
 
-  const response = await fetch(COACH_API_URL, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      model: COACH_MODEL,
-      messages,
-      stream,
-      max_tokens: maxTokens,
-      temperature
-    })
-  });
+  let lastError;
+  for (let attempt = 1; attempt <= COACH_MAX_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), COACH_TIMEOUT_MS);
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Coach API error: ${response.status} - ${error}`);
+    try {
+      const response = await fetch(COACH_API_URL, {
+        method: 'POST',
+        headers,
+        signal: controller.signal,
+        body: JSON.stringify({
+          model: COACH_MODEL,
+          messages,
+          stream,
+          max_tokens: maxTokens,
+          temperature
+        })
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Coach API error: ${response.status} - ${error}`);
+      }
+
+      return response;
+    } catch (err) {
+      clearTimeout(timeout);
+      lastError = err;
+      const isTimeout = err.name === 'AbortError';
+      console.warn(`[Coach] Attempt ${attempt}/${COACH_MAX_RETRIES} failed${isTimeout ? ' (timeout)' : ''}: ${err.message}`);
+      if (attempt < COACH_MAX_RETRIES) {
+        await new Promise(r => setTimeout(r, 500 * attempt));
+      }
+    }
   }
 
-  return response;
+  throw lastError;
 }
 
 function extractJson(content) {
