@@ -5,11 +5,12 @@ import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../contexts/SettingsContext';
 import { normalizeMoveHistory, buildGameFromHistory } from '../engine/game/moveHistory';
 import socketService from '../services/socket';
+import api from '../services/api';
 import { findKingSquare } from './ChessGame/utils';
 import { useGameCore } from './OnlineChessGame/hooks/useGameCore';
 import GameUI from './OnlineChessGame/subcomponents/GameUI';
 
-const REACTIONS = ['👍', '👏', '🤔', '😮', '🎉', '😅'];
+const REACTIONS = ['GOOD', 'CLAP', 'THINK', 'WOW', 'PARTY', 'SWEAT'];
 
 export default function OnlineChessGame({ gameId, playerId, playerColor, opponentInfo, onLeave }) {
   const { settings } = useSettings();
@@ -35,6 +36,18 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
 
   const animationIdRef = useRef(0);
   const boardOrientation = playerColor;
+
+  useEffect(() => {
+    if (!gameId) return;
+    api.request(`/games/by-code/${gameId}`).then(data => {
+      if (data && data.move_history && moveHistory.length === 0) {
+        const history = normalizeMoveHistory(data.move_history);
+        setGame(buildGameFromHistory(history, data.fen));
+        setMoveHistory(history);
+        console.log('[OnlineGame] Recovered state from DB');
+      }
+    }).catch(() => {});
+  }, [gameId, moveHistory.length, setGame, setMoveHistory]);
 
   useEffect(() => {
     if (!gameId || !playerId) return;
@@ -154,7 +167,6 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
         return;
       }
 
-      // Tap to move: switch selection if clicking another of own pieces
       if (piece && piece.color === colorCode) {
         setSelectedSquare(square);
         haptics.select();

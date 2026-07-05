@@ -28,7 +28,6 @@ export function useGameCore(gameId, playerId, playerColor, settings) {
       const storedHistory = toStoredMoveHistory(newHistory);
       setMoveHistory(newHistory);
 
-      // Emit to socket
       socketService.makeMove(
         gameId,
         gameCopy.fen(),
@@ -37,7 +36,6 @@ export function useGameCore(gameId, playerId, playerColor, settings) {
         playerId
       );
 
-      // Redundant immediate save to DB as requested for robustness
       try {
         await api.saveGame({
           gameCode: gameId,
