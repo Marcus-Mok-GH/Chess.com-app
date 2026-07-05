@@ -16,13 +16,15 @@ const PIECE_IMAGES = {
 };
 
 const customPieces = Object.entries(PIECE_IMAGES).reduce((acc, [piece, src]) => {
-  acc[piece] = () => (
-    <img
-      src={src}
-      alt={piece}
-      style={{ width: '100%', height: '100%', pointerEvents: 'none' }}
-      draggable={false}
-    />
+  acc[piece] = ({ squareWidth }) => (
+    <div style={{ width: squareWidth, height: squareWidth }}>
+      <img
+        src={src}
+        alt={piece}
+        style={{ width: '100%', height: '100%', pointerEvents: 'none' }}
+        draggable={false}
+      />
+    </div>
   );
   return acc;
 }, {});
@@ -49,38 +51,40 @@ export default function ChessBoard({
   // react-chessboard v5 expects a FEN string or position object
   const currentFen = typeof position?.fen === 'function' ? position.fen() : position;
 
-  // react-chessboard v5 API uses an 'options' prop for most configurations.
+  // react-chessboard v5 API uses an 'options' prop.
   const chessboardOptions = {
     id: "MainChessboard",
     position: currentFen,
-    orientation: boardOrientation,
+    boardOrientation: boardOrientation,
     allowDragging: Boolean(onPieceDrop),
     showNotation: showCoordinates,
-    animationDuration: 300,
-    customDarkSquareStyle: { backgroundColor: colors.dark },
-    customLightSquareStyle: { backgroundColor: colors.light },
-    customPieces: customPieces,
-    customSquareStyles: customSquareStyles,
+    animationDurationInMs: 300,
+    darkSquareStyle: { backgroundColor: colors.dark },
+    lightSquareStyle: { backgroundColor: colors.light },
+    pieces: customPieces,
+    squareStyles: customSquareStyles,
     onSquareClick: (args) => {
-      const square = args?.square || args;
-      onSquareClick?.(square);
+      const square = typeof args === 'string' ? args : args?.square;
+      if (square) onSquareClick?.(square);
     },
-    onPieceDrop: (args) => {
-      const { sourceSquare, targetSquare } = args || {};
+    onPieceDrop: (args, ...rest) => {
+      const { sourceSquare, targetSquare } = typeof args === 'object' ? args : { sourceSquare: args, targetSquare: rest[0] };
       if (!targetSquare) return false;
       return onPieceDrop?.(sourceSquare, targetSquare) ?? false;
     },
-    isDraggablePiece: (args) => {
-      const { piece, sourceSquare } = args || {};
-      // Handle piece as object (v5) or string (v4 fallback)
+    canDragPiece: (args, ...rest) => {
+      const { piece, square } = typeof args === 'object' ? args : { piece: args, square: rest[0] };
       const pieceType = typeof piece === 'object' ? piece.pieceType : piece;
-      return canDragPiece?.(pieceType, sourceSquare) ?? true;
+      return canDragPiece?.(pieceType, square) ?? true;
     },
   };
 
   return (
-    <div className={`chess-board-wrapper theme-${boardTheme}`} style={{ width: '100%', height: '100%', minHeight: '300px' }}>
-      <Chessboard options={chessboardOptions} />
+    <div className={`chess-board-wrapper theme-${boardTheme}`} style={{ width: '100%', height: '100%', minHeight: '300px', position: 'relative' }}>
+      <Chessboard 
+        position={currentFen}
+        options={chessboardOptions} 
+      />
     </div>
   );
 }

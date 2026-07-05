@@ -1,5 +1,11 @@
 # Changelog
 
+## [2026-07-05] - react-chessboard v5 Documentation Alignment
+
+### Fixed
+- **Options API Names**: Reverted `options` prop keys to `boardOrientation`, `animationDurationInMs`, `darkSquareStyle`, `lightSquareStyle`, `pieces`, and `squareStyles` based on official v5 documentation snapshot to fix visibility issues.
+- **Reactivity Fix**: Added `position` as both a top-level prop and an `options` entry to ensure the board re-renders on state changes.
+
 ## [2026-07-05] - react-chessboard v5 Compatibility Fix
 
 ### Fixed

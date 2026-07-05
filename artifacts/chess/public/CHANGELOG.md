@@ -1,5 +1,10 @@
 # Changelog
 
+## [2026-07-05] - react-chessboard v5 Documentation Alignment
+
+### Fixed
+- **Options API Names**: Corrected `options` keys and added top-level `position` prop to fix board visibility.
+
 ## [2026-07-05] - react-chessboard v5 Compatibility Fix
 
 ### Fixed
