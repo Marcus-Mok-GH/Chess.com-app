@@ -41,11 +41,11 @@ export async function initDatabase() {
         await client.query(`
           CREATE TABLE IF NOT EXISTS games (
             id SERIAL PRIMARY KEY,
-            game_code VARCHAR(10) UNIQUE NOT NULL,
+            game_code VARCHAR(20) UNIQUE NOT NULL,
             white_player_id VARCHAR(100) REFERENCES users(id),
             black_player_id VARCHAR(100) REFERENCES users(id),
-            white_player_name VARCHAR(20),
-            black_player_name VARCHAR(20),
+            white_player_name VARCHAR(50),
+            black_player_name VARCHAR(50),
             result VARCHAR(10),
             game_mode VARCHAR(20) DEFAULT 'friendly',
             fen TEXT,
@@ -55,6 +55,21 @@ export async function initDatabase() {
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           )
         `);
+
+        // Keep existing installations compatible with the current games schema.
+        await client.query('ALTER TABLE games ADD COLUMN IF NOT EXISTS game_code VARCHAR(20)');
+        await client.query('ALTER TABLE games ADD COLUMN IF NOT EXISTS white_player_id VARCHAR(100)');
+        await client.query('ALTER TABLE games ADD COLUMN IF NOT EXISTS black_player_id VARCHAR(100)');
+        await client.query('ALTER TABLE games ADD COLUMN IF NOT EXISTS white_player_name VARCHAR(50)');
+        await client.query('ALTER TABLE games ADD COLUMN IF NOT EXISTS black_player_name VARCHAR(50)');
+        await client.query('ALTER TABLE games ADD COLUMN IF NOT EXISTS result VARCHAR(10)');
+        await client.query("ALTER TABLE games ADD COLUMN IF NOT EXISTS game_mode VARCHAR(20) DEFAULT 'friendly'");
+        await client.query('ALTER TABLE games ADD COLUMN IF NOT EXISTS fen TEXT');
+        await client.query("ALTER TABLE games ADD COLUMN IF NOT EXISTS move_history TEXT[] DEFAULT '{}'");
+        await client.query("ALTER TABLE games ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'waiting'");
+        await client.query('ALTER TABLE games ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+        await client.query('ALTER TABLE games ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+        await client.query('ALTER TABLE games ALTER COLUMN game_code TYPE VARCHAR(20)');
 
         // User settings table
         await client.query(`
@@ -132,6 +147,23 @@ export async function initDatabase() {
           )
         `);
 
+        // Keep active game recovery tables self-healing if they were created by an older deploy.
+        await client.query('ALTER TABLE active_games ADD COLUMN IF NOT EXISTS game_id VARCHAR(20)');
+        await client.query('ALTER TABLE active_games ADD COLUMN IF NOT EXISTS white_player_id VARCHAR(100)');
+        await client.query('ALTER TABLE active_games ADD COLUMN IF NOT EXISTS black_player_id VARCHAR(100)');
+        await client.query('ALTER TABLE active_games ADD COLUMN IF NOT EXISTS white_socket_id VARCHAR(100)');
+        await client.query('ALTER TABLE active_games ADD COLUMN IF NOT EXISTS black_socket_id VARCHAR(100)');
+        await client.query('ALTER TABLE active_games ADD COLUMN IF NOT EXISTS white_player_name VARCHAR(50)');
+        await client.query('ALTER TABLE active_games ADD COLUMN IF NOT EXISTS black_player_name VARCHAR(50)');
+        await client.query('ALTER TABLE active_games ADD COLUMN IF NOT EXISTS white_elo INTEGER');
+        await client.query('ALTER TABLE active_games ADD COLUMN IF NOT EXISTS black_elo INTEGER');
+        await client.query("ALTER TABLE active_games ADD COLUMN IF NOT EXISTS fen TEXT DEFAULT 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'");
+        await client.query("ALTER TABLE active_games ADD COLUMN IF NOT EXISTS move_history TEXT[] DEFAULT '{}'");
+        await client.query("ALTER TABLE active_games ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'waiting'");
+        await client.query("ALTER TABLE active_games ADD COLUMN IF NOT EXISTS game_mode VARCHAR(20) DEFAULT 'ranked'");
+        await client.query('ALTER TABLE active_games ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+        await client.query('ALTER TABLE active_games ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+
         await client.query(`
           CREATE TABLE IF NOT EXISTS match_moves (
             game_id VARCHAR(20) NOT NULL,
@@ -142,6 +174,12 @@ export async function initDatabase() {
             PRIMARY KEY (game_id, username)
           )
         `);
+
+        await client.query('ALTER TABLE match_moves ADD COLUMN IF NOT EXISTS game_id VARCHAR(20)');
+        await client.query('ALTER TABLE match_moves ADD COLUMN IF NOT EXISTS username VARCHAR(20)');
+        await client.query("ALTER TABLE match_moves ADD COLUMN IF NOT EXISTS move_history TEXT[] DEFAULT '{}'");
+        await client.query('ALTER TABLE match_moves ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+        await client.query('ALTER TABLE match_moves ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
 
         await client.query(`
           CREATE TABLE IF NOT EXISTS elo_history (
@@ -159,12 +197,15 @@ export async function initDatabase() {
 
         // Indexes
         await client.query('CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)');
+        await client.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_games_code_unique ON games(game_code)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_games_code ON games(game_code)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_matchmaking_player_id ON matchmaking_queue(player_id)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_matchmaking_elo ON matchmaking_queue(elo)');
+        await client.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_active_games_game_id_unique ON active_games(game_id)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_active_games_game_id ON active_games(game_id)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_active_games_status ON active_games(status)');
+        await client.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_match_moves_game_username_unique ON match_moves(game_id, username)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_match_moves_game_id ON match_moves(game_id)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_match_moves_username ON match_moves(username)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_elo_history_user_id ON elo_history(user_id)');

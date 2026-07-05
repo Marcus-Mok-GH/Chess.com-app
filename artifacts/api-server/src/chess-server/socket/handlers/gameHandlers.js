@@ -50,8 +50,8 @@ export function setupGameHandlers(io, socket) {
       return;
     }
 
-    if (game.status !== 'playing' && game.status !== 'waiting') {
-      socket.emit('game_error', { message: 'Game is not active' });
+    if (!['playing', 'waiting', 'ended'].includes(game.status)) {
+      socket.emit('game_error', { message: 'Game is not available' });
       return;
     }
 
@@ -456,11 +456,49 @@ export function setupGameHandlers(io, socket) {
       return;
     }
 
+    const game = await service.getGame(gameId);
+    if (!game) {
+      socket.emit('game_error', { message: 'Game not found' });
+      return;
+    }
+
+    const isWhitePlayer = game.white_player_id === playerId;
+    const isBlackPlayer = game.black_player_id === playerId;
+    if (!isWhitePlayer && !isBlackPlayer) {
+      socket.emit('game_error', { message: 'Unauthorized - not your game' });
+      return;
+    }
+
+    const nextWhiteSocketId = isWhitePlayer ? null : game.white_socket_id;
+    const nextBlackSocketId = isBlackPlayer ? null : game.black_socket_id;
+    const bothPlayersGone = !nextWhiteSocketId && !nextBlackSocketId;
+    const nextStatus = bothPlayersGone ? 'ended' : game.status;
+
+    const updated = await query(
+      `UPDATE active_games
+       SET white_socket_id = CASE WHEN white_player_id = $2 THEN NULL ELSE white_socket_id END,
+           black_socket_id = CASE WHEN black_player_id = $2 THEN NULL ELSE black_socket_id END,
+           status = $3,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE game_id = $1
+       RETURNING *`,
+      [gameId, playerId, nextStatus]
+    );
+
+    if (updated.rows[0]) {
+      await service.persistGameSnapshot(
+        updated.rows[0],
+        null,
+        nextStatus === 'ended' ? 'completed' : nextStatus
+      );
+    }
+
     socket.leave(gameId);
 
     socket.to(gameId).emit('player_left', {
       gameId,
       playerId,
+      linkClosed: bothPlayersGone,
       timestamp: Date.now()
     });
   });

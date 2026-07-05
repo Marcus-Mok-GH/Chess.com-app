@@ -25,21 +25,36 @@ export async function registerSocketHandlers(io, socket) {
       );
 
       for (const game of activeGames.rows) {
-        if (game.status === 'playing') {
-          const otherSocketId = game.white_socket_id === socket.id
-            ? game.black_socket_id
-            : game.white_socket_id;
+        const isWhiteSocket = game.white_socket_id === socket.id;
+        const otherSocketId = isWhiteSocket ? game.black_socket_id : game.white_socket_id;
+        const nextWhiteSocketId = isWhiteSocket ? null : game.white_socket_id;
+        const nextBlackSocketId = isWhiteSocket ? game.black_socket_id : null;
+        const bothPlayersGone = !nextWhiteSocketId && !nextBlackSocketId;
+        const nextStatus = bothPlayersGone ? 'ended' : game.status;
 
-          if (otherSocketId) {
-            io.to(otherSocketId).emit('opponent_disconnected', {
-              gameId: game.game_id,
-              reason: 'Player disconnected'
-            });
-          }
+        if (otherSocketId) {
+          io.to(otherSocketId).emit('opponent_disconnected', {
+            gameId: game.game_id,
+            reason: 'Player disconnected'
+          });
+        }
 
+        await query(
+          `UPDATE active_games
+           SET white_socket_id = CASE WHEN white_socket_id = $1 THEN NULL ELSE white_socket_id END,
+               black_socket_id = CASE WHEN black_socket_id = $1 THEN NULL ELSE black_socket_id END,
+               status = $2,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE game_id = $3`,
+          [socket.id, nextStatus, game.game_id]
+        );
+
+        if (bothPlayersGone) {
           await query(
-            'UPDATE active_games SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE game_id = $2',
-            ['disconnected', game.game_id]
+            `UPDATE games
+             SET status = 'completed', updated_at = CURRENT_TIMESTAMP
+             WHERE game_code = $1`,
+            [game.game_id]
           );
         }
       }

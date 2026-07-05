@@ -345,13 +345,26 @@ router.get('/by-code/:gameCode', async (req, res) => {
     const { gameCode } = req.params;
     if (!gameCode) return errorResponse(res, 400, 'Game code is required');
 
+    const normalizedCode = gameCode.toUpperCase();
     const result = await query(
-      `SELECT game_code, result, fen, move_history, game_mode, created_at
+      `SELECT game_code, result, fen, move_history, game_mode, status, created_at
        FROM games WHERE game_code = $1 LIMIT 1`,
-      [gameCode.toUpperCase()]
+      [normalizedCode]
     );
-    if (result.rows.length === 0) return errorResponse(res, 404, 'Game not found');
-    res.json(result.rows[0]);
+
+    if (result.rows.length > 0) {
+      return res.json(result.rows[0]);
+    }
+
+    const activeResult = await query(
+      `SELECT game_id AS game_code, NULL AS result, fen, move_history,
+              game_mode, status, created_at
+       FROM active_games WHERE game_id = $1 LIMIT 1`,
+      [normalizedCode]
+    );
+
+    if (activeResult.rows.length === 0) return errorResponse(res, 404, 'Game not found');
+    res.json(activeResult.rows[0]);
   } catch (error) {
     return handleRouteError(res, error, 'Failed to get game');
   }

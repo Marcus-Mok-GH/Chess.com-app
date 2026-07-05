@@ -1,5 +1,18 @@
 # Changelog
 
+## [2026-07-05] - Self-Healing Chess Persistence Tables
+
+### Changed
+- **Automatic Table Creation**: Expanded startup database initialization so games, active game recovery, and match move tables create themselves and add missing persistence columns/indexes automatically.
+- **Schema Alignment**: Updated the manual setup SQL to match the app-managed schema used by online refresh recovery.
+
+## [2026-07-05] - Online Game Link Lifecycle Persistence
+
+### Changed
+- **Online Move Archiving**: Active online games now upsert each move into the permanent games table so refresh and hard-refresh recovery can use database-backed move history before a match ends.
+- **Leave Handling**: Online game links now remain available while either participant is still connected and are only marked closed after both players have left or disconnected, regardless of the current match state.
+- **Game Code Recovery**: Game-code lookups now fall back to active games when no archived game row exists yet.
+
 ## [2026-07-05] - Persistent Move Storage & Refresh Survival
 
 ### Added

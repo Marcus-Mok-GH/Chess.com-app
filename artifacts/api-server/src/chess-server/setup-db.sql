@@ -7,8 +7,10 @@
 -- Connect to chess_db before running the rest
 
 -- Users table
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
+    id VARCHAR(100) PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
     username VARCHAR(20) UNIQUE NOT NULL,
     elo INTEGER DEFAULT 1200,
     games_played INTEGER DEFAULT 0,
@@ -22,11 +24,11 @@ CREATE TABLE IF NOT EXISTS users (
 -- Games table (optional, for game history)
 CREATE TABLE IF NOT EXISTS games (
     id SERIAL PRIMARY KEY,
-    game_code VARCHAR(10) UNIQUE NOT NULL,
-    white_player_id INTEGER REFERENCES users(id),
-    black_player_id INTEGER REFERENCES users(id),
-    white_player_name VARCHAR(20),
-    black_player_name VARCHAR(20),
+    game_code VARCHAR(20) UNIQUE NOT NULL,
+    white_player_id VARCHAR(100) REFERENCES users(id),
+    black_player_id VARCHAR(100) REFERENCES users(id),
+    white_player_name VARCHAR(50),
+    black_player_name VARCHAR(50),
     result VARCHAR(10), -- 'white', 'black', 'draw', null
     game_mode VARCHAR(20) DEFAULT 'friendly',
     fen TEXT,
@@ -38,7 +40,7 @@ CREATE TABLE IF NOT EXISTS games (
 
 -- User settings table (UI preferences per user)
 CREATE TABLE IF NOT EXISTS user_settings (
-    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    user_id VARCHAR(100) PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     settings JSONB DEFAULT '{}'::jsonb,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -87,13 +89,16 @@ CREATE TABLE IF NOT EXISTS match_moves (
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_users_elo ON users(elo DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_games_code_unique ON games(game_code);
 CREATE INDEX IF NOT EXISTS idx_games_code ON games(game_code);
 CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id);
 CREATE INDEX IF NOT EXISTS idx_games_status ON games(status);
 CREATE INDEX IF NOT EXISTS idx_matchmaking_player_id ON matchmaking_queue(player_id);
 CREATE INDEX IF NOT EXISTS idx_matchmaking_elo ON matchmaking_queue(elo);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_active_games_game_id_unique ON active_games(game_id);
 CREATE INDEX IF NOT EXISTS idx_active_games_game_id ON active_games(game_id);
 CREATE INDEX IF NOT EXISTS idx_active_games_status ON active_games(status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_match_moves_game_username_unique ON match_moves(game_id, username);
 CREATE INDEX IF NOT EXISTS idx_match_moves_game_id ON match_moves(game_id);
 CREATE INDEX IF NOT EXISTS idx_match_moves_username ON match_moves(username);
 

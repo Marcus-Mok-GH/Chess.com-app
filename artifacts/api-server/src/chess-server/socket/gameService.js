@@ -33,6 +33,53 @@ export class GameService {
     }
   }
 
+  async persistGameSnapshot(game, result = null, status = 'active') {
+    if (!game) return null;
+
+    const whiteUserId = userIdFromPlayerId(game.white_player_id);
+    const blackUserId = userIdFromPlayerId(game.black_player_id);
+
+    try {
+      const saved = await query(
+        `INSERT INTO games (
+          game_code, white_player_id, black_player_id,
+          white_player_name, black_player_name, result,
+          fen, move_history, status, game_mode
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        ON CONFLICT (game_code)
+        DO UPDATE SET
+          white_player_id = EXCLUDED.white_player_id,
+          black_player_id = EXCLUDED.black_player_id,
+          white_player_name = EXCLUDED.white_player_name,
+          black_player_name = EXCLUDED.black_player_name,
+          result = COALESCE(EXCLUDED.result, games.result),
+          fen = EXCLUDED.fen,
+          move_history = EXCLUDED.move_history,
+          status = EXCLUDED.status,
+          game_mode = EXCLUDED.game_mode,
+          updated_at = CURRENT_TIMESTAMP
+        RETURNING *`,
+        [
+          game.game_id,
+          whiteUserId,
+          blackUserId,
+          game.white_player_name,
+          game.black_player_name,
+          result,
+          game.fen,
+          game.move_history || [],
+          status,
+          game.game_mode
+        ]
+      );
+
+      return saved.rows[0] || null;
+    } catch (error) {
+      console.error('[Game] Error persisting game snapshot:', error);
+      return null;
+    }
+  }
+
   async updateGameState(gameId, fen, lastMove, moveHistory) {
     try {
       const result = await query(
@@ -43,7 +90,12 @@ export class GameService {
         [fen, moveHistory, gameId]
       );
 
-      return result.rows[0] || null;
+      const game = result.rows[0] || null;
+      if (game) {
+        await this.persistGameSnapshot(game, null, game.status === 'ended' ? 'completed' : game.status);
+      }
+
+      return game;
     } catch (error) {
       console.error('[Game] Error updating game state:', error);
       return null;
@@ -79,41 +131,8 @@ export class GameService {
 
       if (gameResult.rows.length > 0) {
         const game = gameResult.rows[0];
-        const whiteUserId = userIdFromPlayerId(game.white_player_id);
-        const blackUserId = userIdFromPlayerId(game.black_player_id);
-
         // Store completed game in games table
-        await query(
-          `INSERT INTO games (
-            game_code, white_player_id, black_player_id,
-            white_player_name, black_player_name, result,
-            fen, move_history, status, game_mode
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-          ON CONFLICT (game_code)
-          DO UPDATE SET
-            white_player_id = EXCLUDED.white_player_id,
-            black_player_id = EXCLUDED.black_player_id,
-            white_player_name = EXCLUDED.white_player_name,
-            black_player_name = EXCLUDED.black_player_name,
-            result = EXCLUDED.result,
-            fen = EXCLUDED.fen,
-            move_history = EXCLUDED.move_history,
-            status = EXCLUDED.status,
-            game_mode = EXCLUDED.game_mode,
-            updated_at = CURRENT_TIMESTAMP`,
-          [
-            game.game_id,
-            whiteUserId,
-            blackUserId,
-            game.white_player_name,
-            game.black_player_name,
-            result,
-            game.fen,
-            game.move_history,
-            'completed',
-            game.game_mode
-          ]
-        );
+        await this.persistGameSnapshot(game, result, 'completed');
 
         if (game.game_mode === 'ranked') {
           // Update player ELOs
