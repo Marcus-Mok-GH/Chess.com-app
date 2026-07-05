@@ -3,6 +3,7 @@ import { Chess } from 'chess.js';
 import { buildGameFromHistory, normalizeMoveHistory, toStoredMoveHistory } from '../../../engine/game/moveHistory';
 import socketService from '../../../services/socket';
 import { playSoundEffect } from '../../../utils/sound';
+import api from '../../../services/api';
 
 export function useGameCore(gameId, playerId, playerColor, settings) {
   const [game, setGame] = useState(new Chess());
@@ -15,25 +16,41 @@ export function useGameCore(gameId, playerId, playerColor, settings) {
   const moveErrorTimeoutRef = useRef(null);
   const colorCode = playerColor === 'white' ? 'w' : 'b';
 
-  const makeMove = useCallback((moveAttempt) => {
+  const makeMove = useCallback(async (moveAttempt) => {
     if (game.turn() !== colorCode || game.isGameOver() || gameStatus !== 'playing') return false;
 
     const gameCopy = buildGameFromHistory(moveHistory, game.fen());
     const move = gameCopy.move(moveAttempt);
 
     if (move) {
-      // Small delay to allow local animation to start
       setGame(gameCopy);
       const newHistory = gameCopy.history({ verbose: true });
+      const storedHistory = toStoredMoveHistory(newHistory);
       setMoveHistory(newHistory);
 
+      // Emit to socket
       socketService.makeMove(
         gameId,
         gameCopy.fen(),
         { from: move.from, to: move.to, promotion: move.promotion, san: move.san },
-        toStoredMoveHistory(newHistory),
+        storedHistory,
         playerId
       );
+
+      // Redundant immediate save to DB as requested for robustness
+      try {
+        await api.saveGame({
+          gameCode: gameId,
+          moveHistory: storedHistory,
+          result: 'in_progress',
+          gameMode: 'online',
+          userId: playerId.startsWith('user_') ? playerId.replace('user_', '') : null,
+          playerColor: playerColor,
+          finalFen: gameCopy.fen(),
+        });
+      } catch (err) {
+        console.warn('[OnlineGame] DB persist fallback failed:', err);
+      }
 
       playSoundEffect(settings, { type: move.captured ? 'capture' : 'move' });
       if (gameCopy.inCheck()) playSoundEffect(settings, { type: 'check' });
@@ -52,7 +69,7 @@ export function useGameCore(gameId, playerId, playerColor, settings) {
       return true;
     }
     return false;
-  }, [game, colorCode, gameStatus, moveHistory, gameId, playerId, settings]);
+  }, [game, colorCode, gameStatus, moveHistory, gameId, playerId, settings, playerColor]);
 
   return {
     game, setGame,
