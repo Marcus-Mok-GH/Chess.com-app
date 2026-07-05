@@ -82,20 +82,18 @@ function ChessGame(
   const customEloRef = useRef(customElo);
   const settingsRef = useRef(settings);
   const moveHistoryRef = useRef(moveHistory);
-  const isThinkingRef = useRef(isThinking); // Add ref to track isThinking state
+  const isThinkingRef = useRef(isThinking);
   const victoryTimeoutRef = useRef(null);
   const lastVictoryKeyRef = useRef(null);
 
   const engineErrorRef = useRef(false);
   const busyRetryCountRef = useRef(0);
 
-  const persistTimeoutRef = useRef(null);
   const suppressPersistRef = useRef(false);
 
   const { animatingPieces, triggerAnimation, removeAnimation } = usePieceAnimations();
   const capturedPieces = useCapturedPieces(game);
 
-  // Define getGameStatus early so it can be used in useEffect
   const getGameStatus = useMemo(() => {
     if (!game) return 'playing';
     if (hasResigned) return 'resigned';
@@ -161,13 +159,46 @@ function ChessGame(
     customEloRef.current = customElo;
   }, [customElo]);
 
+  const persistGame = useCallback(async (currentGame, currentHistory) => {
+    if (!initialGameId || !hasLoadedPersistedState || !currentGame || !isOnline || !user) return;
+    
+    try {
+      const gameResult = currentGame.isCheckmate()
+        ? (currentGame.turn() === 'w' ? 'black' : 'white')
+        : currentGame.isDraw()
+          ? 'draw'
+          : 'in_progress';
+
+      const bot = selectedBotRef.current;
+      const botName = bot.id === 'custom' ? `Custom Bot (${customEloRef.current})` : bot.name;
+      const botElo = bot.id === 'custom' ? customEloRef.current : bot.rating;
+
+      const storedHistory = toStoredMoveHistory(currentHistory);
+
+      await api.saveGame({
+        gameCode: gameId,
+        moveHistory: storedHistory,
+        result: gameResult,
+        gameMode: 'local',
+        userId: user.id,
+        username: user.username,
+        opponentName: botName,
+        opponentElo: botElo,
+        playerColor: playerColor === 'w' ? 'white' : 'black',
+        finalFen: currentGame.fen(),
+      });
+      console.log('[ChessGame] Persisted game state to DB');
+    } catch (error) {
+      console.error('[ChessGame] Failed to persist game state:', error);
+    }
+  }, [gameId, hasLoadedPersistedState, initialGameId, isOnline, playerColor, user]);
+
   useEffect(() => {
     if (hasLoadedPersistedState || !initialGameId) return;
 
     let isMounted = true;
     const loadState = async () => {
       try {
-        // Load from database (requires user login)
         if (!user) {
           console.warn('[ChessGame] Cannot load game state without a user');
           return;
@@ -212,7 +243,6 @@ function ChessGame(
     };
   }, [gameId, hasLoadedPersistedState, initialGameId, user]);
 
-
   useEffect(() => {
     if (moveHistory.length === 0 && selectedBot) {
       setBotMessage(getRandomQuote(selectedBot, 'start'));
@@ -229,59 +259,6 @@ function ChessGame(
       selectedBot,
     });
   }, [isThinking, moveHistory.length, getGameStatus, onUiStateChange, botMessage, selectedBot]);
-
-  useEffect(() => {
-    if (!initialGameId || !hasLoadedPersistedState || !game) return;
-    if (suppressPersistRef.current) {
-      suppressPersistRef.current = false;
-      return;
-    }
-
-    if (persistTimeoutRef.current) {
-      clearTimeout(persistTimeoutRef.current);
-    }
-
-    persistTimeoutRef.current = setTimeout(async () => {
-      try {
-        const gameResult = game.isCheckmate()
-          ? (game.turn() === 'w' ? 'black' : 'white')
-          : game.isDraw()
-            ? 'draw'
-            : 'in_progress';
-
-        const bot = selectedBotRef.current;
-        const botName = bot.id === 'custom' ? `Custom Bot (${customEloRef.current})` : bot.name;
-        const botElo = bot.id === 'custom' ? customEloRef.current : bot.rating;
-
-        const storedHistory = toStoredMoveHistory(moveHistory);
-
-        // Also save to database if online and user is logged in
-        if (isOnline && user) {
-          await api.saveGame({
-            gameCode: gameId,
-            moveHistory: storedHistory,
-            result: gameResult,
-            gameMode: 'local',
-            userId: user.id,
-            username: user.username,
-            opponentName: botName,
-            opponentElo: botElo,
-            playerColor: playerColor === 'w' ? 'white' : 'black',
-            finalFen: game.fen(),
-          });
-          console.log('[ChessGame] Saved game state to database');
-        }
-      } catch (error) {
-        console.error('[ChessGame] Failed to autosave game state:', error);
-      }
-    }, 500);
-
-    return () => {
-      if (persistTimeoutRef.current) {
-        clearTimeout(persistTimeoutRef.current);
-      }
-    };
-  }, [boardOrientation, game, gameId, hasLoadedPersistedState, initialGameId, isOnline, moveHistory, playerColor, user]);
 
   const makeAIMove = useCallback(async () => {
     if (gameRef.current.isGameOver() || isThinkingRef.current || engineErrorRef.current) return;
@@ -313,8 +290,6 @@ function ChessGame(
 
       const { bestMove, debugInfo: newDebugInfo } = response;
 
-      // Successful response — reset consecutive-failure counter so future isolated
-      // timeouts don't accumulate toward the permanent-block threshold.
       busyRetryCountRef.current = 0;
       setEngineError(null);
 
@@ -331,16 +306,15 @@ function ChessGame(
           console.warn('[ChessGame] Engine move could not be applied:', bestMove);
           setIsThinking(false);
           isThinkingRef.current = false;
-          // Don't show error to user, just stop thinking
           return;
         }
-
-        
 
         setTimeout(() => {
           if (moveResult.captured) haptics.capture(); else haptics.move();
           setGame(newGame);
-          setMoveHistory([...history, moveResult]);
+          const nextHistory = [...history, moveResult];
+          setMoveHistory(nextHistory);
+          persistGame(newGame, nextHistory);
 
           if (!bot.isCoach) {
             if (newGame.isCheckmate()) {
@@ -361,8 +335,6 @@ function ChessGame(
     } catch (err) {
       console.error('[ChessGame] Engine error:', err);
       busyRetryCountRef.current = (busyRetryCountRef.current || 0) + 1;
-      // Only permanently block after 3 consecutive failures to allow recovery from
-      // transient serverless cold-start timeouts without silencing the bot forever.
       if (busyRetryCountRef.current >= 3) {
         engineErrorRef.current = true;
         setEngineError(err.message || 'Failed to connect to chess engine');
@@ -373,12 +345,11 @@ function ChessGame(
       setIsThinking(false);
       isThinkingRef.current = false;
     }
-  }, [triggerAnimation]);
+  }, [triggerAnimation, persistGame]);
 
   useEffect(() => {
     if (game.turn() !== playerColor && !game.isGameOver() && !isThinking) {
       const timer = setTimeout(() => {
-        // Double-check conditions before making AI move using ref values for most current state
         if (gameRef.current.turn() !== playerColor && !gameRef.current.isGameOver() && !isThinkingRef.current) {
           makeAIMove();
         }
@@ -388,7 +359,7 @@ function ChessGame(
   }, [game, playerColor, isThinking, makeAIMove]);
 
   const saveGameToDatabase = useCallback(async (reason, winner) => {
-    if (!isOnline || !user) return; // Only save if online and logged in
+    if (!isOnline || !user) return;
 
     try {
       let result;
@@ -402,7 +373,6 @@ function ChessGame(
         result = 'unknown';
       }
 
-      // Get bot info
       const bot = selectedBotRef.current;
       const botName = bot.id === 'custom' ? `Custom Bot (${customEloRef.current})` : bot.name;
       const botElo = bot.id === 'custom' ? customEloRef.current : bot.rating;
@@ -428,7 +398,6 @@ function ChessGame(
     }
   }, [game, gameId, moveHistory, isOnline, user, playerColor]);
 
-  // Save game to database when it ends
   useEffect(() => {
     if (getGameStatus !== 'playing' && !hasResigned && moveHistory.length > 0) {
       let result;
@@ -443,7 +412,6 @@ function ChessGame(
     }
   }, [getGameStatus, hasResigned, moveHistory.length, game, saveGameToDatabase]);
 
-  // Get coaching feedback after player move (only for Coach bot)
   const requestCoachingFeedback = useCallback(async (fenBefore, move, history) => {
     if (!selectedBotRef.current.isCoach) return;
     
@@ -484,7 +452,6 @@ function ChessGame(
     return 'q';
   }, []);
 
-
   const handlePieceDrop = useCallback((from, to) => {
     if (game.turn() !== playerColor || isThinking || game.isGameOver() || hasResigned) return false;
 
@@ -507,6 +474,7 @@ function ChessGame(
         setGame(gameCopy);
         const nextHistory = [...moveHistory, move];
         setMoveHistory(nextHistory);
+        persistGame(gameCopy, nextHistory);
         haptics.move();
         setSelectedSquare(null);
         setPossibleMoves([]);
@@ -527,7 +495,7 @@ function ChessGame(
     }
 
     return false;
-  }, [game, playerColor, isThinking, hasResigned, requestCoachingFeedback, resolvePromotion, moveHistory]);
+  }, [game, playerColor, isThinking, hasResigned, requestCoachingFeedback, resolvePromotion, moveHistory, persistGame]);
 
   const canDragPiece = useCallback((pieceType, square) => {
     if (game.turn() !== playerColor || isThinking || game.isGameOver() || hasResigned) return false;
@@ -548,7 +516,6 @@ function ChessGame(
           return;
         }
 
-        // Tap to move: if clicking another piece of the same color, switch selection
         if (piece && piece.color === playerColor) {
           setSelectedSquare(square);
           haptics.select();
@@ -599,7 +566,6 @@ function ChessGame(
     if (hasResigned || game.isGameOver()) return;
     setHasResigned(true);
     setBotMessage(getRandomQuote(selectedBot, 'win'));
-    // Save game to database
     saveGameToDatabase('resigned', selectedBot.name === 'You' ? 'black' : 'white');
   }, [hasResigned, game, selectedBot, saveGameToDatabase]);
 
@@ -608,16 +574,16 @@ function ChessGame(
     gameCopy.undo();
     gameCopy.undo();
     setGame(gameCopy);
-    setMoveHistory(gameCopy.history({ verbose: true }));
+    const nextHistory = gameCopy.history({ verbose: true });
+    setMoveHistory(nextHistory);
+    persistGame(gameCopy, nextHistory);
     setSelectedSquare(null);
     setPossibleMoves([]);
-  }, [game, moveHistory]);
+  }, [game, moveHistory, persistGame]);
 
   const handleFlipBoard = useCallback(() => {
     const newOrientation = boardOrientation === 'white' ? 'black' : 'white';
     setBoardOrientation(newOrientation);
-    // When board is oriented for white, player plays white (at bottom)
-    // When board is oriented for black, player plays black (at bottom)
     setPlayerColor(newOrientation === 'white' ? 'w' : 'b');
   }, [boardOrientation]);
 
@@ -633,8 +599,6 @@ function ChessGame(
     setHintMove(null);
     
     try {
-      // Use a fast but decent configuration for quick hints
-      // depth: 8 and nodes: 5000 gives good moves in ~200-500ms
       const response = await api.getEngineMove({
         fen: game.fen(),
         bot: { name: 'Hint', depth: 8, nodes: 5000 },
@@ -671,7 +635,6 @@ function ChessGame(
     [handleNewGame, handleUndo, handleFlipBoard, handleGetHint, handleResign, handleReview, getGameStatus],
   );
 
-  // Safety check - if game failed to initialize, show error
   if (!game) {
     return (
       <div className="chess-game-error">
