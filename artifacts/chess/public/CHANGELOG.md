@@ -1,5 +1,11 @@
 # Changelog
 
+## [2026-07-05] - Persistent Move Storage & Refresh Survival
+
+### Added
+- **Immediate DB Persistence**: Every move is now stored in the database for both bot and online matches.
+- **Refresh Survival**: Improved session recovery for online games to survive page refreshes.
+
 ## [2026-07-05] - react-chessboard v5 Documentation Alignment
 
 ### Fixed
