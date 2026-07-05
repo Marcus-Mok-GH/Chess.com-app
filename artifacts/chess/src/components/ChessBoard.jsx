@@ -46,31 +46,41 @@ export default function ChessBoard({
 }) {
   const colors = themeColors[boardTheme] || themeColors.green;
 
-  // react-chessboard expects a FEN string or position object
-  // The position prop passed from parent is a chess.js object
-  const currentFen = typeof position.fen === 'function' ? position.fen() : position;
+  // react-chessboard v5 expects a FEN string or position object
+  const currentFen = typeof position?.fen === 'function' ? position.fen() : position;
 
+  // react-chessboard v5 API uses an 'options' prop for most configurations.
   const chessboardOptions = {
+    id: "MainChessboard",
     position: currentFen,
-    onSquareClick: ({ square }) => onSquareClick?.(square),
-    onPieceDrop: ({ sourceSquare, targetSquare }) => {
+    orientation: boardOrientation,
+    allowDragging: Boolean(onPieceDrop),
+    showNotation: showCoordinates,
+    animationDuration: 300,
+    customDarkSquareStyle: { backgroundColor: colors.dark },
+    customLightSquareStyle: { backgroundColor: colors.light },
+    customPieces: customPieces,
+    customSquareStyles: customSquareStyles,
+    onSquareClick: (args) => {
+      const square = args?.square || args;
+      onSquareClick?.(square);
+    },
+    onPieceDrop: (args) => {
+      const { sourceSquare, targetSquare } = args || {};
       if (!targetSquare) return false;
       return onPieceDrop?.(sourceSquare, targetSquare) ?? false;
     },
-    allowDragging: Boolean(onPieceDrop),
-    canDragPiece: ({ piece, square }) => canDragPiece?.(piece?.pieceType, square) ?? true,
-    boardOrientation,
-    darkSquareStyle: { backgroundColor: colors.dark },
-    lightSquareStyle: { backgroundColor: colors.light },
-    pieces: customPieces,
-    squareStyles: customSquareStyles,
-    showNotation: showCoordinates,
-    animationDurationInMs: 300,
+    isDraggablePiece: (args) => {
+      const { piece, sourceSquare } = args || {};
+      // Handle piece as object (v5) or string (v4 fallback)
+      const pieceType = typeof piece === 'object' ? piece.pieceType : piece;
+      return canDragPiece?.(pieceType, sourceSquare) ?? true;
+    },
   };
 
   return (
-    <div className={`chess-board-wrapper theme-${boardTheme}`} style={{ width: '100%', height: '100%' }}>
-      <Chessboard id="MainChessboard" options={chessboardOptions} />
+    <div className={`chess-board-wrapper theme-${boardTheme}`} style={{ width: '100%', height: '100%', minHeight: '300px' }}>
+      <Chessboard options={chessboardOptions} />
     </div>
   );
 }

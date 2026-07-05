@@ -1,5 +1,10 @@
 # Changelog
 
+## [2026-07-05] - react-chessboard v5 Compatibility Fix
+
+### Fixed
+- **react-chessboard v5 Migration**: Updated `ChessBoard.jsx` to use the `options` prop required by version 5.10.0. Fixed property names (`orientation`, `customPieces`, `customSquareStyles`, `animationDuration`) and updated callback signatures (`onSquareClick`, `onPieceDrop`, `isDraggablePiece`) to match the new API, resolving the issue where the board was missing in games.
+
 ## [2026-07-03] - Deep Layout & Overflow Resolution
 
 ### Fixed

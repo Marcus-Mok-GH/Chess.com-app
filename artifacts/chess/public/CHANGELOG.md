@@ -1,5 +1,10 @@
 # Changelog
 
+## [2026-07-05] - react-chessboard v5 Compatibility Fix
+
+### Fixed
+- **react-chessboard v5 Migration**: Updated `ChessBoard.jsx` to use the `options` prop required by version 5.10.0 to fix the missing board issue.
+
 ## [2026-07-02] - Full UI Theme Synchronization
 
 ### Added
