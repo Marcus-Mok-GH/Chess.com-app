@@ -1,5 +1,12 @@
 # Changelog
 
+## [2026-07-05] - Persistent Move Storage & Refresh Survival
+
+### Added
+- **Immediate DB Persistence**: Updated both local (bot) and online game logic to save every move to the database immediately, ensuring no data loss on sudden refreshes.
+- **Online Session Recovery**: Implemented `localStorage` persistence for `playerId` and `playerColor` in `OnlinePlay.jsx` to allow players to resume matches after a page reload.
+- **Hybrid State Loading**: `OnlineChessGame.jsx` now performs an initial state fetch from the database via REST API to ensure the board is populated instantly while waiting for the socket connection.
+
 ## [2026-07-05] - react-chessboard v5 Documentation Alignment
 
 ### Fixed
