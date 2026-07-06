@@ -1,5 +1,5 @@
 import { Chessboard } from 'react-chessboard';
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 
 const PIECE_IMAGES = {
   wK: '/custom-pieces/wK.svg',
@@ -35,6 +35,10 @@ export default function ChessBoard({
 }) {
   const colors = themeColors[boardTheme] || themeColors.green;
 
+  useEffect(() => {
+    console.log('[ChessBoard] Rendering with position:', position);
+  }, [position]);
+
   // Robust FEN extraction
   const currentFen = useMemo(() => {
     if (!position) return 'start';
@@ -44,8 +48,7 @@ export default function ChessBoard({
     return 'start';
   }, [position]);
 
-  // Robust custom piece renderer for react-chessboard v5
-  // Receives { squareWidth, isDragging, squareColor }
+  // Robust custom piece renderer
   const customPieces = useMemo(() => {
     return Object.entries(PIECE_IMAGES).reduce((acc, [piece, src]) => {
       acc[piece] = ({ squareWidth }) => (
@@ -65,19 +68,16 @@ export default function ChessBoard({
     }, {});
   }, []);
 
-  // Handler adaptation for v5 object-based arguments vs standard positional ones
   const handleSquareClick = (args) => {
     const square = typeof args === 'string' ? args : args?.square;
     if (square) onSquareClick?.(square);
   };
 
   const handlePieceDrop = (args, target, piece) => {
-    // Check if args is the v5 object { sourceSquare, targetSquare, piece }
     if (typeof args === 'object' && args !== null && 'sourceSquare' in args) {
       const { sourceSquare, targetSquare } = args;
       return onPieceDrop?.(sourceSquare, targetSquare) ?? false;
     }
-    // Fallback to positional arguments (source, target)
     return onPieceDrop?.(args, target) ?? false;
   };
 
@@ -90,23 +90,6 @@ export default function ChessBoard({
     return canDragPiece?.(args, square) ?? true;
   };
 
-  // Simplified and corrected config for react-chessboard v5
-  const config = {
-    id: "MainChessboard",
-    position: currentFen,
-    boardOrientation: boardOrientation,
-    onPieceDrop: handlePieceDrop,
-    onSquareClick: handleSquareClick,
-    arePiecesDraggable: Boolean(onPieceDrop),
-    showBoardNotation: showCoordinates,
-    animationDuration: 300,
-    customDarkSquareStyle: { backgroundColor: colors.dark },
-    customLightSquareStyle: { backgroundColor: colors.light },
-    customPieces: customPieces,
-    customSquareStyles: customSquareStyles,
-    isDraggablePiece: handleCanDragPiece,
-  };
-
   return (
     <div 
       className={`chess-board-wrapper theme-${boardTheme}`} 
@@ -114,10 +97,30 @@ export default function ChessBoard({
         width: '100%', 
         height: '100%', 
         position: 'absolute',
-        inset: 0
+        inset: 0,
+        backgroundColor: 'rgba(255, 0, 0, 0.2)', // Debug: Light red background
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
       }}
     >
-      <Chessboard {...config} />
+      <div style={{ width: '100%', height: '100%' }}>
+        <Chessboard 
+          id="MainBoard"
+          position={currentFen}
+          boardOrientation={boardOrientation}
+          onPieceDrop={handlePieceDrop}
+          onSquareClick={handleSquareClick}
+          arePiecesDraggable={Boolean(onPieceDrop)}
+          showBoardNotation={showCoordinates}
+          animationDuration={300}
+          customDarkSquareStyle={{ backgroundColor: colors.dark }}
+          customLightSquareStyle={{ backgroundColor: colors.light }}
+          customPieces={customPieces}
+          customSquareStyles={customSquareStyles}
+          isDraggablePiece={handleCanDragPiece}
+        />
+      </div>
     </div>
   );
 }
