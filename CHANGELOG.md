@@ -1,5 +1,13 @@
 # Changelog
 
+## [2026-07-06] - Mobile Board Visibility Patch
+
+### Fixed
+- **Explicit Minimum Dimensions**: Added `min-height` using dynamic viewport units (`calc(100vw - 2rem)`) to the board container on mobile to ensure it never collapses to 0 height.
+- **Layout Restoration**: Re-enabled `position: absolute` for the inner board wrapper to ensure `react-chessboard` fills the aspect-ratio container correctly.
+- **Section Sizing**: Forced the `board-section` to use 100% width on small screens while maintaining a sensible max-width.
+
+
 ## [2026-07-06] - Simplification of Board Container for Mobile
 
 ### Fixed

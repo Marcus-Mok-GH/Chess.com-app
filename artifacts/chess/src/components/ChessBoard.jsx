@@ -35,10 +35,6 @@ export default function ChessBoard({
 }) {
   const colors = themeColors[boardTheme] || themeColors.green;
 
-  useEffect(() => {
-    console.log('[ChessBoard] Rendering with position:', typeof position === 'string' ? position : 'FEN object');
-  }, [position]);
-
   // Robust FEN extraction
   const currentFen = useMemo(() => {
     if (!position) return 'start';
@@ -91,15 +87,7 @@ export default function ChessBoard({
   };
 
   return (
-    <div 
-      className={`chess-board-wrapper theme-${boardTheme}`} 
-      style={{ 
-        width: '100%',
-        aspectRatio: '1 / 1',
-        display: 'block',
-        position: 'relative'
-      }}
-    >
+    <div className={`chess-board-wrapper theme-${boardTheme}`}>
       <Chessboard 
         id="MainBoard"
         position={currentFen}
