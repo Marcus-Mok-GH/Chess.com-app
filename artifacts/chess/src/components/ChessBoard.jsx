@@ -90,9 +90,7 @@ export default function ChessBoard({
     return canDragPiece?.(args, square) ?? true;
   };
 
-  // UNIQUE APPROACH: Prop Redundancy
-  // We provide both top-level props AND the options object to ensure compatibility 
-  // with any v5 variant/beta and prevent the "missing board" issue.
+  // Simplified and corrected config for react-chessboard v5
   const config = {
     id: "MainChessboard",
     position: currentFen,
@@ -100,21 +98,13 @@ export default function ChessBoard({
     onPieceDrop: handlePieceDrop,
     onSquareClick: handleSquareClick,
     arePiecesDraggable: Boolean(onPieceDrop),
-    allowDragging: Boolean(onPieceDrop), // Legacy/Alternative name
     showBoardNotation: showCoordinates,
-    showNotation: showCoordinates, // Legacy/Alternative name
     animationDuration: 300,
-    animationDurationInMs: 300, // Legacy/Alternative name
     customDarkSquareStyle: { backgroundColor: colors.dark },
     customLightSquareStyle: { backgroundColor: colors.light },
-    darkSquareStyle: { backgroundColor: colors.dark }, // Legacy/Alternative name
-    lightSquareStyle: { backgroundColor: colors.light }, // Legacy/Alternative name
     customPieces: customPieces,
-    pieces: customPieces, // Common name in some v5 snapshots
     customSquareStyles: customSquareStyles,
-    squareStyles: customSquareStyles, // Common name in some v5 snapshots
     isDraggablePiece: handleCanDragPiece,
-    canDragPiece: handleCanDragPiece, // Legacy/Alternative name
   };
 
   return (
@@ -123,11 +113,11 @@ export default function ChessBoard({
       style={{ 
         width: '100%', 
         height: '100%', 
-        position: 'relative',
-        minHeight: '200px' // Ensure visibility during initialization
+        position: 'absolute',
+        inset: 0
       }}
     >
-      <Chessboard {...config} options={config} />
+      <Chessboard {...config} />
     </div>
   );
 }
