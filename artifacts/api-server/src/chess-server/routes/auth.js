@@ -9,18 +9,9 @@ import {
 
 const router = express.Router();
 
-const UPSTREAM_TIMEOUT_MS = 8000;
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const UPSTREAM_TIMEOUT_MS = 10000;
+const EMAIL_RE = /^[\s@]+@[^\s@]+\.[^\s@]+$/;
 const OTP_RE = /^\d{4,8}$/;
-
-function maskEmail(email) {
-  if (typeof email !== 'string') return '<invalid>';
-  const at = email.indexOf('@');
-  if (at < 1) return '<invalid>';
-  const local = email.slice(0, at);
-  const domain = email.slice(at);
-  return `${local[0]}***${domain}`;
-}
 
 function getNeonAuthUrl() {
   const raw =
@@ -67,16 +58,29 @@ router.post('/email-otp/send-verification-otp', async (req, res) => {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
+        'accept': 'application/json',
         origin: req.headers.origin || `https://${req.headers.host}`,
+        cookie: req.headers.cookie || '',
       },
       body: JSON.stringify({ email: normalizedEmail, type: 'sign-in' }),
     });
+
+    // Forward Set-Cookie headers back to the client
+    const setCookies = response.headers.getSetCookie?.() || response.headers.get('set-cookie');
+    if (setCookies) {
+      if (Array.isArray(setCookies)) {
+        setCookies.forEach(c => res.append('set-cookie', c));
+      } else {
+        res.setHeader('set-cookie', setCookies);
+      }
+    }
 
     const text = await response.text();
     let data;
     try { data = text ? JSON.parse(text) : {}; } catch { data = {}; }
     return res.status(response.status).json(data);
   } catch (err) {
+    console.error('[Auth] Send OTP error:', err);
     return res.status(500).json({ error: { message: 'Failed to send code.' } });
   }
 });
@@ -103,16 +107,32 @@ router.post('/sign-in/email-otp', async (req, res) => {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
+        'accept': 'application/json',
         origin: req.headers.origin || `https://${req.headers.host}`,
+        cookie: req.headers.cookie || '',
       },
-      body: JSON.stringify({ email: normalizedEmail, otp: normalizedOtp }),
+      // Some Better Auth configurations require 'type' to match the sending type
+      body: JSON.stringify({ email: normalizedEmail, otp: normalizedOtp, type: 'sign-in' }),
     });
+
+    // Forward Set-Cookie headers back to the client
+    const setCookies = neonResponse.headers.getSetCookie?.() || neonResponse.headers.get('set-cookie');
+    if (setCookies) {
+      if (Array.isArray(setCookies)) {
+        setCookies.forEach(c => res.append('set-cookie', c));
+      } else {
+        res.setHeader('set-cookie', setCookies);
+      }
+    }
 
     const text = await neonResponse.text();
     let neonData;
     try { neonData = text ? JSON.parse(text) : {}; } catch { neonData = {}; }
 
-    if (!neonResponse.ok || neonData.error) return res.status(neonResponse.status).json(neonData);
+    if (!neonResponse.ok || neonData.error) {
+      console.warn('[Auth] Upstream verification failed:', neonResponse.status, neonData);
+      return res.status(neonResponse.status).json(neonData);
+    }
 
     let user;
     const existing = await query(`SELECT id, username, elo, games_played, wins, losses, draws, created_at, email FROM users WHERE email = $1`, [normalizedEmail]);
@@ -133,9 +153,8 @@ router.post('/sign-in/email-otp', async (req, res) => {
     const token = await createSession(user.id, { ipAddress: req.ip, userAgent: req.headers['user-agent'] });
     const needsUsername = user.username.startsWith('player_');
 
-    // Root-level objects as expected by Better Auth client and session flow
     return res.json({
-      session: { 
+      session: {
         id: token,
         token: token,
         userId: user.id,
@@ -148,6 +167,7 @@ router.post('/sign-in/email-otp', async (req, res) => {
       }
     });
   } catch (err) {
+    console.error('[Auth] Verification error:', err);
     return res.status(500).json({ error: { message: 'Sign-in failed. Please try again.' } });
   }
 });
@@ -159,7 +179,7 @@ router.post('/update-username', async (req, res) => {
 
   const { username } = req.body || {};
   const trimmed = (username || '').trim();
-  
+
   if (trimmed.length < 2 || trimmed.length > 20 || !/^[a-zA-Z0-9._-]+$/.test(trimmed)) {
     return res.status(400).json({ error: { message: 'Username must be 2-20 characters (letters, numbers, dots, hyphens, underscores).' } });
   }

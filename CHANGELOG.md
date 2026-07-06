@@ -1,5 +1,12 @@
 # Changelog
 
+## [2026-07-06] - Auth Logic & OTP Verification Fix
+
+### Fixed
+- **Invalid OTP Bug**: Resolved an issue where correct OTP codes were being rejected by implementing full cookie and header forwarding in the auth proxy. This ensures that Better Auth's CSRF and verification state are preserved between the "send" and "verify" steps.
+- **Request Synchronization**: Added explicit `type: 'sign-in'` and `Accept` headers to the upstream auth calls to match the standard Better Auth signature.
+
+
 ## [2026-07-06] - Deployment Stability Fix
 
 ### Fixed
