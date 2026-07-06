@@ -1,5 +1,13 @@
 # Changelog
 
+## [2026-07-06] - Chess Board Logic Reversion & Stability Fix
+
+### Fixed
+- **API Correction**: Reverted the incorrect use of the `options` prop and returned to direct props for `react-chessboard` v5, which resolves the "stuck position" issue where state updates were being ignored.
+- **Event Handler Refinement**: Standardized `onPieceDrop`, `onSquareClick`, and `isDraggablePiece` to match the correct v5 function signatures.
+- **Persistent Visibility**: Maintained `position: absolute` and touch optimizations to ensure the board remains visible and responsive on mobile devices.
+
+
 ## [2026-07-06] - Chess Board Interaction Overhaul
 
 ### Added
