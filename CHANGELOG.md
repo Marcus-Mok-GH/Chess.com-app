@@ -1,5 +1,11 @@
 # Changelog
 
+## [2026-07-06] - Deployment Stability Fix
+
+### Fixed
+- **Dynamic Import Errors**: Implemented a global listener for `vite:preloadError` and module fetch `TypeErrors`. This ensures that if a user has the app open during a redeploy, the app will automatically refresh to load the latest asset hashes instead of crashing with a "Failed to fetch dynamically imported module" error.
+
+
 ## [2026-07-06] - Mobile Optimization & react-chessboard v5 Final Fix
 
 ### Added
