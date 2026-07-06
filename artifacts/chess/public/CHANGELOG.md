@@ -1,5 +1,11 @@
 # Changelog
 
+## [2026-07-06] - Final Board Rendering Fix
+
+### Fixed
+- **Mobile Dimensions**: Added `min-height` and `min-width` constraints to the board wrapper and section in `ChessGame.css` to prevent dimension collapse on mobile viewports.
+- **Component Cleanup**: Removed debug styles and logs while maintaining the standardized direct prop API for `react-chessboard` v5.
+
 ## [2026-07-06] - Debugging Missing Board
 
 ### Added
