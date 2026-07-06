@@ -35,108 +35,100 @@ function getNeonAuthUrl() {
   return url;
 }
 
+/**
+ * Robust proxy to Neon/Better Auth
+ */
+async function proxyToAuth(req, path, body) {
+  const neonAuthUrl = getNeonAuthUrl();
+  if (!neonAuthUrl) throw new Error('Auth service not configured.');
+
+  const upstreamUrl = `${neonAuthUrl}${path}`;
+  const headers = {
+    'content-type': 'application/json',
+    'accept': 'application/json',
+    'x-forwarded-host': req.headers.host || '',
+    'x-forwarded-proto': req.headers['x-forwarded-proto'] || 'https',
+    'x-forwarded-for': req.headers['x-forwarded-for'] || req.ip,
+  };
+
+  // Carefully forward existing session/state cookies
+  if (req.headers.cookie) headers['cookie'] = req.headers.cookie;
+
+  // Forward origin but prioritize the incoming origin for CSRF consistency
+  if (req.headers.origin) headers['origin'] = req.headers.origin;
+  else headers['origin'] = `https://${req.headers.host}`;
+
+  const response = await fetch(upstreamUrl, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  const setCookies = response.headers.getSetCookie ? response.headers.getSetCookie() : response.headers.get('set-cookie');
+  const status = response.status;
+  const data = await response.json().catch(() => ({}));
+
+  return { status, data, setCookies };
+}
+
 router.post('/email-otp/send-verification-otp', async (req, res) => {
   const { email } = req.body || {};
-  if (typeof email !== 'string' || !EMAIL_RE.test(email.trim())) {
+  if (!email || !EMAIL_RE.test(String(email).trim())) {
     return res.status(400).json({ error: { message: 'A valid email is required.' } });
   }
 
-  const neonAuthUrl = getNeonAuthUrl();
-  if (!neonAuthUrl) {
-    console.error('[Auth] Error: Auth service not configured.');
-    return res.status(503).json({ error: { message: 'Auth service not configured.' } });
-  }
-
   const normalizedEmail = email.toLowerCase().trim();
-  const upstreamUrl = `${neonAuthUrl}/email-otp/send-verification-otp`;
-
-  console.log(`[Auth] Proxying Send OTP for ${normalizedEmail} to ${upstreamUrl}`);
 
   try {
-    const upstreamResponse = await fetch(upstreamUrl, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'accept': 'application/json',
-      },
-      body: JSON.stringify({ email: normalizedEmail, type: 'sign-in' }),
+    // Failsafe 1: Try 'sign-in' type (Unified flow)
+    let result = await proxyToAuth(req, '/email-otp/send-verification-otp', {
+      email: normalizedEmail,
+      type: 'sign-in'
     });
 
-    const status = upstreamResponse.status;
-    const text = await upstreamResponse.text();
-    console.log(`[Auth] Upstream response: ${status} - ${text.slice(0, 500)}`);
-
-    let data;
-    try {
-      data = text ? JSON.parse(text) : {};
-    } catch {
-      data = { message: text || 'Invalid response from auth service' };
+    // Failsafe 2: If 400, try 'email-verification' type (Classic flow)
+    if (result.status === 400) {
+      console.log(`[Auth] 'sign-in' failed for ${normalizedEmail}, retrying with 'email-verification'...`);
+      result = await proxyToAuth(req, '/email-otp/send-verification-otp', {
+        email: normalizedEmail,
+        type: 'email-verification'
+      });
     }
 
-    // Forward cookies if any
-    const setCookies = upstreamResponse.headers.getSetCookie?.() || upstreamResponse.headers.get('set-cookie');
-    if (setCookies) {
-      if (Array.isArray(setCookies)) {
-        setCookies.forEach(c => res.append('set-cookie', c));
-      } else {
-        res.setHeader('set-cookie', setCookies);
-      }
+    // Forward cookies
+    if (result.setCookies) {
+      const cookies = Array.isArray(result.setCookies) ? result.setCookies : [result.setCookies];
+      cookies.forEach(c => res.append('set-cookie', c));
     }
 
-    if (!upstreamResponse.ok) {
-      return res.status(status).json(data.error ? data : { error: { message: data.message || 'Failed to send code' } });
-    }
-
-    return res.status(status).json(data);
+    return res.status(result.status).json(result.data);
   } catch (err) {
-    console.error('[Auth] Fatal Send OTP error:', err);
-    return res.status(500).json({ error: { message: 'Internal server error: ' + err.message } });
+    console.error('[Auth] Send OTP Error:', err);
+    return res.status(500).json({ error: { message: 'Auth bridge failure: ' + err.message } });
   }
 });
 
 router.post('/sign-in/email-otp', async (req, res) => {
   const { email, otp } = req.body || {};
-
-  if (!email || !otp) {
-    return res.status(400).json({ error: { message: 'Email and code are required.' } });
-  }
-
-  const neonAuthUrl = getNeonAuthUrl();
-  if (!neonAuthUrl) return res.status(503).json({ error: { message: 'Auth service not configured.' } });
-
-  const normalizedEmail = email.toLowerCase().trim();
-  const normalizedOtp = otp.trim();
-  const upstreamUrl = `${neonAuthUrl}/sign-in/email-otp`;
-
-  console.log(`[Auth] Proxying Verify OTP for ${normalizedEmail} to ${upstreamUrl}`);
+  if (!email || !otp) return res.status(400).json({ error: { message: 'Email and code are required.' } });
 
   try {
-    const upstreamResponse = await fetch(upstreamUrl, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'accept': 'application/json',
-        'cookie': req.headers.cookie || '', // Essential for CSRF in some flows
-      },
-      body: JSON.stringify({ email: normalizedEmail, otp: normalizedOtp }),
+    const result = await proxyToAuth(req, '/sign-in/email-otp', {
+      email: email.toLowerCase().trim(),
+      otp: otp.trim()
     });
 
-    const status = upstreamResponse.status;
-    const text = await upstreamResponse.text();
-    console.log(`[Auth] Upstream verify response: ${status} - ${text.slice(0, 500)}`);
-
-    let neonData;
-    try {
-      neonData = text ? JSON.parse(text) : {};
-    } catch {
-      neonData = { message: text || 'Invalid response' };
+    if (result.setCookies) {
+      const cookies = Array.isArray(result.setCookies) ? result.setCookies : [result.setCookies];
+      cookies.forEach(c => res.append('set-cookie', c));
     }
 
-    if (!upstreamResponse.ok) {
-      return res.status(status).json(neonData);
+    if (result.status >= 400) {
+      return res.status(result.status).json(result.data);
     }
 
-    // Success - user is authenticated by Neon
+    // Auth succeeded at Neon, now handle local user record
+    const normalizedEmail = email.toLowerCase().trim();
     let user;
     const existing = await query(`SELECT id, username, elo, games_played, wins, losses, draws, created_at, email FROM users WHERE email = $1`, [normalizedEmail]);
 
@@ -163,15 +155,11 @@ router.post('/sign-in/email-otp', async (req, res) => {
         userId: user.id,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
       },
-      user: {
-        ...user,
-        name: user.username,
-        needsUsername
-      }
+      user: { ...user, name: user.username, needsUsername }
     });
   } catch (err) {
-    console.error('[Auth] Fatal verification error:', err);
-    return res.status(500).json({ error: { message: 'Verification failed: ' + err.message } });
+    console.error('[Auth] Verify OTP Error:', err);
+    return res.status(500).json({ error: { message: 'Auth bridge verification failure: ' + err.message } });
   }
 });
 
@@ -184,17 +172,15 @@ router.post('/update-username', async (req, res) => {
   const trimmed = (username || '').trim();
 
   if (trimmed.length < 2 || trimmed.length > 20 || !/^[a-zA-Z0-9._-]+$/.test(trimmed)) {
-    return res.status(400).json({ error: { message: 'Username must be 2-20 characters (letters, numbers, dots, hyphens, underscores).' } });
+    return res.status(400).json({ error: { message: 'Username must be 2-20 characters.' } });
   }
 
   try {
     const userId = await validateSession(token);
-    if (!userId) return res.status(401).json({ error: { message: 'Session expired. Please log in again.' } });
+    if (!userId) return res.status(401).json({ error: { message: 'Session expired.' } });
 
     const check = await query('SELECT id FROM users WHERE LOWER(username) = LOWER($1) AND id::TEXT != $2::TEXT', [trimmed, userId]);
-    if (check.rows.length > 0) {
-      return res.status(400).json({ error: { message: 'That username is already taken.' } });
-    }
+    if (check.rows.length > 0) return res.status(400).json({ error: { message: 'Username taken.' } });
 
     const result = await query(
       'UPDATE users SET username = $1 WHERE id::TEXT = $2::TEXT RETURNING id, username, elo, games_played, wins, losses, draws, created_at, email',
@@ -204,12 +190,9 @@ router.post('/update-username', async (req, res) => {
     if (result.rows.length === 0) return res.status(404).json({ error: { message: 'User not found.' } });
 
     const u = result.rows[0];
-    return res.json({
-      success: true,
-      user: { ...u, name: u.username, needsUsername: false }
-    });
+    return res.json({ success: true, user: { ...u, name: u.username, needsUsername: false } });
   } catch (error) {
-    return res.status(500).json({ error: { message: 'Failed to update username.' } });
+    return res.status(500).json({ error: { message: 'Update failed.' } });
   }
 });
 
