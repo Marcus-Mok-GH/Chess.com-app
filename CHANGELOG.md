@@ -1,11 +1,14 @@
 # Changelog
 
-## [2026-07-06] - Chess Board Logic Reversion & Stability Fix
+## [2026-07-06] - Chess Board v5 API Compliance
 
 ### Fixed
-- **API Correction**: Reverted the incorrect use of the `options` prop and returned to direct props for `react-chessboard` v5, which resolves the "stuck position" issue where state updates were being ignored.
-- **Event Handler Refinement**: Standardized `onPieceDrop`, `onSquareClick`, and `isDraggablePiece` to match the correct v5 function signatures.
-- **Persistent Visibility**: Maintained `position: absolute` and touch optimizations to ensure the board remains visible and responsive on mobile devices.
+- **Options API Standardization**: Successfully integrated the `options` prop for `react-chessboard` v5 while keeping `position` as a top-level prop. This hybrid approach ensures both proper configuration (interactions/styles) and reactive state updates (resolving the "stuck board" issue).
+- **Handler Signatures**: Aligned event handlers with official v5 signatures:
+    - `onSquareClick`: receives the square string directly.
+    - `onPieceDrop`: receives source, target, and piece as positional arguments.
+    - `canDragPiece`: receives a destructured object with `piece` and `sourceSquare`.
+- **Performance**: Memoized the `options` object to prevent unnecessary board re-renders while ensuring responsiveness to state changes like `customSquareStyles`.
 
 
 ## [2026-07-06] - Chess Board Interaction Overhaul
