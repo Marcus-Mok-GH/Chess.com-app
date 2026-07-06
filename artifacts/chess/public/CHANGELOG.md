@@ -1,5 +1,13 @@
 # Changelog
 
+## [2026-07-06] - Chess Board Rendering Fix & Code Cleanup
+
+### Fixed
+- **Prop Cleanup**: Removed redundant and conflicting hybrid API (Direct + Options) in `ChessBoard.jsx` that was causing the board to be missing in deployment. Standardized on clean direct props for `react-chessboard` v5.
+- **Positioning Fix**: Switched board container to `position: absolute` with `inset: 0` to ensure proper filling of the board wrapper across different viewport sizes.
+- **Robust Piece Scaling**: Updated custom piece renderers to accept `squareWidth` and fallback to `100%`, fixing potential invisibility issues.
+- **Universal Event Handlers**: Maintained defensive logic for board callbacks (`onPieceDrop`, `onSquareClick`, `canDragPiece`) to handle both object-destructured and positional arguments.
+
 ## [2026-07-05] - Self-Healing Chess Persistence Tables
 
 ### Changed
