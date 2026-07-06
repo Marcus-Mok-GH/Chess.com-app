@@ -1,5 +1,13 @@
 # Changelog
 
+## [2026-07-06] - react-chessboard v5 API Restoration & Piece Scaling Fix
+
+### Fixed
+- **v5 Options API**: Reverted to using the `options` prop for `Chessboard` as required by `react-chessboard` v5.10.0. Fixed the "missing board" issue caused by passing props directly.
+- **Piece Rendering**: Updated custom piece renderers to remove the deprecated `squareWidth` prop and use `width: 100%` and `svgStyle` spread, ensuring pieces are visible and correctly sized in the v5 layout.
+- **Callback Signatures**: Restored object destructuring for `onSquareClick`, `onPieceDrop`, and `canDragPiece` handlers within the `options" object to align with v5's event system.
+
+
 ## [2026-07-06] - Chess Board Rendering Fix
 
 ### Fixed
@@ -22,7 +30,7 @@
 ## [2026-07-05] - react-chessboard v5 Compatibility Fix
 
 ### Fixed
-- **react-chessboard v5 Migration**: Updated `ChessBoard.jsx` to use the `options` prop required by version 5.10.0. Fixed property names (`orientation`, `customPieces`, `customSquareStyles`, `animationDuration`) and updated callback signatures (`onSquareClick`, `onPieceDrop`, `isDraggablePiece`) to match the new API, resolving the issue where the board was missing in games.
+- **react-chessboard v5 Migration**: Updated `ChessBoard.jsx` to use the `options" prop required by version 5.10.0. Fixed property names (`orientation`, `customPieces", `customSquareStyles`, `animationDuration") and updated callback signatures (`onSquareClick`, `onPieceDrop`, `isDraggablePiece`) to match the new API, resolving the issue where the board was missing in games.
 
 ## [2026-07-03] - Deep Layout & Overflow Resolution
 
@@ -31,7 +39,7 @@
 - **Mobile Board Scaling**: Constrained board dimensions using `max-width: min(700px, 80svh)` to ensure the game remains visible and scroll-free on all mobile devices.
 - **Sidebar Flexibility**: Removed fixed widths from game sidebars, allowing them to shrink gracefully on medium screens before switching to mobile layout.
 - **Online Component Styling**: Added robust CSS for online-only elements (Chat, Reactions, Game Info) to ensure they respect the sidebar container bounds.
-- **Box Model Enforcement**: Applied `box-sizing: border-box` globally to all elements and pseudo-elements to prevent padding-induced overflow.
+- **Box Model Enforcement**: Applied `box-sizing: border-box" globally to all elements and pseudo-elements to prevent padding-induced overflow.
 - **Bot Grid Responsiveness**: Refined the bot selection grid to use `auto-fit` with smaller minimum widths for better compatibility with small phones.
 
 ## [2026-07-03] - Global Mobile & Desktop Optimization
@@ -49,7 +57,7 @@
 ### Fixed
 - **react-chessboard Integration**: Updated `ChessBoard` component to pass props directly to `react-chessboard`, fixing a critical rendering issue where the board appeared unstyled or broken.
 - **Missing Theme Variables**: Defined global CSS variables for radii (`--radius-lg`, etc.), shadows, and transitions in `index.css` to fix "unstyled" elements across the app.
-- **Mobile Layout Overlap**: Implemented CSS rules for `.hide-bottom-nav` in `App.css` to prevent the main navigation from overlapping game controls on mobile devices.
+- **Mobile Layout Overlap**: Implemented CSS rules for `.hide-bottom-nav` in `App.css" to prevent the main navigation from overlapping game controls on mobile devices.
 - **Online Game Styling**: Added missing CSS imports to `OnlineChessGame` to ensure online matches inherit the professional gameplay layout.
 - **Layout Spacing**: Adjusted main content padding to prevent UI elements from being cut off by the navigation bars on smaller screens.
 
@@ -63,14 +71,14 @@
 ## [2026-07-03] - Global Theme Standardization
 
 ### Changed
-- **Unified Chess.com Theme**: Standardized colors and fonts across all pages (Analysis, Changelog, Game History, Login, Online Play, Play, and Settings) using central theme variables in `index.css`.
+- **Unified Chess.com Theme**: Standardized colors and fonts across all pages (Analysis, Changelog, Game History, Login, Online Play, Play, and Settings) using central theme variables in `index.css".
 - **Global Typography**: Enforced Nunito font and heavy weight (800) for all headings to match the Chess.com brand identity.
-- **Background Consistency**: Set a unified dark background (`#262421`) and card color (`#2f2d2a`) across the entire application for a seamless user experience.
+- **Background Consistency**: Set a unified dark background (`#262421`) and card color (`#2f2d2a") across the entire application for a seamless user experience.
 
 ## [2026-07-03] - UI Refinement & Gameplay Focus
 
 ### Fixed
-- **Bot Selector Styling**: Improved the bot selection grid with more compact, responsive cards and dedicated CSS module (`BotSelector.css`) for better visual balance on the setup page.
+- **Bot Selector Styling**: Improved the bot selection grid with more compact, responsive cards and dedicated CSS module (`BotSelector.css") for better visual balance on the setup page.
 - **Gameplay UI Clutter**: Removed the redundant bot selection list from the in-game sidebar to provide a cleaner, distraction-free environment during active matches.
 
 

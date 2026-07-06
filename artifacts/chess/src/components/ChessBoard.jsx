@@ -15,16 +15,20 @@ const PIECE_IMAGES = {
   bP: '/custom-pieces/bP.svg',
 };
 
+// In react-chessboard v5, custom piece renderers receive { fill, square, svgStyle }
 const customPieces = Object.entries(PIECE_IMAGES).reduce((acc, [piece, src]) => {
-  acc[piece] = ({ squareWidth }) => (
-    <div style={{ width: squareWidth, height: squareWidth }}>
-      <img
-        src={src}
-        alt={piece}
-        style={{ width: '100%', height: '100%', pointerEvents: 'none' }}
-        draggable={false}
-      />
-    </div>
+  acc[piece] = ({ svgStyle }) => (
+    <img
+      src={src}
+      alt={piece}
+      style={{ 
+        width: '100%', 
+        height: '100%', 
+        pointerEvents: 'none',
+        ...svgStyle 
+      }}
+      draggable={false}
+    />
   );
   return acc;
 }, {});
@@ -48,43 +52,40 @@ export default function ChessBoard({
 }) {
   const colors = themeColors[boardTheme] || themeColors.green;
 
-  // react-chessboard expects a FEN string or position object
+  // react-chessboard v5 expects a FEN string or position object
   const currentFen = typeof position?.fen === 'function' ? position.fen() : position;
 
-  // Handler for square clicks in react-chessboard v4+
-  const handleSquareClick = (square) => {
-    if (square) onSquareClick?.(square);
-  };
-
-  // Handler for piece drops in react-chessboard v4+
-  const handlePieceDrop = (sourceSquare, targetSquare, piece) => {
-    if (!targetSquare) return false;
-    return onPieceDrop?.(sourceSquare, targetSquare) ?? false;
-  };
-
-  // Handler for drag start in react-chessboard v4+
-  const handlePieceDragBegin = (piece, square) => {
-    // piece is a string like 'wP'
-    return canDragPiece?.(piece, square) ?? true;
+  const chessboardOptions = {
+    id: "MainChessboard",
+    position: currentFen,
+    boardOrientation: boardOrientation,
+    allowDragging: Boolean(onPieceDrop),
+    showNotation: showCoordinates,
+    animationDurationInMs: 300,
+    darkSquareStyle: { backgroundColor: colors.dark },
+    lightSquareStyle: { backgroundColor: colors.light },
+    pieces: customPieces,
+    squareStyles: customSquareStyles,
+    // v5 uses object arguments for callbacks
+    onSquareClick: (args) => {
+      const square = typeof args === 'string' ? args : args?.square;
+      if (square) onSquareClick?.(square);
+    },
+    onPieceDrop: (args) => {
+      const { sourceSquare, targetSquare } = args;
+      if (!targetSquare) return false;
+      return onPieceDrop?.(sourceSquare, targetSquare) ?? false;
+    },
+    canDragPiece: (args) => {
+      const { piece, square } = args;
+      const pieceType = typeof piece === 'object' ? piece.pieceType : piece;
+      return canDragPiece?.(pieceType, square) ?? true;
+    },
   };
 
   return (
     <div className={`chess-board-wrapper theme-${boardTheme}`} style={{ width: '100%', height: '100%', position: 'relative' }}>
-      <Chessboard 
-        id="MainChessboard"
-        position={currentFen}
-        boardOrientation={boardOrientation}
-        onPieceDrop={handlePieceDrop}
-        onSquareClick={handleSquareClick}
-        onPieceDragBegin={handlePieceDragBegin}
-        showBoardNotation={showCoordinates}
-        animationDuration={300}
-        customDarkSquareStyle={{ backgroundColor: colors.dark }}
-        customLightSquareStyle={{ backgroundColor: colors.light }}
-        customPieces={customPieces}
-        customSquareStyles={customSquareStyles}
-        boardWidth={undefined} // Let it fill the container
-      />
+      <Chessboard options={chessboardOptions} />
     </div>
   );
 }
