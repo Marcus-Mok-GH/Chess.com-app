@@ -1,115 +1,82 @@
-/* ========================================
-   ELO SLIDER - Professional Design
-   ======================================== */
-
 .elo-slider {
-  padding: 20px;
-  background: var(--color-bg-tertiary);
-  border: 1px solid var(--color-border-default);
+  padding: 2rem;
+  background: var(--background);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  margin-top: 16px;
+  margin-top: 1rem;
 }
 
 .elo-slider-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 2rem;
 }
 
 .elo-slider-label {
   font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--color-text-secondary);
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.1em;
 }
 
 .elo-value {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
+  text-align: right;
 }
 
 .elo-number {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--color-accent-primary);
-  letter-spacing: -0.02em;
+  display: block;
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--primary);
+  line-height: 1;
 }
 
 .elo-skill {
-  font-size: 0.6875rem;
-  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  font-weight: 600;
 }
 
 .elo-slider-input {
   width: 100%;
-  height: 8px;
-  background: var(--color-bg-primary);
-  border-radius: var(--radius-sm);
-  outline: none;
+  height: 6px;
+  background: var(--card);
+  border-radius: var(--radius-full);
   -webkit-appearance: none;
   appearance: none;
-  cursor: pointer;
+  outline: none;
 }
 
 .elo-slider-input::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 22px;
-  height: 22px;
-  background: linear-gradient(180deg, var(--color-accent-primary) 0%, var(--color-accent-primary) 100%);
+  width: 24px;
+  height: 24px;
+  background: var(--primary);
   border-radius: var(--radius-full);
   cursor: pointer;
-  transition: all var(--transition-fast);
-  box-shadow: var(--shadow-md);
+  border: 4px solid var(--background);
+  box-shadow: 0 0 20px rgba(129, 182, 76, 0.4);
+  transition: var(--transition-smooth);
 }
 
 .elo-slider-input::-webkit-slider-thumb:hover {
-  transform: scale(1.15);
-  box-shadow: var(--shadow-lg), var(--shadow-glow);
-}
-
-.elo-slider-input::-moz-range-thumb {
-  width: 22px;
-  height: 22px;
-  background: linear-gradient(180deg, var(--color-accent-primary) 0%, var(--color-accent-primary) 100%);
-  border: none;
-  border-radius: var(--radius-full);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  box-shadow: var(--shadow-md);
-}
-
-.elo-slider-input::-moz-range-thumb:hover {
-  transform: scale(1.15);
-}
-
-.elo-slider-input:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.elo-slider-input:disabled::-webkit-slider-thumb {
-  cursor: not-allowed;
-}
-
-.elo-slider-input:disabled::-moz-range-thumb {
-  cursor: not-allowed;
+  transform: scale(1.2);
+  background: var(--accent);
 }
 
 .elo-slider-marks {
   display: flex;
   justify-content: space-between;
-  margin-top: 12px;
-  padding: 0 4px;
+  margin-top: 1rem;
 }
 
 .elo-slider-marks span {
-  font-size: 0.6875rem;
-  color: var(--color-text-muted);
-  font-weight: 500;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 600;
 }

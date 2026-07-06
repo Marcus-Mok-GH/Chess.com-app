@@ -1,5 +1,20 @@
 # Changelog
 
+## [2026-07-06] - Ultra-Modern UI & Board Logic Fix
+
+### Added
+- **Modern Typography**: Integrated 'Plus Jakarta Sans' as the primary font for a high-end interface feel.
+- **Glassmorphism Theme**: Implemented a dark space theme with translucent panels, subtle gradients, and glow effects across the entire app.
+
+### Changed
+- **UI/UX Overhaul**: Completely redesigned the Landing, Home, Login, and Play Setup pages with modern aesthetics, improved spacing, and refined interactive elements.
+- **Component Modernization**: Updated `BotSelector`, `EloSlider`, `MoveHistory`, and `GameControls` with sleek, professional styling.
+- **Chessboard Refinement**: Refactored `ChessBoard.jsx` to fully comply with the `react-chessboard` v5 options API, resolving the "stuck board" and interaction issues.
+
+### Fixed
+- **Board Interaction**: Corrected event handler signatures and prop mapping for `onPieceDrop`, `onSquareClick`, and `onPieceDragBegin` to ensure reliable drag-and-drop and tap-to-move functionality.
+
+
 ## [2026-07-06] - Chess Board v5 API Compliance
 
 ### Fixed

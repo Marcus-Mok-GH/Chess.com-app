@@ -35,28 +35,20 @@ export default function ChessBoard({
 }) {
   const colors = themeColors[boardTheme] || themeColors.green;
 
-  // Robust FEN extraction
   const currentFen = useMemo(() => {
     if (!position) return 'start';
     if (typeof position === 'string') return position;
     if (typeof position.fen === 'function') return position.fen();
-    if (position.fen && typeof position.fen === 'string') return position.fen;
     return 'start';
   }, [position]);
 
-  // Custom piece renderer
   const customPieces = useMemo(() => {
     return Object.entries(PIECE_IMAGES).reduce((acc, [piece, src]) => {
       acc[piece] = ({ squareWidth }) => (
         <img
           src={src}
           alt={piece}
-          style={{ 
-            width: squareWidth || '100%', 
-            height: squareWidth || '100%', 
-            display: 'block',
-            pointerEvents: 'none'
-          }}
+          style={{ width: squareWidth, height: squareWidth, display: 'block', pointerEvents: 'none' }}
           draggable={false}
         />
       );
@@ -64,60 +56,33 @@ export default function ChessBoard({
     }, {});
   }, []);
 
-  // v5 Options API configuration
-  // We keep position separate for reactivity as recommended in some v5 patterns
-  const options = useMemo(() => ({
-    // Interactions
-    allowDragging: true,
-    onSquareClick: (square) => {
-      // Signature: (square: string) => void
-      onSquareClick?.(square);
-    },
-    onPieceDrop: (sourceSquare, targetSquare, piece) => {
-      // Signature: (source: string, target: string, piece: string) => boolean
-      return onPieceDrop?.(sourceSquare, targetSquare) ?? false;
-    },
-    canDragPiece: ({ piece, sourceSquare }) => {
-      // Signature: ({ piece, sourceSquare }) => boolean
-      // Note: mapping sourceSquare to what parent expects
-      return canDragPiece?.(piece, sourceSquare) ?? true;
-    },
-    
-    // Appearance
-    boardOrientation,
-    showBoardNotation: showCoordinates,
-    animationDuration: 300,
-    customPieces,
-    customSquareStyles,
-    customDarkSquareStyle: { backgroundColor: colors.dark },
-    customLightSquareStyle: { backgroundColor: colors.light },
-  }), [
-    onSquareClick, 
-    onPieceDrop, 
-    canDragPiece, 
-    boardOrientation, 
-    showCoordinates, 
-    customPieces, 
-    customSquareStyles, 
-    colors
-  ]);
-
   return (
     <div 
       className={`chess-board-wrapper theme-${boardTheme}`}
       style={{ 
-        width: '100%',
-        height: '100%',
-        touchAction: 'none',
-        position: 'absolute',
-        top: 0,
-        left: 0
+        width: '100%', 
+        height: '100%', 
+        position: 'absolute', 
+        top: 0, 
+        left: 0,
+        boxShadow: '0 0 40px rgba(0,0,0,0.3)',
+        borderRadius: '8px',
+        overflow: 'hidden'
       }}
     >
       <Chessboard 
         id="MainBoard"
         position={currentFen}
-        options={options}
+        onPieceDrop={onPieceDrop}
+        onSquareClick={onSquareClick}
+        onPieceDragBegin={(piece, sourceSquare) => canDragPiece?.(piece, sourceSquare)}
+        boardOrientation={boardOrientation}
+        showBoardNotation={showCoordinates}
+        animationDuration={300}
+        customPieces={customPieces}
+        customSquareStyles={customSquareStyles}
+        customDarkSquareStyle={{ backgroundColor: colors.dark }}
+        customLightSquareStyle={{ backgroundColor: colors.light }}
       />
     </div>
   );
