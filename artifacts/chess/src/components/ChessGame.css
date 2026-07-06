@@ -31,7 +31,7 @@
   align-items: stretch;
   flex: 1;
   max-width: 800px;
-  min-width: 0; /* Allow shrinking */
+  min-width: 280px; /* Ensure minimum width */
   gap: 12px;
 }
 
@@ -39,6 +39,7 @@
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
+  min-height: 280px; /* Fallback for aspect-ratio or small viewports */
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
@@ -581,37 +582,19 @@
 }
 
 /* ── Mobile: fit board on screen without scrolling ─────────────── */
-/*
-  On mobile the layout is:
-    [nav ~52px] [player-bar ~56px] [board] [player-bar ~56px] [bottom-bar ~80px]
-  + gaps/padding ≈ 48px  →  non-board ≈ 292px
-  We cap board-section width so the square board never exceeds that remaining height.
-  Using dvh (dynamic viewport height) accounts for browser chrome reliably.
-*/
 @media (max-width: 768px) {
   .chess-game,
   .online-chess-game {
-    /* Prevent the page from growing taller than the screen */
     max-height: 100dvh;
     overflow: hidden;
   }
 
   .game-container {
-    /* Allow internal scroll only if content truly overflows,
-       but the board itself will be capped so it normally won't */
     overflow-y: auto;
-    /* Remove extra bottom padding — bottom bar is fixed-position */
     padding-bottom: calc(80px + env(safe-area-inset-bottom));
   }
 
   .board-section {
-    /*
-      Limit width to whichever is smaller:
-        • full container width (vw-based, minus side padding)
-        • available height after nav + 2 player bars + bottom bar + gaps
-          ≈ 100dvh - 292px
-      This makes the square board always fit in the viewport.
-    */
     width: min(
       calc(100vw - 1rem),
       calc(100dvh - 292px)
@@ -620,21 +603,7 @@
       calc(100vw - 1rem),
       calc(100dvh - 292px)
     );
-    /* Center the (potentially narrower) board section */
+    min-width: 280px; /* Force minimum size */
     align-self: center;
-  }
-}
-
-/* Extra-small phones: tighten the offset a touch */
-@media (max-width: 400px) {
-  .board-section {
-    width: min(
-      calc(100vw - 0.75rem),
-      calc(100dvh - 280px)
-    );
-    max-width: min(
-      calc(100vw - 0.75rem),
-      calc(100dvh - 280px)
-    );
   }
 }
