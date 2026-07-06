@@ -1,5 +1,12 @@
 # Changelog
 
+## [2026-07-06] - Mobile Layout & Board Container Fixes
+
+### Fixed
+- **Mobile Layout Robustness**: Improved CSS layout rules in `ChessGame.css` and `Analysis.css` to prevent zero-width board containers on small viewports by adjusting `max-width` calculations.
+- **Board Container Cleanup**: Simplified `ChessBoard.jsx` container styles to ensure the board reliably renders as a block element within its wrapper.
+
+
 ## [2026-07-06] - Final Board Rendering Fix
 
 ### Fixed
