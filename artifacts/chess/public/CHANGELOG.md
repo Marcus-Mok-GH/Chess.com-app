@@ -1,5 +1,11 @@
 # Changelog
 
+## [2026-07-06] - Debugging Missing Board
+
+### Added
+- **Debug Styles**: Added a semi-transparent red background to the `ChessBoard` wrapper to verify visibility in the actual DOM.
+- **Rendering Logs**: Added console logs to `ChessBoard.jsx` to track component initialization and position updates.
+
 ## [2026-07-06] - Chess Board Rendering Fix & Code Cleanup
 
 ### Fixed
