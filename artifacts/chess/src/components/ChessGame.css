@@ -31,7 +31,7 @@
   align-items: stretch;
   flex: 1;
   max-width: 800px;
-  min-width: 280px; /* Ensure minimum width */
+  min-width: 280px;
   gap: 12px;
 }
 
@@ -39,11 +39,7 @@
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
-  min-height: 280px; /* Fallback for aspect-ratio or small viewports */
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
-  background-color: var(--color-bg-secondary);
+  background-color: #2a2a2a; /* Fallback background */
   border-radius: 8px;
   overflow: hidden;
   box-shadow: var(--shadow-lg);
@@ -53,8 +49,6 @@
 .chess-board-wrapper {
   width: 100% !important;
   height: 100% !important;
-  position: absolute;
-  inset: 0;
 }
 
 /* ── Player Bar ─────────────────────️ */
@@ -117,30 +111,6 @@
   justify-content: flex-end;
 }
 
-.material-diff {
-  font-size: 0.75rem;
-  font-weight: 800;
-  color: var(--color-accent-primary);
-  margin-left: 6px;
-}
-
-.bot-message-inline {
-  max-width: 240px;
-  font-size: 0.8rem;
-  font-style: italic;
-  color: var(--color-text-secondary);
-  padding: 6px 12px;
-  background: rgba(0,0,0,0.25);
-  border-radius: 8px;
-  border-left: 3px solid var(--color-accent-primary);
-  margin: 0 10px;
-  display: none; /* Hide on small bars, show on larger ones or in sidebar */
-}
-
-@media (min-width: 1200px) {
-  .bot-message-inline { display: block; }
-}
-
 /* ── Sidebar ────────────────────️ */
 .sidebar {
   display: flex;
@@ -159,24 +129,6 @@
   overflow-y: auto;
 }
 
-.sidebar-header {
-  padding-bottom: 1rem;
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-  border-bottom: 1px solid var(--color-border-default);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.game-id-label {
-  font-family: monospace;
-  letter-spacing: 0.05em;
-  font-weight: 700;
-  color: var(--color-accent-primary);
-}
-
-/* ── Game Controls (In Sidebar) ─────────── */
 .game-controls {
   display: flex;
   flex-direction: column;
@@ -188,43 +140,6 @@
   border-radius: 10px;
   padding: 1.25rem;
   border: 1px solid var(--color-border-default);
-}
-
-.bot-display {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.bot-avatar-large {
-  font-size: 2.75rem;
-  width: 64px;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-bg-primary);
-  border-radius: 50%;
-  border: 3px solid var(--bot-color, var(--color-accent-primary));
-  box-shadow: var(--shadow-glow);
-}
-
-.bot-details {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.bot-name-large {
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: var(--color-text-primary);
-}
-
-.bot-rating-badge {
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-  font-weight: 600;
 }
 
 .bot-message {
@@ -239,63 +154,12 @@
   color: var(--color-text-primary);
 }
 
-.game-status {
-  padding: 1rem;
-  background: var(--color-bg-tertiary);
-  border-radius: 8px;
-  text-align: center;
-  font-weight: 800;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  border: 1px solid var(--color-border-default);
-}
-
-.status-check { color: #ff6b6b; border-color: rgba(255, 107, 107, 0.4); }
-.status-checkmate { background: var(--color-accent-primary); color: #fff; border-color: var(--color-accent-primary); }
-
-.thinking {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  animation: pulse 2s infinite;
-}
-
 .control-buttons {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
 
-.control-buttons .btn {
-  padding: 12px 8px;
-  border-radius: 8px;
-  font-weight: 700;
-  cursor: pointer;
-  border: none;
-  font-size: 0.9375rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: all var(--transition-fast);
-}
-
-.btn-primary {
-  background: linear-gradient(180deg, var(--color-accent-primary) 0%, #6a9344 100%);
-  color: #fff;
-}
-.btn-secondary {
-  background: var(--color-bg-tertiary);
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border-default) !important;
-}
-.btn-secondary:hover {
-  background: var(--color-bg-hover);
-}
-.btn-danger { background: #c9302c; color: #fff; }
-
-/* ── Move History ────────────────────️ */
 .move-history {
   flex: 1;
   display: flex;
@@ -307,54 +171,6 @@
   border: 1px solid var(--color-border-default);
 }
 
-.move-history h3 {
-  padding: 10px 16px;
-  background: rgba(0,0,0,0.2);
-  margin: 0;
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-weight: 800;
-  color: var(--color-text-muted);
-  border-bottom: 1px solid var(--color-border-default);
-}
-
-.moves-container {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px;
-}
-
-.move-row {
-  display: grid;
-  grid-template-columns: 40px 1fr 1fr;
-  padding: 8px 12px;
-  font-size: 0.9375rem;
-  border-radius: 6px;
-  align-items: center;
-}
-
-.move-row:nth-child(even) {
-  background: rgba(255,255,255,0.03);
-}
-
-.move-number {
-  color: var(--color-text-muted);
-  font-weight: 700;
-}
-
-.white-move, .black-move {
-  font-weight: 600;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-}
-
-.white-move:hover, .black-move:hover {
-  background: var(--color-accent-muted);
-  color: var(--color-accent-primary);
-}
-
 /* ── Mobile: stack board above sidebar ─────────────️ */
 @media (max-width: 1024px) {
   .game-container {
@@ -362,7 +178,7 @@
     align-items: center;
     padding: 1rem;
     gap: 1.5rem;
-    padding-bottom: calc(140px + env(safe-area-inset-bottom));
+    padding-bottom: calc(100px + env(safe-area-inset-bottom));
   }
 
   .board-section {
@@ -400,205 +216,10 @@
   }
 }
 
-/* ── Online Game Specifics ───────────────️ */
-.online-game-info {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  background: var(--color-bg-tertiary);
-  padding: 1rem;
-  border-radius: 10px;
-  border: 1px solid var(--color-border-default);
-  font-family: monospace;
-  font-size: 0.9rem;
-}
-
-.status-connected { color: #81b64c; }
-.status-disconnected { color: #ff6b6b; }
-
-.status-message {
-  font-weight: 800;
-  text-align: center;
-  padding: 10px;
-  background: rgba(129, 182, 76, 0.1);
-  border-radius: 6px;
-  color: var(--color-text-primary);
-}
-
-.reactions {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.reactions button {
-  font-size: 1.25rem;
-  background: var(--color-bg-tertiary);
-  border: 1px solid var(--color-border-default);
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.reactions button:hover {
-  background: var(--color-bg-hover);
-  transform: scale(1.1);
-}
-
-.chat-container {
-  display: flex;
-  flex-direction: column;
-  height: 300px;
-  background: var(--color-bg-tertiary);
-  border-radius: 10px;
-  border: 1px solid var(--color-border-default);
-  overflow: hidden;
-}
-
-.chat-messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.chat-message {
-  padding: 6px 10px;
-  border-radius: 8px;
-  max-width: 85%;
-  font-size: 0.875rem;
-  line-height: 1.4;
-}
-
-.chat-message.mine {
-  align-self: flex-end;
-  background: var(--color-accent-primary);
-  color: #fff;
-}
-
-.chat-message.theirs {
-  align-self: flex-start;
-  background: var(--color-bg-primary);
-  color: var(--color-text-primary);
-}
-
-.chat-sender {
-  font-weight: 800;
-  font-size: 0.75rem;
-  display: block;
-  margin-bottom: 2px;
-  opacity: 0.8;
-}
-
-.chat-input-form {
-  display: flex;
-  padding: 8px;
-  background: rgba(0,0,0,0.2);
-  gap: 8px;
-}
-
-.chat-input-form input {
-  flex: 1;
-  background: var(--color-bg-primary);
-  border: 1px solid var(--color-border-default);
-  color: #fff;
-  padding: 8px 12px;
-  border-radius: 6px;
-  outline: none;
-}
-
-.chat-input-form input:focus {
-  border-color: var(--color-accent-primary);
-}
-
-.chat-input-form button {
-  background: var(--color-accent-primary);
-  color: #fff;
-  border: none;
-  padding: 0 16px;
-  border-radius: 6px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.controls {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 10px;
-}
-
-.controls button {
-  padding: 10px;
-  border-radius: 8px;
-  font-weight: 700;
-  cursor: pointer;
-  border: 1px solid var(--color-border-default);
-  background: var(--color-bg-tertiary);
-  color: var(--color-text-primary);
-  transition: all var(--transition-fast);
-}
-
-.controls button:hover:not(:disabled) {
-  background: var(--color-bg-hover);
-}
-
-.controls button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.draw-offer {
-  background: #3e3a35;
-  border: 1px solid var(--color-accent-primary);
-  padding: 12px;
-  border-radius: 8px;
-  text-align: center;
-  display: flex; flex-direction: column; gap: 8px;
-}
-
-.draw-offer p { margin: 0; font-weight: 700; }
-
-.draw-offer-btns {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-}
-
-/* ── Overlays Fix ────────────────️ */
-.victory-burst {
-  z-index: 1000; /* Ensure above board pieces */
-}
-
-@media (max-width: 480px) {
-  .chat-container {
-    height: 240px;
-  }
-}
-
-/* ── Mobile: fit board on screen without scrolling ─────────────── */
+/* ── Mobile: fit board on screen ─────────────── */
 @media (max-width: 768px) {
-  .chess-game,
-  .online-chess-game {
-    max-height: 100dvh;
-    overflow: hidden;
-  }
-
-  .game-container {
-    overflow-y: auto;
-    padding-bottom: calc(80px + env(safe-area-inset-bottom));
-  }
-
   .board-section {
-    width: 100%;
-    max-width: min(
-      calc(100vw - 1rem),
-      calc(100dvh - 220px)
-    );
-    min-width: 280px; /* Force minimum size */
+    width: min(calc(100vw - 1rem), 500px);
     align-self: center;
   }
 }

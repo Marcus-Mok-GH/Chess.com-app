@@ -40,28 +40,12 @@
   gap: 8px;
 }
 
-.analysis-back:hover {
-  background: var(--color-bg-hover);
-  border-color: var(--color-accent-primary);
-}
-
 .analysis-title {
   margin: 0;
   font-size: 1.5rem;
   font-weight: 800;
   color: var(--color-text-primary);
   letter-spacing: -0.01em;
-}
-
-.analysis-game-id {
-  font-weight: 600;
-  color: var(--color-accent-primary);
-  margin-left: 8px;
-  opacity: 0.8;
-}
-
-.analysis-header-spacer {
-  width: 100px;
 }
 
 /* Main layout */
@@ -89,12 +73,11 @@
   width: 100%;
   max-width: min(700px, 80svh);
   aspect-ratio: 1 / 1;
-  background-color: var(--color-bg-secondary);
+  background-color: #2a2a2a;
   border-radius: 8px;
   overflow: hidden;
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--color-border-default);
-  position: relative;
 }
 
 .analysis-board-actions {
@@ -107,29 +90,11 @@
   max-width: 700px;
 }
 
-.analysis-move-nav {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: var(--color-bg-secondary);
-  padding: 6px;
-  border-radius: 10px;
-  border: 1px solid var(--color-border-default);
-}
-
-.analysis-move-label {
-  font-size: 0.9375rem;
-  font-weight: 800;
-  color: var(--color-text-primary);
-  min-width: 80px;
-  text-align: center;
-}
-
-/* Right panel */
 .analysis-panel {
   width: 400px;
   flex-shrink: 0;
-  display: flex; flex-direction: column;
+  display: flex;
+  flex-direction: column;
   background: var(--color-bg-secondary);
   border-left: 1px solid var(--color-border-default);
   max-height: calc(100vh - 70px);
@@ -164,31 +129,6 @@
   box-shadow: var(--shadow-sm);
 }
 
-.analysis-tab-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 1rem;
-}
-
-/* Empty states */
-.analysis-empty {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-}
-
-.analysis-empty-card {
-  background: var(--color-bg-secondary);
-  border-radius: 12px;
-  padding: 3rem 2rem;
-  max-width: 440px;
-  text-align: center;
-  box-shadow: var(--shadow-lg);
-  border: 1px solid var(--color-border-default);
-}
-
 /* Mobile Adjustments */
 @media (max-width: 1024px) {
   .analysis-layout {
@@ -207,28 +147,10 @@
     border-left: none;
     border-top: 1px solid var(--color-border-default);
   }
-
-  .analysis-header-spacer {
-    display: none;
-  }
 }
 
 @media (max-width: 768px) {
   .analysis-board-wrap {
-    max-width: min(calc(100vw - 2rem), calc(100svh - 250px));
-  }
-}
-
-@media (max-width: 480px) {
-  .analysis-header-bar {
-    padding: 10px 16px;
-  }
-  .analysis-title {
-    font-size: 1.25rem;
-  }
-
-  .analysis-board-actions {
-    flex-direction: column;
-    gap: 12px;
+    max-width: min(calc(100vw - 2rem), 500px);
   }
 }

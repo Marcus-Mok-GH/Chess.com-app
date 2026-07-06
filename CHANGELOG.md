@@ -1,5 +1,13 @@
 # Changelog
 
+## [2026-07-06] - Simplification of Board Container for Mobile
+
+### Fixed
+- **Simplified CSS**: Replaced complex `calc` and `min/max` logic with a more robust width-based approach for mobile viewports to prevent container collapse.
+- **Fixed Aspect Ratio**: Standardized `aspect-ratio: 1 / 1` and removed `position: absolute` on the inner board wrapper to improve rendering stability across mobile browsers.
+- **Rendering Diagnostics**: Added console logs to `ChessBoard.jsx` to verify component mounting and state updates in production.
+
+
 ## [2026-07-06] - Mobile Layout & Board Container Fixes
 
 ### Fixed
