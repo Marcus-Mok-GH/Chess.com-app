@@ -1,5 +1,16 @@
 # Changelog
 
+## [2026-07-06] - Chess Board Interaction Overhaul
+
+### Added
+- **Tap-to-Move**: Integrated `onSquareClick` via the `options` prop for `react-chessboard` v5, enabling seamless piece selection and movement by tapping squares.
+- **Drag-and-Drop**: Standardized `onPieceDrop` and `canDragPiece` event handlers to support the v5 destructured object pattern while maintaining compatibility.
+- **Mobile Touch Optimization**: Added `touch-action: none` to the chessboard container to prevent viewport scrolling during piece drag operations.
+
+### Changed
+- **API Standardization**: Transitioned `ChessBoard.jsx` to use the `options` prop as the primary configuration gateway for `react-chessboard` v5, ensuring better stability and feature support.
+
+
 ## [2026-07-06] - Mobile Board Visibility Patch
 
 ### Fixed
