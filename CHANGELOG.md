@@ -1,5 +1,13 @@
 # Changelog
 
+## [2026-07-06] - Authentic Chess.com Theme Overhaul
+
+### Changed
+- **UI Theme Synchronization**: Overhauled global styles to use the authentic Chess.com color palette (#302e2b background, #262421 cards/sidebar, #81b64c green).
+- **Typography Refresh**: Switched to 'Nunito' as the primary font to match the classic chess.com feel.
+- **Layout Refinement**: Updated sidebar, landing page, and user dashboard to align with the professional, high-contrast look of the original platform.
+
+
 ## [2026-07-06] - Auth Logic & OTP Verification Fix
 
 ### Fixed
