@@ -9,7 +9,6 @@ import {
 
 const router = express.Router();
 
-const UPSTREAM_TIMEOUT_MS = 10000;
 const EMAIL_RE = /^[\s@]+@[^\s@]+\.[^\s@]+$/;
 const OTP_RE = /^\d{4,8}$/;
 
@@ -26,7 +25,7 @@ function getNeonAuthUrl() {
   if (!raw) return null;
 
   let url = raw.trim().replace(/\/+$/, '');
-  const tailRe = /\/(api\/auth|email-otp\/send-verification-otp|sign-in\/email-otp)\/?$/i;
+  const tailRe = /\/(api\/auth|email-otp/send-verification-otp|sign-in\/email-otp)\/?$/i;
 
   let prev;
   do {
@@ -35,10 +34,6 @@ function getNeonAuthUrl() {
   } while (url !== prev);
 
   return url;
-}
-
-async function fetchWithTimeout(url, init) {
-  return fetch(url, { ...init, signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS) });
 }
 
 router.post('/email-otp/send-verification-otp', async (req, res) => {
@@ -54,34 +49,37 @@ router.post('/email-otp/send-verification-otp', async (req, res) => {
   const upstreamUrl = `${neonAuthUrl}/email-otp/send-verification-otp`;
 
   try {
-    const response = await fetchWithTimeout(upstreamUrl, {
+    const headers = {
+      'content-type': 'application/json',
+      'accept': 'application/json',
+    };
+
+    if (req.headers.origin) headers['origin'] = req.headers.origin;
+    else if (req.headers.host) headers['origin'] = `https://${req.headers.host}`;
+
+    if (req.headers.cookie) headers['cookie'] = req.headers.cookie;
+
+    const response = await fetch(upstreamUrl, {
       method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'accept': 'application/json',
-        origin: req.headers.origin || `https://${req.headers.host}`,
-        cookie: req.headers.cookie || '',
-      },
+      headers,
       body: JSON.stringify({ email: normalizedEmail, type: 'sign-in' }),
     });
 
-    // Forward Set-Cookie headers back to the client
-    const setCookies = response.headers.getSetCookie?.() || response.headers.get('set-cookie');
-    if (setCookies) {
-      if (Array.isArray(setCookies)) {
-        setCookies.forEach(c => res.append('set-cookie', c));
+    // Forward Set-Cookie headers
+    const setCookie = response.headers.getSetCookie ? response.headers.getSetCookie() : response.headers.get('set-cookie');
+    if (setCookie) {
+      if (Array.isArray(setCookie)) {
+        setCookie.forEach(c => res.append('set-cookie', c));
       } else {
-        res.setHeader('set-cookie', setCookies);
+        res.setHeader('set-cookie', setCookie);
       }
     }
 
-    const text = await response.text();
-    let data;
-    try { data = text ? JSON.parse(text) : {}; } catch { data = {}; }
+    const data = await response.json().catch(() => ({}));
     return res.status(response.status).json(data);
   } catch (err) {
     console.error('[Auth] Send OTP error:', err);
-    return res.status(500).json({ error: { message: 'Failed to send code.' } });
+    return res.status(500).json({ error: { message: 'Failed to send code: ' + err.message } });
   }
 });
 
@@ -103,35 +101,35 @@ router.post('/sign-in/email-otp', async (req, res) => {
   const upstreamUrl = `${neonAuthUrl}/sign-in/email-otp`;
 
   try {
-    const neonResponse = await fetchWithTimeout(upstreamUrl, {
+    const headers = {
+      'content-type': 'application/json',
+      'accept': 'application/json',
+    };
+
+    if (req.headers.origin) headers['origin'] = req.headers.origin;
+    else if (req.headers.host) headers['origin'] = `https://${req.headers.host}`;
+
+    if (req.headers.cookie) headers['cookie'] = req.headers.cookie;
+
+    const response = await fetch(upstreamUrl, {
       method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'accept': 'application/json',
-        origin: req.headers.origin || `https://${req.headers.host}`,
-        cookie: req.headers.cookie || '',
-      },
-      // Some Better Auth configurations require 'type' to match the sending type
-      body: JSON.stringify({ email: normalizedEmail, otp: normalizedOtp, type: 'sign-in' }),
+      headers,
+      body: JSON.stringify({ email: normalizedEmail, otp: normalizedOtp }),
     });
 
-    // Forward Set-Cookie headers back to the client
-    const setCookies = neonResponse.headers.getSetCookie?.() || neonResponse.headers.get('set-cookie');
-    if (setCookies) {
-      if (Array.isArray(setCookies)) {
-        setCookies.forEach(c => res.append('set-cookie', c));
+    const setCookie = response.headers.getSetCookie ? response.headers.getSetCookie() : response.headers.get('set-cookie');
+    if (setCookie) {
+      if (Array.isArray(setCookie)) {
+        setCookie.forEach(c => res.append('set-cookie', c));
       } else {
-        res.setHeader('set-cookie', setCookies);
+        res.setHeader('set-cookie', setCookie);
       }
     }
 
-    const text = await neonResponse.text();
-    let neonData;
-    try { neonData = text ? JSON.parse(text) : {}; } catch { neonData = {}; }
+    const neonData = await response.json().catch(() => ({}));
 
-    if (!neonResponse.ok || neonData.error) {
-      console.warn('[Auth] Upstream verification failed:', neonResponse.status, neonData);
-      return res.status(neonResponse.status).json(neonData);
+    if (!response.ok || neonData.error) {
+      return res.status(response.status).json(neonData);
     }
 
     let user;
@@ -168,7 +166,7 @@ router.post('/sign-in/email-otp', async (req, res) => {
     });
   } catch (err) {
     console.error('[Auth] Verification error:', err);
-    return res.status(500).json({ error: { message: 'Sign-in failed. Please try again.' } });
+    return res.status(500).json({ error: { message: 'Sign-in failed: ' + err.message } });
   }
 });
 

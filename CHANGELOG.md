@@ -1,5 +1,11 @@
 # Changelog
 
+## [2026-07-06] - Auth Hardening & Error Reporting
+
+### Fixed
+- **OTP Send Failure**: Refined the auth proxy to be more robust by safely forwarding only existing headers (Cookie, Origin) and adding detailed error messages to the response. This helps diagnose network issues or header mismatches during the sign-in flow.
+
+
 ## [2026-07-06] - Authentic Chess.com Theme Overhaul
 
 ### Changed
