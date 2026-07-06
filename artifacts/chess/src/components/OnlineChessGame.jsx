@@ -155,45 +155,57 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     return Boolean(piece && piece.color === colorCode && pieceType?.[0] === colorCode);
   }, [game, colorCode, gameStatus]);
 
-  const onSquareClick = (square) => {
-    if (game.turn() !== colorCode || gameStatus !== 'playing') return;
-    
-    const piece = game.get(square);
+  const onSquareClick = useCallback(
+    (square) => {
+      if (game.turn() !== colorCode || gameStatus !== 'playing') return;
+      
+      const piece = game.get(square);
 
-    if (selectedSquare) {
-      if (square === selectedSquare) {
-        setSelectedSquare(null);
-        setPossibleMoves([]);
-        return;
-      }
-
+      // 1. Selection logic: If clicking our own piece, always select it
       if (piece && piece.color === colorCode) {
+        // If clicking same square, deselect
+        if (square === selectedSquare) {
+          setSelectedSquare(null);
+          setPossibleMoves([]);
+          return;
+        }
+        
+        // Otherwise select new piece
         setSelectedSquare(square);
         haptics.select();
         setPossibleMoves(game.moves({ square, verbose: true }).map(m => m.to));
         return;
       }
 
-      const moveAttempt = { from: selectedSquare, to: square, promotion: 'q' };
-      if (handlePieceDrop(moveAttempt.from, moveAttempt.to)) {
-        return;
+      // 2. Move logic: If we have a selection and click a non-own-piece square
+      if (selectedSquare) {
+        const isLegal = possibleMoves.includes(square);
+        
+        if (isLegal) {
+          handlePieceDrop(selectedSquare, square);
+          return;
+        }
       }
-    }
-    
-    if (piece && piece.color === colorCode) {
-      setSelectedSquare(square);
-      haptics.select();
-      setPossibleMoves(game.moves({ square, verbose: true }).map(m => m.to));
-    } else {
+
+      // 3. Deselect if clicking anywhere else or invalid move
       setSelectedSquare(null);
       setPossibleMoves([]);
-    }
-  };
+    },
+    [game, colorCode, gameStatus, selectedSquare, possibleMoves, handlePieceDrop]
+  );
 
   const customSquareStyles = useMemo(() => {
     const styles = {};
     if (selectedSquare) styles[selectedSquare] = { backgroundColor: 'rgba(255, 255, 0, 0.4)' };
-    possibleMoves.forEach(s => styles[s] = { background: 'radial-gradient(circle, rgba(0, 0, 0, 0.2) 25%, transparent 25%)' });
+    possibleMoves.forEach(s => {
+      const isCapture = game.get(s);
+      styles[s] = { 
+        background: isCapture 
+          ? 'radial-gradient(circle, rgba(0, 0, 0, 0.1) 85%, transparent 85%)' 
+          : 'radial-gradient(circle, rgba(0, 0, 0, 0.2) 25%, transparent 25%)',
+        borderRadius: '50%'
+      };
+    });
     if (game.inCheck()) {
       const king = findKingSquare(game, game.turn());
       if (king) styles[king] = { backgroundColor: 'rgba(255, 0, 0, 0.5)' };

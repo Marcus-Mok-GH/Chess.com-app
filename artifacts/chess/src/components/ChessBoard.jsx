@@ -65,15 +65,19 @@ export default function ChessBoard({
   }, []);
 
   const handleSquareClick = (args) => {
+    // In react-chessboard v5, onSquareClick usually receives the square string directly,
+    // but we handle both cases defensively.
     const square = typeof args === 'string' ? args : args?.square;
     if (square) onSquareClick?.(square);
   };
 
   const handlePieceDrop = (args, target, piece) => {
+    // Check if args is the v5 object { sourceSquare, targetSquare, piece }
     if (typeof args === 'object' && args !== null && 'sourceSquare' in args) {
       const { sourceSquare, targetSquare } = args;
       return onPieceDrop?.(sourceSquare, targetSquare) ?? false;
     }
+    // Fallback to positional arguments
     return onPieceDrop?.(args, target) ?? false;
   };
 

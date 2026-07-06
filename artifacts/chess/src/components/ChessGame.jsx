@@ -509,38 +509,40 @@ function ChessGame(
 
       const piece = game.get(square);
 
-      if (selectedSquare) {
+      // 1. Selection logic: If clicking our own piece, always select it
+      if (piece && piece.color === playerColor) {
+        // If clicking same square, deselect
         if (square === selectedSquare) {
           setSelectedSquare(null);
           setPossibleMoves([]);
           return;
         }
-
-        if (piece && piece.color === playerColor) {
-          setSelectedSquare(square);
-          haptics.select();
-          const moves = game.moves({ square, verbose: true });
-          setPossibleMoves(moves.map((m) => m.to));
-          return;
-        }
-
-        if (handlePieceDrop(selectedSquare, square)) {
-          return;
-        }
-      }
-
-      const pieceToSelect = game.get(square);
-      if (pieceToSelect && pieceToSelect.color === playerColor) {
+        
+        // Otherwise select new piece
         setSelectedSquare(square);
         haptics.select();
         const moves = game.moves({ square, verbose: true });
         setPossibleMoves(moves.map((m) => m.to));
-      } else {
-        setSelectedSquare(null);
-        setPossibleMoves([]);
+        return;
       }
+
+      // 2. Move logic: If we have a selection and click a non-own-piece square
+      if (selectedSquare) {
+        // Check if it's a legal move
+        const isLegal = possibleMoves.includes(square);
+        
+        if (isLegal) {
+          // Execute the move
+          handlePieceDrop(selectedSquare, square);
+          return;
+        }
+      }
+
+      // 3. Deselect if clicking anywhere else or invalid move
+      setSelectedSquare(null);
+      setPossibleMoves([]);
     },
-    [game, playerColor, selectedSquare, isThinking, hasResigned, handlePieceDrop]
+    [game, playerColor, selectedSquare, possibleMoves, isThinking, game.isGameOver(), hasResigned, handlePieceDrop]
   );
 
   const handleNewGame = useCallback(() => {
