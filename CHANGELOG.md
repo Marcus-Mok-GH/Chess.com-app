@@ -1,5 +1,11 @@
 # Changelog
 
+## [2026-07-06] - Chess Board Rendering Fix
+
+### Fixed
+- **react-chessboard v5 Prop Alignment**: Fixed the missing chess board by removing the non-functional `options` prop and passing configuration (`position`, `onPieceDrop`, `onSquareClick`, etc.) directly to the `Chessboard` component. Updated prop names (`showBoardNotation`, `animationDuration`) and handlers (`onPieceDragBegin`) to match the v5 API requirements.
+
+
 ## [2026-07-05] - Persistent Move Storage & Refresh Survival
 
 ### Added
