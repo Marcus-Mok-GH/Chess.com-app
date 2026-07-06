@@ -1,5 +1,5 @@
 import { Chessboard } from 'react-chessboard';
-import { useMemo, useEffect } from 'react';
+import { useMemo } from 'react';
 
 const PIECE_IMAGES = {
   wK: '/custom-pieces/wK.svg',
@@ -34,10 +34,6 @@ export default function ChessBoard({
   boardTheme = 'green',
 }) {
   const colors = themeColors[boardTheme] || themeColors.green;
-
-  useEffect(() => {
-    console.log('[ChessBoard] Rendering with position:', position);
-  }, [position]);
 
   // Robust FEN extraction
   const currentFen = useMemo(() => {
@@ -98,7 +94,6 @@ export default function ChessBoard({
         height: '100%', 
         position: 'absolute',
         inset: 0,
-        backgroundColor: 'rgba(255, 0, 0, 0.2)', // Debug: Light red background
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center'
