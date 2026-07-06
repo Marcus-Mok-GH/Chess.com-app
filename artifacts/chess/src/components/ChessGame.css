@@ -557,9 +557,7 @@
   padding: 12px;
   border-radius: 8px;
   text-align: center;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: flex; flex-direction: column; gap: 8px;
 }
 
 .draw-offer p { margin: 0; font-weight: 700; }
@@ -595,13 +593,10 @@
   }
 
   .board-section {
-    width: min(
-      calc(100vw - 1rem),
-      calc(100dvh - 292px)
-    );
+    width: 100%;
     max-width: min(
       calc(100vw - 1rem),
-      calc(100dvh - 292px)
+      calc(100dvh - 220px)
     );
     min-width: 280px; /* Force minimum size */
     align-self: center;

@@ -65,19 +65,15 @@ export default function ChessBoard({
   }, []);
 
   const handleSquareClick = (args) => {
-    // In react-chessboard v5, onSquareClick usually receives the square string directly,
-    // but we handle both cases defensively.
     const square = typeof args === 'string' ? args : args?.square;
     if (square) onSquareClick?.(square);
   };
 
   const handlePieceDrop = (args, target, piece) => {
-    // Check if args is the v5 object { sourceSquare, targetSquare, piece }
     if (typeof args === 'object' && args !== null && 'sourceSquare' in args) {
       const { sourceSquare, targetSquare } = args;
       return onPieceDrop?.(sourceSquare, targetSquare) ?? false;
     }
-    // Fallback to positional arguments
     return onPieceDrop?.(args, target) ?? false;
   };
 
@@ -95,31 +91,25 @@ export default function ChessBoard({
       className={`chess-board-wrapper theme-${boardTheme}`} 
       style={{ 
         width: '100%', 
-        height: '100%', 
-        position: 'absolute',
-        inset: 0,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
+        height: '100%',
+        display: 'block'
       }}
     >
-      <div style={{ width: '100%', height: '100%' }}>
-        <Chessboard 
-          id="MainBoard"
-          position={currentFen}
-          boardOrientation={boardOrientation}
-          onPieceDrop={handlePieceDrop}
-          onSquareClick={handleSquareClick}
-          arePiecesDraggable={Boolean(onPieceDrop)}
-          showBoardNotation={showCoordinates}
-          animationDuration={300}
-          customDarkSquareStyle={{ backgroundColor: colors.dark }}
-          customLightSquareStyle={{ backgroundColor: colors.light }}
-          customPieces={customPieces}
-          customSquareStyles={customSquareStyles}
-          isDraggablePiece={handleCanDragPiece}
-        />
-      </div>
+      <Chessboard 
+        id="MainBoard"
+        position={currentFen}
+        boardOrientation={boardOrientation}
+        onPieceDrop={handlePieceDrop}
+        onSquareClick={handleSquareClick}
+        arePiecesDraggable={Boolean(onPieceDrop)}
+        showBoardNotation={showCoordinates}
+        animationDuration={300}
+        customDarkSquareStyle={{ backgroundColor: colors.dark }}
+        customLightSquareStyle={{ backgroundColor: colors.light }}
+        customPieces={customPieces}
+        customSquareStyles={customSquareStyles}
+        isDraggablePiece={handleCanDragPiece}
+      />
     </div>
   );
 }
