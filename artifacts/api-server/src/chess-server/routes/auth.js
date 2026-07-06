@@ -10,7 +10,6 @@ import {
 const router = express.Router();
 
 const EMAIL_RE = /^[\s@]+@[^\s@]+\.[^\s@]+$/;
-const OTP_RE = /^\d{4,8}$/;
 
 function getNeonAuthUrl() {
   const raw =
@@ -25,7 +24,7 @@ function getNeonAuthUrl() {
   if (!raw) return null;
 
   let url = raw.trim().replace(/\/+$/, '');
-  const tailRe = /\/(api\/auth|email-otp/send-verification-otp|sign-in\/email-otp)\/?$/i;
+  const tailRe = /\/(api\/auth|email-otp\/send-verification-otp|sign-in\/email-otp)\/?$/i;
 
   let prev;
   do {
@@ -43,54 +42,63 @@ router.post('/email-otp/send-verification-otp', async (req, res) => {
   }
 
   const neonAuthUrl = getNeonAuthUrl();
-  if (!neonAuthUrl) return res.status(503).json({ error: { message: 'Auth service not configured.' } });
+  if (!neonAuthUrl) {
+    console.error('[Auth] Error: Auth service not configured.');
+    return res.status(503).json({ error: { message: 'Auth service not configured.' } });
+  }
 
   const normalizedEmail = email.toLowerCase().trim();
   const upstreamUrl = `${neonAuthUrl}/email-otp/send-verification-otp`;
 
+  console.log(`[Auth] Proxying Send OTP for ${normalizedEmail} to ${upstreamUrl}`);
+
   try {
-    const headers = {
-      'content-type': 'application/json',
-      'accept': 'application/json',
-    };
-
-    if (req.headers.origin) headers['origin'] = req.headers.origin;
-    else if (req.headers.host) headers['origin'] = `https://${req.headers.host}`;
-
-    if (req.headers.cookie) headers['cookie'] = req.headers.cookie;
-
-    const response = await fetch(upstreamUrl, {
+    const upstreamResponse = await fetch(upstreamUrl, {
       method: 'POST',
-      headers,
+      headers: {
+        'content-type': 'application/json',
+        'accept': 'application/json',
+      },
       body: JSON.stringify({ email: normalizedEmail, type: 'sign-in' }),
     });
 
-    // Forward Set-Cookie headers
-    const setCookie = response.headers.getSetCookie ? response.headers.getSetCookie() : response.headers.get('set-cookie');
-    if (setCookie) {
-      if (Array.isArray(setCookie)) {
-        setCookie.forEach(c => res.append('set-cookie', c));
+    const status = upstreamResponse.status;
+    const text = await upstreamResponse.text();
+    console.log(`[Auth] Upstream response: ${status} - ${text.slice(0, 500)}`);
+
+    let data;
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      data = { message: text || 'Invalid response from auth service' };
+    }
+
+    // Forward cookies if any
+    const setCookies = upstreamResponse.headers.getSetCookie?.() || upstreamResponse.headers.get('set-cookie');
+    if (setCookies) {
+      if (Array.isArray(setCookies)) {
+        setCookies.forEach(c => res.append('set-cookie', c));
       } else {
-        res.setHeader('set-cookie', setCookie);
+        res.setHeader('set-cookie', setCookies);
       }
     }
 
-    const data = await response.json().catch(() => ({}));
-    return res.status(response.status).json(data);
+    if (!upstreamResponse.ok) {
+      return res.status(status).json(data.error ? data : { error: { message: data.message || 'Failed to send code' } });
+    }
+
+    return res.status(status).json(data);
   } catch (err) {
-    console.error('[Auth] Send OTP error:', err);
-    return res.status(500).json({ error: { message: 'Failed to send code: ' + err.message } });
+    console.error('[Auth] Fatal Send OTP error:', err);
+    return res.status(500).json({ error: { message: 'Internal server error: ' + err.message } });
   }
 });
 
 router.post('/sign-in/email-otp', async (req, res) => {
   const { email, otp } = req.body || {};
 
-  if (typeof email !== 'string' || !EMAIL_RE.test(email.trim())) {
-    return res.status(400).json({ error: { message: 'A valid email is required.' } });
-  }
-  if (typeof otp !== 'string' || !OTP_RE.test(otp.trim())) {
-    return res.status(400).json({ error: { message: 'A valid code is required.' } });
+  if (!email || !otp) {
+    return res.status(400).json({ error: { message: 'Email and code are required.' } });
   }
 
   const neonAuthUrl = getNeonAuthUrl();
@@ -100,38 +108,35 @@ router.post('/sign-in/email-otp', async (req, res) => {
   const normalizedOtp = otp.trim();
   const upstreamUrl = `${neonAuthUrl}/sign-in/email-otp`;
 
+  console.log(`[Auth] Proxying Verify OTP for ${normalizedEmail} to ${upstreamUrl}`);
+
   try {
-    const headers = {
-      'content-type': 'application/json',
-      'accept': 'application/json',
-    };
-
-    if (req.headers.origin) headers['origin'] = req.headers.origin;
-    else if (req.headers.host) headers['origin'] = `https://${req.headers.host}`;
-
-    if (req.headers.cookie) headers['cookie'] = req.headers.cookie;
-
-    const response = await fetch(upstreamUrl, {
+    const upstreamResponse = await fetch(upstreamUrl, {
       method: 'POST',
-      headers,
+      headers: {
+        'content-type': 'application/json',
+        'accept': 'application/json',
+        'cookie': req.headers.cookie || '', // Essential for CSRF in some flows
+      },
       body: JSON.stringify({ email: normalizedEmail, otp: normalizedOtp }),
     });
 
-    const setCookie = response.headers.getSetCookie ? response.headers.getSetCookie() : response.headers.get('set-cookie');
-    if (setCookie) {
-      if (Array.isArray(setCookie)) {
-        setCookie.forEach(c => res.append('set-cookie', c));
-      } else {
-        res.setHeader('set-cookie', setCookie);
-      }
+    const status = upstreamResponse.status;
+    const text = await upstreamResponse.text();
+    console.log(`[Auth] Upstream verify response: ${status} - ${text.slice(0, 500)}`);
+
+    let neonData;
+    try {
+      neonData = text ? JSON.parse(text) : {};
+    } catch {
+      neonData = { message: text || 'Invalid response' };
     }
 
-    const neonData = await response.json().catch(() => ({}));
-
-    if (!response.ok || neonData.error) {
-      return res.status(response.status).json(neonData);
+    if (!upstreamResponse.ok) {
+      return res.status(status).json(neonData);
     }
 
+    // Success - user is authenticated by Neon
     let user;
     const existing = await query(`SELECT id, username, elo, games_played, wins, losses, draws, created_at, email FROM users WHERE email = $1`, [normalizedEmail]);
 
@@ -165,8 +170,8 @@ router.post('/sign-in/email-otp', async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('[Auth] Verification error:', err);
-    return res.status(500).json({ error: { message: 'Sign-in failed: ' + err.message } });
+    console.error('[Auth] Fatal verification error:', err);
+    return res.status(500).json({ error: { message: 'Verification failed: ' + err.message } });
   }
 });
 
