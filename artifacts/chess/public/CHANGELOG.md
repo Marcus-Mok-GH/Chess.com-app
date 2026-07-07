@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.2 - 2026-07-08
+- Added a fancy `resign-burst` animation that plays after a game ends by resignation in both local and online play.
+- Local/bot game: when the player resigns, a red "😔 You Lost / by resignation" burst pops in over the board.
+- Online game: when either side resigns, a win or loss burst plays (gold "🏆 You Win!" or red "😔 You Lost / by resignation") based on the local player color.
+- Includes slide-in, pulse, and fade animations with a `prefers-reduced-motion` fallback that mirrors the existing `victory-burst` pattern.
+
 ## 2.0.1 - 2026-06-21
 - Fixed Stockfish AI hanging on Vercel by shimming the engine API to support both `postMessage/onmessage` and `sendCommand/print` interfaces.
 - Implemented a robust initialization fallback strategy to handle Stockfish module caching issues in serverless environments.

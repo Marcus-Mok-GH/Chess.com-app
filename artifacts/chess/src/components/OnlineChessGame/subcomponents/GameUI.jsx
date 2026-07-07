@@ -8,7 +8,8 @@ import MoveHistory from '../../MoveHistory';
 export default function GameUI({
   topPlayer, bottomPlayer, game, onPieceDrop, onSquareClick,
   boardOrientation, customSquareStyles, settings, animatingPieces,
-  removeAnimation, showVictory, gameId, opponentStatus, eloChange,
+  removeAnimation, showVictory, showResignBurst, resignOutcome,
+  gameId, opponentStatus, eloChange,
   moveError, getStatusMessage, drawOffered, handleRespondDraw,
   REACTIONS, handleSendReaction, moveHistory, gameStatus,
   handleOfferDraw, handleResign, navigate, canReview, onLeave,
@@ -44,6 +45,22 @@ export default function GameUI({
             />
           ))}
           {showVictory && <div className="victory-burst">Checkmate!</div>}
+          {showResignBurst && (
+            <div
+              className={`resign-burst resign-${resignOutcome}`}
+              role="status"
+              aria-live="polite"
+            >
+              <span className="resign-spark" />
+              <span className="resign-text">
+                <span className="resign-emoji" aria-hidden="true">
+                  {resignOutcome === 'win' ? '🏆' : '😔'}
+                </span>
+                {resignOutcome === 'win' ? 'You Win!' : 'You Lost'}
+              </span>
+              <span className="resign-subtext">by resignation</span>
+            </div>
+          )}
         </div>
         <PlayerBar
           {...bottomPlayer}

@@ -27,8 +27,12 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
   const [eloChange, setEloChange] = useState(null);
   const [drawOffered, setDrawOffered] = useState(false);
   const [showVictory, setShowVictory] = useState(false);
+  const [showResignBurst, setShowResignBurst] = useState(false);
+  const [resignOutcome, setResignOutcome] = useState('loss');
   const lastVictoryKeyRef = useRef(null);
   const victoryTimeoutRef = useRef(null);
+  const lastResignKeyRef = useRef(null);
+  const resignTimeoutRef = useRef(null);
 
   const animationIdRef = useRef(0);
   const boardOrientation = playerColor;
@@ -108,6 +112,24 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     if (victoryTimeoutRef.current) clearTimeout(victoryTimeoutRef.current);
     victoryTimeoutRef.current = setTimeout(() => setShowVictory(false), 2200);
   }, [game, playerColor]);
+
+  // Fire resign burst when the server tells us the game ended by resignation.
+  // `data.result` is the winning color ('white' | 'black' | 'draw'), and we
+  // compare it to our local `playerColor` to decide win vs. loss.
+  useEffect(() => {
+    if (gameStatus !== 'ended' || endReason !== 'resignation') return;
+    if (!winner) return;
+
+    const didPlayerWin = winner === playerColor;
+    const resignKey = `${gameId}-${endReason}-${winner}`;
+    if (lastResignKeyRef.current === resignKey) return;
+    lastResignKeyRef.current = resignKey;
+
+    setResignOutcome(didPlayerWin ? 'win' : 'loss');
+    setShowResignBurst(true);
+    if (resignTimeoutRef.current) clearTimeout(resignTimeoutRef.current);
+    resignTimeoutRef.current = setTimeout(() => setShowResignBurst(false), 2600);
+  }, [gameStatus, endReason, winner, playerColor, gameId]);
 
   const triggerAnimation = useCallback((move) => {
     const id = animationIdRef.current++;
@@ -189,6 +211,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
         settings={settings} animatingPieces={animatingPieces}
         removeAnimation={(id) => setAnimatingPieces(prev => prev.filter(a => a.id !== id))}
         showVictory={showVictory} gameId={gameId} opponentStatus={opponentStatus}
+        showResignBurst={showResignBurst} resignOutcome={resignOutcome}
         eloChange={eloChange} moveError={moveError} getStatusMessage={getStatusMessage}
         drawOffered={drawOffered} handleRespondDraw={(acc) => socketService.respondDraw(gameId, playerId, acc)}
         REACTIONS={REACTIONS} handleSendReaction={(r) => socketService.sendMessage(gameId, playerId, r)}

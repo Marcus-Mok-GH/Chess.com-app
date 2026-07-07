@@ -76,6 +76,8 @@ function ChessGame(
   const [isCoachingLoading, setIsCoachingLoading] = useState(false);
   const [hasResigned, setHasResigned] = useState(false);
   const [showVictory, setShowVictory] = useState(false);
+  const [showResignBurst, setShowResignBurst] = useState(false);
+  const [resignOutcome, setResignOutcome] = useState('loss'); // 'win' | 'loss'
   const [engineError, setEngineError] = useState(null);
   const gameRef = useRef(game);
   const selectedBotRef = useRef(selectedBot);
@@ -85,6 +87,8 @@ function ChessGame(
   const isThinkingRef = useRef(isThinking); // Add ref to track isThinking state
   const victoryTimeoutRef = useRef(null);
   const lastVictoryKeyRef = useRef(null);
+  const resignTimeoutRef = useRef(null);
+  const lastResignKeyRef = useRef(null);
 
   const engineErrorRef = useRef(false);
   const busyRetryCountRef = useRef(0);
@@ -113,6 +117,9 @@ function ChessGame(
   useEffect(() => () => {
     if (victoryTimeoutRef.current) {
       clearTimeout(victoryTimeoutRef.current);
+    }
+    if (resignTimeoutRef.current) {
+      clearTimeout(resignTimeoutRef.current);
     }
   }, []);
 
@@ -160,6 +167,25 @@ function ChessGame(
   useEffect(() => {
     customEloRef.current = customElo;
   }, [customElo]);
+
+  // Trigger resign burst whenever hasResigned flips true.
+  // In the local/bot game only the player can resign (the bot never does),
+  // so this always shows the "loss" path. The `resignOutcome` is still
+  // computed from the player color so the layout matches the future win path.
+  useEffect(() => {
+    if (!hasResigned || !game) return;
+
+    const resignKey = `resign-${game.fen()}-${playerColor}`;
+    if (lastResignKeyRef.current === resignKey) return;
+    lastResignKeyRef.current = resignKey;
+
+    setResignOutcome('loss');
+    setShowResignBurst(true);
+    if (resignTimeoutRef.current) {
+      clearTimeout(resignTimeoutRef.current);
+    }
+    resignTimeoutRef.current = setTimeout(() => setShowResignBurst(false), 2600);
+  }, [hasResigned, game, playerColor]);
 
   useEffect(() => {
     if (hasLoadedPersistedState || !initialGameId) return;
@@ -647,6 +673,12 @@ function ChessGame(
     setBotMessage(getRandomQuote(selectedBot, 'start'));
     setCoachingTip(null);
     setHasResigned(false);
+    setShowResignBurst(false);
+    setResignOutcome('loss');
+    lastResignKeyRef.current = null;
+    if (resignTimeoutRef.current) {
+      clearTimeout(resignTimeoutRef.current);
+    }
     setHasLoadedPersistedState(true);
     setEngineError(null);
     engineErrorRef.current = false;
@@ -834,6 +866,22 @@ function ChessGame(
                 <div className="victory-burst" role="status" aria-live="polite">
                   <span className="victory-spark" />
                   <span className="victory-text">Checkmate!</span>
+                </div>
+              )}
+              {showResignBurst && (
+                <div
+                  className={`resign-burst resign-${resignOutcome}`}
+                  role="status"
+                  aria-live="polite"
+                >
+                  <span className="resign-spark" />
+                  <span className="resign-text">
+                    <span className="resign-emoji" aria-hidden="true">
+                      {resignOutcome === 'win' ? '🏆' : '😔'}
+                    </span>
+                    {resignOutcome === 'win' ? 'You Win!' : 'You Lost'}
+                  </span>
+                  <span className="resign-subtext">by resignation</span>
                 </div>
               )}
             </div>
