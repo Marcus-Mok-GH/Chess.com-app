@@ -1,117 +1,181 @@
+/* ========================================
+   LANDING PAGE — chess.com style
+   ======================================== */
+
 .landing {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background: var(--bg-page);
 }
 
+/* ── Hero ─────────────────── */
 .landing-hero {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4rem 2rem;
-  max-width: 1300px;
-  margin: 0 auto;
+  padding: 3rem 1.5rem 4rem;
+  background:
+    radial-gradient(ellipse at top, rgba(129, 182, 76, 0.08), transparent 60%),
+    var(--bg-page);
 }
 
 .hero-wrapper {
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  gap: 5rem;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 4rem;
   align-items: center;
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
 }
 
 .hero-visual {
   width: 100%;
-  max-width: 600px;
+  max-width: 540px;
   aspect-ratio: 1;
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
   position: relative;
+  margin: 0 auto;
 }
 
 .hero-content {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.75rem;
+  min-width: 0;
 }
 
 .hero-title {
   font-size: 3.5rem;
-  font-weight: 800;
-  line-height: 1;
+  font-weight: 900;
+  line-height: 1.05;
   margin: 0;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.hero-title-accent {
+  color: var(--primary);
+}
+
+.hero-subtitle {
+  font-size: 1.125rem;
+  color: var(--text-dim);
+  margin: 0;
+  line-height: 1.5;
+  max-width: 38ch;
 }
 
 .hero-actions {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1rem;
+  margin-top: 0.5rem;
 }
 
 .btn-chess {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
-  padding: 1.25rem 2rem;
-  border-radius: var(--radius-md);
+  gap: 1.25rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: 8px;
   text-align: left;
   border: none;
   cursor: pointer;
-  transition: all 0.15s;
-  box-shadow: 0 4px 0 0 rgba(0,0,0,0.2);
+  transition: transform 150ms ease, background 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 0 0 rgba(0, 0, 0, 0.25);
+  color: #fff;
+  font-family: inherit;
+  width: 100%;
+  max-width: 440px;
 }
 
 .btn-chess.primary {
   background-color: var(--primary);
-  color: white;
 }
 
 .btn-chess.primary:hover {
-  background-color: var(--accent);
+  background-color: var(--primary-hover);
   transform: translateY(-2px);
-  box-shadow: 0 6px 0 0 rgba(0,0,0,0.2);
+  box-shadow: 0 6px 0 0 rgba(0, 0, 0, 0.25);
 }
 
 .btn-chess.secondary {
-  background-color: #454341;
-  color: white;
+  background-color: var(--bg-surface-3);
 }
 
 .btn-chess.secondary:hover {
-  background-color: #565452;
+  background-color: #4a4641;
   transform: translateY(-2px);
-  box-shadow: 0 6px 0 0 rgba(0,0,0,0.2);
+  box-shadow: 0 6px 0 0 rgba(0, 0, 0, 0.25);
+}
+
+.btn-chess:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 0 0 rgba(0, 0, 0, 0.25);
 }
 
 .btn-icon {
-  font-size: 2.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  color: #fff;
+}
+
+.btn-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.btn-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
 }
 
 .btn-main-text {
-  font-size: 1.75rem;
+  font-size: 1.5rem;
   font-weight: 800;
   display: block;
-  line-height: 1;
+  line-height: 1.1;
 }
 
 .btn-sub-text {
-  font-size: 0.9rem;
-  opacity: 0.7;
-  font-weight: 600;
+  font-size: 0.85rem;
+  opacity: 0.85;
+  font-weight: 500;
 }
 
+/* ── Features ─────────────────── */
 .features-section {
-  padding: 6rem 2rem;
-  background-color: var(--card);
+  padding: 5rem 1.5rem;
+  background-color: var(--bg-surface);
+  border-top: 1px solid var(--bg-surface-2);
+}
+
+.features-title {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 0 0 3rem;
+  letter-spacing: -0.01em;
 }
 
 .features-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2.5rem;
-  max-width: 1300px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 2rem;
+  max-width: 1180px;
   margin: 0 auto;
 }
 
@@ -120,27 +184,107 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
+  padding: 1.5rem 1rem;
+  border-radius: 8px;
+  transition: background 150ms ease;
+}
+
+.feature-card:hover {
+  background: var(--bg-surface-2);
 }
 
 .feature-icon {
-  font-size: 3rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(129, 182, 76, 0.12);
+  color: var(--primary);
+}
+
+.feature-icon svg {
+  width: 28px;
+  height: 28px;
 }
 
 .feature-card-title {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 800;
+  margin: 0.25rem 0 0;
 }
 
 .feature-card-description {
   color: var(--text-dim);
   line-height: 1.5;
+  margin: 0;
+  font-size: 0.95rem;
 }
 
-@media (max-width: 1024px) {
-  .hero-wrapper { grid-template-columns: 1fr; text-align: center; gap: 3rem; }
-  .hero-visual { order: -1; margin: 0 auto; }
-  .btn-chess { justify-content: center; text-align: center; }
-  .btn-text { align-items: center; }
-  .hero-title { font-size: 2.75rem; }
+/* ── Stats ─────────────────── */
+.stats-section {
+  padding: 4rem 1.5rem;
+  background: var(--bg-page);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.stat-card {
+  text-align: center;
+  padding: 1.5rem;
+  background: var(--bg-surface);
+  border-radius: 8px;
+  border: 1px solid var(--bg-surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.stat-number {
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--primary);
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+/* ── Responsive ─────────────────── */
+@media (max-width: 900px) {
+  .hero-wrapper {
+    grid-template-columns: 1fr;
+    text-align: center;
+    gap: 2.5rem;
+  }
+  .hero-visual { order: -1; max-width: 380px; }
+  .hero-title { font-size: 2.5rem; }
+  .hero-subtitle { margin: 0 auto; }
+  .hero-actions { align-items: center; }
+  .btn-chess { text-align: left; }
+  .btn-text { text-align: left; }
+  .features-title { font-size: 1.5rem; margin-bottom: 2rem; }
+}
+
+@media (max-width: 480px) {
+  .landing-hero { padding: 1.5rem 1rem 3rem; }
+  .hero-title { font-size: 2rem; }
+  .hero-visual { max-width: 100%; }
+  .btn-chess { padding: 1rem; gap: 1rem; }
+  .btn-icon { width: 40px; height: 40px; }
+  .btn-icon svg { width: 24px; height: 24px; }
+  .btn-main-text { font-size: 1.125rem; }
+  .btn-sub-text { font-size: 0.8rem; }
+  .features-section { padding: 3rem 1rem; }
+  .stat-number { font-size: 1.5rem; }
 }

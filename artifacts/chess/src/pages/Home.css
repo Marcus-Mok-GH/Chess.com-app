@@ -1,6 +1,11 @@
+/* ========================================
+   HOME — chess.com style
+   ======================================== */
+
 .home-page {
   min-height: 100vh;
-  padding: 2.5rem 1.5rem;
+  padding: 2rem 1.25rem 3rem;
+  background: var(--bg-page);
 }
 
 .home-container {
@@ -8,14 +13,23 @@
   margin: 0 auto;
 }
 
+.home-loading {
+  text-align: center;
+  padding: 4rem 1rem;
+  color: var(--text-dim);
+}
+
+/* ── Welcome ─────────────────── */
 .welcome-section {
-  margin-bottom: 3rem;
+  margin-bottom: 2.5rem;
 }
 
 .welcome-title {
-  font-size: 2.5rem;
-  font-weight: 800;
+  font-size: 2.25rem;
+  font-weight: 900;
   margin: 0 0 0.5rem;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
 }
 
 .username-highlight {
@@ -24,97 +38,225 @@
 
 .welcome-subtitle {
   color: var(--text-dim);
-  font-size: 1.1rem;
+  font-size: 1.05rem;
+  margin: 0;
 }
 
+/* ── Stats Overview ─────────────────── */
 .stats-overview {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.25rem;
-  margin-bottom: 4rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-bottom: 3rem;
 }
 
 .stat-card {
-  background-color: var(--card);
-  padding: 1.5rem;
-  border-radius: var(--radius-sm);
+  background-color: var(--bg-surface);
+  padding: 1.25rem;
+  border-radius: 8px;
   display: flex;
   align-items: center;
-  gap: 1.25rem;
-  border: 1px solid rgba(255,255,255,0.05);
+  gap: 1rem;
+  border: 1px solid var(--bg-surface-2);
+  transition: transform 150ms ease, border-color 150ms ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-1px);
+  border-color: var(--bg-surface-3);
 }
 
 .stat-icon {
-  font-size: 2rem;
-  width: 50px;
-  height: 50px;
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(129, 182, 76, 0.1);
-  border-radius: var(--radius-sm);
+  color: var(--primary);
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.stat-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .stat-label {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
   font-weight: 700;
-  color: var(--text-secondary);
-  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
 }
 
 .stat-value {
   font-size: 1.75rem;
-  font-weight: 800;
+  font-weight: 900;
+  letter-spacing: -0.01em;
 }
 
+/* ── Section title ─────────────────── */
 .section-title {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 800;
-  margin-bottom: 1.5rem;
+  margin: 0 0 1rem;
+  letter-spacing: -0.01em;
 }
+
+/* ── Detailed stats ─────────────────── */
+.detailed-stats {
+  margin-bottom: 3rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.stat-item {
+  background: var(--bg-surface);
+  padding: 1.25rem;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  border: 1px solid var(--bg-surface-2);
+}
+
+.stat-item .stat-number {
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--text-primary);
+}
+
+.win-stat .stat-number  { color: #769656; }
+.draw-stat .stat-number { color: #b0b0b0; }
+.loss-stat .stat-number { color: #c33; }
+
+.stat-text {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 0.25rem;
+}
+
+/* ── Quick Actions ─────────────────── */
+.quick-actions { margin-bottom: 3rem; }
 
 .action-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
 }
 
 .action-card {
-  background-color: var(--card);
-  border: none;
-  border-radius: var(--radius-sm);
-  padding: 2rem;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--bg-surface-2);
+  border-radius: 8px;
+  padding: 1.5rem;
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1.25rem;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: transform 150ms ease, background 150ms ease, border-color 150ms ease;
   text-align: left;
-  border-bottom: 4px solid rgba(0,0,0,0.3);
+  color: var(--text-primary);
+  font-family: inherit;
+  position: relative;
 }
 
-.action-card:hover {
-  background-color: #383531;
+.action-card:hover:not(:disabled) {
+  background-color: var(--bg-surface-2);
   transform: translateY(-2px);
+  border-color: var(--bg-surface-3);
+}
+
+.action-card.is-disabled,
+.action-card:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .action-icon {
-  font-size: 2.5rem;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(129, 182, 76, 0.1);
+  color: var(--primary);
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.action-icon svg {
+  width: 24px;
+  height: 24px;
 }
 
 .action-content h3 {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 800;
   margin: 0 0 0.25rem;
 }
 
 .action-content p {
   color: var(--text-dim);
-  font-size: 0.9rem;
+  font-size: 0.875rem;
+  margin: 0;
+  line-height: 1.4;
 }
 
+.card-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: var(--bg-surface-3);
+  color: var(--text-dim);
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Member info ─────────────────── */
+.member-info {
+  text-align: center;
+  margin-top: 2rem;
+}
+
+.member-text {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+/* ── Responsive ─────────────────── */
 @media (max-width: 768px) {
-  .home-page { padding: 1.5rem 1rem; }
-  .welcome-title { font-size: 2rem; }
+  .home-page { padding: 1.25rem 1rem 2rem; }
+  .welcome-title { font-size: 1.75rem; }
+  .stats-overview { gap: 0.75rem; }
+  .stat-value { font-size: 1.5rem; }
+  .action-card { padding: 1.25rem; }
+}
+
+@media (max-width: 480px) {
+  .welcome-title { font-size: 1.5rem; }
+  .stats-grid { grid-template-columns: 1fr; }
+  .action-cards { grid-template-columns: 1fr; }
+  .stat-card { padding: 1rem; }
 }

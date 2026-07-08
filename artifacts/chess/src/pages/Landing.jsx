@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useUser } from '../contexts/UserContext'
 import ChessBoard from '../components/ChessBoard'
 import { Chess } from 'chess.js'
+import { PlayIcon, OnlineIcon, AnalysisIcon, ArchiveIcon, BoltIcon, RobotIcon } from '../components/Icons'
 import './Landing.css'
 
 export default function Landing() {
@@ -37,12 +38,12 @@ export default function Landing() {
   }, [])
 
   const features = [
-    { icon: '♟️', title: 'Play Computer', description: 'Challenge AI bots at any difficulty with Stockfish engine' },
-    { icon: '🌐', title: 'Play Online', description: 'Real-time matchmaking against players at your skill level' },
-    { icon: '🔬', title: 'Analysis Board', description: 'Analyse any game with Stockfish engine evaluation' },
-    { icon: '📚', title: 'Game Archive', description: 'Review and replay all your past games' },
-    { icon: '📈', title: 'ELO Rating', description: 'Track your skill progression with a live rating system' },
-    { icon: '⚙️', title: 'Custom Settings', description: 'Personalise board themes, piece sets, and sounds' },
+    { Icon: RobotIcon,     title: 'Play Computer',   description: 'Challenge AI bots at any difficulty with the Stockfish engine' },
+    { Icon: OnlineIcon,    title: 'Play Online',     description: 'Real-time matchmaking against players at your skill level' },
+    { Icon: AnalysisIcon,  title: 'Analysis Board',  description: 'Analyse any game with Stockfish engine evaluation' },
+    { Icon: ArchiveIcon,   title: 'Game Archive',    description: 'Review and replay all your past games' },
+    { Icon: BoltIcon,      title: 'Live ELO Rating', description: 'Track your skill progression with a live rating system' },
+    { Icon: PlayIcon,      title: 'Custom Settings', description: 'Personalise board themes, piece sets, and sound effects' },
   ]
 
   return (
@@ -50,22 +51,30 @@ export default function Landing() {
       <main className="landing-hero">
         <div className="hero-wrapper">
           <div className="hero-visual">
-            <ChessBoard 
-              position={demoPosition} 
+            <ChessBoard
+              position={demoPosition}
               showCoordinates={false}
               boardTheme="green"
             />
           </div>
 
           <div className="hero-content">
-            <h1 className="hero-title">Play Chess Online on the #1 Site!</h1>
-            
+            <h1 className="hero-title">
+              Play Chess<br />
+              <span className="hero-title-accent">Online</span>
+            </h1>
+            <p className="hero-subtitle">
+              Play with someone at your level. Or challenge the computer. It's free.
+            </p>
+
             <div className="hero-actions">
               <button
                 className="btn-chess primary"
                 onClick={() => navigate('/online')}
               >
-                <span className="btn-icon">🌐</span>
+                <span className="btn-icon">
+                  <OnlineIcon />
+                </span>
                 <div className="btn-text">
                   <span className="btn-main-text">Play Online</span>
                   <span className="btn-sub-text">Play with someone at your level</span>
@@ -76,7 +85,9 @@ export default function Landing() {
                 className="btn-chess secondary"
                 onClick={() => navigate('/play')}
               >
-                <span className="btn-icon">🤖</span>
+                <span className="btn-icon">
+                  <RobotIcon />
+                </span>
                 <div className="btn-text">
                   <span className="btn-main-text">Play Computer</span>
                   <span className="btn-sub-text">Challenge our elite AI bots</span>
@@ -90,11 +101,11 @@ export default function Landing() {
       <section className="features-section">
         <h2 className="features-title">Everything You Need to Master Chess</h2>
         <div className="features-grid">
-          {features.map((feature) => (
-            <div className="feature-card" key={feature.title}>
-              <span className="feature-icon">{feature.icon}</span>
-              <h3 className="feature-card-title">{feature.title}</h3>
-              <p className="feature-card-description">{feature.description}</p>
+          {features.map(({ Icon, title, description }) => (
+            <div className="feature-card" key={title}>
+              <span className="feature-icon"><Icon /></span>
+              <h3 className="feature-card-title">{title}</h3>
+              <p className="feature-card-description">{description}</p>
             </div>
           ))}
         </div>

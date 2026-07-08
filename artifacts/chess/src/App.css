@@ -1,188 +1,296 @@
+/* ========================================
+   APP SHELL — chess.com style
+   ======================================== */
+
 .app {
   display: flex;
   min-height: 100vh;
-  background-color: var(--background);
-  color: var(--foreground);
+  background-color: var(--bg-page);
+  color: var(--text-primary);
 }
 
-/* ── Sidebar (Desktop) ─────────────────── */
-.sidebar-nav {
-  width: 140px;
-  background-color: var(--card);
-  border-right: 1px solid rgba(0,0,0,0.1);
+.main-content {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  z-index: 100;
-  transition: width 0.2s;
+}
+
+/* Hide bottom nav when on game screens */
+.app.hide-bottom-nav .bottom-nav,
+.app.hide-bottom-nav .mobile-header { display: none !important; }
+.app.hide-bottom-nav .sidebar-nav { display: none !important; }
+
+/* ========================================
+   DESKTOP TOP HEADER (chess.com style)
+   ======================================== */
+
+.top-header {
+  display: none;
+}
+
+@media (min-width: 769px) {
+  .top-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    padding: 0 1.25rem;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-subtle);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+}
+
+.top-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.top-header-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 900;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
   flex-shrink: 0;
 }
 
-@media (min-width: 1200px) {
-  .sidebar-nav { width: 220px; }
-}
+.top-header-logo svg { display: block; }
 
-.sidebar-content {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  padding: 1.5rem 0;
-}
-
-.sidebar-logo {
-  padding: 0 1rem;
-  margin-bottom: 2rem;
+.top-header-nav {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  text-decoration: none;
-  color: var(--foreground);
+  gap: 0.25rem;
 }
 
-.logo-text {
-  font-weight: 800;
-  font-size: 1.25rem;
+.top-header-link {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  border-radius: var(--radius-sm);
+  transition: var(--transition-fast);
   white-space: nowrap;
-  overflow: hidden;
 }
 
-.sidebar-links {
+.top-header-link:hover { color: var(--text-primary); background: var(--bg-hover); }
+.top-header-link.active { color: var(--text-primary); background: var(--bg-hover); }
+.top-header-link svg { width: 16px; height: 16px; }
+
+.top-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.top-header-cta {
+  background: var(--primary);
+  color: white;
+  font-weight: 800;
+  font-size: 0.85rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+.top-header-cta:hover { background: var(--primary-hover); }
+
+.user-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem 0.25rem 0.25rem;
+  background: var(--bg-surface-2);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  border: 1px solid var(--border-subtle);
+}
+.user-pill:hover { background: var(--bg-hover); }
+.user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 800;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.user-pill-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.user-pill-elo {
+  font-size: 0.7rem;
+  color: var(--primary);
+  font-weight: 800;
+  background: rgba(129, 182, 76, 0.12);
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+}
+
+/* ========================================
+   SIDEBAR — left rail
+   ======================================== */
+
+.sidebar-nav {
+  display: none;
+}
+
+@media (min-width: 769px) {
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    width: 64px;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border-subtle);
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 40;
+    padding-top: 56px; /* below top header */
+  }
+
+  /* Push content right to make room for sidebar */
+  .app .main-content {
+    margin-left: 64px;
+  }
+}
+
+.sidebar-list {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  flex: 1;
+  padding: 0.75rem 0.5rem;
 }
 
 .sidebar-item {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 1rem;
-  padding: 0.875rem 1.25rem;
-  text-decoration: none;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.65rem 0.25rem;
   color: var(--text-dim);
-  font-weight: 600;
-  transition: all 0.15s;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-fast);
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-align: center;
 }
+.sidebar-item:hover { color: var(--text-primary); background: var(--bg-hover); }
+.sidebar-item.active { color: var(--text-primary); background: var(--bg-hover); }
+.sidebar-item svg { width: 20px; height: 20px; }
 
-.sidebar-item:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  color: var(--foreground);
-}
+.sidebar-footer { margin-top: auto; padding: 0.5rem; }
 
-.sidebar-item.active {
-  background-color: rgba(255, 255, 255, 0.08);
-  color: var(--foreground);
-  border-left: 4px solid var(--primary);
-  padding-left: calc(1.25rem - 4px);
-}
+/* ========================================
+   MOBILE HEADER + BOTTOM NAV
+   ======================================== */
 
-.sidebar-footer {
-  margin-top: auto;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.user-profile-mini {
+.mobile-header {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  background: rgba(0,0,0,0.2);
-  border-radius: var(--radius-sm);
+  justify-content: space-between;
+  height: 52px;
+  padding: 0 1rem;
+  padding-top: var(--safe-top);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  position: sticky;
+  top: 0;
+  z-index: 50;
 }
 
-.user-info {
+.app-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 900;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+.app-logo svg { display: block; }
+
+.page-title {
+  font-size: 0.9rem;
+  font-weight: 800;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.offline-badge {
+  background: rgba(231, 76, 60, 0.15);
+  color: #e74c3c;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.bottom-nav {
+  display: flex;
+  justify-content: space-around;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-subtle);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0.4rem 0 calc(0.4rem + var(--safe-bottom));
+  z-index: 50;
+  backdrop-filter: blur(10px);
+}
+
+.nav-item {
   display: flex;
   flex-direction: column;
-  min-width: 0;
-}
-
-.username {
+  align-items: center;
+  gap: 0.2rem;
+  color: var(--text-dim);
+  font-size: 0.6rem;
   font-weight: 700;
-  font-size: 0.9rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.elo {
-  font-size: 0.75rem;
-  color: var(--primary);
-  font-weight: 800;
-}
-
-/* ── Mobile Layout ──────────────────── */
-@media (max-width: 768px) {
-  .app { flex-direction: column; }
-  .sidebar-nav { display: none; }
-  
-  .mobile-header {
-    height: 50px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 1rem;
-    background: var(--card);
-    border-bottom: 1px solid rgba(0,0,0,0.1);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-
-  .app-logo {
-    font-weight: 800;
-    font-size: 1rem;
-    color: var(--foreground);
-    text-decoration: none;
-  }
-
-  .page-title {
-    font-size: 0.9rem;
-    font-weight: 700;
-    margin: 0;
-  }
-
-  .bottom-nav {
-    display: flex;
-    justify-content: space-around;
-    background: var(--card);
-    border-top: 1px solid rgba(0,0,0,0.1);
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 0.5rem 0 calc(0.5rem + env(safe-area-inset-bottom));
-    z-index: 100;
-  }
-
-  .nav-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.2rem;
-    color: var(--text-dim);
-    text-decoration: none;
-    font-size: 0.6rem;
-    font-weight: 600;
-    flex: 1;
-  }
-
-  .nav-item.active {
-    color: var(--foreground);
-    background: rgba(255,255,255,0.05);
-  }
-}
-
-.app.hide-bottom-nav .bottom-nav {
-  display: none !important;
-}
-
-main {
   flex: 1;
-  min-width: 0;
-  position: relative;
+  padding: 0.4rem 0.2rem;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-fast);
+}
+.nav-item:hover, .nav-item.active { color: var(--text-primary); }
+.nav-item.active { background: var(--bg-hover); }
+.nav-item svg { width: 20px; height: 20px; }
+
+@media (min-width: 769px) {
+  .mobile-header { display: none; }
+  .bottom-nav { display: none; }
+}
+
+/* Add bottom padding on mobile so content isn't hidden under the bottom nav */
+@media (max-width: 768px) {
+  .app .main-content { padding-bottom: calc(60px + var(--safe-bottom)); }
+  .app.hide-bottom-nav .main-content { padding-bottom: 0; }
 }

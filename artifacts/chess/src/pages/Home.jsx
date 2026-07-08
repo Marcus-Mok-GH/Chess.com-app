@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUser } from '../contexts/UserContext'
+import { RobotIcon, OnlineIcon, ArchiveIcon, AnalysisIcon, BoltIcon, PlayIcon } from '../components/Icons'
 import './Home.css'
 
 export default function Home() {
@@ -9,28 +10,21 @@ export default function Home() {
   const [greeting, setGreeting] = useState('')
 
   useEffect(() => {
-    // Redirect to landing if not logged in (but wait for loading to complete)
-    if (!isLoading && !isLoggedIn) {
-      navigate('/', { replace: true })
-    }
+    if (!isLoading && !isLoggedIn) navigate('/', { replace: true })
   }, [isLoggedIn, isLoading, navigate])
 
   useEffect(() => {
-    // Set time-based greeting
     const hour = new Date().getHours()
     if (hour < 12) setGreeting('Good morning')
     else if (hour < 18) setGreeting('Good afternoon')
     else setGreeting('Good evening')
   }, [])
 
-  // Show loading state while checking auth
   if (isLoading) {
     return (
       <div className="home-page">
         <div className="home-container">
-          <div style={{ textAlign: 'center', padding: '4rem' }}>
-            <p style={{ color: 'var(--chesscom-text-dim)' }}>Loading...</p>
-          </div>
+          <div className="home-loading"><p>Loading...</p></div>
         </div>
       </div>
     )
@@ -38,14 +32,21 @@ export default function Home() {
 
   if (!user) return null
 
-  const winRate = user.gamesPlayed > 0 
+  const winRate = user.gamesPlayed > 0
     ? ((user.wins / user.gamesPlayed) * 100).toFixed(1)
     : 0
+
+  const actions = [
+    { Icon: RobotIcon,    title: 'Play vs AI',      desc: 'Challenge our chess bots at different skill levels',         onClick: () => navigate('/play'),     disabled: false },
+    { Icon: OnlineIcon,   title: 'Play Online',     desc: isOnline ? 'Find a match against other players' : 'Unavailable while offline', onClick: () => navigate('/online'), disabled: !isOnline, badge: !isOnline ? 'Offline' : null },
+    { Icon: ArchiveIcon,  title: 'Game Archive',    desc: 'Review and replay your past games',                          onClick: () => navigate('/history'),  disabled: false },
+    { Icon: AnalysisIcon, title: 'Analysis Board',  desc: 'Analyse any position with Stockfish evaluation',            onClick: () => navigate('/analysis'), disabled: false },
+  ]
 
   return (
     <div className="home-page">
       <div className="home-container">
-        {/* Welcome Section */}
+        {/* Welcome */}
         <section className="welcome-section">
           <h1 className="welcome-title">
             {greeting}, <span className="username-highlight">{user.username}</span>!
@@ -56,23 +57,21 @@ export default function Home() {
         {/* Stats Overview */}
         <section className="stats-overview">
           <div className="stat-card elo-card">
-            <div className="stat-icon">⭐</div>
+            <div className="stat-icon"><BoltIcon /></div>
             <div className="stat-content">
               <div className="stat-label">Current Rating</div>
               <div className="stat-value">{user.elo}</div>
             </div>
           </div>
-
           <div className="stat-card games-card">
-            <div className="stat-icon">🎮</div>
+            <div className="stat-icon"><PlayIcon /></div>
             <div className="stat-content">
               <div className="stat-label">Games Played</div>
               <div className="stat-value">{user.gamesPlayed || 0}</div>
             </div>
           </div>
-
           <div className="stat-card winrate-card">
-            <div className="stat-icon">🏆</div>
+            <div className="stat-icon" style={{ color: 'var(--primary)' }}>🏆</div>
             <div className="stat-content">
               <div className="stat-label">Win Rate</div>
               <div className="stat-value">{winRate}%</div>
@@ -103,56 +102,29 @@ export default function Home() {
         <section className="quick-actions">
           <h2 className="section-title">Quick Play</h2>
           <div className="action-cards">
-            <button 
-              className="action-card play-ai-card"
-              onClick={() => navigate('/play')}
-            >
-              <div className="action-icon">🤖</div>
-              <div className="action-content">
-                <h3>Play vs AI</h3>
-                <p>Challenge our chess bots at different skill levels</p>
-              </div>
-            </button>
-
-
-            <button
-              className="action-card"
-              onClick={() => navigate('/changelog')}
-            >
-              <div className="action-icon">📝</div>
-              <div className="action-content">
-                <h3>Changelog</h3>
-                <p>Read release notes and latest updates</p>
-              </div>
-            </button>
-
-            <button 
-              className="action-card play-online-card"
-              onClick={() => navigate('/online')}
-              disabled={!isOnline}
-            >
-              <div className="action-icon">🌐</div>
-              <div className="action-content">
-                <h3>Play Online</h3>
-                <p>
-                  {isOnline 
-                    ? 'Find a match against other players' 
-                    : 'Unavailable while offline'}
-                </p>
-              </div>
-              {!isOnline && <div className="card-badge">Offline</div>}
-            </button>
+            {actions.map(({ Icon, title, desc, onClick, disabled, badge }) => (
+              <button
+                key={title}
+                className={`action-card ${disabled ? 'is-disabled' : ''}`}
+                onClick={onClick}
+                disabled={disabled}
+              >
+                <div className="action-icon"><Icon /></div>
+                <div className="action-content">
+                  <h3>{title}</h3>
+                  <p>{desc}</p>
+                </div>
+                {badge && <div className="card-badge">{badge}</div>}
+              </button>
+            ))}
           </div>
         </section>
 
-        {/* Member Since */}
         {user.createdAt && (
           <section className="member-info">
             <p className="member-text">
-              Member since {new Date(user.createdAt).toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
+              Member since {new Date(user.createdAt).toLocaleDateString('en-US', {
+                year: 'numeric', month: 'long', day: 'numeric'
               })}
             </p>
           </section>
