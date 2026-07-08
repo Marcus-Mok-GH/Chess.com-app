@@ -2,8 +2,18 @@ let databaseReady = false;
 let initPromise = null;
 
 // Delays (ms) between successive DB init attempts.
-// 2 retries × 5 s = up to 10 s total wait — enough for Neon compute to wake from cold.
-const DB_INIT_RETRY_DELAYS_MS = [5000, 5000];
+//
+// Vercel serverless functions have a hard ~15s execution ceiling for the
+// Hobby plan (60s on Pro). Neon compute can take 2–6s to wake from cold.
+// A single 4s backoff gives Neon one retry chance while still leaving
+// enough headroom for the actual query — important for the OTP sign-in
+// flow which proxies to Neon Auth and is the user-facing "first request"
+// after a cold start.
+//
+// 1 retry × 4 s = up to 4 s total wait, vs. the previous 2 × 5 s = 10 s
+// which routinely blew past Vercel's ceiling and produced the
+// "Failed to send code" error users saw on the login screen.
+const DB_INIT_RETRY_DELAYS_MS = [4000];
 
 export function setDatabaseReady(ready) {
   databaseReady = Boolean(ready);

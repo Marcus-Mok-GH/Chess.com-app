@@ -17,6 +17,7 @@ import statsRoutes from './routes/stats.js';
 import { registerSocketHandlers } from './socket/index.js';
 import { query } from './db.js';
 import { initDatabase } from './db/init.js';
+import { ensureDatabaseReady } from './db/status.js';
 
 dotenv.config();
 
@@ -32,6 +33,33 @@ const io = new Server(httpServer, {
 // Middleware
 app.use(cors(corsOptions));
 app.use(express.json());
+
+// In serverless (Vercel) the boot-time checkDbConnection below does NOT run,
+// so the first request after a cold start can hit a function with no tables
+// created yet. Ensure the schema exists on every request — `initDatabase()`
+// is idempotent (`CREATE TABLE IF NOT EXISTS`) and the readiness promise is
+// memoized, so the cost on a warm function is one in-memory boolean check.
+let _serverlessDbReadyPromise = null;
+async function ensureServerlessDb() {
+  if (!_serverlessDbReadyPromise) {
+    _serverlessDbReadyPromise = ensureDatabaseReady(initDatabase).finally(() => {
+      // Allow retry on the next request if init failed (e.g. cold Neon
+      // wake-up), but coalesce concurrent requests in flight right now.
+      setTimeout(() => { _serverlessDbReadyPromise = null; }, 0);
+    });
+  }
+  return _serverlessDbReadyPromise;
+}
+app.use(async (req, res, next) => {
+  if (process.env.VERCEL) {
+    try {
+      await ensureServerlessDb();
+    } catch (err) {
+      console.error('[DB] Serverless pre-request init failed:', err?.message || err);
+    }
+  }
+  next();
+});
 
 // Routes
 app.use('/api/matchmaking', matchmakingRoutes);

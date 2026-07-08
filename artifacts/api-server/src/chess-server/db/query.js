@@ -28,6 +28,9 @@ export async function query(text, params) {
     if (!restored) {
       throw error;
     }
+    // After a successful re-init, force the readiness flag back to true so
+    // subsequent queries in the same invocation skip the backoff.
+    setDatabaseReady(true);
     res = await pool.query(text, params);
   }
   const duration = Date.now() - start;
