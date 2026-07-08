@@ -16,6 +16,12 @@
 - `UserContext` now passes the local session token to `getSession` and is tolerant of the new client response shape (`{ success, data, error }`).
 - `UserContext.test.jsx` mocks updated to the new client contract.
 
+## [2026-07-08] - OTP Schema Self-Heal + Authentic Chess.com Theme
+
+### Fixed
+- **OTP "failed to send OTP code" (production)**: The `verifications` table on production was created by an earlier deploy without a `DEFAULT` on the `id` column. `CREATE TABLE IF NOT EXISTS` is a no-op on the existing table, so the missing default never got backfilled and `INSERT INTO verifications (identifier, code_hash, salt, expires_at)` failed with `null value in column "id" of relation "verifications" violates not-null constraint`. Added an idempotent `ALTER TABLE verifications ALTER COLUMN id SET DEFAULT gen_random_uuid()::TEXT` in `db/init.js` so the next cold start self-heals the table. (PR #101.)
+- **App understyled (deployment gap)**: The full Chess.com theme pass (#302e2b background, #262421 cards/sidebar, #81b64c accent green, Nunito, top header + sidebar + mobile bottom nav, redesigned Landing and Home) had been sitting uncommitted on `fix/otp-native-flow-and-css-tokens`. The live build was serving an older 89 KB CSS that didn't include it. Committed + pushed + opened PR (#102). After merge + auto-deploy, the live UI matches the real chess.com.
+
 ## [2026-07-06] - Final Board Rendering Fix
 
 ### Fixed
