@@ -84,25 +84,23 @@ async function sendOtp({ email, resend }) {
     return { ok: false, status: 400, message: 'A valid email is required.' };
   }
 
-  // Enforce a small resend cooldown so a script can't hammer the mailer.
-  if (resend) {
-    const recent = await query(
-      `SELECT created_at FROM verifications
-        WHERE identifier = $1
-        ORDER BY created_at DESC
-        LIMIT 1`,
-      [normalized]
-    );
-    if (recent.rows[0]) {
-      const lastCreated = new Date(recent.rows[0].created_at).getTime();
-      const elapsed = (Date.now() - lastCreated) / 1000;
-      if (elapsed < OTP_RESEND_COOLDOWN_SECONDS) {
-        return {
-          ok: false,
-          status: 429,
-          message: `Please wait ${Math.ceil(OTP_RESEND_COOLDOWN_SECONDS - elapsed)}s before requesting a new code.`,
-        };
-      }
+  // Enforce cooldown for all OTP sends (initial and resend) to prevent mailer abuse.
+  const recent = await query(
+    `SELECT created_at FROM verifications
+      WHERE identifier = $1
+      ORDER BY created_at DESC
+      LIMIT 1`,
+    [normalized]
+  );
+  if (recent.rows[0]) {
+    const lastCreated = new Date(recent.rows[0].created_at).getTime();
+    const elapsed = (Date.now() - lastCreated) / 1000;
+    if (elapsed < OTP_RESEND_COOLDOWN_SECONDS) {
+      return {
+        ok: false,
+        status: 429,
+        message: `Please wait ${Math.ceil(OTP_RESEND_COOLDOWN_SECONDS - elapsed)}s before requesting a new code.`,
+      };
     }
   }
 

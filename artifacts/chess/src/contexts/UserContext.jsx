@@ -198,12 +198,12 @@ export function UserProvider({ children }) {
   }, [user, token, persistUser]);
 
   const logout = useCallback(async () => {
-    await neonAuth.signOut().catch(() => {});
+    await neonAuth.signOut({ token }).catch(() => {});
     localStorage.clear();
     setUser(null);
     setToken(null);
     window.location.href = '/';
-  }, []);
+  }, [token]);
 
   const value = {
     user, token, isLoggedIn: !!user, isLoading, isOnline,

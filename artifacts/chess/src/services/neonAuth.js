@@ -72,8 +72,8 @@ export const neonAuth = {
       postJson('/api/auth/sign-in/email-otp', { email, otp }),
   },
   getSession: async ({ token } = {}) => getJson('/api/auth/session', token),
-  signOut: async () => {
-    const result = await postJson('/api/auth/signout', {});
+  signOut: async ({ token } = {}) => {
+    const result = await postJson('/api/auth/signout', { token });
     return { success: true, data: { success: true }, error: result.error };
   },
 };
