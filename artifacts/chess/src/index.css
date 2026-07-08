@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
@@ -6,55 +6,160 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --color-background: #302e2b;
+  --color-background: #1a1a1a;
   --color-foreground: #ffffff;
-  --color-border: #403d39;
-  --color-card: #262421;
+  --color-border: #272522;
+  --color-card: #272522;
   --color-primary: #81b64c;
   --color-primary-foreground: #ffffff;
   --font-sans: 'Nunito', 'Inter', system-ui, sans-serif;
 }
 
 :root {
-  --background: #302e2b;
-  --foreground: #ffffff;
-  --card: #262421;
-  --primary: #81b64c;
-  --accent: #a3d16e;
+  /* Chess.com Authentic Palette */
+  --bg-page: #1a1a1a;
+  --bg-surface: #272522;
+  --bg-surface-2: #312e2b;
+  --bg-surface-3: #3a3733;
+  --bg-elevated: #454341;
+  --bg-hover: #383531;
+
+  --color-bg-primary: #1a1a1a;
+  --color-bg-surface: #272522;
+  --color-bg-surface-2: #312e2b;
+  --color-bg-surface-3: #3a3733;
+  --color-bg-elevated: #454341;
+  --color-bg-hover: #383531;
+  --color-bg-secondary: #272522;
+  --color-bg-tertiary: #312e2b;
+
+  --color-text-primary: #ffffff;
+  --color-text-dim: #bababa;
+  --color-text-secondary: #989795;
+  --color-text-muted: #7a7773;
+
+  --color-primary: #81b64c;
+  --color-primary-hover: #a3d16e;
+  --color-primary-dim: #769656;
+
+  --color-accent-blue: #769656;
+  --color-accent-red: #e74c3c;
+  --color-accent-gold: #f1c40f;
+  --color-accent-primary: #81b64c;
+  --color-accent-muted: rgba(129, 182, 76, 0.12);
+  --badge-outline: rgba(255, 255, 255, 0.12);
+  --button-outline: rgba(255, 255, 255, 0.12);
+  --skeleton-width: 100%;
+
+  /* Board colors (chess.com green) */
+  --board-light: #ebecd0;
+  --board-dark: #779556;
+
+  --color-border-default: #403d39;
+  --color-border-subtle: rgba(255, 255, 255, 0.06);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --color-border-hover: #5a5550;
+  --color-border-accent: #81b64c;
+
+  --text-primary: #ffffff;
   --text-dim: #bababa;
   --text-secondary: #989795;
-  --border: #403d39;
 
-  /* Chess.com Authentic Palette */
-  --color-bg-dark: #262421;
-  --color-bg-light: #312e2b;
-  --color-green: #81b64c;
-  --color-green-hover: #a3d16e;
-  
-  /* Spacing & Radius */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
   --radius-full: 9999px;
 
-  /* Transitions */
-  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-smooth: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: 120ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: 220ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* safe areas (mobile) */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* shadcn-style aliases — files like Login.css, SetUsernameModal.css, OnlinePlay.css, etc.
+     were written against this token namespace. Map them to the chess.com palette so the
+     whole app shares one theme. */
+  --background: #1a1a1a;
+  --foreground: #ffffff;
+  --card: #272522;
+  --card-foreground: #ffffff;
+  --popover: #312e2b;
+  --popover-foreground: #ffffff;
+  --primary: #81b64c;
+  --primary-foreground: #ffffff;
+  --primary-hover: #a3d16e;
+  --secondary: #3a3733;
+  --secondary-foreground: #ffffff;
+  --muted: #3a3733;
+  --muted-foreground: #bababa;
+  --accent: #81b64c;
+  --accent-foreground: #ffffff;
+  --accent-primary: #81b64c;
+  --accent-hover: #a3d16e;
+  --accent-muted: rgba(129, 182, 76, 0.12);
+  --destructive: #e74c3c;
+  --destructive-foreground: #ffffff;
+  --border: #403d39;
+  --input: #403d39;
+  --ring: #81b64c;
+  --radius: 8px;
+  --radius-xl: 18px;
+  --font-display: 'Nunito', 'Inter', system-ui, sans-serif;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.5);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.45);
+  --shadow-lg: 0 12px 32px rgba(0,0,0,0.55);
+  --shadow-xl: 0 30px 80px rgba(0,0,0,0.6);
+  --shadow-glow: 0 0 28px rgba(129, 182, 76, 0.35);
+
+  /* shadcn sidebar tokens (set so Sidebar components render predictably) */
+  --sidebar: #1a1a1a;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #81b64c;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #383531;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #272522;
+  --sidebar-ring: #81b64c;
+  --sidebar-width: 16rem;
+  --sidebar-width-icon: 3rem;
+  --sidebar-width-mobile: 18rem;
 }
 
 @layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body, #root {
+    height: 100%;
+  }
+
   body {
-    background-color: var(--background);
-    color: var(--foreground);
-    font-family: 'Nunito', sans-serif;
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    font-family: 'Nunito', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     margin: 0;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overscroll-behavior-y: none;
   }
-  
+
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Nunito', sans-serif;
     font-weight: 800;
+    letter-spacing: -0.01em;
   }
+
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; }
+
+  /* Hide scrollbar for clean chess.com feel */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
 }
 
 @layer components {
@@ -63,22 +168,38 @@
     color: white;
     font-weight: 700;
     padding: 0.75rem 1.5rem;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     transition: var(--transition-smooth);
-    border-bottom: 4px solid rgba(0,0,0,0.2);
+    border: none;
+    cursor: pointer;
   }
+  .btn-primary:hover { background-color: var(--primary-hover); }
+  .btn-primary:active { transform: translateY(1px); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  .btn-primary:hover {
-    background-color: var(--accent);
-    transform: translateY(-1px);
+  .btn-secondary {
+    background-color: var(--bg-elevated);
+    color: var(--text-primary);
+    font-weight: 700;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-sm);
+    border: none;
+    cursor: pointer;
+    transition: var(--transition-smooth);
   }
-  
-  .btn-primary:active {
-    border-bottom-width: 2px;
-    transform: translateY(1px);
+  .btn-secondary:hover { background-color: #565452; }
+
+  .card-surface {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
   }
 }
 
-* {
-  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+/* Mobile-friendly tap targets globally */
+@layer utilities {
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }

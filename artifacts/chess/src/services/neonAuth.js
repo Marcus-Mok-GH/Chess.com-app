@@ -1,49 +1,81 @@
 /**
- * Neon Auth client (powered by Better Auth with email OTP).
+ * Native email-OTP auth client.
  *
- * Requires NEON_AUTH_BASE_URL (server-side env var) — get it from your Neon project dashboard:
- *   Neon Console → your project → Auth tab → copy the Auth URL.
- *   It looks like: https://ep-xxx.neonauth.us-east-1.aws.neon.tech/neondb/auth
- * Then add it to your Vercel environment variables as NEON_AUTH_BASE_URL.
- * (NEON_AUTH_URL is also accepted for backward compatibility.)
+ * The app owns the OTP flow end-to-end: the React client calls
+ *   POST /api/auth/email-otp/send-verification-otp   (request a code)
+ *   POST /api/auth/sign-in/email-otp                (verify the code)
+ *   POST /api/auth/email-otp/resend                 (resend with cooldown)
+ * and the Express backend issues a 6-digit code, stores its salted hash in
+ * the `verifications` table, and emails it via `mailer.js`.
  *
- * The client routes requests through the Express backend (/api/auth/*) instead
- * of calling Neon directly. This prevents "Invalid origin" errors caused by
- * Better Auth's CSRF check rejecting cross-origin browser requests.
+ * No external auth provider is required at runtime. The local
+ * Vite dev server (and the Express proxy in production) forwards
+ * `/api/*` to the same origin so we just POST to the relative path.
  *
- * Neon Auth includes a built-in shared SMTP provider so OTP emails work
- * out of the box — no external email service required.
+ * All public methods return: { success, data, error }.
+ *   - success === true  → data holds the response body
+ *   - success === false → error is a string explaining what went wrong
  */
-import { createAuthClient } from 'better-auth/client';
-import { emailOTPClient } from 'better-auth/client/plugins';
 
-// Route auth calls through the same origin as the app (proxied by Express to Neon).
-// In dev: http://localhost:5173 → Vite proxy → Express → Neon
-// In prod: https://your-app.com → Express serverless fn → Neon
 const neonAuthBaseUrl = typeof window !== 'undefined'
   ? window.location.origin
   : 'http://localhost:3001';
 
-const noOpStub = {
-  emailOtp: {
-    sendVerificationOtp: async () => ({ data: null, error: new Error('Auth proxy not configured — set NEON_AUTH_BASE_URL on the server') }),
-  },
-  signIn: {
-    emailOtp: async () => ({ data: null, error: new Error('Auth proxy not configured — set NEON_AUTH_BASE_URL on the server') }),
-  },
-  getSession: async () => ({ data: { session: null, user: null } }),
-  signOut: async () => {},
-};
+async function postJson(path, body) {
+  let res;
+  try {
+    res = await fetch(`${neonAuthBaseUrl}${path}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    return { success: false, data: null, error: err?.message || 'Network error' };
+  }
 
-let neonAuth;
-try {
-  neonAuth = createAuthClient({
-    baseURL: neonAuthBaseUrl,
-    plugins: [emailOTPClient()],
-  });
-} catch (err) {
-  console.error('[Neon Auth] Failed to initialise auth client:', err.message);
-  neonAuth = noOpStub;
+  let data = null;
+  try { data = await res.json(); } catch { data = null; }
+
+  if (!res.ok) {
+    const message = data?.error?.message || data?.message || `Request failed (${res.status})`;
+    return { success: false, data, error: message };
+  }
+  return { success: true, data, error: null };
 }
 
-export { neonAuth };
+async function getJson(path, token) {
+  const headers = { accept: 'application/json' };
+  if (token) headers.authorization = `Bearer ${token}`;
+  try {
+    const res = await fetch(`${neonAuthBaseUrl}${path}`, {
+      method: 'GET',
+      headers,
+      credentials: 'include',
+    });
+    const data = await res.json().catch(() => ({ session: null, user: null }));
+    return { success: res.ok, data, error: null };
+  } catch (err) {
+    return { success: false, data: { session: null, user: null }, error: err?.message || 'Network error' };
+  }
+}
+
+export const neonAuth = {
+  emailOtp: {
+    sendVerificationOtp: ({ email }) =>
+      postJson('/api/auth/email-otp/send-verification-otp', { email }),
+    resendVerificationOtp: ({ email }) =>
+      postJson('/api/auth/email-otp/resend', { email }),
+  },
+  signIn: {
+    emailOtp: ({ email, otp }) =>
+      postJson('/api/auth/sign-in/email-otp', { email, otp }),
+  },
+  getSession: async ({ token } = {}) => getJson('/api/auth/session', token),
+  signOut: async () => {
+    const result = await postJson('/api/auth/signout', {});
+    return { success: true, data: { success: true }, error: result.error };
+  },
+};
+
+export default neonAuth;

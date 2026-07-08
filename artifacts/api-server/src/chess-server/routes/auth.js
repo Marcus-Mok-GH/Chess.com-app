@@ -6,156 +6,226 @@ import {
   validateSession,
   deleteSession,
 } from '../auth.js';
+import { sendOtpEmail } from '../mailer.js';
 
 const router = express.Router();
 
-const EMAIL_RE = /^[\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const OTP_TTL_MINUTES = 10;
+const OTP_RESEND_COOLDOWN_SECONDS = 30;
+const OTP_MAX_ATTEMPTS = 5;
+const SESSION_DAYS = 7;
 
-function getNeonAuthUrl() {
-  const raw =
-    process.env.NEON_AUTH_BASE_URL ||
-    process.env.NEON_AUTH_URL ||
-    process.env.AUTH_BASE_URL ||
-    process.env.AUTH_URL ||
-    process.env.STACK_AUTH_URL ||
-    process.env.NEON_API_BASE_URL ||
-    process.env.DATABASE_AUTH_URL ||
-    process.env.NEXT_PUBLIC_NEON_AUTH_URL;
-  if (!raw) return null;
-
-  let url = raw.trim().replace(/\/+$/, '');
-  const tailRe = /\/(api\/auth|email-otp\/send-verification-otp|sign-in\/email-otp)\/?$/i;
-
-  let prev;
-  do {
-    prev = url;
-    url = url.replace(tailRe, '');
-  } while (url !== prev);
-
-  return url;
+function normalizeEmail(email) {
+  return String(email || '').toLowerCase().trim();
 }
 
-/**
- * Robust proxy to Neon/Better Auth
- */
-async function proxyToAuth(req, path, body) {
-  const neonAuthUrl = getNeonAuthUrl();
-  if (!neonAuthUrl) throw new Error('Auth service not configured.');
-
-  const upstreamUrl = `${neonAuthUrl}${path}`;
-  const headers = {
-    'content-type': 'application/json',
-    'accept': 'application/json',
-    'x-forwarded-host': req.headers.host || '',
-    'x-forwarded-proto': req.headers['x-forwarded-proto'] || 'https',
-    'x-forwarded-for': req.headers['x-forwarded-for'] || req.ip,
-  };
-
-  // Carefully forward existing session/state cookies
-  if (req.headers.cookie) headers['cookie'] = req.headers.cookie;
-
-  // Forward origin but prioritize the incoming origin for CSRF consistency
-  if (req.headers.origin) headers['origin'] = req.headers.origin;
-  else headers['origin'] = `https://${req.headers.host}`;
-
-  const response = await fetch(upstreamUrl, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body),
-  });
-
-  const setCookies = response.headers.getSetCookie ? response.headers.getSetCookie() : response.headers.get('set-cookie');
-  const status = response.status;
-  const data = await response.json().catch(() => ({}));
-
-  return { status, data, setCookies };
+function hashCode(code, salt) {
+  return crypto.scryptSync(String(code), salt, 32).toString('hex');
 }
 
-router.post('/email-otp/send-verification-otp', async (req, res) => {
-  const { email } = req.body || {};
-  if (!email || !EMAIL_RE.test(String(email).trim())) {
-    return res.status(400).json({ error: { message: 'A valid email is required.' } });
+function generateCode() {
+  // 6-digit numeric code, leading zeros preserved.
+  return String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
+}
+
+async function findActiveVerification(identifier) {
+  const result = await query(
+    `SELECT id, code_hash, salt, expires_at, attempts, created_at
+       FROM verifications
+      WHERE identifier = $1 AND consumed_at IS NULL AND expires_at > NOW()
+      ORDER BY created_at DESC
+      LIMIT 1`,
+    [identifier]
+  );
+  return result.rows[0] || null;
+}
+
+async function invalidatePrevious(identifier) {
+  await query(
+    `UPDATE verifications SET consumed_at = NOW()
+      WHERE identifier = $1 AND consumed_at IS NULL`,
+    [identifier]
+  );
+}
+
+async function findOrCreateUser(email) {
+  const existing = await query(
+    `SELECT id, username, elo, games_played, wins, losses, draws, created_at, email, email_verified
+       FROM users WHERE email = $1`,
+    [email]
+  );
+  if (existing.rows.length > 0) return existing.rows[0];
+
+  const baseUsername = `player_${crypto.randomBytes(4).toString('hex')}`;
+  const finalUsername = await resolveUniqueUsername(baseUsername);
+  const inserted = await query(
+    `INSERT INTO users (id, username, email, email_verified)
+     VALUES (gen_random_uuid()::TEXT, $1, $2, TRUE)
+     RETURNING id, username, elo, games_played, wins, losses, draws, created_at, email, email_verified`,
+    [finalUsername, email]
+  );
+  return inserted.rows[0];
+}
+
+async function resolveUniqueUsername(base) {
+  const check = await query(
+    `SELECT id FROM users WHERE LOWER(username) = LOWER($1)`,
+    [base]
+  );
+  if (check.rows.length === 0) return base;
+  const suffix = crypto.randomBytes(2).toString('hex');
+  return `${base.slice(0, 15)}_${suffix}`;
+}
+
+async function sendOtp({ email, resend }) {
+  const normalized = normalizeEmail(email);
+  if (!EMAIL_RE.test(normalized)) {
+    return { ok: false, status: 400, message: 'A valid email is required.' };
   }
 
-  const normalizedEmail = email.toLowerCase().trim();
+  // Enforce a small resend cooldown so a script can't hammer the mailer.
+  if (resend) {
+    const recent = await query(
+      `SELECT created_at FROM verifications
+        WHERE identifier = $1
+        ORDER BY created_at DESC
+        LIMIT 1`,
+      [normalized]
+    );
+    if (recent.rows[0]) {
+      const lastCreated = new Date(recent.rows[0].created_at).getTime();
+      const elapsed = (Date.now() - lastCreated) / 1000;
+      if (elapsed < OTP_RESEND_COOLDOWN_SECONDS) {
+        return {
+          ok: false,
+          status: 429,
+          message: `Please wait ${Math.ceil(OTP_RESEND_COOLDOWN_SECONDS - elapsed)}s before requesting a new code.`,
+        };
+      }
+    }
+  }
+
+  // Invalidate any outstanding code before issuing a new one.
+  await invalidatePrevious(normalized);
+
+  const code = generateCode();
+  const salt = crypto.randomBytes(16).toString('hex');
+  const codeHash = hashCode(code, salt);
+  const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
+
+  await query(
+    `INSERT INTO verifications (identifier, code_hash, salt, expires_at)
+     VALUES ($1, $2, $3, $4)`,
+    [normalized, codeHash, salt, expiresAt]
+  );
 
   try {
-    // Failsafe 1: Try 'sign-in' type (Unified flow)
-    let result = await proxyToAuth(req, '/email-otp/send-verification-otp', {
-      email: normalizedEmail,
-      type: 'sign-in'
-    });
+    await sendOtpEmail({ to: normalized, code });
+  } catch (err) {
+    console.error('[Auth] sendOtpEmail failed:', err.message);
+    return {
+      ok: false,
+      status: 500,
+      message: 'Failed to send code. Please try again in a moment.',
+    };
+  }
 
-    // Failsafe 2: If 400, try 'email-verification' type (Classic flow)
-    if (result.status === 400) {
-      console.log(`[Auth] 'sign-in' failed for ${normalizedEmail}, retrying with 'email-verification'...`);
-      result = await proxyToAuth(req, '/email-otp/send-verification-otp', {
-        email: normalizedEmail,
-        type: 'email-verification'
+  return { ok: true, status: 200, message: 'Verification code sent.' };
+}
+
+// POST /api/auth/email-otp/send-verification-otp
+router.post('/email-otp/send-verification-otp', async (req, res) => {
+  const { email } = req.body || {};
+  const result = await sendOtp({ email, resend: false });
+  if (!result.ok) {
+    return res.status(result.status).json({ error: { message: result.message } });
+  }
+  return res.status(result.status).json({ success: true, message: result.message });
+});
+
+// POST /api/auth/email-otp/resend
+router.post('/email-otp/resend', async (req, res) => {
+  const { email } = req.body || {};
+  const result = await sendOtp({ email, resend: true });
+  if (!result.ok) {
+    return res.status(result.status).json({ error: { message: result.message } });
+  }
+  return res.status(result.status).json({ success: true, message: result.message });
+});
+
+// POST /api/auth/sign-in/email-otp
+router.post('/sign-in/email-otp', async (req, res) => {
+  const { email, otp } = req.body || {};
+  const normalized = normalizeEmail(email);
+  const code = String(otp || '').trim();
+
+  if (!EMAIL_RE.test(normalized) || !code) {
+    return res.status(400).json({ error: { message: 'Email and code are required.' } });
+  }
+
+  try {
+    const verification = await findActiveVerification(normalized);
+    if (!verification) {
+      return res.status(400).json({
+        error: { message: 'Your code has expired or was never issued. Please request a new one.' },
       });
     }
 
-    // Forward cookies
-    if (result.setCookies) {
-      const cookies = Array.isArray(result.setCookies) ? result.setCookies : [result.setCookies];
-      cookies.forEach(c => res.append('set-cookie', c));
+    if (verification.attempts >= OTP_MAX_ATTEMPTS) {
+      await invalidatePrevious(normalized);
+      return res.status(429).json({
+        error: { message: 'Too many incorrect attempts. Please request a new code.' },
+      });
     }
 
-    return res.status(result.status).json(result.data);
-  } catch (err) {
-    console.error('[Auth] Send OTP Error:', err);
-    return res.status(500).json({ error: { message: 'Auth bridge failure: ' + err.message } });
-  }
-});
+    const expectedHash = verification.code_hash;
+    const candidateHash = hashCode(code, verification.salt);
+    const matches = expectedHash.length === candidateHash.length
+      && crypto.timingSafeEqual(Buffer.from(expectedHash, 'hex'), Buffer.from(candidateHash, 'hex'));
 
-router.post('/sign-in/email-otp', async (req, res) => {
-  const { email, otp } = req.body || {};
-  if (!email || !otp) return res.status(400).json({ error: { message: 'Email and code are required.' } });
-
-  try {
-    const result = await proxyToAuth(req, '/sign-in/email-otp', {
-      email: email.toLowerCase().trim(),
-      otp: otp.trim()
-    });
-
-    if (result.setCookies) {
-      const cookies = Array.isArray(result.setCookies) ? result.setCookies : [result.setCookies];
-      cookies.forEach(c => res.append('set-cookie', c));
-    }
-
-    if (result.status >= 400) {
-      return res.status(result.status).json(result.data);
-    }
-
-    // Auth succeeded at Neon, now handle local user record
-    const normalizedEmail = email.toLowerCase().trim();
-    let user;
-    const existing = await query(`SELECT id, username, elo, games_played, wins, losses, draws, created_at, email FROM users WHERE email = $1`, [normalizedEmail]);
-
-    if (existing.rows.length > 0) {
-      user = existing.rows[0];
-    } else {
-      const baseUsername = `player_${crypto.randomBytes(4).toString('hex')}`;
-      const finalUsername = await resolveUniqueUsername(baseUsername);
-      const newUser = await query(
-        `INSERT INTO users (id, username, email) VALUES (gen_random_uuid()::TEXT, $1, $2)
-         RETURNING id, username, elo, games_played, wins, losses, draws, created_at, email`,
-        [finalUsername, normalizedEmail]
+    if (!matches) {
+      await query(
+        `UPDATE verifications SET attempts = attempts + 1 WHERE id = $1`,
+        [verification.id]
       );
-      user = newUser.rows[0];
+      const remaining = OTP_MAX_ATTEMPTS - (verification.attempts + 1);
+      return res.status(400).json({
+        error: { message: `Incorrect code. ${remaining > 0 ? `${remaining} attempt${remaining === 1 ? '' : 's'} remaining.` : 'Please request a new code.'}` },
+      });
     }
 
-    const token = await createSession(user.id, { ipAddress: req.ip, userAgent: req.headers['user-agent'] });
-    const needsUsername = user.username.startsWith('player_');
+    // Mark code consumed.
+    await query(
+      `UPDATE verifications SET consumed_at = NOW() WHERE id = $1`,
+      [verification.id]
+    );
+
+    // Find or create the user.
+    const user = await findOrCreateUser(normalized);
+    const token = await createSession(user.id, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
+    const needsUsername = String(user.username).startsWith('player_');
 
     return res.json({
       session: {
         id: token,
         token: token,
         userId: user.id,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+        expiresAt: new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000).toISOString(),
       },
-      user: { ...user, name: user.username, needsUsername }
+      user: {
+        ...user,
+        name: user.username,
+        elo: user.elo ?? 1200,
+        gamesPlayed: user.games_played ?? 0,
+        wins: user.wins ?? 0,
+        losses: user.losses ?? 0,
+        draws: user.draws ?? 0,
+        needsUsername,
+      },
     });
   } catch (err) {
     console.error('[Auth] Verify OTP Error:', err);
@@ -179,7 +249,10 @@ router.post('/update-username', async (req, res) => {
     const userId = await validateSession(token);
     if (!userId) return res.status(401).json({ error: { message: 'Session expired.' } });
 
-    const check = await query('SELECT id FROM users WHERE LOWER(username) = LOWER($1) AND id::TEXT != $2::TEXT', [trimmed, userId]);
+    const check = await query(
+      'SELECT id FROM users WHERE LOWER(username) = LOWER($1) AND id::TEXT != $2::TEXT',
+      [trimmed, userId]
+    );
     if (check.rows.length > 0) return res.status(400).json({ error: { message: 'Username taken.' } });
 
     const result = await query(
@@ -196,13 +269,6 @@ router.post('/update-username', async (req, res) => {
   }
 });
 
-async function resolveUniqueUsername(base) {
-  const check = await query(`SELECT id FROM users WHERE LOWER(username) = LOWER($1)`, [base]);
-  if (check.rows.length === 0) return base;
-  const suffix = crypto.randomBytes(2).toString('hex');
-  return `${base.slice(0, 15)}_${suffix}`;
-}
-
 router.get('/session', async (req, res) => {
   const authHeader = req.headers.authorization;
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
@@ -212,15 +278,27 @@ router.get('/session', async (req, res) => {
     const userId = await validateSession(token);
     if (!userId) return res.json({ session: null, user: null });
 
-    const result = await query('SELECT id, username, email, elo, games_played, wins, losses, draws, created_at FROM users WHERE id::TEXT = $1::TEXT', [userId]);
+    const result = await query(
+      'SELECT id, username, email, elo, games_played, wins, losses, draws, created_at, email_verified FROM users WHERE id::TEXT = $1::TEXT',
+      [userId]
+    );
     if (result.rows.length === 0) return res.json({ session: null, user: null });
 
     const u = result.rows[0];
-    const needsUsername = u.username.startsWith('player_');
+    const needsUsername = String(u.username).startsWith('player_');
 
     return res.json({
       session: { id: token, token: token, userId: u.id },
-      user: { ...u, name: u.username, needsUsername }
+      user: {
+        ...u,
+        name: u.username,
+        elo: u.elo ?? 1200,
+        gamesPlayed: u.games_played ?? 0,
+        wins: u.wins ?? 0,
+        losses: u.losses ?? 0,
+        draws: u.draws ?? 0,
+        needsUsername,
+      },
     });
   } catch (error) {
     return res.json({ session: null, user: null });

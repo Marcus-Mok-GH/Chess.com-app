@@ -1,5 +1,21 @@
 # Changelog
 
+## [2026-07-08] - OTP Native Flow + CSS Token Unification
+
+### Fixed
+- **OTP "failed to send OTP code"**: Rewrote `routes/auth.js` to a fully native email-OTP flow. The route was previously a proxy to Neon/Better Auth that errored out at runtime; now it issues a 6-digit code, stores its salted scrypt hash in a new `verifications` table, emails it via the existing `mailer.js`, and verifies it with constant-time comparison. The frontend client (`services/neonAuth.js`) now calls `/api/auth/email-otp/send-verification-otp`, `/api/auth/email-otp/resend`, `/api/auth/sign-in/email-otp`, and `/api/auth/session` directly — no external auth provider required.
+- **App understyled**: Added the missing CSS variables in `index.css` (`--card`, `--background`, `--accent`, `--primary`, `--border`, `--text-dim`, `--text-primary`, `--text-secondary`, shadcn-style tokens, sidebar tokens, shadows, and the `--color-bg-secondary/tertiary`, `--color-border-hover/accent`, `--color-accent-muted/primary` aliases). Several pages (`Settings`, `GameHistory`, `OnlinePlay`, `Play`, `LoginModal`, etc.) referenced these variables but they were never defined, so colors and surfaces fell back to nothing. The app now consistently applies the chess.com palette across every page.
+
+### Added
+- **`verifications` table** in `db/init.js` and `db/migrations.js` for native OTP storage (identifier, code_hash, salt, expires_at, attempts, consumed_at) with self-healing `ALTER TABLE … ADD COLUMN IF NOT EXISTS` for existing deployments.
+- **`POST /api/auth/email-otp/resend`** endpoint with a 30-second cooldown to prevent abuse.
+- **OTP hardening**: 6-digit codes with leading zeros preserved, `scryptSync` hashing with per-code salt, 10-minute TTL, 5-attempt cap, and `timingSafeEqual` on verify.
+
+### Changed
+- `services/neonAuth.js` replaced the Better Auth client with a thin `fetch`-based wrapper. The same surface (`emailOtp.sendVerificationOtp`, `signIn.emailOtp`, `getSession`, `signOut`) is preserved so call sites did not need changes.
+- `UserContext` now passes the local session token to `getSession` and is tolerant of the new client response shape (`{ success, data, error }`).
+- `UserContext.test.jsx` mocks updated to the new client contract.
+
 ## [2026-07-06] - Final Board Rendering Fix
 
 ### Fixed
