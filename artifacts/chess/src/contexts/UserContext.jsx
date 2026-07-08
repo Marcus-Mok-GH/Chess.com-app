@@ -69,11 +69,12 @@ export function UserProvider({ children }) {
           } catch { localStorage.removeItem(SESSION_USER_DATA_KEY); }
         }
 
-        const sessionResult = await neonAuth.getSession();
-        // Support both direct body result and { data: body } wrapper
-        const body = sessionResult?.data?.session ? sessionResult.data : sessionResult?.data;
-        const session = body?.session;
-        const serverUser = body?.user;
+        const sessionResult = await neonAuth.getSession({ token });
+        const body = sessionResult?.data && typeof sessionResult.data === 'object'
+          ? sessionResult.data
+          : null;
+        const session = body?.session || null;
+        const serverUser = body?.user || null;
 
         if (!session || !serverUser) {
           if (isMounted && !localStorage.getItem(PENDING_OTP_KEY)) {
@@ -115,15 +116,26 @@ export function UserProvider({ children }) {
     return () => { isMounted = false; };
   }, [persistUser]);
 
-  const requestOtp = useCallback(async ({ email }) => {
+  const requestOtp = useCallback(async ({ email, username }) => {
     if (!email) return { error: 'Email is required' };
+    if (username !== undefined && (typeof username !== 'string' || username.trim().length < 2)) {
+      return { error: 'Username must be at least 2 characters.' };
+    }
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      return { error: 'You are offline. Reconnect and try again.' };
+    }
     try {
       localStorage.setItem(PENDING_OTP_KEY, JSON.stringify({ email }));
       const result = await neonAuth.emailOtp.sendVerificationOtp({ email: email.trim(), type: 'sign-in' });
-      if (result.error) throw new Error(result.error.message || 'Failed to send code');
+      if (!result.success) {
+        const errMsg = typeof result.error === 'string'
+          ? result.error
+          : (result.error?.message || 'Failed to send code');
+        throw new Error(errMsg);
+      }
       setIsAwaitingVerification(true);
       setPendingOtpEmail(email);
-      return { success: true };
+      return { success: true, message: 'Code sent! Check your email for a 6-digit verification code.' };
     } catch (error) {
       localStorage.removeItem(PENDING_OTP_KEY);
       return { error: error.message };
@@ -133,12 +145,17 @@ export function UserProvider({ children }) {
   const verifyEmailOtp = useCallback(async ({ email, token: otpToken }) => {
     try {
       const result = await neonAuth.signIn.emailOtp({ email: email.trim(), otp: otpToken.trim() });
-      if (result.error) throw new Error(result.error.message || 'Invalid code');
-      
-      const body = result.data?.session ? result.data : result.data?.data;
-      const serverUser = body?.user;
-      const session = body?.session;
-      
+      if (!result.success) {
+        const errMsg = typeof result.error === 'string'
+          ? result.error
+          : (result.error?.message || 'Invalid or expired code');
+        throw new Error(errMsg);
+      }
+
+      const data = result.data || {};
+      const serverUser = data.user;
+      const session = data.session;
+
       if (!serverUser || !session) throw new Error('Authentication response was incomplete.');
 
       const userData = {
@@ -181,12 +198,12 @@ export function UserProvider({ children }) {
   }, [user, token, persistUser]);
 
   const logout = useCallback(async () => {
-    await neonAuth.signOut().catch(() => {});
+    await neonAuth.signOut({ token }).catch(() => {});
     localStorage.clear();
     setUser(null);
     setToken(null);
     window.location.href = '/';
-  }, []);
+  }, [token]);
 
   const value = {
     user, token, isLoggedIn: !!user, isLoading, isOnline,

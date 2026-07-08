@@ -112,6 +112,29 @@ export async function initDatabase() {
           )
         `);
 
+        // OTP verifications (native email-OTP flow)
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS verifications (
+            id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
+            identifier VARCHAR(255) NOT NULL,
+            code_hash TEXT NOT NULL,
+            salt TEXT NOT NULL,
+            expires_at TIMESTAMP NOT NULL,
+            attempts INTEGER NOT NULL DEFAULT 0,
+            consumed_at TIMESTAMP,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        await client.query('ALTER TABLE verifications ADD COLUMN IF NOT EXISTS identifier VARCHAR(255)');
+        await client.query('ALTER TABLE verifications ADD COLUMN IF NOT EXISTS code_hash TEXT');
+        await client.query('ALTER TABLE verifications ADD COLUMN IF NOT EXISTS salt TEXT');
+        await client.query('ALTER TABLE verifications ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP');
+        await client.query('ALTER TABLE verifications ADD COLUMN IF NOT EXISTS attempts INTEGER NOT NULL DEFAULT 0');
+        await client.query('ALTER TABLE verifications ADD COLUMN IF NOT EXISTS consumed_at TIMESTAMP');
+        await client.query('ALTER TABLE verifications ADD COLUMN IF NOT EXISTS created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_verifications_identifier ON verifications(identifier)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_verifications_expires_at ON verifications(expires_at)');
+
         // Other tables
         await client.query(`
           CREATE TABLE IF NOT EXISTS matchmaking_queue (

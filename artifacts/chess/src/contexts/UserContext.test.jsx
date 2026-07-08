@@ -65,7 +65,7 @@ describe('UserContext.requestOtp – 6-digit code message (PR #1.1.65)', () => {
   });
 
   it('returns a success message referencing a 6-digit verification code', async () => {
-    neonAuth.emailOtp.sendVerificationOtp.mockResolvedValue({ error: null });
+    neonAuth.emailOtp.sendVerificationOtp.mockResolvedValue({ success: true, data: { sent: true } });
 
     let capturedContext;
     renderWithUserContext((ctx) => { capturedContext = ctx; });
@@ -80,7 +80,7 @@ describe('UserContext.requestOtp – 6-digit code message (PR #1.1.65)', () => {
   });
 
   it('success message does NOT reference a 8-digit code (regression)', async () => {
-    neonAuth.emailOtp.sendVerificationOtp.mockResolvedValue({ error: null });
+    neonAuth.emailOtp.sendVerificationOtp.mockResolvedValue({ success: true, data: { sent: true } });
 
     let capturedContext;
     renderWithUserContext((ctx) => { capturedContext = ctx; });
@@ -94,7 +94,7 @@ describe('UserContext.requestOtp – 6-digit code message (PR #1.1.65)', () => {
   });
 
   it('returns the exact success message string', async () => {
-    neonAuth.emailOtp.sendVerificationOtp.mockResolvedValue({ error: null });
+    neonAuth.emailOtp.sendVerificationOtp.mockResolvedValue({ success: true, data: { sent: true } });
 
     let capturedContext;
     renderWithUserContext((ctx) => { capturedContext = ctx; });
@@ -108,7 +108,7 @@ describe('UserContext.requestOtp – 6-digit code message (PR #1.1.65)', () => {
   });
 
   it('calls neonAuth.emailOtp.sendVerificationOtp with the correct email', async () => {
-    neonAuth.emailOtp.sendVerificationOtp.mockResolvedValue({ error: null });
+    neonAuth.emailOtp.sendVerificationOtp.mockResolvedValue({ success: true, data: { sent: true } });
 
     let capturedContext;
     renderWithUserContext((ctx) => { capturedContext = ctx; });
@@ -123,7 +123,7 @@ describe('UserContext.requestOtp – 6-digit code message (PR #1.1.65)', () => {
   });
 
   it('returns an error when neonAuth.emailOtp.sendVerificationOtp fails', async () => {
-    neonAuth.emailOtp.sendVerificationOtp.mockResolvedValue({ error: { message: 'Rate limit exceeded' } });
+    neonAuth.emailOtp.sendVerificationOtp.mockResolvedValue({ success: false, error: 'Rate limit exceeded' });
 
     let capturedContext;
     renderWithUserContext((ctx) => { capturedContext = ctx; });
