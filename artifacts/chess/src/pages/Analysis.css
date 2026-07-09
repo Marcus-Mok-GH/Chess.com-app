@@ -305,7 +305,96 @@
 }
 
 @media (max-width: 768px) {
+  .analysis-page {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .analysis-header-bar {
+    padding: 10px 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .analysis-header-spacer {
+    display: none;
+  }
+  
+  .analysis-title {
+    font-size: 1.1rem;
+    flex: 1;
+    text-align: center;
+    order: -1;
+    width: 100%;
+  }
+  
+  .analysis-back {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+  }
+  
+  .analysis-game-id {
+    display: none;
+  }
+  
+  .analysis-board-section {
+    padding: 1rem 0.5rem;
+  }
+  
   .analysis-board-wrap {
-    max-width: min(calc(100vw - 2rem), 500px);
+    max-width: min(calc(100vw - 1rem), 480px);
+  }
+  
+  .analysis-board-actions {
+    gap: 8px;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+  }
+  
+  .analysis-panel {
+    max-height: 50vh;
+  }
+  
+  .analysis-tabs {
+    padding: 2px;
+  }
+  
+  .analysis-tab {
+    padding: 10px 8px;
+    font-size: 0.75rem;
+  }
+  
+  .analysis-move-row {
+    grid-template-columns: 35px 1fr 1fr;
+  }
+  
+  .analysis-move {
+    padding: 10px 8px;
+    font-size: 0.85rem;
+    min-height: 44px;
+  }
+  
+  .analysis-move-nav {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .analysis-empty-card {
+    padding: 2rem 1.5rem;
+    margin: 0 1rem;
+  }
+}
+
+/* ── Large Desktop ──────────────── */
+@media (min-width: 1440px) {
+  .analysis-layout {
+    max-width: 1800px;
+  }
+  
+  .analysis-board-wrap {
+    max-width: 720px;
+  }
+  
+  .analysis-panel {
+    width: 420px;
   }
 }

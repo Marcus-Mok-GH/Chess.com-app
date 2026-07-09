@@ -30,12 +30,18 @@
   cursor: pointer;
   transition: var(--transition-smooth);
   position: relative;
+  min-height: 140px;
+  touch-action: manipulation;
 }
 
 .bot-card:hover {
   border-color: var(--bot-color, var(--primary));
   transform: translateY(-4px);
   box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+}
+
+.bot-card:active {
+  transform: translateY(-2px);
 }
 
 .bot-card.selected {
@@ -101,4 +107,53 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 1rem;
+}
+
+/* ── Mobile ───────────────────────── */
+@media (max-width: 768px) {
+  .bot-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+  
+  .bot-card {
+    padding: 1rem 0.75rem;
+    min-height: 120px;
+    gap: 0.75rem;
+  }
+  
+  .bot-avatar {
+    width: 44px;
+    height: 44px;
+    font-size: 2rem;
+  }
+  
+  .bot-name {
+    font-size: 0.9rem;
+  }
+  
+  .bot-rating {
+    font-size: 0.7rem;
+  }
+  
+  .bot-personality {
+    display: none;
+  }
+  
+  .bot-special-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+  
+  .bot-special-section {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+  }
+}
+
+/* ── Tablet ───────────────────────── */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .bot-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }

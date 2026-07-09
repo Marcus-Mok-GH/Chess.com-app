@@ -213,10 +213,139 @@
   margin: 0;
 }
 
+/* ── Tablet ───────────────────────── */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .home-page {
+    padding: 2.5rem 2rem;
+  }
+  
+  .welcome-title {
+    font-size: 2.25rem;
+  }
+  
+  .stats-overview {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+  
+  .action-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ── Mobile ───────────────────────── */
 @media (max-width: 768px) {
-  .home-page { padding: 1.5rem 1rem; }
-  .welcome-title { font-size: 2rem; }
-  .stats-overview { grid-template-columns: 1fr; }
-  .stats-grid { grid-template-columns: 1fr; }
-  .action-cards { grid-template-columns: 1fr; }
+  .home-page {
+    padding: 1.25rem 1rem 5rem;
+  }
+  
+  .home-container {
+    max-width: 100%;
+  }
+  
+  .welcome-section {
+    margin-bottom: 2rem;
+  }
+  
+  .welcome-title {
+    font-size: 1.75rem;
+    line-height: 1.2;
+  }
+  
+  .welcome-subtitle {
+    font-size: 1rem;
+  }
+  
+  .stats-overview {
+    grid-template-columns: 1fr;
+    gap: 0.875rem;
+    margin-bottom: 2.5rem;
+  }
+  
+  .stat-card {
+    padding: 1.25rem;
+    flex-direction: row;
+    gap: 1rem;
+  }
+  
+  .stat-icon {
+    width: 44px;
+    height: 44px;
+    font-size: 1.5rem;
+  }
+  
+  .stat-value {
+    font-size: 1.5rem;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+  }
+  
+  .stat-item {
+    padding: 1rem 0.75rem;
+  }
+  
+  .stat-item .stat-number {
+    font-size: 1.5rem;
+  }
+  
+  .stat-item .stat-text {
+    font-size: 0.65rem;
+  }
+  
+  .section-title {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+  }
+  
+  .action-cards {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .action-card {
+    padding: 1.5rem;
+    gap: 1.25rem;
+  }
+  
+  .action-icon {
+    font-size: 2rem;
+  }
+  
+  .action-content h3 {
+    font-size: 1.1rem;
+  }
+  
+  .action-content p {
+    font-size: 0.85rem;
+  }
+  
+  .quick-actions {
+    margin-bottom: 2rem;
+  }
+}
+
+/* ── Large Desktop ──────────────── */
+@media (min-width: 1440px) {
+  .home-page {
+    padding: 4rem 3rem;
+  }
+  
+  .home-container {
+    max-width: 1200px;
+  }
+  
+  .welcome-title {
+    font-size: 3rem;
+  }
+  
+  .stats-overview {
+    gap: 1.5rem;
+  }
+  
+  .stat-card {
+    padding: 2rem;
+  }
 }

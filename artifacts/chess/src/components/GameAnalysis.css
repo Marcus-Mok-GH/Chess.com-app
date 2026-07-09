@@ -230,20 +230,53 @@
 
 @media (max-width: 600px) {
   .analysis-modal {
-    width: 94%;
-    max-height: 86vh;
+    width: 96%;
+    max-height: 90vh;
+    border-radius: var(--radius-lg);
+    margin: 1rem;
   }
 
   .analysis-header {
-    padding: 16px;
+    padding: 14px;
+    flex-wrap: wrap;
+    gap: 0.5rem;
   }
 
   .analysis-header h3 {
-    font-size: 1.3rem;
+    font-size: 1.2rem;
+    flex: 1;
   }
 
   .analysis-content {
-    padding: 16px;
+    padding: 14px;
+  }
+  
+  .analysis-start {
+    padding: 2rem 1rem;
+  }
+  
+  .analysis-start p {
+    font-size: 1rem;
+  }
+  
+  .analysis-loading {
+    padding: 2rem 1rem;
+  }
+  
+  .analysis-move-reviews {
+    max-height: 300px;
+    padding: 10px;
+  }
+  
+  .analysis-move-review {
+    padding: 10px;
+  }
+  
+  .model-selector select {
+    width: 100%;
+    min-width: unset;
+    padding: 12px;
+    font-size: 1rem;
   }
 }
 
