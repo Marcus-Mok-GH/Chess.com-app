@@ -37,28 +37,39 @@ app.get("/health", (_req, res) => {
 });
 
 // Chess routes (JS files loaded dynamically)
-async function loadChessRoutes() {
-  try {
-    const matchmakingRoutes = (await import("./chess-server/routes/matchmaking.js" as any)).default;
-    const gameRoutes = (await import("./chess-server/routes/games.js" as any)).default;
-    const userRoutes = (await import("./chess-server/routes/users.js" as any)).default;
-    const coachRoutes = (await import("./chess-server/routes/coach.js" as any)).default;
-    const engineRoutes = (await import("./chess-server/routes/engine.js" as any)).default;
-    const authRoutes = (await import("./chess-server/routes/auth.js" as any)).default;
-    const statsRoutes = (await import("./chess-server/routes/stats.js" as any)).default;
+// Use top-level await so routes are guaranteed to be mounted before the first
+// request is handled. The previous implementation called loadChessRoutes()
+// without awaiting, creating a race where /api/auth/* could return 404/500
+// on cold start, which manifested as \"OTP endpoint keeps failing\".
+try {
+  const matchmakingRoutes = (await import("./chess-server/routes/matchmaking.js" as any)).default;
+  const gameRoutes = (await import("./chess-server/routes/games.js" as any)).default;
+  const userRoutes = (await import("./chess-server/routes/users.js" as any)).default;
+  const coachRoutes = (await import("./chess-server/routes/coach.js" as any)).default;
+  const engineRoutes = (await import("./chess-server/routes/engine.js" as any)).default;
+  const authRoutes = (await import("./chess-server/routes/auth.js" as any)).default;
+  const statsRoutes = (await import("./chess-server/routes/stats.js" as any)).default;
 
-    app.use("/api/matchmaking", matchmakingRoutes);
-    app.use("/api/games", gameRoutes);
-    app.use("/api/users", userRoutes);
-    app.use("/api/coach", coachRoutes);
-    app.use("/api/engine", engineRoutes);
-    app.use("/api/auth", authRoutes);
-    app.use("/api/stats", statsRoutes);
-  } catch (err) {
-    console.error("Failed to load chess routes:", err);
-  }
+  app.use("/api/matchmaking", matchmakingRoutes);
+  app.use("/api/games", gameRoutes);
+  app.use("/api/users", userRoutes);
+  app.use("/api/coach", coachRoutes);
+  app.use("/api/engine", engineRoutes);
+  app.use("/api/auth", authRoutes);
+  app.use("/api/stats", statsRoutes);
+} catch (err) {
+  console.error("Failed to load chess routes:", err);
 }
 
-loadChessRoutes();
+// Global error handler — ensures every uncaught error returns JSON
+// instead of HTML, matching the behavior in chess-server/index.js
+// and preventing generic \"Request failed (500)\" without details on the client.
+app.use((err: any, _req: any, res: any, next: any) => {
+  console.error("[Server] Unhandled route error:", err?.message || err);
+  if (res.headersSent) {
+    return next(err);
+  }
+  res.status(500).json({ error: { message: "Internal server error. Please try again later." } });
+});
 
 export default app;

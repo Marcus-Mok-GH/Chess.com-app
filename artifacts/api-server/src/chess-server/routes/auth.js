@@ -106,9 +106,11 @@ async function sendOtp({ email, resend }) {
     }
 
     // Enforce cooldown for all OTP sends (initial and resend) to prevent mailer abuse.
+    // Only consider non-consumed, non-expired codes for cooldown to avoid blocking
+    // users who have already consumed/expired codes.
     const recent = await query(
       `SELECT created_at FROM verifications
-        WHERE identifier = $1
+        WHERE identifier = $1 AND consumed_at IS NULL AND expires_at > NOW()
         ORDER BY created_at DESC
         LIMIT 1`,
       [normalized]
@@ -125,25 +127,14 @@ async function sendOtp({ email, resend }) {
       }
     }
 
-    // Invalidate any outstanding code before issuing a new one.
-    await invalidatePrevious(normalized);
-
     const code = generateCode();
     const salt = crypto.randomBytes(16).toString('hex');
     const codeHash = hashCode(code, salt);
     const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
 
-    // `value` is required on production's verifications table — the table was
-    // originally provisioned by Better Auth with a `value TEXT NOT NULL` column,
-    // and our schema migration only ADDs the columns it actually reads. We store
-    // the OTP in `code_hash` + `salt`; `value` is set to a stable marker so the
-    // NOT NULL constraint is satisfied on every install (old and new).
-    await query(
-      `INSERT INTO verifications (identifier, code_hash, salt, value, expires_at)
-       VALUES ($1, $2, $3, 'native-email-otp', $4)`,
-      [normalized, codeHash, salt, expiresAt]
-    );
-
+    // Send email BEFORE touching the DB so that a mailer failure doesn't
+    // invalidate any existing valid code and doesn't leave the user with
+    // no usable code during cooldown.
     try {
       await sendOtpEmail({ to: normalized, code });
     } catch (err) {
@@ -152,6 +143,36 @@ async function sendOtp({ email, resend }) {
         ok: false,
         status: 500,
         message: 'Failed to send code. Please try again in a moment.',
+      };
+    }
+
+    // Invalidate any outstanding code before issuing a new one, and insert the new hash.
+    // This is done only after the email has been successfully dispatched.
+    try {
+      await invalidatePrevious(normalized);
+    } catch (e) {
+      console.warn('[Auth] invalidatePrevious failed (non-fatal):', e?.message);
+    }
+
+    // `value` is required on production's verifications table — the table was
+    // originally provisioned by Better Auth with a `value TEXT NOT NULL` column,
+    // and our schema migration only ADDs the columns it actually reads. We store
+    // the OTP in `code_hash` + `salt`; `value` is set to a stable marker so the
+    // NOT NULL constraint is satisfied on every install (old and new).
+    try {
+      await query(
+        `INSERT INTO verifications (identifier, code_hash, salt, value, expires_at)
+         VALUES ($1, $2, $3, 'native-email-otp', $4)`,
+        [normalized, codeHash, salt, expiresAt]
+      );
+    } catch (dbErr) {
+      console.error('[Auth] Failed to store OTP verification:', dbErr?.message || dbErr);
+      // Email already sent, but DB write failed — return 500 so client knows to retry.
+      // The code was sent but can't be verified; user will need to request again after cooldown.
+      return {
+        ok: false,
+        status: 500,
+        message: 'Failed to store verification code. Please try again.',
       };
     }
 
