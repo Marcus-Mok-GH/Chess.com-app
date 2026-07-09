@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@neondatabase/neon-js": "0.6.2-beta",
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",
     "chess.js": "^1.4.0",
@@ -18,7 +19,6 @@
     "dotenv": "^16.4.7",
     "drizzle-orm": "catalog:",
     "express": "^5.2.1",
-    "nodemailer": "^9.0.1",
     "pg": "^8.20.0",
     "pino": "^9.14.0",
     "pino-http": "^10.5.0",

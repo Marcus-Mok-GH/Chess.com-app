@@ -28,8 +28,8 @@ vi.mock('../services/neonAuth', () => ({
     signIn: {
       emailOtp: vi.fn(),
     },
-    getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
-    signOut: vi.fn(),
+    getSession: vi.fn().mockResolvedValue({ success: true, data: { session: null, user: null }, error: null }),
+    signOut: vi.fn().mockResolvedValue({ success: true, data: { success: true }, error: null }),
   },
 }));
 
@@ -58,7 +58,7 @@ function renderWithUserContext(onValue) {
 describe('UserContext.requestOtp – 6-digit code message (PR #1.1.65)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    neonAuth.getSession.mockResolvedValue({ data: { session: null } });
+    neonAuth.getSession.mockResolvedValue({ success: true, data: { session: null, user: null }, error: null });
     // Simulate being online
     Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
     localStorage.clear();

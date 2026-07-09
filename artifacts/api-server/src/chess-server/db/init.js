@@ -80,74 +80,13 @@ export async function initDatabase() {
           )
         `);
 
-        // Sessions table
-        await client.query(`
-          CREATE TABLE IF NOT EXISTS sessions (
-            id VARCHAR(100) PRIMARY KEY,
-            user_id VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            token VARCHAR(100) UNIQUE NOT NULL,
-            expires_at TIMESTAMP NOT NULL,
-            ip_address VARCHAR(100),
-            user_agent TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-          )
-        `);
+        // Neon Auth manages sessions and accounts in its own auth schema;
+        // we keep our own `users` row that the rest of the app reads from.
 
-        // Accounts table (Better Auth/Neon Auth requirements)
-        await client.query(`
-          CREATE TABLE IF NOT EXISTS accounts (
-            id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
-            user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            account_id TEXT NOT NULL,
-            provider_id TEXT NOT NULL,
-            access_token TEXT,
-            refresh_token TEXT,
-            access_token_expires_at TIMESTAMP,
-            refresh_token_expires_at TIMESTAMP,
-            scope TEXT,
-            password TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-          )
-        `);
-
-        // OTP verifications (native email-OTP flow)
-        await client.query(`
-          CREATE TABLE IF NOT EXISTS verifications (
-            id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
-            identifier VARCHAR(255) NOT NULL,
-            code_hash TEXT NOT NULL,
-            salt TEXT NOT NULL,
-            value TEXT,
-            expires_at TIMESTAMP NOT NULL,
-            attempts INTEGER NOT NULL DEFAULT 0,
-            consumed_at TIMESTAMP,
-            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-          )
-        `);
-        await client.query('ALTER TABLE verifications ADD COLUMN IF NOT EXISTS identifier VARCHAR(255)');
-        await client.query('ALTER TABLE verifications ADD COLUMN IF NOT EXISTS code_hash TEXT');
-        await client.query('ALTER TABLE verifications ADD COLUMN IF NOT EXISTS salt TEXT');
-        await client.query('ALTER TABLE verifications ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP');
-        await client.query('ALTER TABLE verifications ADD COLUMN IF NOT EXISTS attempts INTEGER NOT NULL DEFAULT 0');
-        await client.query('ALTER TABLE verifications ADD COLUMN IF NOT EXISTS consumed_at TIMESTAMP');
-        await client.query('ALTER TABLE verifications ADD COLUMN IF NOT EXISTS created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP');
-        // Self-heal: earlier deploys created the `verifications` table without a
-        // DEFAULT on `id`, which makes the OTP `INSERT` fail with
-        // "null value in column 'id' violates not-null constraint".
-        // CREATE TABLE IF NOT EXISTS is a no-op on an existing table, so the
-        // default never gets backfilled. This ALTER is idempotent and safe to
-        // run on every cold start.
-        await client.query('ALTER TABLE verifications ALTER COLUMN id SET DEFAULT gen_random_uuid()::TEXT');
-        // Self-heal: the table may have been provisioned by Better Auth with a
-        // `value TEXT NOT NULL` column. We don't read `value` (the OTP code lives
-        // in `code_hash` + `salt`), but the constraint still rejects INSERTs that
-        // omit it. Add the column if missing so the OTP flow works on every
-        // existing install. The route supplies the literal `'native-email-otp'`.
-        await client.query('ALTER TABLE verifications ADD COLUMN IF NOT EXISTS value TEXT');
-        await client.query('CREATE INDEX IF NOT EXISTS idx_verifications_identifier ON verifications(identifier)');
-        await client.query('CREATE INDEX IF NOT EXISTS idx_verifications_expires_at ON verifications(expires_at)');
+        // Drop the legacy verifications table if it exists (no longer used;
+        // the auth flow now lives on the Neon auth host). Safe no-op on
+        // installs that never had it.
+        await client.query('DROP TABLE IF EXISTS verifications');
 
         // Other tables
         await client.query(`
@@ -247,7 +186,6 @@ export async function initDatabase() {
         await client.query('CREATE INDEX IF NOT EXISTS idx_match_moves_username ON match_moves(username)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_elo_history_user_id ON elo_history(user_id)');
         await client.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_elo_history_user_game ON elo_history(user_id, game_code)');
-        await client.query('CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token)');
 
         await client.query('COMMIT');
       } catch (error) {

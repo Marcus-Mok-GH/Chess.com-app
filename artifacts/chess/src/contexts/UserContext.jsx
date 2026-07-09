@@ -155,8 +155,9 @@ export function UserProvider({ children }) {
       const data = result.data || {};
       const serverUser = data.user;
       const session = data.session;
+      const sessionToken = data.token || session?.token || session?.id;
 
-      if (!serverUser || !session) throw new Error('Authentication response was incomplete.');
+      if (!serverUser) throw new Error('Authentication response was incomplete.');
 
       const userData = {
         id: serverUser.id,
@@ -172,7 +173,7 @@ export function UserProvider({ children }) {
       };
 
       setUser(userData);
-      persistUser(userData, session.token || session.id);
+      persistUser(userData, sessionToken);
       setIsAwaitingVerification(false);
       localStorage.removeItem(PENDING_OTP_KEY);
       return { success: true, userData };

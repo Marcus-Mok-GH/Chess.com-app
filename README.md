@@ -61,7 +61,7 @@ Then open http://localhost:5173 (or whatever port Vite chooses).
 
 ### Required Environment
 - `DATABASE_URL` — PostgreSQL connection (Neon, Supabase, etc. recommended)
-- Optional: `SMTP_*` vars for real email delivery (falls back to console logging for dev)
+- Optional: `VITE_NEON_AUTH_URL` for the Neon Auth client (auto-set by Vercel on Neon integrations)
 
 ---
 
@@ -75,7 +75,7 @@ Then open http://localhost:5173 (or whatever port Vite chooses).
 **Backend**
 - Express 5 + Socket.IO
 - PostgreSQL + Drizzle ORM
-- Email OTP authentication (no passwords)
+- Neon Auth (email OTP, no passwords)
 
 **Infrastructure**
 - Vercel serverless functions

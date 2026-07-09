@@ -1,5 +1,24 @@
 # Changelog
 
+## [2026-07-10] - Switch to Neon Auth (native email-OTP)
+
+### Changed
+- **Email verification is now handled by Neon Auth** instead of a custom Express route + Resend/nodemailer mailer. The React client calls `@neondatabase/neon-js` `auth.emailOtp.sendVerificationOtp` and `auth.signIn.emailOtp` directly, and the Express server verifies the session JWT via Neon's JWKS endpoint on protected requests.
+- `services/neonAuth.js` (frontend) now wraps `@neondatabase/neon-js` and exposes the same `{ success, data, error }` shape the React context already uses, so `UserContext.jsx` is unchanged.
+- `chess-server/neonAuthServer.js` (new) is a server-side helper that resolves the session JWT to our `users` row (creating one on first sign-in with a generated `player_xxxx` username).
+- `routes/auth.js` is now a thin proxy: `GET /session`, `POST /signout`, `POST /update-username`. The OTP send/verify/resend routes are gone (Neon handles them).
+
+### Removed
+- `chess-server/mailer.js` (nodemailer-based OTP delivery).
+- `chess-server/auth.js` (custom session helpers + `verifications` table readers).
+- `chess-server/services/neonAuth.js` (the stub).
+- The `verifications`, `accounts`, and `sessions` tables from `db/init.js` (Neon manages those in its own auth schema). The schema is self-healing on existing installs via `DROP TABLE IF EXISTS`.
+- `nodemailer` from root and `api-server` `package.json` and from `api-server/build.mjs` externals.
+- `db/migrations.js` (was a duplicate of `init.js`; everything is now in `init.js`).
+
+### Config
+- Set `NEON_AUTH_BASE_URL` on the server (the Neon Auth base URL, e.g. `https://ep-xxx.neonauth.us-east-1.aws.neon.tech/neondb/auth`) and `VITE_NEON_AUTH_URL` on the frontend. Both are auto-injected by Vercel for Neon deployments.
+
 ## [2026-07-09] - In-Game Progress Survives Refresh
 
 ### Fixed
