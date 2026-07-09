@@ -7,6 +7,7 @@
   background: var(--color-bg-primary);
   display: flex;
   flex-direction: column;
+  flex: 1;
 }
 
 .play-nav {

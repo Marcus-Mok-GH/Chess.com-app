@@ -1,13 +1,13 @@
 .settings-page {
   flex: 1;
-  padding: 24px;
+  padding: 3rem 2rem;
   overflow-y: auto;
   background-color: var(--color-bg-primary);
   color: var(--color-text-secondary);
 }
 
 .settings-container {
-  max-width: 600px;
+  max-width: 680px;
   margin: 0 auto;
 }
 
