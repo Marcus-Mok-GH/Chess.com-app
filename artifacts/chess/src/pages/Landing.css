@@ -224,7 +224,7 @@
 
 @media (max-width: 1024px) {
   .hero-wrapper { grid-template-columns: 1fr; text-align: center; gap: 3rem; }
-  .hero-visual { order: -1; margin: 0 auto; }
+  .hero-visual { order: -1; margin: 0 auto; max-width: 400px; }
   .btn-chess { justify-content: center; text-align: center; }
   .btn-text { align-items: center; }
   .hero-title { font-size: 2.75rem; }
@@ -232,8 +232,122 @@
 }
 
 @media (max-width: 768px) {
-  .landing-hero { padding: 2rem 1.25rem; }
-  .features-section { padding: 3rem 1.25rem; }
-  .stats-section { padding: 3rem 1.25rem; }
-  .features-grid { grid-template-columns: 1fr; gap: 1.25rem; }
+  .landing {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .landing-hero {
+    padding: 1.5rem 1rem;
+    min-height: auto;
+  }
+  
+  .hero-wrapper {
+    gap: 2rem;
+  }
+  
+  .hero-visual {
+    max-width: 280px;
+    border-radius: var(--radius-sm);
+  }
+  
+  .hero-title {
+    font-size: 2rem;
+    line-height: 1.1;
+  }
+  
+  .hero-actions {
+    gap: 1rem;
+  }
+  
+  .btn-chess {
+    padding: 1rem 1.5rem;
+    gap: 1rem;
+    min-height: 56px;
+  }
+  
+  .btn-icon {
+    font-size: 2rem;
+  }
+  
+  .btn-main-text {
+    font-size: 1.25rem;
+  }
+  
+  .btn-sub-text {
+    font-size: 0.8rem;
+  }
+  
+  .features-section {
+    padding: 2.5rem 1rem;
+  }
+  
+  .features-title {
+    font-size: 1.75rem;
+    margin-bottom: 2rem;
+  }
+  
+  .features-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .feature-card {
+    padding: 1.5rem 1rem;
+    flex-direction: row;
+    text-align: left;
+    gap: 1.25rem;
+  }
+  
+  .feature-icon {
+    font-size: 2.5rem;
+    flex-shrink: 0;
+  }
+  
+  .feature-card-title {
+    font-size: 1.1rem;
+  }
+  
+  .stats-section {
+    padding: 2.5rem 1rem;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    max-width: 100%;
+  }
+  
+  .stat-card {
+    padding: 1.5rem;
+    flex-direction: row;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .stat-number {
+    font-size: 2rem;
+  }
+  
+  .landing-footer {
+    padding: 1.5rem 1rem;
+  }
+}
+
+/* ── Large Desktop ──────────────── */
+@media (min-width: 1440px) {
+  .landing-hero {
+    padding: 5rem 4rem;
+  }
+  
+  .hero-title {
+    font-size: 4rem;
+  }
+  
+  .hero-visual {
+    max-width: 640px;
+  }
+  
+  .features-section {
+    padding: 8rem 4rem;
+  }
 }
