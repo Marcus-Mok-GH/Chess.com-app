@@ -139,6 +139,12 @@ export async function initDatabase() {
         // default never gets backfilled. This ALTER is idempotent and safe to
         // run on every cold start.
         await client.query('ALTER TABLE verifications ALTER COLUMN id SET DEFAULT gen_random_uuid()::TEXT');
+        // Self-heal: the table may have been provisioned by Better Auth with a
+        // `value TEXT NOT NULL` column. We don't read `value` (the OTP code lives
+        // in `code_hash` + `salt`), but the constraint still rejects INSERTs that
+        // omit it. Add the column if missing so the OTP flow works on every
+        // existing install. The route supplies the literal `'native-email-otp'`.
+        await client.query('ALTER TABLE verifications ADD COLUMN IF NOT EXISTS value TEXT');
         await client.query('CREATE INDEX IF NOT EXISTS idx_verifications_identifier ON verifications(identifier)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_verifications_expires_at ON verifications(expires_at)');
 

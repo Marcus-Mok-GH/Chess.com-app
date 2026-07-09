@@ -133,9 +133,14 @@ async function sendOtp({ email, resend }) {
     const codeHash = hashCode(code, salt);
     const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
 
+    // `value` is required on production's verifications table — the table was
+    // originally provisioned by Better Auth with a `value TEXT NOT NULL` column,
+    // and our schema migration only ADDs the columns it actually reads. We store
+    // the OTP in `code_hash` + `salt`; `value` is set to a stable marker so the
+    // NOT NULL constraint is satisfied on every install (old and new).
     await query(
-      `INSERT INTO verifications (identifier, code_hash, salt, expires_at)
-       VALUES ($1, $2, $3, $4)`,
+      `INSERT INTO verifications (identifier, code_hash, salt, value, expires_at)
+       VALUES ($1, $2, $3, 'native-email-otp', $4)`,
       [normalized, codeHash, salt, expiresAt]
     );
 
