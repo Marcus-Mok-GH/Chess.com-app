@@ -23,6 +23,11 @@
 - **Play page**: Auto-resumes the active bot game after a hard refresh (including when returning to `/play`).
 - **OnlinePlay page**: Restores the last active online session and navigates back into `/online/:gameId` after reload.
 
+## [2026-07-09] - Mailer Resend Path
+
+### Fixed
+- **O**
+
 ## [2026-07-08] - OTP Native Flow + CSS Token Unification
 
 ### Fixed
