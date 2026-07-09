@@ -102,5 +102,16 @@ if (!process.env.VERCEL) {
   })();
 }
 
+// Global error handler — ensures every uncaught error in routes/middleware
+// returns a clean JSON 500 instead of HTML or empty body (which produces the
+// generic "Request failed (500)" in the client).
+app.use((err, req, res, next) => {
+  console.error('[Server] Unhandled route error:', err?.message || err);
+  if (res.headersSent) {
+    return next(err);
+  }
+  res.status(500).json({ error: { message: 'Internal server error. Please try again later.' } });
+});
+
 // Export app so api/[...path].js can use it as a Vercel serverless handler.
 export default app;

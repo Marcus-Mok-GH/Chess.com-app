@@ -62,12 +62,13 @@ export default function VerifyEmail() {
     setSuccessMsg('');
     setOtpCode('');
     const pending = getPendingData();
-    if (!pending?.email || !pending?.username) {
+    const emailToUse = pending?.email || pendingOtpEmail;
+    if (!emailToUse) {
       return setError('Session expired. Please start over.');
     }
     setIsSubmitting(true);
     try {
-      const result = await requestOtp({ email: pending.email, username: pending.username });
+      const result = await requestOtp({ email: emailToUse });
       if (!result.success) return setError(result.error);
       setSuccessMsg('New code sent! Check your email for a 6-digit code.');
     } finally {

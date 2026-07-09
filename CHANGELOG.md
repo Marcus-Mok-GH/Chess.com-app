@@ -1,5 +1,17 @@
 # Changelog
 
+## [2026-07-09] - Login 500 Fix (OTP flow)
+
+### Fixed
+- **Request failed (500) on login/OTP**:
+  - Wrapped all `/api/auth/*` OTP handlers (`send-verification-otp`, `resend`, `sign-in/email-otp`, `update-username`) in try/catch to always return proper JSON `{error:{message}}` instead of letting errors produce default Express HTML/empty 500 responses.
+  - Added top-level Express error middleware in `chess-server/index.js` to guarantee JSON 500 responses for any uncaught route errors.
+  - Hardened `hashCode()`: correctly converts stored hex `salt` to Buffer before `scryptSync`, and safe-guarded `timingSafeEqual` (length + try/catch) to prevent crypto comparison crashes.
+  - Added duplicate-key race handling + try/catch in `findOrCreateUser` (email/username uniqueness).
+  - Improved error logging and user-facing messages for OTP send/verify failures.
+- **VerifyEmail resend bug**: fixed incorrect assumption that pending data always contains `username`; now falls back to context `pendingOtpEmail`.
+- **Session creation**: added defensive `|| null` for `req.ip` / userAgent (some serverless proxies omit them).
+
 ## [2026-07-06] - Auth Failsafes & Robust Proxy
 
 ### Fixed

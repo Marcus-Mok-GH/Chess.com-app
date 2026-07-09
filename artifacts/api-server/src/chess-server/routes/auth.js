@@ -21,7 +21,14 @@ function normalizeEmail(email) {
 }
 
 function hashCode(code, salt) {
-  return crypto.scryptSync(String(code), salt, 32).toString('hex');
+  try {
+    if (!salt) throw new Error('invalid salt');
+    // salt is stored as hex string; convert to Buffer for scrypt
+    const saltBuf = Buffer.isBuffer(salt) ? salt : Buffer.from(String(salt), 'hex');
+    return crypto.scryptSync(String(code), saltBuf, 32).toString('hex');
+  } catch (e) {
+    return '';
+  }
 }
 
 function generateCode() {
@@ -50,7 +57,7 @@ async function invalidatePrevious(identifier) {
 }
 
 async function findOrCreateUser(email) {
-  const existing = await query(
+  let existing = await query(
     `SELECT id, username, elo, games_played, wins, losses, draws, created_at, email, email_verified
        FROM users WHERE email = $1`,
     [email]
@@ -59,13 +66,26 @@ async function findOrCreateUser(email) {
 
   const baseUsername = `player_${crypto.randomBytes(4).toString('hex')}`;
   const finalUsername = await resolveUniqueUsername(baseUsername);
-  const inserted = await query(
-    `INSERT INTO users (id, username, email, email_verified)
-     VALUES (gen_random_uuid()::TEXT, $1, $2, TRUE)
-     RETURNING id, username, elo, games_played, wins, losses, draws, created_at, email, email_verified`,
-    [finalUsername, email]
-  );
-  return inserted.rows[0];
+  try {
+    const inserted = await query(
+      `INSERT INTO users (id, username, email, email_verified)
+       VALUES (gen_random_uuid()::TEXT, $1, $2, TRUE)
+       RETURNING id, username, elo, games_played, wins, losses, draws, created_at, email, email_verified`,
+      [finalUsername, email]
+    );
+    return inserted.rows[0];
+  } catch (err) {
+    if (err.code === '23505') {
+      // race or duplicate email/username, fetch existing
+      existing = await query(
+        `SELECT id, username, elo, games_played, wins, losses, draws, created_at, email, email_verified
+           FROM users WHERE email = $1`,
+        [email]
+      );
+      if (existing.rows.length > 0) return existing.rows[0];
+    }
+    throw err;
+  }
 }
 
 async function resolveUniqueUsername(base) {
@@ -79,90 +99,109 @@ async function resolveUniqueUsername(base) {
 }
 
 async function sendOtp({ email, resend }) {
-  const normalized = normalizeEmail(email);
-  if (!EMAIL_RE.test(normalized)) {
-    return { ok: false, status: 400, message: 'A valid email is required.' };
-  }
+  try {
+    const normalized = normalizeEmail(email);
+    if (!EMAIL_RE.test(normalized)) {
+      return { ok: false, status: 400, message: 'A valid email is required.' };
+    }
 
-  // Enforce cooldown for all OTP sends (initial and resend) to prevent mailer abuse.
-  const recent = await query(
-    `SELECT created_at FROM verifications
-      WHERE identifier = $1
-      ORDER BY created_at DESC
-      LIMIT 1`,
-    [normalized]
-  );
-  if (recent.rows[0]) {
-    const lastCreated = new Date(recent.rows[0].created_at).getTime();
-    const elapsed = (Date.now() - lastCreated) / 1000;
-    if (elapsed < OTP_RESEND_COOLDOWN_SECONDS) {
+    // Enforce cooldown for all OTP sends (initial and resend) to prevent mailer abuse.
+    const recent = await query(
+      `SELECT created_at FROM verifications
+        WHERE identifier = $1
+        ORDER BY created_at DESC
+        LIMIT 1`,
+      [normalized]
+    );
+    if (recent.rows[0]) {
+      const lastCreated = new Date(recent.rows[0].created_at).getTime();
+      const elapsed = (Date.now() - lastCreated) / 1000;
+      if (elapsed < OTP_RESEND_COOLDOWN_SECONDS) {
+        return {
+          ok: false,
+          status: 429,
+          message: `Please wait ${Math.ceil(OTP_RESEND_COOLDOWN_SECONDS - elapsed)}s before requesting a new code.`,
+        };
+      }
+    }
+
+    // Invalidate any outstanding code before issuing a new one.
+    await invalidatePrevious(normalized);
+
+    const code = generateCode();
+    const salt = crypto.randomBytes(16).toString('hex');
+    const codeHash = hashCode(code, salt);
+    const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
+
+    await query(
+      `INSERT INTO verifications (identifier, code_hash, salt, expires_at)
+       VALUES ($1, $2, $3, $4)`,
+      [normalized, codeHash, salt, expiresAt]
+    );
+
+    try {
+      await sendOtpEmail({ to: normalized, code });
+    } catch (err) {
+      console.error('[Auth] sendOtpEmail failed:', err.message);
       return {
         ok: false,
-        status: 429,
-        message: `Please wait ${Math.ceil(OTP_RESEND_COOLDOWN_SECONDS - elapsed)}s before requesting a new code.`,
+        status: 500,
+        message: 'Failed to send code. Please try again in a moment.',
       };
     }
-  }
 
-  // Invalidate any outstanding code before issuing a new one.
-  await invalidatePrevious(normalized);
-
-  const code = generateCode();
-  const salt = crypto.randomBytes(16).toString('hex');
-  const codeHash = hashCode(code, salt);
-  const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
-
-  await query(
-    `INSERT INTO verifications (identifier, code_hash, salt, expires_at)
-     VALUES ($1, $2, $3, $4)`,
-    [normalized, codeHash, salt, expiresAt]
-  );
-
-  try {
-    await sendOtpEmail({ to: normalized, code });
+    return { ok: true, status: 200, message: 'Verification code sent.' };
   } catch (err) {
-    console.error('[Auth] sendOtpEmail failed:', err.message);
+    console.error('[Auth] sendOtp error:', err);
     return {
       ok: false,
       status: 500,
-      message: 'Failed to send code. Please try again in a moment.',
+      message: 'Failed to send verification code. Please try again.',
     };
   }
-
-  return { ok: true, status: 200, message: 'Verification code sent.' };
 }
 
 // POST /api/auth/email-otp/send-verification-otp
 router.post('/email-otp/send-verification-otp', async (req, res) => {
-  const { email } = req.body || {};
-  const result = await sendOtp({ email, resend: false });
-  if (!result.ok) {
-    return res.status(result.status).json({ error: { message: result.message } });
+  try {
+    const { email } = req.body || {};
+    const result = await sendOtp({ email, resend: false });
+    if (!result.ok) {
+      return res.status(result.status).json({ error: { message: result.message } });
+    }
+    return res.status(result.status).json({ success: true, message: result.message });
+  } catch (err) {
+    console.error('[Auth] send-verification-otp handler error:', err);
+    return res.status(500).json({ error: { message: 'Failed to process verification request.' } });
   }
-  return res.status(result.status).json({ success: true, message: result.message });
 });
 
 // POST /api/auth/email-otp/resend
 router.post('/email-otp/resend', async (req, res) => {
-  const { email } = req.body || {};
-  const result = await sendOtp({ email, resend: true });
-  if (!result.ok) {
-    return res.status(result.status).json({ error: { message: result.message } });
+  try {
+    const { email } = req.body || {};
+    const result = await sendOtp({ email, resend: true });
+    if (!result.ok) {
+      return res.status(result.status).json({ error: { message: result.message } });
+    }
+    return res.status(result.status).json({ success: true, message: result.message });
+  } catch (err) {
+    console.error('[Auth] resend handler error:', err);
+    return res.status(500).json({ error: { message: 'Failed to process resend request.' } });
   }
-  return res.status(result.status).json({ success: true, message: result.message });
 });
 
 // POST /api/auth/sign-in/email-otp
 router.post('/sign-in/email-otp', async (req, res) => {
-  const { email, otp } = req.body || {};
-  const normalized = normalizeEmail(email);
-  const code = String(otp || '').trim();
-
-  if (!EMAIL_RE.test(normalized) || !code) {
-    return res.status(400).json({ error: { message: 'Email and code are required.' } });
-  }
-
   try {
+    const { email, otp } = req.body || {};
+    const normalized = normalizeEmail(email);
+    const code = String(otp || '').trim();
+
+    if (!EMAIL_RE.test(normalized) || !code) {
+      return res.status(400).json({ error: { message: 'Email and code are required.' } });
+    }
+
     const verification = await findActiveVerification(normalized);
     if (!verification) {
       return res.status(400).json({
@@ -179,8 +218,18 @@ router.post('/sign-in/email-otp', async (req, res) => {
 
     const expectedHash = verification.code_hash;
     const candidateHash = hashCode(code, verification.salt);
-    const matches = expectedHash.length === candidateHash.length
-      && crypto.timingSafeEqual(Buffer.from(expectedHash, 'hex'), Buffer.from(candidateHash, 'hex'));
+    let matches = false;
+    if (expectedHash && candidateHash && expectedHash.length === candidateHash.length) {
+      try {
+        const expBuf = Buffer.from(String(expectedHash), 'hex');
+        const candBuf = Buffer.from(String(candidateHash), 'hex');
+        if (expBuf.length === candBuf.length && expBuf.length === 32) {
+          matches = crypto.timingSafeEqual(expBuf, candBuf);
+        }
+      } catch {
+        matches = false;
+      }
+    }
 
     if (!matches) {
       await query(
@@ -202,8 +251,8 @@ router.post('/sign-in/email-otp', async (req, res) => {
     // Find or create the user.
     const user = await findOrCreateUser(normalized);
     const token = await createSession(user.id, {
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent'],
+      ipAddress: req.ip || null,
+      userAgent: req.headers['user-agent'] || null,
     });
     const needsUsername = String(user.username).startsWith('player_');
 
@@ -227,23 +276,23 @@ router.post('/sign-in/email-otp', async (req, res) => {
     });
   } catch (err) {
     console.error('[Auth] Verify OTP Error:', err);
-    return res.status(500).json({ error: { message: 'Auth bridge verification failure: ' + err.message } });
+    return res.status(500).json({ error: { message: 'Verification failed. Please try again.' } });
   }
 });
 
 router.post('/update-username', async (req, res) => {
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  if (!token) return res.status(401).json({ error: { message: 'Session token missing' } });
-
-  const { username } = req.body || {};
-  const trimmed = (username || '').trim();
-
-  if (trimmed.length < 2 || trimmed.length > 20 || !/^[a-zA-Z0-9._-]+$/.test(trimmed)) {
-    return res.status(400).json({ error: { message: 'Username must be 2-20 characters.' } });
-  }
-
   try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    if (!token) return res.status(401).json({ error: { message: 'Session token missing' } });
+
+    const { username } = req.body || {};
+    const trimmed = (username || '').trim();
+
+    if (trimmed.length < 2 || trimmed.length > 20 || !/^[a-zA-Z0-9._-]+$/.test(trimmed)) {
+      return res.status(400).json({ error: { message: 'Username must be 2-20 characters.' } });
+    }
+
     const userId = await validateSession(token);
     if (!userId) return res.status(401).json({ error: { message: 'Session expired.' } });
 
@@ -263,6 +312,7 @@ router.post('/update-username', async (req, res) => {
     const u = result.rows[0];
     return res.json({ success: true, user: { ...u, name: u.username, needsUsername: false } });
   } catch (error) {
+    console.error('[Auth] update-username error:', error);
     return res.status(500).json({ error: { message: 'Update failed.' } });
   }
 });
