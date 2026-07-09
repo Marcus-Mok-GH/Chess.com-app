@@ -132,6 +132,13 @@ export async function initDatabase() {
         await client.query('ALTER TABLE verifications ADD COLUMN IF NOT EXISTS attempts INTEGER NOT NULL DEFAULT 0');
         await client.query('ALTER TABLE verifications ADD COLUMN IF NOT EXISTS consumed_at TIMESTAMP');
         await client.query('ALTER TABLE verifications ADD COLUMN IF NOT EXISTS created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP');
+        // Self-heal: earlier deploys created the `verifications` table without a
+        // DEFAULT on `id`, which makes the OTP `INSERT` fail with
+        // "null value in column 'id' violates not-null constraint".
+        // CREATE TABLE IF NOT EXISTS is a no-op on an existing table, so the
+        // default never gets backfilled. This ALTER is idempotent and safe to
+        // run on every cold start.
+        await client.query('ALTER TABLE verifications ALTER COLUMN id SET DEFAULT gen_random_uuid()::TEXT');
         await client.query('CREATE INDEX IF NOT EXISTS idx_verifications_identifier ON verifications(identifier)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_verifications_expires_at ON verifications(expires_at)');
 
