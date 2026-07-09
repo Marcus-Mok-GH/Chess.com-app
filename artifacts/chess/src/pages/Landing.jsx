@@ -114,7 +114,7 @@ export default function Landing() {
       </section>
 
       <footer className="landing-footer" style={{ padding: '2rem', textAlign: 'center', opacity: 0.5, fontSize: '0.8rem' }}>
-        <p>© 2026 chess.com-app. Inspired by the best.</p>
+        <p>© 2026 <a href="http://Chess.com">Chess.com</a> App. Inspired by the best.</p>
       </footer>
     </div>
   )

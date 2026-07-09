@@ -45,7 +45,7 @@ function AppHeader() {
       <aside className="sidebar-nav">
         <div className="sidebar-content">
           <Link to="/home" className="sidebar-logo">
-            <span className="logo-text">chess.com-app</span>
+            <span className="logo-text"><a href="http://Chess.com">Chess.com</a> App</span>
           </Link>
 
           <div className="sidebar-links">
