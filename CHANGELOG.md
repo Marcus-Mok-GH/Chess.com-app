@@ -1,5 +1,15 @@
 # Changelog
 
+## [2026-07-09] - In-Game Progress Survives Refresh
+
+### Fixed
+- **Bot / local games reset on refresh**: Progress (moves, FEN, bot, color) is persisted to `localStorage` after every move and restored on reload. Logged-in users still also save to the database.
+- **Online matches lost on refresh**: Session + board state survive hard refresh; client re-joins the socket room and hydrates from local cache then server/DB.
+- **Refresh ended online games**: Disconnect no longer closes the match when sockets drop; only leave / resign / game-over ends a game. Rejoin rebinds the player's socket.
+
+### Added
+- Client `gamePersistence` helpers and missing online game API methods on the frontend client.
+
 ## [2026-07-09] - Login 500 Fix (OTP flow)
 
 ### Fixed

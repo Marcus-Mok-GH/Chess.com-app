@@ -1,5 +1,20 @@
 # Changelog
 
+## [2026-07-09] - In-Game Progress Survives Refresh
+
+### Fixed
+- **Bot / local games reset on refresh**: Moves, FEN, selected bot, player color, and resign state are now saved to `localStorage` after every move (and still mirrored to the database when logged in). Reloading the page restores the board immediately instead of starting a new game.
+- **Online matches lost on refresh**: Active online session metadata (game id, player id, color, opponent) and the current board/move history are persisted client-side. On reload the client rehydrates from local cache, then re-joins the socket room and prefers the server/DB snapshot when it has more moves.
+- **Disconnect ended online games**: Socket disconnect (including page refresh) no longer marks the match as ended when both sockets drop. Games only close on explicit leave, resign, or game-over. Participants can re-bind a new socket id after reconnect.
+
+### Added
+- **`utils/gamePersistence.js`**: Shared helpers for saving/loading local and online game snapshots plus the active-session pointer.
+- **Missing online API client methods**: `createOnlineGame`, `joinOnlineGame`, `leaveOnlineGame`, and `getGameByCode` on the frontend API service.
+
+### Changed
+- **Play page**: Auto-resumes the active bot game after a hard refresh (including when returning to `/play`).
+- **OnlinePlay page**: Restores the last active online session and navigates back into `/online/:gameId` after reload.
+
 ## [2026-07-08] - OTP Native Flow + CSS Token Unification
 
 ### Fixed

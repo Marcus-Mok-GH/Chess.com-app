@@ -9,6 +9,11 @@ import api from '../services/api';
 import { findKingSquare } from './ChessGame/utils';
 import { useGameCore } from './OnlineChessGame/hooks/useGameCore';
 import GameUI from './OnlineChessGame/subcomponents/GameUI';
+import {
+  saveOnlineSession,
+  clearOnlineSession,
+  clearOnlineGameState,
+} from '../utils/gamePersistence';
 
 const REACTIONS = ['GOOD', 'CLAP', 'THINK', 'WOW', 'PARTY', 'SWEAT'];
 
@@ -18,7 +23,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
   const {
     game, setGame, moveHistory, setMoveHistory, gameStatus, setGameStatus,
     endReason, setEndReason, winner, setWinner, moveError, setMoveError,
-    makeMove, colorCode
+    makeMove, colorCode, restoredMeta,
   } = useGameCore(gameId, playerId, playerColor, settings);
 
   const [chatMessages, setChatMessages] = useState([]);
@@ -26,78 +31,165 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
   const [possibleMoves, setPossibleMoves] = useState([]);
   const [animatingPieces, setAnimatingPieces] = useState([]);
   const [opponentStatus, setOpponentStatus] = useState('connected');
-  const [whitePlayer, setWhitePlayer] = useState({ name: 'White', elo: null });
-  const [blackPlayer, setBlackPlayer] = useState({ name: 'Black', elo: null });
+  const [whitePlayer, setWhitePlayer] = useState(
+    () => restoredMeta?.whitePlayer || { name: 'White', elo: null },
+  );
+  const [blackPlayer, setBlackPlayer] = useState(
+    () => restoredMeta?.blackPlayer || { name: 'Black', elo: null },
+  );
   const [eloChange, setEloChange] = useState(null);
   const [drawOffered, setDrawOffered] = useState(false);
   const [showVictory, setShowVictory] = useState(false);
   const lastVictoryKeyRef = useRef(null);
   const victoryTimeoutRef = useRef(null);
+  const hasHydratedFromDb = useRef(false);
 
   const animationIdRef = useRef(0);
-  const boardOrientation = playerColor;
+  const boardOrientation = playerColor || 'white';
 
+  // Keep session metadata sticky for refresh recovery
   useEffect(() => {
-    if (!gameId) return;
-    api.request(`/games/by-code/${gameId}`).then(data => {
-      if (data && data.move_history && moveHistory.length === 0) {
+    if (!gameId || !playerId) return;
+    saveOnlineSession({
+      gameId,
+      playerId,
+      playerColor,
+      opponentInfo,
+    });
+  }, [gameId, playerId, playerColor, opponentInfo]);
+
+  // Recover from DB if local snapshot is empty / incomplete
+  useEffect(() => {
+    if (!gameId || hasHydratedFromDb.current) return;
+    let cancelled = false;
+
+    api.getGameByCode(gameId)
+      .then((data) => {
+        if (cancelled || !data) return;
         const history = normalizeMoveHistory(data.move_history);
-        setGame(buildGameFromHistory(history, data.fen));
-        setMoveHistory(history);
-        console.log('[OnlineGame] Recovered state from DB');
-      }
-    }).catch(() => {});
-  }, [gameId, moveHistory.length, setGame, setMoveHistory]);
+        // Prefer server if it has more moves (or local is empty)
+        if (history.length >= moveHistory.length) {
+          setGame(buildGameFromHistory(history, data.fen));
+          setMoveHistory(history);
+          if (data.status === 'ended' || data.status === 'completed') {
+            setGameStatus('ended');
+          } else if (data.status) {
+            setGameStatus(data.status === 'playing' || data.status === 'in_progress' ? 'playing' : data.status);
+          }
+          console.log('[OnlineGame] Recovered state from DB');
+        }
+        if (data.white_player_name || data.black_player_name) {
+          if (data.white_player_name) {
+            setWhitePlayer((prev) => ({
+              name: data.white_player_name || prev.name,
+              elo: data.white_elo ?? prev.elo,
+            }));
+          }
+          if (data.black_player_name) {
+            setBlackPlayer((prev) => ({
+              name: data.black_player_name || prev.name,
+              elo: data.black_elo ?? prev.elo,
+            }));
+          }
+        }
+        hasHydratedFromDb.current = true;
+      })
+      .catch(() => {
+        hasHydratedFromDb.current = true;
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // Only run once per gameId mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameId]);
 
   useEffect(() => {
     if (!gameId || !playerId) return;
-    socketService.joinGame(gameId, playerId);
 
-    socketService.on('game_state', (data) => {
+    const ensureJoin = async () => {
+      try {
+        await socketService.connect();
+      } catch {
+        // continue; join is no-op if disconnected
+      }
+      socketService.joinGame(gameId, playerId);
+    };
+    ensureJoin();
+
+    // Re-join after reconnect so refresh + brief disconnects recover
+    const handleConnectionStatus = (status) => {
+      if (status?.connected) {
+        socketService.joinGame(gameId, playerId);
+      }
+    };
+    socketService.on('connection_status', handleConnectionStatus);
+
+    const handleGameState = (data) => {
       const history = normalizeMoveHistory(data.moveHistory);
       setGame(buildGameFromHistory(history, data.fen));
       setMoveHistory(history);
-      setGameStatus(data.status);
+      const status = data.status === 'ended' || data.status === 'completed' ? 'ended' : (data.status || 'playing');
+      setGameStatus(status === 'waiting' ? 'playing' : status);
       if (data.whitePlayer) setWhitePlayer({ name: data.whitePlayer, elo: data.whiteElo });
       if (data.blackPlayer) setBlackPlayer({ name: data.blackPlayer, elo: data.blackElo });
-    });
+    };
 
-    socketService.on('move_made', (data) => {
+    const handleMoveMade = (data) => {
+      const history = normalizeMoveHistory(data.moveHistory);
       if (data.playerId !== playerId) {
-        const history = normalizeMoveHistory(data.moveHistory);
         const lastMove = history[history.length - 1];
         if (lastMove) {
           if (lastMove.captured) haptics.capture(); else haptics.move();
         }
-        setGame(buildGameFromHistory(history, data.fen));
-        setMoveHistory(history);
       }
-    });
+      // Always apply authoritative server state (handles re-sync after refresh)
+      setGame(buildGameFromHistory(history, data.fen));
+      setMoveHistory(history);
+    };
 
-    socketService.on('game_ended', (data) => {
+    const handleGameEnded = (data) => {
       setGameStatus('ended');
       setEndReason(data.reason);
       setWinner(data.result);
-    });
+      clearOnlineSession();
+    };
 
-    socketService.on('opponent_disconnected', () => setOpponentStatus('disconnected'));
-    socketService.on('elo_updated', (data) => setEloChange(data.change));
-    socketService.on('draw_offered', (data) => data.offeredBy !== playerId && setDrawOffered(true));
-    socketService.on('move_error', (data) => setMoveError(data.message));
-    socketService.on('chat_message', (data) => {
-      setChatMessages(prev => [...prev, data]);
-    });
+    const handleOpponentDisconnected = () => setOpponentStatus('disconnected');
+    const handleEloUpdated = (data) => setEloChange(data.change);
+    const handleDrawOffered = (data) => {
+      if (data.offeredBy !== playerId) setDrawOffered(true);
+    };
+    const handleMoveError = (data) => setMoveError(data.message);
+    const handleChatMessage = (data) => {
+      setChatMessages((prev) => [...prev, data]);
+    };
+    const handlePlayerJoined = () => setOpponentStatus('connected');
+
+    socketService.on('game_state', handleGameState);
+    socketService.on('move_made', handleMoveMade);
+    socketService.on('game_ended', handleGameEnded);
+    socketService.on('opponent_disconnected', handleOpponentDisconnected);
+    socketService.on('player_joined', handlePlayerJoined);
+    socketService.on('elo_updated', handleEloUpdated);
+    socketService.on('draw_offered', handleDrawOffered);
+    socketService.on('move_error', handleMoveError);
+    socketService.on('chat_message', handleChatMessage);
 
     return () => {
-      socketService.off('game_state');
-      socketService.off('move_made');
-      socketService.off('game_ended');
-      socketService.off('opponent_disconnected');
-      socketService.off('elo_updated');
-      socketService.off('draw_offered');
-      socketService.off('move_error');
-      socketService.off('chat_message');
-      socketService.leaveGame(gameId, playerId);
+      socketService.off('connection_status', handleConnectionStatus);
+      socketService.off('game_state', handleGameState);
+      socketService.off('move_made', handleMoveMade);
+      socketService.off('game_ended', handleGameEnded);
+      socketService.off('opponent_disconnected', handleOpponentDisconnected);
+      socketService.off('player_joined', handlePlayerJoined);
+      socketService.off('elo_updated', handleEloUpdated);
+      socketService.off('draw_offered', handleDrawOffered);
+      socketService.off('move_error', handleMoveError);
+      socketService.off('chat_message', handleChatMessage);
+      // Do NOT leave the game room on unmount from refresh — only explicit leave
+      // should close the seat. Leaving here races with reconnect and can end the game.
     };
   }, [gameId, playerId, setGame, setMoveHistory, setGameStatus, setEndReason, setWinner, setMoveError]);
 
@@ -247,8 +339,16 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
         chatMessages={chatMessages} handleSendMessage={(m) => socketService.sendMessage(gameId, playerId, m)} playerId={playerId}
         moveHistory={moveHistory} gameStatus={gameStatus}
         handleOfferDraw={() => socketService.offerDraw(gameId, playerId)}
-        handleResign={() => socketService.resignGame(gameId, playerId)}
-        navigate={navigate} canReview={gameStatus === 'ended'} onLeave={onLeave}
+        handleResign={() => {
+          socketService.resignGame(gameId, playerId);
+          clearOnlineSession();
+          if (gameId) clearOnlineGameState(gameId);
+        }}
+        navigate={navigate} canReview={gameStatus === 'ended'} onLeave={() => {
+          clearOnlineSession();
+          if (gameId) clearOnlineGameState(gameId);
+          onLeave?.();
+        }}
         capturedPieces={capturedPieces}
       />
     </div>

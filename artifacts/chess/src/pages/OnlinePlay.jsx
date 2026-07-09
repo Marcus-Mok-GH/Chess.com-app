@@ -8,6 +8,12 @@ import { useUser } from '../contexts/UserContext';
 import socketService from '../services/socket';
 import pollingService from '../services/matchmakingPolling';
 import api from '../services/api';
+import {
+  saveOnlineSession,
+  loadOnlineSession,
+  clearOnlineSession,
+  clearOnlineGameState,
+} from '../utils/gamePersistence';
 
 import { useMatchmaking } from './OnlinePlay/hooks/useMatchmaking';
 import LobbyUI from './OnlinePlay/subcomponents/LobbyUI';
@@ -21,53 +27,98 @@ export default function OnlinePlay() {
   const { user, isLoggedIn } = useUser();
   const isGuest = !isLoggedIn;
 
-  const [view, setView] = useState('mode-select');
+  const restoredSession = useRef(null);
+  if (restoredSession.current === null) {
+    restoredSession.current = loadOnlineSession();
+  }
+  const savedSession = restoredSession.current;
+
+  const [view, setView] = useState(() => {
+    if (routeGameId) return 'playing';
+    // Resume active online session after refresh when still on /online
+    if (savedSession?.gameId && !routeGameId) return 'playing';
+    return 'mode-select';
+  });
   const [gameMode, setGameMode] = useState(null);
-  const [gameId, setGameId] = useState(null);
-  const [playerColor, setPlayerColor] = useState(() => localStorage.getItem('last_chess_color') || null);
+  const [gameId, setGameId] = useState(() => {
+    if (routeGameId) return routeGameId.toUpperCase();
+    if (savedSession?.gameId) return savedSession.gameId;
+    return null;
+  });
+  const [playerColor, setPlayerColor] = useState(() => {
+    if (savedSession?.playerColor) return savedSession.playerColor;
+    try {
+      return localStorage.getItem('last_chess_color') || null;
+    } catch {
+      return null;
+    }
+  });
   const [joinCode, setJoinCode] = useState('');
   const [selectedColor, setSelectedColor] = useState('white');
-  const [copied, setCopied] = useState(false);
   const [playerElo, setPlayerElo] = useState(() => user?.elo || 1200);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [pendingMode, setPendingMode] = useState(null);
   const [showMatchFoundAnimation, setShowMatchFoundAnimation] = useState(false);
   const [foundOpponent, setFoundOpponent] = useState(null);
-  const [opponentInfo, setOpponentInfo] = useState(null);
+  const [opponentInfo, setOpponentInfo] = useState(() => savedSession?.opponentInfo || null);
   const [isWaiting, setIsWaiting] = useState(false);
-  
+
   const [playerId, setPlayerId] = useState(() => {
     if (user) return `user_${user.id}`;
-    return localStorage.getItem('last_chess_player_id') || null;
+    if (savedSession?.playerId) return savedSession.playerId;
+    try {
+      return localStorage.getItem('last_chess_player_id') || null;
+    } catch {
+      return null;
+    }
   });
 
   const {
     error, setError, searchTime, playersInQueue, setPlayersInQueue,
-    matchmakingTransport, setMatchmakingTransport, 
+    matchmakingTransport, setMatchmakingTransport,
     matchFound, setMatchFound, startMatchmaking, handleCancelMatchmaking,
     pendingMatchmakingRef, clearMatchmakingTimers
   } = useMatchmaking(user, isLoggedIn, settings);
 
-  const gameSessionRef = useRef({ gameId: null, playerId: null, playerColor: null, opponentInfo: null });
+  const gameSessionRef = useRef({
+    gameId: gameId,
+    playerId: playerId,
+    playerColor: playerColor,
+    opponentInfo: opponentInfo,
+  });
 
   const persistGameSession = useCallback((session) => {
     gameSessionRef.current = { ...gameSessionRef.current, ...session };
-    if (session.playerId) localStorage.setItem('last_chess_player_id', session.playerId);
-    if (session.playerColor) localStorage.setItem('last_chess_color', session.playerColor);
+    saveOnlineSession(gameSessionRef.current);
   }, []);
 
   const clearGameSession = useCallback(() => {
+    const currentId = gameSessionRef.current.gameId;
     gameSessionRef.current = { gameId: null, playerId: null, playerColor: null, opponentInfo: null };
-    localStorage.removeItem('last_chess_player_id');
-    localStorage.removeItem('last_chess_color');
+    clearOnlineSession();
+    if (currentId) clearOnlineGameState(currentId);
+    try {
+      localStorage.removeItem('last_chess_player_id');
+      localStorage.removeItem('last_chess_color');
+    } catch {
+      // ignore
+    }
   }, []);
 
   useEffect(() => {
     if (user) {
       const id = `user_${user.id}`;
       setPlayerId(id);
-      localStorage.setItem('last_chess_player_id', id);
+      try {
+        localStorage.setItem('last_chess_player_id', id);
+      } catch {
+        // ignore
+      }
     }
+  }, [user]);
+
+  useEffect(() => {
+    if (user?.elo) setPlayerElo(user.elo);
   }, [user]);
 
   useEffect(() => {
@@ -82,10 +133,85 @@ export default function OnlinePlay() {
     };
   }, []);
 
+  // Redirect /online → /online/:gameId when resuming a saved session
+  useEffect(() => {
+    if (!routeGameId && savedSession?.gameId && view === 'playing') {
+      navigate(`/online/${savedSession.gameId}`, { replace: true });
+    }
+  }, [routeGameId, savedSession, view, navigate]);
+
   useEffect(() => {
     if (routeGameId) {
-      setGameId(routeGameId.toUpperCase());
+      const code = routeGameId.toUpperCase();
+      setGameId(code);
       setView('playing');
+
+      // Hydrate color / playerId from saved session if this is the same game
+      const session = loadOnlineSession();
+      let resolvedPlayerId = playerId || (user ? `user_${user.id}` : null);
+      let resolvedColor = playerColor;
+
+      if (session && session.gameId === code) {
+        if (session.playerId) {
+          resolvedPlayerId = session.playerId;
+          setPlayerId(session.playerId);
+        }
+        if (session.playerColor) {
+          resolvedColor = session.playerColor;
+          setPlayerColor(session.playerColor);
+        }
+        if (session.opponentInfo) setOpponentInfo(session.opponentInfo);
+        gameSessionRef.current = { ...gameSessionRef.current, ...session };
+      } else {
+        try {
+          const lastColor = localStorage.getItem('last_chess_color');
+          const lastPlayerId = localStorage.getItem('last_chess_player_id');
+          if (lastColor && !resolvedColor) {
+            resolvedColor = lastColor;
+            setPlayerColor(lastColor);
+          }
+          if (lastPlayerId && !resolvedPlayerId) {
+            resolvedPlayerId = lastPlayerId;
+            setPlayerId(lastPlayerId);
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      // Recover color from server if still unknown (e.g. shared link / lost localStorage)
+      if ((!resolvedColor || !resolvedPlayerId) && (user || resolvedPlayerId)) {
+        const pid = resolvedPlayerId || (user ? `user_${user.id}` : null);
+        api.getGameByCode(code)
+          .then((data) => {
+            if (!data || !pid) return;
+            let color = resolvedColor;
+            if (data.white_player_id === pid) color = 'white';
+            else if (data.black_player_id === pid) color = 'black';
+            // Also match by numeric user id stored without prefix
+            else if (user) {
+              const uid = String(user.id);
+              if (String(data.white_player_id) === uid || data.white_player_id === `user_${uid}`) color = 'white';
+              else if (String(data.black_player_id) === uid || data.black_player_id === `user_${uid}`) color = 'black';
+            }
+            if (color) {
+              setPlayerColor(color);
+              setPlayerId(pid);
+              persistGameSession({
+                gameId: code,
+                playerId: pid,
+                playerColor: color,
+              });
+            }
+          })
+          .catch(() => {});
+      } else {
+        persistGameSession({
+          gameId: code,
+          playerId: resolvedPlayerId,
+          playerColor: resolvedColor || null,
+        });
+      }
     } else {
       const codeFromUrl = searchParams.get('code');
       if (codeFromUrl) {
@@ -94,6 +220,7 @@ export default function OnlinePlay() {
         setView('lobby');
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeGameId, searchParams]);
 
   useEffect(() => {
@@ -112,7 +239,12 @@ export default function OnlinePlay() {
       setMatchFound(true);
       setOpponentInfo(opponent);
       setTimeout(() => setShowMatchFoundAnimation(false), 2000);
-      persistGameSession({ gameId: matchedGameId, playerId: yourId, playerColor: yourColor, opponentInfo: opponent });
+      persistGameSession({
+        gameId: matchedGameId,
+        playerId: yourId,
+        playerColor: yourColor,
+        opponentInfo: opponent,
+      });
       socketService.joinGame(matchedGameId, yourId);
       setView('playing');
       navigate(`/online/${matchedGameId}`, { replace: true });
@@ -137,7 +269,7 @@ export default function OnlinePlay() {
       pollingService.off('match_found', handleMatchFound);
       pollingService.off('matchmaking_error', handleMatchmakingError);
     };
-  }, [view, clearMatchmakingTimers, navigate, persistGameSession, setPlayerId, settings, handleCancelMatchmaking, setError, setPlayersInQueue, setMatchFound]);
+  }, [view, clearMatchmakingTimers, navigate, persistGameSession, setPlayerId, settings, handleCancelMatchmaking, setError, setPlayersInQueue, setMatchFound, pendingMatchmakingRef]);
 
   const handleSelectMode = useCallback(async (mode) => {
     if (!isLoggedIn) {
@@ -157,7 +289,12 @@ export default function OnlinePlay() {
   const handleCreateGame = useCallback(async () => {
     if (!isLoggedIn || !user) return setError('Sign in required.');
     try {
-      const res = await api.createOnlineGame({ playerId: `user_${user.id}`, playerName: user.username, playerColor: selectedColor, playerElo: user.elo });
+      const res = await api.createOnlineGame({
+        playerId: `user_${user.id}`,
+        playerName: user.username,
+        playerColor: selectedColor,
+        playerElo: user.elo,
+      });
       setGameId(res.gameCode);
       const id = `user_${user.id}`;
       setPlayerId(id);
@@ -165,7 +302,9 @@ export default function OnlinePlay() {
       persistGameSession({ gameId: res.gameCode, playerId: id, playerColor: res.playerColor });
       setView('waiting');
       setIsWaiting(true);
-    } catch (e) { setError('Failed to create game.'); }
+    } catch (e) {
+      setError('Failed to create game.');
+    }
   }, [selectedColor, isLoggedIn, user, setError, persistGameSession]);
 
   const handleJoinGame = useCallback(async () => {
@@ -173,15 +312,23 @@ export default function OnlinePlay() {
     if (!code) return setError('Please enter a game code');
     if (!isLoggedIn || !user) return setError('Sign in required.');
     try {
-      const res = await api.joinOnlineGame({ gameCode: code, playerId: `user_${user.id}`, playerName: user.username, playerElo: user.elo });
+      const res = await api.joinOnlineGame({
+        gameCode: code,
+        playerId: `user_${user.id}`,
+        playerName: user.username,
+        playerElo: user.elo,
+      });
       setGameId(res.gameCode);
       const id = `user_${user.id}`;
       setPlayerId(id);
       setPlayerColor(res.playerColor);
       persistGameSession({ gameId: res.gameCode, playerId: id, playerColor: res.playerColor });
       setView('playing');
-    } catch (e) { setError('Game not found or full.'); }
-  }, [joinCode, isLoggedIn, user, setError, persistGameSession]);
+      navigate(`/online/${res.gameCode}`, { replace: true });
+    } catch (e) {
+      setError('Game not found or full.');
+    }
+  }, [joinCode, isLoggedIn, user, setError, persistGameSession, navigate]);
 
   const handleLeaveGame = useCallback(() => {
     if (gameId && playerId) {
@@ -190,6 +337,8 @@ export default function OnlinePlay() {
     }
     setView('mode-select');
     setGameMode(null);
+    setGameId(null);
+    setOpponentInfo(null);
     clearGameSession();
     navigate('/online');
   }, [gameId, playerId, navigate, clearGameSession]);
@@ -254,10 +403,13 @@ export default function OnlinePlay() {
           </div>
         </div>
       )}
-      {view === 'playing' && (
+      {view === 'playing' && gameId && (
         <OnlineChessGame
-          gameId={gameId} playerId={playerId} playerColor={playerColor}
-          opponentInfo={opponentInfo} onLeave={handleLeaveGame}
+          gameId={gameId}
+          playerId={playerId}
+          playerColor={playerColor}
+          opponentInfo={opponentInfo}
+          onLeave={handleLeaveGame}
         />
       )}
       {showLoginModal && (

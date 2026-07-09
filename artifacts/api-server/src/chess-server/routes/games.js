@@ -347,7 +347,8 @@ router.get('/by-code/:gameCode', async (req, res) => {
 
     const normalizedCode = gameCode.toUpperCase();
     const result = await query(
-      `SELECT game_code, result, fen, move_history, game_mode, status, created_at
+      `SELECT game_code, result, fen, move_history, game_mode, status, created_at,
+              white_player_id, black_player_id, white_player_name, black_player_name
        FROM games WHERE game_code = $1 LIMIT 1`,
       [normalizedCode]
     );
@@ -358,7 +359,10 @@ router.get('/by-code/:gameCode', async (req, res) => {
 
     const activeResult = await query(
       `SELECT game_id AS game_code, NULL AS result, fen, move_history,
-              game_mode, status, created_at
+              game_mode, status, created_at,
+              white_player_id, black_player_id,
+              white_player_name, black_player_name,
+              white_elo, black_elo
        FROM active_games WHERE game_id = $1 LIMIT 1`,
       [normalizedCode]
     );
