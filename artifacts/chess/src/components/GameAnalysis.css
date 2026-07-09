@@ -251,3 +251,43 @@
 .analysis-inline {
   min-height: 200px;
 }
+
+/* ── Close button ───────────────── */
+.close-btn {
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  line-height: 1;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+
+.close-btn:hover {
+  color: #fff;
+  background: rgba(255,255,255,0.08);
+}
+
+/* ── Coach states ───────────────── */
+.coach-loading {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: #ccc;
+}
+
+.coach-error {
+  padding: 1rem;
+  background: rgba(231, 76, 60, 0.08);
+  border: 1px solid rgba(231, 76, 60, 0.2);
+  border-radius: 8px;
+  color: #e74c3c;
+}
+
+.small {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  margin-top: 8px;
+  line-height: 1.4;
+}

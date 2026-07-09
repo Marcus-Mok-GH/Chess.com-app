@@ -114,7 +114,96 @@
   font-size: 0.9rem;
 }
 
+/* ── Detailed Stats ──────────────── */
+.detailed-stats {
+  margin-bottom: 3rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.stat-item {
+  background-color: var(--card);
+  padding: 1.25rem;
+  border-radius: var(--radius-sm);
+  text-align: center;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.stat-item .stat-number {
+  display: block;
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: 0.25rem;
+}
+
+.stat-item .stat-text {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
+.win-stat .stat-number { color: var(--primary); }
+.draw-stat .stat-number { color: var(--text-dim); }
+.loss-stat .stat-number { color: var(--accent-red, #e74c3c); }
+
+/* ── Quick Actions ───────────────── */
+.quick-actions {
+  margin-bottom: 3rem;
+}
+
+.play-ai-card { /* inherits action-card styles */ }
+.play-online-card { /* inherits action-card styles */ }
+.play-online-card:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.card-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: var(--accent-red, #e74c3c);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+}
+
+/* ── Stat content helper ─────────── */
+.stat-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ── Card variants ───────────────── */
+.elo-card { /* inherits stat-card */ }
+.games-card { /* inherits stat-card */ }
+.winrate-card { /* inherits stat-card */ }
+
+/* ── Member Info ─────────────────── */
+.member-info {
+  padding: 1rem 0;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+.member-text {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
 @media (max-width: 768px) {
   .home-page { padding: 1.5rem 1rem; }
   .welcome-title { font-size: 2rem; }
+  .stats-grid { grid-template-columns: 1fr; }
 }

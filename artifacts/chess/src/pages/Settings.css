@@ -72,3 +72,168 @@
   font-weight: 700;
   cursor: pointer;
 }
+
+/* ── Toggle switch ──────────────── */
+.toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--color-bg-tertiary);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  left: 3px;
+  bottom: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.toggle input:checked + .toggle-slider {
+  background: var(--color-accent-primary);
+}
+
+.toggle input:checked + .toggle-slider::before {
+  transform: translateX(20px);
+}
+
+/* ── Theme selector ─────────────── */
+.theme-selector {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.theme-option {
+  background: var(--color-bg-primary);
+  border: 2px solid transparent;
+  border-radius: 6px;
+  padding: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.theme-option:hover {
+  border-color: rgba(255,255,255,0.15);
+}
+
+.theme-option.active {
+  border-color: var(--color-accent-primary);
+  box-shadow: 0 0 0 1px var(--color-accent-primary);
+}
+
+.theme-preview {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.theme-square.light { /* color set via inline style */ }
+.theme-square.dark  { /* color set via inline style */ }
+
+/* ── Volume slider ──────────────── */
+.volume-slider {
+  width: 120px;
+  accent-color: var(--color-accent-primary);
+}
+
+/* ── Link button ────────────────── */
+.link-button {
+  background: transparent;
+  border: 1px solid var(--color-border-default);
+  color: var(--color-accent-primary);
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.link-button:hover {
+  background: rgba(129,182,76,0.1);
+  border-color: var(--color-accent-primary);
+}
+
+/* ── Settings actions ───────────── */
+.settings-actions {
+  margin-top: 24px;
+  text-align: center;
+}
+
+.reset-btn {
+  background: transparent;
+  border: 1px solid var(--color-border-default);
+  color: var(--color-text-muted);
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.reset-btn:hover {
+  background: rgba(255,255,255,0.04);
+  color: var(--color-text-primary);
+}
+
+/* ── Account section ────────────── */
+.account-info {
+  margin-bottom: 16px;
+}
+
+.account-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border-default);
+}
+
+.account-row:last-child { border-bottom: none; }
+
+.account-label {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.account-value {
+  color: var(--color-text-primary);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+/* ── Guest note ─────────────────── */
+.settings-guest-note {
+  background: rgba(129,182,76,0.08);
+  border: 1px solid rgba(129,182,76,0.2);
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
