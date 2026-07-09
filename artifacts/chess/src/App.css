@@ -7,9 +7,9 @@
 
 /* ── Sidebar (Desktop) ─────────────────── */
 .sidebar-nav {
-  width: 140px;
+  width: 220px;
   background-color: var(--card);
-  border-right: 1px solid rgba(0,0,0,0.1);
+  border-right: 1px solid rgba(255,255,255,0.06);
   display: flex;
   flex-direction: column;
   position: sticky;
@@ -20,8 +20,8 @@
   flex-shrink: 0;
 }
 
-@media (min-width: 1200px) {
-  .sidebar-nav { width: 220px; }
+@media (min-width: 1440px) {
+  .sidebar-nav { width: 260px; }
 }
 
 .sidebar-content {
@@ -32,7 +32,7 @@
 }
 
 .sidebar-logo {
-  padding: 0 1rem;
+  padding: 0 1.25rem;
   margin-bottom: 2rem;
   display: flex;
   align-items: center;
@@ -43,47 +43,66 @@
 
 .logo-text {
   font-weight: 800;
-  font-size: 1.25rem;
+  font-size: 1.35rem;
   white-space: nowrap;
   overflow: hidden;
+  letter-spacing: -0.02em;
 }
 
 .sidebar-links {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 2px;
   flex: 1;
 }
 
 .sidebar-item {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 0.875rem 1.25rem;
+  gap: 0.875rem;
+  padding: 0.75rem 1.25rem;
   text-decoration: none;
   color: var(--text-dim);
   font-weight: 600;
+  font-size: 0.9375rem;
   transition: all 0.15s;
+  border-left: 3px solid transparent;
 }
 
 .sidebar-item:hover {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgba(255, 255, 255, 0.04);
   color: var(--foreground);
 }
 
 .sidebar-item.active {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: rgba(129, 182, 76, 0.08);
   color: var(--foreground);
-  border-left: 4px solid var(--primary);
-  padding-left: calc(1.25rem - 4px);
+  border-left-color: var(--primary);
+}
+
+.sidebar-icon {
+  font-size: 1.15rem;
+  width: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sidebar-footer {
   margin-top: auto;
-  padding: 1rem;
+  padding: 1rem 1rem 0;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.5rem;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding-top: 1rem;
 }
 
 .user-profile-mini {
@@ -99,6 +118,7 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  flex: 1;
 }
 
 .username {
@@ -115,14 +135,71 @@
   font-weight: 800;
 }
 
+.sidebar-logout {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text-dim);
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.sidebar-logout:hover {
+  background: rgba(231, 76, 60, 0.15);
+  color: #e74c3c;
+  border-color: rgba(231, 76, 60, 0.3);
+}
+
+.sidebar-login {
+  width: 100%;
+  padding: 0.625rem 1rem;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.sidebar-login:hover {
+  background: var(--primary-hover);
+}
+
+/* ── Mobile Header & Bottom Nav — hidden on desktop ── */
+.mobile-header {
+  display: none;
+}
+
+.bottom-nav {
+  display: none;
+}
+
+.offline-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  background: rgba(231, 76, 60, 0.15);
+  color: #e74c3c;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(231, 76, 60, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 /* ── Mobile Layout ──────────────────── */
 @media (max-width: 768px) {
   .app { flex-direction: column; }
   .sidebar-nav { display: none; }
-  
+  .offline-badge { display: none; }
+
   .mobile-header {
-    height: 50px;
     display: flex;
+    height: 50px;
     align-items: center;
     justify-content: space-between;
     padding: 0 1rem;
@@ -185,6 +262,13 @@ main {
   flex: 1;
   min-width: 0;
   position: relative;
+}
+
+/* ── Desktop page content wrapper ── */
+@media (min-width: 769px) {
+  main {
+    overflow-y: auto;
+  }
 }
 
 /* ── Global loading / spinner ───── */

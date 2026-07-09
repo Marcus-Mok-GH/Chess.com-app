@@ -20,6 +20,13 @@
   backdrop-filter: blur(12px);
 }
 
+/* Hide on desktop — ChessGame has its own sidebar for controls */
+@media (min-width: 1201px) {
+  .game-bottom-bar {
+    display: none !important;
+  }
+}
+
 .gbb-bot-message {
   width: 100%;
   display: flex;

@@ -3,17 +3,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4rem 2rem;
+  padding: 3rem 2rem;
 }
 
 .play-setup-card {
   width: 100%;
-  max-width: 800px;
+  max-width: 780px;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 4rem;
-  box-shadow: 0 40px 100px rgba(0,0,0,0.6);
+  padding: 3rem;
+  box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
   gap: 2.5rem;
