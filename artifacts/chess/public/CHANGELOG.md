@@ -1,5 +1,13 @@
 # Changelog
 
+## [2026-07-09] - OTP Value-Column Schema Self-Heal
+
+### Fixed
+- **OTP still returning "Failed to send verification code" in production** after the 2026-07-08 native flow rewrite + the 2026-07-09 id DEFAULT self-heal. The prod `verifications` table was originally created by an older deploy with a Better-Auth-compatible schema (including a NOT NULL `value` column) that the current `db/init.js` doesn't define. The new native `INSERT (identifier, code_hash, salt, expires_at)` omitted `value`, so PostgreSQL rejected every row with `23502 null value in column "value" violates not-null constraint`.
+  - `routes/auth.js`: include `value: codeHash` in the INSERT so it satisfies the prod schema's NOT NULL `value` column (a hash is a valid `value` for the legacy schema).
+  - `db/init.js`: idempotent `ALTER TABLE verifications DROP COLUMN IF EXISTS value` to self-heal older installs that have it; clean installs never get the column. Future migrations will be additive-only against the native schema.
+- Verified in production: `POST /api/auth/email-otp/send-verification-otp` now returns `200 { success: true, message: "Verification code sent." }` for all test requests. End-to-end Playwright test in Zo Browser (load `/login`, enter email, click "Send Code") now lands on the "Check your email" page with the 6-digit code input, instead of staying on the login modal with the red error text.
+
 ## [2026-07-09] - In-Game Progress Survives Refresh
 
 ### Fixed
@@ -14,6 +22,11 @@
 ### Changed
 - **Play page**: Auto-resumes the active bot game after a hard refresh (including when returning to `/play`).
 - **OnlinePlay page**: Restores the last active online session and navigates back into `/online/:gameId` after reload.
+
+## [2026-07-09] - Mailer Resend Path
+
+### Fixed
+- **O**
 
 ## [2026-07-08] - OTP Native Flow + CSS Token Unification
 
