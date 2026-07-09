@@ -129,6 +129,160 @@
   box-shadow: var(--shadow-sm);
 }
 
+/* ── Header extras ───────────────── */
+.analysis-game-id {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+.analysis-header-spacer {
+  width: 80px;
+}
+
+/* ── Panel loading ──────────────── */
+.analysis-panel-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  color: var(--color-text-muted);
+  gap: 1rem;
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(255,255,255,0.1);
+  border-top-color: var(--color-accent-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Tab content ────────────────── */
+.analysis-tab-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.analysis-report-pane {
+  padding: 1rem;
+}
+
+.analysis-moves-pane {
+  padding: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* ── Move list ──────────────────── */
+.analysis-moves-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.analysis-move-row {
+  display: grid;
+  grid-template-columns: 40px 1fr 1fr;
+  align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.analysis-move-num {
+  padding: 0 8px;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.analysis-move {
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  text-align: left;
+}
+
+.analysis-move:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+.analysis-move.active {
+  background: rgba(129, 182, 76, 0.15);
+  color: var(--color-accent-primary);
+}
+
+.analysis-move:disabled {
+  color: var(--color-text-muted);
+  cursor: default;
+  opacity: 0.4;
+}
+
+.no-moves {
+  padding: 2rem;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+/* ── Move nav ───────────────────── */
+.analysis-move-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.analysis-move-label {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  min-width: 60px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.btn-sm {
+  height: 36px;
+  padding: 0 12px;
+  font-size: 0.8rem;
+}
+
+/* ── Empty / error states ───────── */
+.analysis-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+}
+
+.analysis-empty-card {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-default);
+  border-radius: 12px;
+  padding: 3rem;
+  max-width: 480px;
+  text-align: center;
+}
+
+.analysis-empty-card h2 {
+  color: var(--color-text-primary);
+  margin: 0 0 1rem;
+}
+
+.analysis-empty-card p {
+  color: var(--color-text-muted);
+  margin: 0 0 1.5rem;
+}
+
 /* Mobile Adjustments */
 @media (max-width: 1024px) {
   .analysis-layout {

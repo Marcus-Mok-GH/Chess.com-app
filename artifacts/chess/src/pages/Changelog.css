@@ -111,6 +111,30 @@
   letter-spacing: 0.6px;
 }
 
+/* ── Navigation row ─────────────── */
+.changelog-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.changelog-home-btn {
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border-default);
+  color: var(--color-text-primary);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.changelog-home-btn:hover {
+  background: var(--color-bg-hover);
+}
+
 @media (max-width: 800px) {
   .changelog-layout {
     grid-template-columns: 1fr;

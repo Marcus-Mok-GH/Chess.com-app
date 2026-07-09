@@ -76,3 +76,179 @@
   border-radius: 8px;
   cursor: pointer;
 }
+
+.btn-primary:hover { filter: brightness(1.1); }
+
+.btn-secondary {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  font-weight: 700;
+  border: 1px solid var(--color-border-default);
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-ghost:hover {
+  background: rgba(255,255,255,0.05);
+  color: var(--color-text-primary);
+}
+
+/* ── Guest banner ───────────────── */
+.guest-banner {
+  background: rgba(243, 156, 18, 0.08);
+  border-bottom: 1px solid rgba(243, 156, 18, 0.2);
+  padding: 12px 24px;
+}
+
+.guest-banner-content {
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.guest-banner-icon {
+  font-size: 1.25rem;
+}
+
+.guest-banner-text {
+  flex: 1;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}
+
+/* ── Waiting / Matchmaking ──────── */
+.waiting-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.waiting-content {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-default);
+  border-radius: 12px;
+  padding: 3rem;
+  text-align: center;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+
+.waiting-content h2 {
+  color: var(--color-text-primary);
+  margin: 0 0 1rem;
+  font-weight: 800;
+}
+
+.waiting-content p {
+  color: var(--color-text-muted);
+  margin: 0 0 1rem;
+}
+
+/* ── Join form ──────────────────── */
+.join-form {
+  display: flex;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.join-form input {
+  flex: 1;
+  padding: 10px 14px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-default);
+  border-radius: 8px;
+  color: var(--color-text-primary);
+  font-size: 0.9rem;
+}
+
+.join-form input:focus {
+  border-color: var(--color-accent-primary);
+  outline: none;
+}
+
+/* ── Game code box ──────────────── */
+.game-code-box {
+  background: var(--color-bg-primary);
+  border: 2px dashed var(--color-border-default);
+  border-radius: 8px;
+  padding: 16px;
+  font-family: monospace;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-accent-primary);
+  letter-spacing: 0.1em;
+  margin: 16px 0;
+}
+
+/* ── Match found animation ──────── */
+.match-found-animation {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.match-found-content {
+  text-align: center;
+}
+
+.match-found-content h2 {
+  font-size: 2.5rem;
+  color: var(--color-accent-primary);
+  margin: 0 0 1.5rem;
+  animation: pulse 0.6s ease infinite alternate;
+}
+
+@keyframes pulse {
+  from { transform: scale(1); }
+  to   { transform: scale(1.05); }
+}
+
+.opponent-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--color-text-primary);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.opponent-avatar {
+  width: 64px;
+  height: 64px;
+  background: var(--color-accent-primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #fff;
+}
