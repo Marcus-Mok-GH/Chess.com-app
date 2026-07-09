@@ -59,24 +59,19 @@ export function setupGameHandlers(io, socket) {
     const isBlackPlayer = game.black_player_id === playerId;
     const isParticipant = isWhitePlayer || isBlackPlayer;
 
-    if (isWhitePlayer && game.white_socket_id && game.white_socket_id !== socket.id) {
-      socket.emit('game_error', { message: 'Unauthorized - not your game' });
-      return;
-    }
-
-    if (isBlackPlayer && game.black_socket_id && game.black_socket_id !== socket.id) {
-      socket.emit('game_error', { message: 'Unauthorized - not your game' });
-      return;
-    }
-
-    if (game.white_socket_id === socket.id && game.white_player_id && game.white_player_id !== playerId) {
-      socket.emit('game_error', { message: 'Player ID mismatch' });
-      return;
-    }
-
-    if (game.black_socket_id === socket.id && game.black_player_id && game.black_player_id !== playerId) {
-      socket.emit('game_error', { message: 'Player ID mismatch' });
-      return;
+    // Authenticated participants may rejoin after refresh / reconnect.
+    // Always re-bind their socket id so a new connection replaces the old one.
+    // Spectators keep the previous spectator-style path.
+    if (!isParticipant) {
+      // Non-participants can only spectate; block if they try to claim a seat
+      if (game.white_socket_id === socket.id && game.white_player_id && game.white_player_id !== playerId) {
+        socket.emit('game_error', { message: 'Player ID mismatch' });
+        return;
+      }
+      if (game.black_socket_id === socket.id && game.black_player_id && game.black_player_id !== playerId) {
+        socket.emit('game_error', { message: 'Player ID mismatch' });
+        return;
+      }
     }
 
     if (isWhitePlayer && game.white_socket_id !== socket.id) {

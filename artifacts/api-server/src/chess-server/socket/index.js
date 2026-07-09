@@ -27,10 +27,6 @@ export async function registerSocketHandlers(io, socket) {
       for (const game of activeGames.rows) {
         const isWhiteSocket = game.white_socket_id === socket.id;
         const otherSocketId = isWhiteSocket ? game.black_socket_id : game.white_socket_id;
-        const nextWhiteSocketId = isWhiteSocket ? null : game.white_socket_id;
-        const nextBlackSocketId = isWhiteSocket ? game.black_socket_id : null;
-        const bothPlayersGone = !nextWhiteSocketId && !nextBlackSocketId;
-        const nextStatus = bothPlayersGone ? 'ended' : game.status;
 
         if (otherSocketId) {
           io.to(otherSocketId).emit('opponent_disconnected', {
@@ -39,24 +35,17 @@ export async function registerSocketHandlers(io, socket) {
           });
         }
 
+        // Clear this socket only. Do NOT end the game on disconnect —
+        // page refreshes drop the socket briefly and players rejoin via join_game.
+        // Games are closed only on explicit leave / game_over / resign.
         await query(
           `UPDATE active_games
            SET white_socket_id = CASE WHEN white_socket_id = $1 THEN NULL ELSE white_socket_id END,
                black_socket_id = CASE WHEN black_socket_id = $1 THEN NULL ELSE black_socket_id END,
-               status = $2,
                updated_at = CURRENT_TIMESTAMP
-           WHERE game_id = $3`,
-          [socket.id, nextStatus, game.game_id]
+           WHERE game_id = $2`,
+          [socket.id, game.game_id]
         );
-
-        if (bothPlayersGone) {
-          await query(
-            `UPDATE games
-             SET status = 'completed', updated_at = CURRENT_TIMESTAMP
-             WHERE game_code = $1`,
-            [game.game_id]
-          );
-        }
       }
     } catch (error) {
       console.error('[Socket] Error handling disconnect:', error);

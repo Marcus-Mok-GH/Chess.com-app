@@ -97,6 +97,31 @@ class ApiService {
     });
   }
 
+  async createOnlineGame({ playerId, playerName, playerColor, playerElo, gameCode }) {
+    return this.request('/games/online/create', {
+      method: 'POST',
+      body: JSON.stringify({ playerId, playerName, playerColor, playerElo, gameCode }),
+    });
+  }
+
+  async joinOnlineGame({ gameCode, playerId, playerName, playerElo }) {
+    return this.request('/games/online/join', {
+      method: 'POST',
+      body: JSON.stringify({ gameCode, playerId, playerName, playerElo }),
+    });
+  }
+
+  async leaveOnlineGame({ gameCode, playerId }) {
+    return this.request('/games/online/leave', {
+      method: 'POST',
+      body: JSON.stringify({ gameCode, playerId }),
+    });
+  }
+
+  async getGameByCode(gameCode) {
+    return this.request(`/games/by-code/${encodeURIComponent(gameCode)}`);
+  }
+
   async getEngineMove({ fen, bot }) {
     return this.request('/engine/move', {
       method: 'POST',

@@ -6,28 +6,96 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useUser } from '../contexts/UserContext';
 import GameBottomBar from '../components/GameBottomBar';
 import PlaySetup from '../components/PlaySetup';
-import { BOTS } from '../engine/bots/bots';
+import { BOTS, createCustomBot } from '../engine/bots/bots';
 import { generateGameId } from '../engine/game/gameId';
 import api from '../services/api';
+import {
+  loadLocalGame,
+  getActiveLocalGameId,
+  saveLocalGame,
+  clearLocalGame,
+} from '../utils/gamePersistence';
 
 import './Play.css';
+
+function botFromSetup(setup) {
+  if (!setup) return BOTS.find((b) => b.id === 'nelson') || BOTS[0];
+  if (setup.selectedBot) return setup.selectedBot;
+  if (setup.botId === 'custom') return createCustomBot(setup.customElo ?? 1000);
+  if (setup.botId) return BOTS.find((b) => b.id === setup.botId) || BOTS[0];
+  return BOTS.find((b) => b.id === 'nelson') || BOTS[0];
+}
 
 export default function Play({ initialGameId = null, initialSetup = null }) {
   const navigate = useNavigate();
   const { settings } = useSettings();
   const { user, isOnline } = useUser();
 
-  const [phase, setPhase] = useState(initialGameId ? 'game' : 'setup');
-  const [playerColor, setPlayerColor] = useState(initialSetup?.playerColor || 'w');
-  const [customElo, setCustomElo] = useState(initialSetup?.customElo ?? 1000);
-  const [selectedBot, setSelectedBot] = useState(() => initialSetup?.selectedBot || BOTS.find((b) => b.id === 'nelson') || BOTS[0]);
+  // On direct /play visit, try to resume an active local game from localStorage
+  const resumedFromStorage = useMemo(() => {
+    if (initialGameId) {
+      const saved = loadLocalGame(initialGameId);
+      if (saved) return saved;
+      return null;
+    }
+    const activeId = getActiveLocalGameId();
+    if (!activeId) return null;
+    return loadLocalGame(activeId);
+  }, [initialGameId]);
 
-  const boardOrientation = useMemo(() => (playerColor === 'w' ? 'white' : 'black'), [playerColor]);
+  const effectiveGameId = initialGameId
+    ? String(initialGameId).toUpperCase()
+    : resumedFromStorage?.gameId || null;
+
+  const mergedSetup = useMemo(() => {
+    if (initialSetup?.selectedBot || initialSetup?.playerColor) {
+      return {
+        selectedBot: initialSetup.selectedBot,
+        customElo: initialSetup.customElo,
+        playerColor: initialSetup.playerColor,
+      };
+    }
+    if (resumedFromStorage) {
+      return {
+        selectedBot: botFromSetup(resumedFromStorage),
+        customElo: resumedFromStorage.customElo ?? 1000,
+        playerColor: resumedFromStorage.playerColor || 'w',
+      };
+    }
+    return null;
+  }, [initialSetup, resumedFromStorage]);
+
+  const [phase, setPhase] = useState(effectiveGameId ? 'game' : 'setup');
+  const [playerColor, setPlayerColor] = useState(mergedSetup?.playerColor || 'w');
+  const [customElo, setCustomElo] = useState(mergedSetup?.customElo ?? 1000);
+  const [selectedBot, setSelectedBot] = useState(
+    () => mergedSetup?.selectedBot || BOTS.find((b) => b.id === 'nelson') || BOTS[0],
+  );
+  const [activeGameId, setActiveGameId] = useState(effectiveGameId);
+
+  const boardOrientation = useMemo(
+    () => (playerColor === 'w' ? 'white' : 'black'),
+    [playerColor],
+  );
+
+  // If we landed on /play without a game id but found a saved game, put it in the URL
+  useEffect(() => {
+    if (!initialGameId && resumedFromStorage?.gameId && phase === 'game') {
+      navigate(`/game/${resumedFromStorage.gameId}?mode=local`, {
+        replace: true,
+        state: {
+          selectedBot: botFromSetup(resumedFromStorage),
+          customElo: resumedFromStorage.customElo ?? 1000,
+          playerColor: resumedFromStorage.playerColor || 'w',
+        },
+      });
+      setActiveGameId(resumedFromStorage.gameId);
+    }
+  }, [initialGameId, resumedFromStorage, phase, navigate]);
 
   useEffect(() => {
     const shouldHideNav = phase === 'game';
 
-    // Apply to both <html> and <body> to avoid edge-cases where layout is scoped differently
     document.documentElement.classList.toggle('hide-bottom-nav', shouldHideNav);
     document.body.classList.toggle('hide-bottom-nav', shouldHideNav);
 
@@ -39,9 +107,22 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
 
   async function handleStart() {
     if (!user) {
-      const gameId = initialGameId || generateGameId();
+      const gameId = activeGameId || generateGameId();
+      // Seed localStorage so a mid-game refresh restores setup + empty board
+      saveLocalGame({
+        gameId,
+        fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+        moveHistory: [],
+        playerColor,
+        boardOrientation: playerColor === 'w' ? 'white' : 'black',
+        botId: selectedBot.id,
+        botName: selectedBot.id === 'custom' ? `Custom Bot (${customElo})` : selectedBot.name,
+        customElo,
+        result: 'in_progress',
+      });
+
       navigate(`/game/${gameId}?mode=local`, {
-        replace: Boolean(initialGameId),
+        replace: Boolean(activeGameId),
         state: {
           selectedBot,
           customElo,
@@ -49,19 +130,31 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
         },
       });
 
+      setActiveGameId(gameId);
       setPhase('game');
       return;
     }
 
     if (!isOnline) {
-      window.alert('You are offline. Game progress will not be saved.');
+      window.alert('You are offline. Game progress will be saved locally on this device.');
     }
 
-    // Generate a gameId and put it in the URL like online games
-    const gameId = initialGameId || generateGameId();
+    const gameId = activeGameId || generateGameId();
 
     const botName = selectedBot.id === 'custom' ? `Custom Bot (${customElo})` : selectedBot.name;
     const botElo = selectedBot.id === 'custom' ? customElo : selectedBot.rating;
+
+    saveLocalGame({
+      gameId,
+      fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      moveHistory: [],
+      playerColor,
+      boardOrientation: playerColor === 'w' ? 'white' : 'black',
+      botId: selectedBot.id,
+      botName,
+      customElo,
+      result: 'in_progress',
+    });
 
     if (isOnline) {
       try {
@@ -79,7 +172,7 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
     }
 
     navigate(`/game/${gameId}?mode=local`, {
-      replace: Boolean(initialGameId),
+      replace: Boolean(activeGameId),
       state: {
         selectedBot,
         customElo,
@@ -87,15 +180,24 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
       },
     });
 
+    setActiveGameId(gameId);
     setPhase('game');
   }
 
   const gameRef = useRef(null);
-  const [uiState, setUiState] = useState({ canUndo: false, isThinking: false, gameStatus: 'playing', showHints: true });
+  const [uiState, setUiState] = useState({
+    canUndo: false,
+    isThinking: false,
+    gameStatus: 'playing',
+    showHints: true,
+  });
 
   function handleSetup() {
-    // Back to bot selection. We also reset the URL back to /play.
+    if (activeGameId) {
+      clearLocalGame(activeGameId);
+    }
     setPhase('setup');
+    setActiveGameId(null);
     navigate('/play', { replace: true });
   }
 
@@ -137,7 +239,7 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
         <>
           <ChessGame
             ref={gameRef}
-            initialGameId={initialGameId}
+            initialGameId={activeGameId || effectiveGameId}
             initialSelectedBot={selectedBot}
             initialCustomElo={customElo}
             initialBoardOrientation={boardOrientation}

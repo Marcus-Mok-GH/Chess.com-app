@@ -17,11 +17,27 @@ import { generateGameId } from '../engine/game/gameId';
 import { normalizeMoveHistory, toSanHistory, toStoredMoveHistory, buildGameFromHistory } from '../engine/game/moveHistory';
 import { useUser } from '../contexts/UserContext';
 import api from '../services/api';
+import {
+  saveLocalGame,
+  loadLocalGame,
+  clearLocalGame,
+  markLocalGameFinished,
+} from '../utils/gamePersistence';
 
 import { findKingSquare, applyEngineMove, getMoveCoords } from './ChessGame/utils';
 import { useCapturedPieces, usePieceAnimations } from './ChessGame/hooks';
 import GameStatus from './ChessGame/subcomponents/GameStatus';
 import './ChessGame.css';
+
+function resolveBotFromPersisted(persisted, fallbackBot) {
+  if (persisted?.botId === 'custom') {
+    return createCustomBot(persisted.customElo ?? 1000);
+  }
+  if (persisted?.botId) {
+    return BOTS.find((b) => b.id === persisted.botId) || fallbackBot;
+  }
+  return fallbackBot;
+}
 
 function ChessGame(
   {
@@ -36,45 +52,69 @@ function ChessGame(
 ) {
   const { user, isOnline } = useUser();
   const { settings } = useSettings();
-  
-  // Initialize state with error handling
-  const [game, setGame] = useState(() => {
+
+  const resolvedGameId = useMemo(
+    () => (initialGameId ? String(initialGameId).toUpperCase() : generateGameId()),
+    // Only resolve once per mount / game id prop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [initialGameId],
+  );
+
+  // Synchronous localStorage restore so the board never flashes empty on refresh
+  const restoredSnapshot = useMemo(() => {
+    if (!initialGameId) return null;
+    return loadLocalGame(resolvedGameId);
+  }, [initialGameId, resolvedGameId]);
+
+  const defaultBot = initialSelectedBot || BOTS.find((b) => b.id === 'nelson') || BOTS[0];
+  const startingBot = resolveBotFromPersisted(restoredSnapshot, defaultBot);
+  const startingColor = restoredSnapshot?.playerColor || initialPlayerColor || 'w';
+  const startingOrientation =
+    restoredSnapshot?.boardOrientation ||
+    initialBoardOrientation ||
+    (startingColor === 'w' ? 'white' : 'black');
+  const startingCustomElo = restoredSnapshot?.customElo ?? initialCustomElo ?? 1000;
+  const startingHistory = restoredSnapshot
+    ? normalizeMoveHistory(restoredSnapshot.moveHistory)
+    : [];
+  const startingGame = (() => {
     try {
+      if (restoredSnapshot && (startingHistory.length > 0 || restoredSnapshot.fen)) {
+        return buildGameFromHistory(startingHistory, restoredSnapshot.fen);
+      }
       return new Chess();
     } catch (error) {
       console.error('Failed to initialize chess game:', error);
       return null;
     }
-  });
-  
-  const [boardOrientation, setBoardOrientation] = useState(initialBoardOrientation || 'white');
-  const [playerColor, setPlayerColor] = useState(initialPlayerColor || 'w');
+  })();
+
+  const [game, setGame] = useState(() => startingGame);
+  const [boardOrientation, setBoardOrientation] = useState(startingOrientation);
+  const [playerColor, setPlayerColor] = useState(startingColor);
   const [selectedBot, setSelectedBot] = useState(() => {
     try {
-      return (
-        initialSelectedBot ||
-        BOTS.find((b) => b.id === 'nelson') ||
-        BOTS[0]
-      );
+      return startingBot;
     } catch (error) {
       console.error('Failed to initialize bot:', error);
       return null;
     }
   });
-  const [customElo, setCustomElo] = useState(initialCustomElo ?? 1000);
+  const [customElo, setCustomElo] = useState(startingCustomElo);
   const [isThinking, setIsThinking] = useState(false);
-  const [moveHistory, setMoveHistory] = useState([]);
+  const [moveHistory, setMoveHistory] = useState(startingHistory);
   const [possibleMoves, setPossibleMoves] = useState([]);
   const [selectedSquare, setSelectedSquare] = useState(null);
   const [botMessage, setBotMessage] = useState('');
   const [hintMove, setHintMove] = useState(null);
-  const [gameId, setGameId] = useState(() => (initialGameId ? String(initialGameId).toUpperCase() : generateGameId()));
-  const [hasLoadedPersistedState, setHasLoadedPersistedState] = useState(false);
+  const [gameId, setGameId] = useState(resolvedGameId);
+  // If we already restored from localStorage, mark loaded; otherwise wait for DB/local load
+  const [hasLoadedPersistedState, setHasLoadedPersistedState] = useState(() => Boolean(restoredSnapshot) || !initialGameId);
   const navigate = useNavigate();
   const [debugInfo, setDebugInfo] = useState(null);
   const [coachingTip, setCoachingTip] = useState(null);
   const [isCoachingLoading, setIsCoachingLoading] = useState(false);
-  const [hasResigned, setHasResigned] = useState(false);
+  const [hasResigned, setHasResigned] = useState(() => Boolean(restoredSnapshot?.hasResigned));
   const [showVictory, setShowVictory] = useState(false);
   const [engineError, setEngineError] = useState(null);
   const gameRef = useRef(game);
@@ -90,6 +130,8 @@ function ChessGame(
   const busyRetryCountRef = useRef(0);
 
   const suppressPersistRef = useRef(false);
+  const playerColorRef = useRef(playerColor);
+  const boardOrientationRef = useRef(boardOrientation);
 
   const { animatingPieces, triggerAnimation, removeAnimation } = usePieceAnimations();
   const capturedPieces = useCapturedPieces(game);
@@ -127,6 +169,14 @@ function ChessGame(
   }, [isThinking]);
 
   useEffect(() => {
+    playerColorRef.current = playerColor;
+  }, [playerColor]);
+
+  useEffect(() => {
+    boardOrientationRef.current = boardOrientation;
+  }, [boardOrientation]);
+
+  useEffect(() => {
     if (!game) return;
 
     const isCheckmate = game.isCheckmate();
@@ -159,9 +209,39 @@ function ChessGame(
     customEloRef.current = customElo;
   }, [customElo]);
 
+  const persistLocalSnapshot = useCallback((currentGame, currentHistory, extra = {}) => {
+    if (suppressPersistRef.current || !currentGame) return;
+
+    const bot = selectedBotRef.current;
+    const gameResult = extra.result
+      || (currentGame.isCheckmate()
+        ? (currentGame.turn() === 'w' ? 'black' : 'white')
+        : currentGame.isDraw()
+          ? 'draw'
+          : 'in_progress');
+
+    saveLocalGame({
+      gameId,
+      fen: currentGame.fen(),
+      moveHistory: toStoredMoveHistory(currentHistory),
+      playerColor: playerColorRef.current,
+      boardOrientation: boardOrientationRef.current,
+      botId: bot?.id || null,
+      botName: bot?.id === 'custom' ? `Custom Bot (${customEloRef.current})` : bot?.name,
+      customElo: customEloRef.current,
+      hasResigned: Boolean(extra.hasResigned),
+      result: gameResult,
+    });
+  }, [gameId]);
+
   const persistGame = useCallback(async (currentGame, currentHistory) => {
-    if (!initialGameId || !hasLoadedPersistedState || !currentGame || !isOnline || !user) return;
-    
+    if (!hasLoadedPersistedState || !currentGame || suppressPersistRef.current) return;
+
+    // Always keep a local snapshot so refresh survives even offline / as guest
+    persistLocalSnapshot(currentGame, currentHistory);
+
+    if (!isOnline || !user) return;
+
     try {
       const gameResult = currentGame.isCheckmate()
         ? (currentGame.turn() === 'w' ? 'black' : 'white')
@@ -191,49 +271,63 @@ function ChessGame(
     } catch (error) {
       console.error('[ChessGame] Failed to persist game state:', error);
     }
-  }, [gameId, hasLoadedPersistedState, initialGameId, isOnline, playerColor, user]);
+  }, [gameId, hasLoadedPersistedState, isOnline, playerColor, user, persistLocalSnapshot]);
 
   useEffect(() => {
-    if (hasLoadedPersistedState || !initialGameId) return;
+    if (hasLoadedPersistedState) return;
 
     let isMounted = true;
     const loadState = async () => {
-      try {
-        if (!user) {
-          console.warn('[ChessGame] Cannot load game state without a user');
-          return;
-        }
+      // 1) Prefer localStorage (instant, works offline / guest)
+      const local = loadLocalGame(gameId);
+      if (local) {
+        const normalizedHistory = normalizeMoveHistory(local.moveHistory);
+        const restoredGame = buildGameFromHistory(normalizedHistory, local.fen);
+        if (!isMounted) return;
 
+        setGame(restoredGame);
+        setMoveHistory(normalizedHistory);
+        if (local.playerColor) setPlayerColor(local.playerColor);
+        if (local.boardOrientation) setBoardOrientation(local.boardOrientation);
+        if (local.customElo != null) setCustomElo(local.customElo);
+        if (local.hasResigned) setHasResigned(true);
+        const bot = resolveBotFromPersisted(local, selectedBotRef.current);
+        if (bot) setSelectedBot(bot);
+
+        setHasLoadedPersistedState(true);
+        console.log('[ChessGame] Loaded game state from localStorage');
+        return;
+      }
+
+      // 2) Fall back to DB when logged in
+      if (!user || !isOnline) {
+        if (isMounted) setHasLoadedPersistedState(true);
+        return;
+      }
+
+      try {
         const match = await api.getLocalGameByCode(user.username, gameId);
+        if (!isMounted) return;
+
         if (!match) {
-          if (isMounted) {
-            setHasLoadedPersistedState(true);
-          }
+          setHasLoadedPersistedState(true);
           return;
         }
 
         const normalizedHistory = normalizeMoveHistory(match.move_history);
+        const restoredGame = match.fen
+          ? buildGameFromHistory(normalizedHistory, match.fen)
+          : buildGameFromHistory(normalizedHistory);
 
-        if (!match?.fen) {
-          if (isMounted) {
-            setMoveHistory(normalizedHistory);
-            setHasLoadedPersistedState(true);
-          }
-          return;
-        }
-
-        const restoredGame = buildGameFromHistory(normalizedHistory, match.fen);
-        if (isMounted) {
-          setGame(restoredGame);
-          setMoveHistory(normalizedHistory);
-          setHasLoadedPersistedState(true);
-          console.log('[ChessGame] Loaded game state from database');
-        }
+        setGame(restoredGame);
+        setMoveHistory(normalizedHistory);
+        setHasLoadedPersistedState(true);
+        // Mirror into localStorage for next refresh
+        persistLocalSnapshot(restoredGame, normalizedHistory);
+        console.log('[ChessGame] Loaded game state from database');
       } catch (error) {
         console.error('[ChessGame] Failed to load saved game state:', error);
-        if (isMounted) {
-          setHasLoadedPersistedState(true);
-        }
+        if (isMounted) setHasLoadedPersistedState(true);
       }
     };
 
@@ -241,7 +335,7 @@ function ChessGame(
     return () => {
       isMounted = false;
     };
-  }, [gameId, hasLoadedPersistedState, initialGameId, user]);
+  }, [gameId, hasLoadedPersistedState, user, isOnline, persistLocalSnapshot]);
 
   useEffect(() => {
     if (moveHistory.length === 0 && selectedBot) {
@@ -348,31 +442,44 @@ function ChessGame(
   }, [triggerAnimation, persistGame]);
 
   useEffect(() => {
-    if (game.turn() !== playerColor && !game.isGameOver() && !isThinking) {
+    if (!game || !hasLoadedPersistedState) return;
+    if (game.turn() !== playerColor && !game.isGameOver() && !isThinking && !hasResigned) {
       const timer = setTimeout(() => {
-        if (gameRef.current.turn() !== playerColor && !gameRef.current.isGameOver() && !isThinkingRef.current) {
+        if (
+          gameRef.current &&
+          gameRef.current.turn() !== playerColor &&
+          !gameRef.current.isGameOver() &&
+          !isThinkingRef.current
+        ) {
           makeAIMove();
         }
       }, 50);
       return () => clearTimeout(timer);
     }
-  }, [game, playerColor, isThinking, makeAIMove]);
+  }, [game, playerColor, isThinking, makeAIMove, hasLoadedPersistedState, hasResigned]);
 
   const saveGameToDatabase = useCallback(async (reason, winner) => {
+    let result;
+    if (reason === 'resigned') {
+      result = winner;
+    } else if (game.isCheckmate()) {
+      result = game.turn() === 'w' ? 'black' : 'white';
+    } else if (game.isDraw()) {
+      result = 'draw';
+    } else {
+      result = 'unknown';
+    }
+
+    // Local persistence first so finished games don't re-open as active on refresh
+    persistLocalSnapshot(game, moveHistory, {
+      result: reason === 'resigned' ? 'resigned' : result,
+      hasResigned: reason === 'resigned',
+    });
+    markLocalGameFinished(gameId, reason === 'resigned' ? 'resigned' : result);
+
     if (!isOnline || !user) return;
 
     try {
-      let result;
-      if (reason === 'resigned') {
-        result = winner;
-      } else if (game.isCheckmate()) {
-        result = game.turn() === 'w' ? 'black' : 'white';
-      } else if (game.isDraw()) {
-        result = 'draw';
-      } else {
-        result = 'unknown';
-      }
-
       const bot = selectedBotRef.current;
       const botName = bot.id === 'custom' ? `Custom Bot (${customEloRef.current})` : bot.name;
       const botElo = bot.id === 'custom' ? customEloRef.current : bot.rating;
@@ -391,12 +498,12 @@ function ChessGame(
         playerColor: playerColor === 'w' ? 'white' : 'black',
         finalFen: game.fen(),
       });
-      
+
       console.log('✅ Game saved to database');
     } catch (error) {
       console.error('🔸 Failed to save game:', error);
     }
-  }, [game, gameId, moveHistory, isOnline, user, playerColor]);
+  }, [game, gameId, moveHistory, isOnline, user, playerColor, persistLocalSnapshot]);
 
   useEffect(() => {
     if (getGameStatus !== 'playing' && !hasResigned && moveHistory.length > 0) {
@@ -548,6 +655,7 @@ function ChessGame(
   const handleNewGame = useCallback(() => {
     const newId = generateGameId();
     suppressPersistRef.current = true;
+    clearLocalGame(gameId);
     setGameId(newId);
     const newGame = new Chess();
     setGame(newGame);
@@ -562,14 +670,31 @@ function ChessGame(
     setEngineError(null);
     engineErrorRef.current = false;
     busyRetryCountRef.current = 0;
-  }, [selectedBot]);
+    // Allow persistence for the new game after state settles
+    setTimeout(() => {
+      suppressPersistRef.current = false;
+      saveLocalGame({
+        gameId: newId,
+        fen: newGame.fen(),
+        moveHistory: [],
+        playerColor: playerColorRef.current,
+        boardOrientation: boardOrientationRef.current,
+        botId: selectedBotRef.current?.id,
+        botName: selectedBotRef.current?.name,
+        customElo: customEloRef.current,
+        result: 'in_progress',
+      });
+    }, 0);
+  }, [selectedBot, gameId]);
 
   const handleResign = useCallback(() => {
     if (hasResigned || game.isGameOver()) return;
     setHasResigned(true);
     setBotMessage(getRandomQuote(selectedBot, 'win'));
-    saveGameToDatabase('resigned', selectedBot.name === 'You' ? 'black' : 'white');
-  }, [hasResigned, game, selectedBot, saveGameToDatabase]);
+    // Player resigned → opponent (bot) wins
+    const winner = playerColor === 'w' ? 'black' : 'white';
+    saveGameToDatabase('resigned', winner);
+  }, [hasResigned, game, selectedBot, saveGameToDatabase, playerColor]);
 
   const handleUndo = useCallback(() => {
     const gameCopy = buildGameFromHistory(moveHistory, game.fen());
@@ -585,9 +710,15 @@ function ChessGame(
 
   const handleFlipBoard = useCallback(() => {
     const newOrientation = boardOrientation === 'white' ? 'black' : 'white';
+    const newColor = newOrientation === 'white' ? 'w' : 'b';
     setBoardOrientation(newOrientation);
-    setPlayerColor(newOrientation === 'white' ? 'w' : 'b');
-  }, [boardOrientation]);
+    setPlayerColor(newColor);
+    boardOrientationRef.current = newOrientation;
+    playerColorRef.current = newColor;
+    if (game) {
+      persistLocalSnapshot(game, moveHistory);
+    }
+  }, [boardOrientation, game, moveHistory, persistLocalSnapshot]);
 
   const handleSelectBot = useCallback((bot) => {
     setSelectedBot(bot);
