@@ -119,6 +119,7 @@ export async function initDatabase() {
             identifier VARCHAR(255) NOT NULL,
             code_hash TEXT NOT NULL,
             salt TEXT NOT NULL,
+            value TEXT,
             expires_at TIMESTAMP NOT NULL,
             attempts INTEGER NOT NULL DEFAULT 0,
             consumed_at TIMESTAMP,
