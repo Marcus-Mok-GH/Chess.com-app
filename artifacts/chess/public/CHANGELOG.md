@@ -23,6 +23,15 @@
 - **Play page**: Auto-resumes the active bot game after a hard refresh (including when returning to `/play`).
 - **OnlinePlay page**: Restores the last active online session and navigates back into `/online/:gameId` after reload.
 
+## [2026-07-09] - OTP Endpoint Reliability Fix
+
+### Fixed
+- **OTP endpoint 500 in dev/test**: `mailer.js` now falls back to console logging when no mailer is configured (RESEND_API_KEY or SMTP_* missing) instead of throwing \"No mailer configured\". This matches the README's \"falls back to console logging for dev\" contract and prevents the `/api/auth/email-otp/*` routes from returning 500 in environments without email credentials. The dev code is logged as `[OTP-DEV] Code for <email>: <code>` so local testing still works.
+- **OTP send invalidates previous code on failure**: Reordered `sendOtp()` in `routes/auth.js` to send the email BEFORE invalidating previous codes and inserting the new verification row. Previously, `invalidatePrevious()` was called first, so if `sendOtpEmail` failed, the user lost their existing valid code and entered a 30s cooldown with no usable code. Now the DB is only touched after successful email dispatch.
+- **Cooldown race**: Cooldown query now checks only non-consumed, non-expired verifications (`consumed_at IS NULL AND expires_at > NOW()`), allowing immediate re-request after a successful verification while still preventing abuse.
+- **Cold-start race in app.ts**: `artifacts/api-server/src/app.ts` previously called `loadChessRoutes()` without awaiting, so the first request on cold start could hit `/api/auth/*` before routes were mounted, returning 404/500. Refactored to use top-level await for deterministic route mounting and added a JSON error handler (mirroring `chess-server/index.js`) to guarantee `{error:{message}}` responses.
+- Verified: `node --check` passes for auth and mailer modules; OTP flow now returns 200 when mailer is unconfigured (dev fallback) and preserves existing codes on mailer failure.
+
 ## [2026-07-09] - Mailer Resend Path
 
 ### Fixed
