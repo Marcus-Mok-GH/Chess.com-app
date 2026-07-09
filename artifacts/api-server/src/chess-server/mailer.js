@@ -1,7 +1,5 @@
 import nodemailer from 'nodemailer';
 
-const RESEND_API_URL = 'https://api.resend.com/emails';
-
 function createTransport() {
   const host = process.env.SMTP_HOST;
   const user = process.env.SMTP_USER;
@@ -20,24 +18,6 @@ function createTransport() {
   return null;
 }
 
-async function sendViaResend({ from, to, subject, text, html }) {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) return null;
-  const res = await fetch(RESEND_API_URL, {
-    method: 'POST',
-    headers: {
-      'authorization': `Bearer ${apiKey}`,
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({ from, to, subject, text, html }),
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`Resend API ${res.status}: ${body || res.statusText}`);
-  }
-  return res.json().catch(() => ({}));
-}
-
 export async function sendOtpEmail({ to, code }) {
   const subject = 'Your Chess sign-in code';
   const text = `Your verification code is: ${code}\n\nIt expires in 10 minutes. Do not share it with anyone.`;
@@ -49,31 +29,21 @@ export async function sendOtpEmail({ to, code }) {
       <p style="color:#666;font-size:13px">If you didn't request this, you can safely ignore it.</p>
     </div>`;
 
-  // 1) Resend takes priority — it's the production path and works on serverless.
-  if (process.env.RESEND_API_KEY) {
-    const from = process.env.RESEND_FROM || 'Chess <onboarding@resend.dev>';
-    try {
-      await sendViaResend({ from, to, subject, text, html });
-      console.log(`[OTP] Resent via Resend to ${to}`);
-      return;
-    } catch (err) {
-      console.error('[Auth] sendOtpEmail (Resend) failed:', err.message);
-      throw err;
-    }
-  }
-
-  // 2) SMTP fallback for self-hosted / dev environments.
   const transport = createTransport();
-  if (transport) {
-    const from = process.env.SMTP_FROM || process.env.SMTP_USER;
-    await transport.sendMail({ from, to, subject, text, html });
-    console.log(`[OTP] Sent verification code via SMTP to ${to}`);
+
+  if (!transport) {
+    // No SMTP configured — log the code locally (useful for dev/testing).
+    // OTP emails in production are now sent natively by Neon Auth, so this
+    // path is only hit if sendOtpEmail() is called outside the OTP flow.
+    console.log(`\n[OTP] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    console.log(`[OTP]  No SMTP configured — code for ${to}:`);
+    console.log(`[OTP]  >>>  ${code}  <<<`);
+    console.log(`[OTP] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
     return;
   }
 
-  // 3) No mailer configured — surface an error so the route returns 500
-  //    instead of silently swallowing the email.
-  throw new Error(
-    'No mailer configured. Set RESEND_API_KEY (production) or SMTP_HOST/USER/PASS (self-hosted).'
-  );
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+
+  await transport.sendMail({ from, to, subject, text, html });
+  console.log(`[OTP] Sent verification code to ${to}`);
 }
