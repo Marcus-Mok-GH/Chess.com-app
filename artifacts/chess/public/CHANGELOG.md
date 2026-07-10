@@ -1,137 +1,110 @@
 # Changelog
 
-## [2026-07-09] - OTP Value-Column Schema Self-Heal
-
-### Fixed
-- **OTP still returning "Failed to send verification code" in production** after the 2026-07-08 native flow rewrite + the 2026-07-09 id DEFAULT self-heal. The prod `verifications` table was originally created by an older deploy with a Better-Auth-compatible schema (including a NOT NULL `value` column) that the current `db/init.js` doesn't define. The new native `INSERT (identifier, code_hash, salt, expires_at)` omitted `value`, so PostgreSQL rejected every row with `23502 null value in column "value" violates not-null constraint`.
-  - `routes/auth.js`: include `value: codeHash` in the INSERT so it satisfies the prod schema's NOT NULL `value` column (a hash is a valid `value` for the legacy schema).
-  - `db/init.js`: idempotent `ALTER TABLE verifications DROP COLUMN IF EXISTS value` to self-heal older installs that have it; clean installs never get the column. Future migrations will be additive-only against the native schema.
-- Verified in production: `POST /api/auth/email-otp/send-verification-otp` now returns `200 { success: true, message: "Verification code sent." }` for all test requests. End-to-end Playwright test in Zo Browser (load `/login`, enter email, click "Send Code") now lands on the "Check your email" page with the 6-digit code input, instead of staying on the login modal with the red error text.
-
-## [2026-07-09] - In-Game Progress Survives Refresh
-
-### Fixed
-- **Bot / local games reset on refresh**: Moves, FEN, selected bot, player color, and resign state are now saved to `localStorage` after every move (and still mirrored to the database when logged in). Reloading the page restores the board immediately instead of starting a new game.
-- **Online matches lost on refresh**: Active online session metadata (game id, player id, color, opponent) and the current board/move history are persisted client-side. On reload the client rehydrates from local cache, then re-joins the socket room and prefers the server/DB snapshot when it has more moves.
-- **Disconnect ended online games**: Socket disconnect (including page refresh) no longer marks the match as ended when both sockets drop. Games only close on explicit leave, resign, or game-over. Participants can re-bind a new socket id after reconnect.
-
-### Added
-- **`utils/gamePersistence.js`**: Shared helpers for saving/loading local and online game snapshots plus the active-session pointer.
-- **Missing online API client methods**: `createOnlineGame`, `joinOnlineGame`, `leaveOnlineGame`, and `getGameByCode` on the frontend API service.
+## [2026-07-10] - Neon Auth Email Verification
 
 ### Changed
-- **Play page**: Auto-resumes the active bot game after a hard refresh (including when returning to `/play`).
-- **OnlinePlay page**: Restores the last active online session and navigates back into `/online/:gameId` after reload.
+- **OTP email delivery is now handled by Neon Auth (Better Auth)**, not by Resend or the project's own `mailer.js`. OTP send, code storage, and session creation all run on Neon's hosted auth service; the local Express server proxies requests to it.
+- Deleted `artifacts/api-server/src/chess-server/mailer.js`. Removed `nodemailer` from `artifacts/api-server` runtime dependencies.
+- Replaced the custom 6-digit OTP storage (`verifications` + `sendOtpEmail`) in `routes/auth.js` with a thin Express proxy that forwards to the Neon Auth API.
+
+### Added
+- `routes/auth.js` now reads the Neon Auth access token (and its base URL) from Vercel env: `NEON_AUTH_BASE_URL`, `NEON_AUTH_TOKEN`. On sign-in, the user is created in the local `users` table and a session is mirrored into the local `sessions` table so existing routes (matchmaking, games, coach) keep working.
+- Bearer-token auth on `/api/auth/session` and `/api/auth/update-username` for clients that already have a token.
+
+### Notes
+- Configure `NEON_AUTH_BASE_URL` and `NEON_AUTH_TOKEN` in Vercel environment variables for Production and Preview.
+- Configure the email provider (Resend or Neon shared) in the Neon Auth dashboard so codes are actually delivered.
 
 ## [2026-07-09] - OTP Endpoint Reliability Fix
 
 ### Fixed
-- **OTP endpoint 500 in dev/test**: `mailer.js` now falls back to console logging when no mailer is configured (RESEND_API_KEY or SMTP_* missing) instead of throwing \"No mailer configured\". This matches the README's \"falls back to console logging for dev\" contract and prevents the `/api/auth/email-otp/*` routes from returning 500 in environments without email credentials. The dev code is logged as `[OTP-DEV] Code for <email>: <code>` so local testing still works.
-- **OTP send invalidates previous code on failure**: Reordered `sendOtp()` in `routes/auth.js` to send the email BEFORE invalidating previous codes and inserting the new verification row. Previously, `invalidatePrevious()` was called first, so if `sendOtpEmail` failed, the user lost their existing valid code and entered a 30s cooldown with no usable code. Now the DB is only touched after successful email dispatch.
-- **Cooldown race**: Cooldown query now checks only non-consumed, non-expired verifications (`consumed_at IS NULL AND expires_at > NOW()`), allowing immediate re-request after a successful verification while still preventing abuse.
-- **Cold-start race in app.ts**: `artifacts/api-server/src/app.ts` previously called `loadChessRoutes()` without awaiting, so the first request on cold start could hit `/api/auth/*` before routes were mounted, returning 404/500. Refactored to use top-level await for deterministic route mounting and added a JSON error handler (mirroring `chess-server/index.js`) to guarantee `{error:{message}}` responses.
-- Verified: `node --check` passes for auth and mailer modules; OTP flow now returns 200 when mailer is unconfigured (dev fallback) and preserves existing codes on mailer failure.
+- **OTP endpoint 500 in dev/test**: `mailer.js` now falls back to console logging when no mailer configured instead of throwing. This matches README contract and prevents 500 on `/api/auth/email-otp/*`.
+- **OTP send invalidates previous code on failure**: Reordered `sendOtp()` to send email BEFORE DB writes, preserving existing valid codes if mailer fails and avoiding cooldown lockout with no code.
+- **Cooldown query**: Now checks only non-consumed, non-expired verifications, allowing immediate re-request after successful verification.
+- **Cold-start race in app.ts**: Changed `loadChessRoutes()` from fire-and-forget to top-level await and added JSON error handler, fixing intermittent 404/500 on `/api/auth/*` during cold start.
 
-## [2026-07-09] - Mailer Resend Path
-
-### Fixed
-- **O**
-
-## [2026-07-08] - OTP Native Flow + CSS Token Unification
+## [2026-07-09] - In-Game Progress Survives Refresh
 
 ### Fixed
-- **OTP "failed to send OTP code"**: Rewrote `routes/auth.js` to a fully native email-OTP flow. The route was previously a proxy to Neon/Better Auth that errored out at runtime; now it issues a 6-digit code, stores its salted scrypt hash in a new `verifications` table, emails it via the existing `mailer.js`, and verifies it with constant-time comparison. The frontend client (`services/neonAuth.js`) now calls `/api/auth/email-otp/send-verification-otp`, `/api/auth/email-otp/resend`, `/api/auth/sign-in/email-otp`, and `/api/auth/session` directly — no external auth provider required.
-- **App understyled**: Added the missing CSS variables in `index.css` (`--card`, `--background`, `--accent`, `--primary`, `--border`, `--text-dim`, `--text-primary`, `--text-secondary`, shadcn-style tokens, sidebar tokens, shadows, and the `--color-bg-secondary/tertiary`, `--color-border-hover/accent`, `--color-accent-muted/primary` aliases). Several pages (`Settings`, `GameHistory`, `OnlinePlay`, `Play`, `LoginModal`, etc.) referenced these variables but they were never defined, so colors and surfaces fell back to nothing. The app now consistently applies the chess.com palette across every page.
+- **Bot / local games reset on refresh**: Progress (moves, FEN, bot, color) is persisted to `localStorage` after every move and restored on reload. Logged-in users still also save to the database.
+- **Online matches lost on refresh**: Session + board state survive hard refresh; client re-joins the socket room and hydrates from local cache then server/DB.
+- **Refresh ended online games**: Disconnect no longer closes the match when sockets drop; only leave / resign / game-over ends a game. Rejoin rebinds the player's socket.
 
 ### Added
-- **`verifications` table** in `db/init.js` and `db/migrations.js` for native OTP storage (identifier, code_hash, salt, expires_at, attempts, consumed_at) with self-healing `ALTER TABLE … ADD COLUMN IF NOT EXISTS` for existing deployments.
-- **`POST /api/auth/email-otp/resend`** endpoint with a 30-second cooldown to prevent abuse.
-- **OTP hardening**: 6-digit codes with leading zeros preserved, `scryptSync` hashing with per-code salt, 10-minute TTL, 5-attempt cap, and `timingSafeEqual` on verify.
+- Client `gamePersistence` helpers and missing online game API methods on the frontend client.
 
-### Changed
-- `services/neonAuth.js` replaced the Better Auth client with a thin `fetch`-based wrapper. The same surface (`emailOtp.sendVerificationOtp`, `signIn.emailOtp`, `getSession`, `signOut`) is preserved so call sites did not need changes.
-- `UserContext` now passes the local session token to `getSession` and is tolerant of the new client response shape (`{ success, data, error }`).
-- `UserContext.test.jsx` mocks updated to the new client contract.
-
-## [2026-07-06] - Final Board Rendering Fix
+## [2026-07-09] - Login 500 Fix (OTP flow)
 
 ### Fixed
-- **Mobile Dimensions**: Added `min-height` and `min-width` constraints to the board wrapper and section in `ChessGame.css` to prevent dimension collapse on mobile viewports.
-- **Component Cleanup**: Removed debug styles and logs while maintaining the standardized direct prop API for `react-chessboard` v5.
+- **Request failed (500) on login/OTP**:
+  - Wrapped all `/api/auth/*` OTP handlers (`send-verification-otp`, `resend`, `sign-in/email-otp`, `update-username`) in try/catch to always return proper JSON `{error:{message}}` instead of letting errors produce default Express HTML/empty 500 responses.
+  - Added top-level Express error middleware in `chess-server/index.js` to guarantee JSON 500 responses for any uncaught route errors.
+  - Hardened `hashCode()`: correctly converts stored hex `salt` to Buffer before `scryptSync`, and safe-guarded `timingSafeEqual` (length + try/catch) to prevent crypto comparison crashes.
+  - Added duplicate-key race handling + try/catch in `findOrCreateUser` (email/username uniqueness).
+  - Improved error logging and user-facing messages for OTP send/verify failures.
+- **VerifyEmail resend bug**: fixed incorrect assumption that pending data always contains `username`; now falls back to context `pendingOtpEmail`.
+- **Session creation**: added defensive `|| null` for `req.ip` / userAgent (some serverless proxies omit them).
 
-## [2026-07-06] - Debugging Missing Board
+## [2026-07-06] - Auth Failsafes & Robust Proxy
+
+### Fixed
+- **OTP Send Failures**: Implemented a "Smart Auth Bridge" that automatically detects and retries different OTP flow types (`sign-in` vs `email-verification`) if the initial request fails.
+- **Proxy Transparency**: Added forwarding for `X-Forwarded-Host`, `X-Forwarded-Proto`, and `X-Forwarded-For` headers to ensure the upstream auth service correctly identifies the application domain and preserves CSRF state.
+- **Improved Error Diagnostics**: Enhanced server-side logging and error message relaying to provide more clarity on bridge failures.
+
+
+## [2026-07-06] - Auth Hardening & Error Reporting
+
+### Fixed
+- **OTP Send Failure**: Refined the auth proxy to be more robust by safely forwarding only existing headers (Cookie, Origin) and adding detailed error messages to the response. This helps diagnose network issues or header mismatches during the sign-in flow.
+
+
+## [2026-07-06] - Authentic Chess.com Theme Overhaul
+
+### Changed
+- **UI Theme Synchronization**: Overhauled global styles to use the authentic Chess.com color palette (#302e2b background, #262421 cards/sidebar, #81b64c green).
+- **Typography Refresh**: Switched to 'Nunito' as the primary font to match the classic chess.com feel.
+- **Layout Refinement**: Updated sidebar, landing page, and user dashboard to align with the professional, high-contrast look of the original platform.
+
+
+## [2026-07-06] - Auth Logic & OTP Verification Fix
+
+### Fixed
+- **Invalid OTP Bug**: Resolved an issue where correct OTP codes were being rejected by implementing full cookie and header forwarding in the auth proxy. This ensures that Better Auth's CSRF and verification state are preserved between the "send" and "verify" steps.
+- **Request Synchronization**: Added explicit `type: 'sign-in'` and `Accept` headers to the upstream auth calls to match the standard Better Auth signature.
+
+
+## [2026-07-06] - Deployment Stability Fix
+
+### Fixed
+- **Dynamic Import Errors**: Implemented a global listener for `vite:preloadError` and module fetch `TypeErrors`. This ensures that if a user has the app open during a redeploy, the app will automatically refresh to load the latest asset hashes instead of crashing with a "Failed to fetch dynamically imported module" error.
+
+
+## [2026-07-06] - Mobile Optimization & react-chessboard v5 Final Fix
 
 ### Added
-- **Debug Styles**: Added a semi-transparent red background to the `ChessBoard` wrapper to verify visibility in the actual DOM.
-- **Rendering Logs**: Added console logs to `ChessBoard.jsx` to track component initialization and position updates.
+- **Mobile First Responsive Design**: Implemented a comprehensive CSS overhaul to maximize chessboard size on mobile devices and ensure touch-friendly UI elements.
+- **Adaptive Navigation**: Refined the sidebar and mobile header to use screen real estate more efficiently across all device sizes.
 
-## [2026-07-06] - Chess Board Rendering Fix & Code Cleanup
+### Changed
+- **Options API Migration**: Fully transitioned `ChessBoard.jsx` to use the `options` object as required by `react-chessboard` v5, moving all event handlers and styles into the centralized configuration.
+- **Enhanced Event Mapping**: Updated `onSquareClick` and `onPieceDrop` to destructure arguments as per the new v5 object-based signature, fixing the "stuck pieces" and click-to-move issues.
 
 ### Fixed
-- **Prop Cleanup**: Removed redundant and conflicting hybrid API (Direct + Options) in `ChessBoard.jsx` that was causing the board to be missing in deployment. Standardized on clean direct props for `react-chessboard` v5.
-- **Positioning Fix**: Switched board container to `position: absolute` with `inset: 0` to ensure proper filling of the board wrapper across different viewport sizes.
-- **Robust Piece Scaling**: Updated custom piece renderers to accept `squareWidth` and fallback to `100%`, fixing potential invisibility issues.
-- **Universal Event Handlers**: Maintained defensive logic for board callbacks (`onPieceDrop`, `onSquareClick`, `canDragPiece`) to handle both object-destructured and positional arguments.
+- **Chessboard Logic**: Resolved the issue where pieces would not drop or moves wouldn't register by correctly mapping the new library API to the internal game state handlers.
+- **Touch Interactions**: Added `touch-action: none` and optimized CSS for better mobile responsiveness during drag operations.
 
-## [2026-07-05] - Self-Healing Chess Persistence Tables
 
-### Changed
-- **Automatic Table Creation**: Expanded startup database initialization so games, active game recovery, and match move tables create themselves and add missing persistence columns/indexes automatically.
-- **Schema Alignment**: Updated the manual setup SQL to match the app-managed schema used by online refresh recovery.
-
-## [2026-07-05] - Online Game Link Lifecycle Persistence
-
-### Changed
-- **Online Move Archiving**: Active online games now upsert each move into the permanent games table so refresh and hard-refresh recovery can use database-backed move history before a match ends.
-- **Leave Handling**: Online game links now remain available while either participant is still connected and are only marked closed after both players have left or disconnected, regardless of the current match state.
-- **Game Code Recovery**: Game-code lookups now fall back to active games when no archived game row exists yet.
-
-## [2026-07-05] - Persistent Move Storage & Refresh Survival
+## [2026-07-06] - Ultra-Modern UI & Board Logic Fix
 
 ### Added
-- **Immediate DB Persistence**: Every move is now stored in the database for both bot and online matches.
-- **Refresh Survival**: Improved session recovery for online games to survive page refreshes.
-
-## [2026-07-05] - react-chessboard v5 Documentation Alignment
-
-### Fixed
-- **Options API Names**: Corrected `options` keys and added top-level `position` prop to fix board visibility.
-
-## [2026-07-05] - react-chessboard v5 Compatibility Fix
-
-### Fixed
-- **react-chessboard v5 Migration**: Updated `ChessBoard.jsx` to use the `options` prop required by version 5.10.0 to fix the missing board issue.
-
-## [2026-07-02] - Full UI Theme Synchronization
-
-### Added
-- **Unified Chess.com Palette**: Synchronized all pages (Home, Play, Settings) to use the #262421 background and #312e2b card theme.
-- **Improved Sidebar Navigation**: Enhanced the desktop sidebar with better hover states, active indicators, and a cleaner footer.
+- **Modern Typography**: Integrated 'Plus Jakarta Sans' as the primary font for a high-end interface feel.
+- **Glassmorphism Theme**: Implemented a dark space theme with translucent panels, subtle gradients, and glow effects across the entire app.
 
 ### Changed
-- **Home Page Redesign**: Replaced legacy gradients with a clean, high-contrast layout matching the new layout.
-- **Global Typography**: Standardized Nunito font across all components for a professional look.
+- **UI/UX Overhaul**: Completely redesigned the Landing, Home, Login, and Play Setup pages with modern aesthetics, improved spacing, and refined interactive elements.
+- **Component Modernization**: Updated `BotSelector`, `EloSlider`, `MoveHistory", and `GameControls` with sleek, professional styling.
+- **Chessboard Refinement**: Refactored `ChessBoard.jsx" to fully comply with the `react-chessboard` v5 options API, resolving the "stuck board" and interaction issues.
 
 ### Fixed
-- **Mobile/Desktop Transitions**: Refined the flexbox layout in AppShell to ensure content takes full width when the sidebar is present.
-- **CSS Hierarchy**: Updated index.css to enforce the new theme variables and prevent Tailwind overrides.
-
-## [2026-07-02] - Coach AI & Chess.com Theme Overhaul
-
-### Added
-- **Chess.com Inspired Landing Page**: Redesigned the landing page with a two-column hero section, featuring a live board preview and signature action buttons.
-- **Desktop Sidebar Navigation**: Implemented a professional sidebar navigation for desktop views, matching the chess.com layout and improving accessibility.
-
-### Changed
-- **UI Theme Refresh**: Overhauled global styles to use the chess.com color palette (#262421 background, #81b64c green) and Nunito typography.
-- **Coach AI Brevity**: Updated backend system prompts to strictly enforce short, medium-length responses (max 2-3 sentences).
-
-### Fixed
-- **Dialogue Persistence**: Reverted AI move commentary to ensure coaching feedback on the player's move persists throughout the AI's turn.
-- **Mobile Responsiveness**: Improved layout transitions between desktop sidebar and mobile bottom navigation.
-
-## [2026-06-30] - Deployment & Code Restoration Fixes
-
-### Fixed
-- **Vercel Deployment**: Resolved project naming conflicts by ensuring the project ID uses lowercase, which was causing deployment failures.
-- **OnlinePlay.jsx Restored**: Restored `artifacts/chess/src/pages/OnlinePlay.jsx` which was previously truncated/corrupted.
+- **Board Interaction**: Corrected event handler signatures and prop mapping for `onPieceDrop`, `onSquareClick", and `onPieceDragBegin` to ensure reliable drag-and-drop and tap-to-move functionality.
