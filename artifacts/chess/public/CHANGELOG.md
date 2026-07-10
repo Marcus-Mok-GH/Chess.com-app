@@ -1,5 +1,26 @@
 # Changelog
 
+## [2026-07-10] - Sleek Chess.com-Style UI Overhaul
+
+### Changed
+- **Global theme tokens** in `index.css` modernized: refined chess.com green palette, darker card surfaces, tighter radii, deeper shadow ramp, smooth focus rings, system-font fallbacks for Nunito.
+- **Landing page** (`pages/Landing.jsx` + `Landing.css`): re-architected with a sleek hero (gradient title, dual-CTA, live demo board), 3-up feature grid with hover lift, and a 4-stat social-proof row. Replaced emoji icons with Lucide icons for a more polished feel.
+- **Home page** (`pages/Home.jsx` + `Home.css`): stat cards now use gradient icon tiles, action cards have lift-on-hover + accent border, page header uses gradient text for the username highlight. Refreshed mobile/tablet breakpoints.
+- **Sidebar** (`App.css`): refined surface, glow-tinted active state, gradient avatar chip in the user profile, smoother hover transitions. Sidebar width is wider on large desktops and collapses to icon-only on tablets.
+- **OnlinePlay** (`pages/OnlinePlay.css`): lobby card now uses a subtle radial gradient and a top-illuminated border. Mode-option cards have a left accent bar on hover, gradient ELO display, and a friendlier empty/loading state.
+- **BotSelector** (`components/BotSelector.css`): card hover lifts, color-coded top accent line driven by `--bot-color`, selected state now has a soft glow ring.
+- **PlaySetup / Login / LoginModal / Settings / GameHistory / Analysis**: tightened spacing, gradient primary buttons, modernized focus rings, smoother transitions, refined mobile sheets.
+- **Changelog** and Settings pages re-aligned to the new design system tokens.
+
+### Added
+- New CSS variable `--accent-gradient` for gradient primary buttons across the app.
+- New `--shadow-glow` and `--shadow-elevated` shadow tokens for cards/buttons.
+- A reusable `.surface-card` utility class in `index.css` for consistent elevated cards.
+- Lucide icon imports in `Landing.jsx` and `Home.jsx` for a more modern visual language.
+
+### Notes
+- All existing dark + chess.com green palette tokens are preserved, so any other components using them keep working.
+
 ## [2026-07-10] - Neon Auth Email Verification
 
 ### Changed

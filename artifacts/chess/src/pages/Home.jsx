@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUser } from '../contexts/UserContext'
+import { Cpu, Globe, FileText, Star, Gamepad2, Trophy, ArrowUpRight, Wifi, WifiOff } from 'lucide-react'
 import './Home.css'
 
 export default function Home() {
@@ -9,21 +10,18 @@ export default function Home() {
   const [greeting, setGreeting] = useState('')
 
   useEffect(() => {
-    // Redirect to landing if not logged in (but wait for loading to complete)
     if (!isLoading && !isLoggedIn) {
       navigate('/', { replace: true })
     }
   }, [isLoggedIn, isLoading, navigate])
 
   useEffect(() => {
-    // Set time-based greeting
     const hour = new Date().getHours()
     if (hour < 12) setGreeting('Good morning')
     else if (hour < 18) setGreeting('Good afternoon')
     else setGreeting('Good evening')
   }, [])
 
-  // Show loading state while checking auth
   if (isLoading) {
     return (
       <div className="home-page">
@@ -38,7 +36,7 @@ export default function Home() {
 
   if (!user) return null
 
-  const winRate = user.gamesPlayed > 0 
+  const winRate = user.gamesPlayed > 0
     ? ((user.wins / user.gamesPlayed) * 100).toFixed(1)
     : 0
 
@@ -47,32 +45,51 @@ export default function Home() {
       <div className="home-container">
         {/* Welcome Section */}
         <section className="welcome-section">
+          <div className="welcome-eyebrow">
+            {isOnline ? (
+              <>
+                <Wifi size={14} />
+                <span>Online</span>
+              </>
+            ) : (
+              <>
+                <WifiOff size={14} />
+                <span>Offline</span>
+              </>
+            )}
+          </div>
           <h1 className="welcome-title">
-            {greeting}, <span className="username-highlight">{user.username}</span>!
+            {greeting}, <span className="username-highlight text-gradient-brand">{user.username}</span>
           </h1>
           <p className="welcome-subtitle">Ready for your next game?</p>
         </section>
 
         {/* Stats Overview */}
         <section className="stats-overview">
-          <div className="stat-card elo-card">
-            <div className="stat-icon">⭐</div>
+          <div className="stat-card card-surface elo-card">
+            <div className="stat-icon">
+              <Star size={20} />
+            </div>
             <div className="stat-content">
               <div className="stat-label">Current Rating</div>
               <div className="stat-value">{user.elo}</div>
             </div>
           </div>
 
-          <div className="stat-card games-card">
-            <div className="stat-icon">🎮</div>
+          <div className="stat-card card-surface games-card">
+            <div className="stat-icon">
+              <Gamepad2 size={20} />
+            </div>
             <div className="stat-content">
               <div className="stat-label">Games Played</div>
               <div className="stat-value">{user.gamesPlayed || 0}</div>
             </div>
           </div>
 
-          <div className="stat-card winrate-card">
-            <div className="stat-icon">🏆</div>
+          <div className="stat-card card-surface winrate-card">
+            <div className="stat-icon">
+              <Trophy size={20} />
+            </div>
             <div className="stat-content">
               <div className="stat-label">Win Rate</div>
               <div className="stat-value">{winRate}%</div>
@@ -84,15 +101,15 @@ export default function Home() {
         <section className="detailed-stats">
           <h2 className="section-title">Your Statistics</h2>
           <div className="stats-grid">
-            <div className="stat-item win-stat">
+            <div className="stat-item card-surface win-stat">
               <span className="stat-number">{user.wins || 0}</span>
               <span className="stat-text">Wins</span>
             </div>
-            <div className="stat-item draw-stat">
+            <div className="stat-item card-surface draw-stat">
               <span className="stat-number">{user.draws || 0}</span>
               <span className="stat-text">Draws</span>
             </div>
-            <div className="stat-item loss-stat">
+            <div className="stat-item card-surface loss-stat">
               <span className="stat-number">{user.losses || 0}</span>
               <span className="stat-text">Losses</span>
             </div>
@@ -103,56 +120,66 @@ export default function Home() {
         <section className="quick-actions">
           <h2 className="section-title">Quick Play</h2>
           <div className="action-cards">
-            <button 
-              className="action-card play-ai-card"
+            <button
+              className="action-card card-surface play-ai-card"
               onClick={() => navigate('/play')}
             >
-              <div className="action-icon">🤖</div>
+              <div className="action-icon">
+                <Cpu size={22} />
+              </div>
               <div className="action-content">
                 <h3>Play vs AI</h3>
                 <p>Challenge our chess bots at different skill levels</p>
               </div>
+              <ArrowUpRight className="action-arrow" size={18} />
             </button>
 
-
             <button
-              className="action-card"
+              className="action-card card-surface"
               onClick={() => navigate('/changelog')}
             >
-              <div className="action-icon">📝</div>
+              <div className="action-icon">
+                <FileText size={22} />
+              </div>
               <div className="action-content">
                 <h3>Changelog</h3>
                 <p>Read release notes and latest updates</p>
               </div>
+              <ArrowUpRight className="action-arrow" size={18} />
             </button>
 
-            <button 
-              className="action-card play-online-card"
+            <button
+              className="action-card card-surface play-online-card"
               onClick={() => navigate('/online')}
               disabled={!isOnline}
             >
-              <div className="action-icon">🌐</div>
+              <div className="action-icon">
+                <Globe size={22} />
+              </div>
               <div className="action-content">
                 <h3>Play Online</h3>
                 <p>
-                  {isOnline 
-                    ? 'Find a match against other players' 
+                  {isOnline
+                    ? 'Find a match against other players'
                     : 'Unavailable while offline'}
                 </p>
               </div>
-              {!isOnline && <div className="card-badge">Offline</div>}
+              {!isOnline ? (
+                <span className="card-badge">Offline</span>
+              ) : (
+                <ArrowUpRight className="action-arrow" size={18} />
+              )}
             </button>
           </div>
         </section>
 
-        {/* Member Since */}
         {user.createdAt && (
           <section className="member-info">
             <p className="member-text">
-              Member since {new Date(user.createdAt).toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
+              Member since {new Date(user.createdAt).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
               })}
             </p>
           </section>
