@@ -1,16 +1,18 @@
 /**
- * Native email-OTP auth client.
+ * Email-OTP auth client.
  *
- * The app owns the OTP flow end-to-end: the React client calls
- *   POST /api/auth/email-otp/send-verification-otp   (request a code)
- *   POST /api/auth/sign-in/email-otp                (verify the code)
- *   POST /api/auth/email-otp/resend                 (resend with cooldown)
- * and the Express backend issues a 6-digit code, stores its salted hash in
- * the `verifications` table, and emails it via `mailer.js`.
+ * The React client still owns the request/response shape (`{ success, data, error }`)
+ * for backwards compatibility with the rest of the app, but the OTP itself
+ * is now sent by Neon Auth (Better Auth email-OTP) rather than by a
+ * custom mailer. The Express backend at `/api/auth/*` proxies the calls
+ * to Neon, then issues our own session token once the code is verified.
  *
- * No external auth provider is required at runtime. The local
- * Vite dev server (and the Express proxy in production) forwards
- * `/api/*` to the same origin so we just POST to the relative path.
+ * Endpoints:
+ *   POST /api/auth/email-otp/send-verification-otp
+ *   POST /api/auth/email-otp/resend
+ *   POST /api/auth/sign-in/email-otp
+ *   GET  /api/auth/session
+ *   POST /api/auth/signout
  *
  * All public methods return: { success, data, error }.
  *   - success === true  → data holds the response body

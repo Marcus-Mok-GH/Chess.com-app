@@ -1,12 +1,9 @@
 /**
- * Neon Auth server — DEPRECATED.
+ * Server-side shim kept only to avoid breaking any leftover imports.
  *
- * The app now uses a custom native OTP flow (routes/auth.js + mailer.js)
- * instead of @neondatabase/auth. This file is kept as a stub so any
- * remaining imports don't crash at build time, but it is no longer wired
- * into the Express router.
- *
- * The neonAuthProxy middleware (middleware/authProxy.js) has also been
- * removed from index.js because it is no longer needed.
+ * The app no longer uses Resend (or any custom mailer). Email verification
+ * is delegated to Neon Auth's native sender (see neonAuthServer.js). The
+ * actual auth proxy/middleware was removed in the previous migration, so
+ * this file remains a no-op stub.
  */
 export const neonAuth = null;
