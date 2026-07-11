@@ -58,6 +58,13 @@ async function neonFetch(pathname, init = {}) {
     ...(init.body ? { 'content-type': 'application/json' } : {}),
     ...(init.headers || {}),
   };
+
+  // Forward NEON_AUTH_TOKEN if available
+  const authToken = process.env.NEON_AUTH_TOKEN;
+  if (authToken) {
+    headers.authorization = `Bearer ${authToken}`;
+  }
+
   const res = await fetch(url, { ...init, headers });
   let data = null;
   try { data = await res.json(); } catch { data = null; }
@@ -154,9 +161,16 @@ router.post('/email-otp/send-verification-otp', async (req, res) => {
   if (!EMAIL_RE.test(email)) return fail(res, 400, 'A valid email is required.');
 
   try {
+    // Forward cookies and relevant CSRF headers to preserve Better Auth state
+    const proxyHeaders = {};
+    if (req.headers.cookie) proxyHeaders.cookie = req.headers.cookie;
+    if (req.headers.origin) proxyHeaders.origin = req.headers.origin;
+    if (req.headers['x-csrf-token']) proxyHeaders['x-csrf-token'] = req.headers['x-csrf-token'];
+
     const r = await neonFetch('/auth/email-otp/send-verification-otp', {
       method: 'POST',
       body: JSON.stringify({ email, type: 'sign-in' }),
+      headers: proxyHeaders,
     });
     if (!r.ok) {
       const { status, message } = neonErrorPayload(r);
@@ -178,9 +192,16 @@ router.post('/email-otp/resend', async (req, res) => {
   if (!EMAIL_RE.test(email)) return fail(res, 400, 'A valid email is required.');
 
   try {
+    // Forward cookies and relevant CSRF headers to preserve Better Auth state
+    const proxyHeaders = {};
+    if (req.headers.cookie) proxyHeaders.cookie = req.headers.cookie;
+    if (req.headers.origin) proxyHeaders.origin = req.headers.origin;
+    if (req.headers['x-csrf-token']) proxyHeaders['x-csrf-token'] = req.headers['x-csrf-token'];
+
     const r = await neonFetch('/auth/email-otp/send-verification-otp', {
       method: 'POST',
       body: JSON.stringify({ email, type: 'sign-in' }),
+      headers: proxyHeaders,
     });
     if (!r.ok) {
       const { status, message } = neonErrorPayload(r);
@@ -189,6 +210,9 @@ router.post('/email-otp/resend', async (req, res) => {
     return ok(res, { message: 'Verification code resent.' });
   } catch (err) {
     console.error('[Auth] resend proxy failed:', err?.message || err);
+    if (err?.message?.includes('NEON_AUTH_BASE_URL')) {
+      return fail(res, 503, 'Auth service is not configured. Please contact support.');
+    }
     return fail(res, 500, 'Failed to resend code. Please try again in a moment.');
   }
 });
@@ -204,36 +228,45 @@ router.post('/sign-in/email-otp', async (req, res) => {
     return fail(res, 400, 'Email and code are required.');
   }
 
-  let neonResponse;
   try {
-    neonResponse = await neonFetch('/auth/sign-in/email-otp', {
+    // Forward cookies and relevant CSRF headers to preserve Better Auth state
+    const proxyHeaders = {};
+    if (req.headers.cookie) proxyHeaders.cookie = req.headers.cookie;
+    if (req.headers.origin) proxyHeaders.origin = req.headers.origin;
+    if (req.headers['x-csrf-token']) proxyHeaders['x-csrf-token'] = req.headers['x-csrf-token'];
+
+    const neonResponse = await neonFetch('/auth/sign-in/email-otp', {
       method: 'POST',
       body: JSON.stringify({ email, otp }),
+      headers: proxyHeaders,
+    });
+
+    if (!neonResponse.ok) {
+      const { status, message } = neonErrorPayload(neonResponse);
+      return fail(res, status, message);
+    }
+
+    const body = neonResponse.data || {};
+    const neonUser = body.user || body?.data?.user;
+    if (!neonUser?.email) {
+      return fail(res, 500, 'Authentication response was incomplete.');
+    }
+
+    const localUser = await findOrCreateUserByEmail({ email: neonUser.email });
+    const { token, expiresAt } = await mintLocalSession({ user: localUser, req });
+
+    return res.json({
+      success: true,
+      session: { id: token, token, userId: localUser.id, expiresAt },
+      user: shapeUser(localUser),
     });
   } catch (err) {
     console.error('[Auth] sign-in/email-otp proxy failed:', err?.message || err);
+    if (err?.message?.includes('NEON_AUTH_BASE_URL')) {
+      return fail(res, 503, 'Auth service is not configured. Please contact support.');
+    }
     return fail(res, 500, 'Verification failed. Please try again.');
   }
-
-  if (!neonResponse.ok) {
-    const { status, message } = neonErrorPayload(neonResponse);
-    return fail(res, status, message);
-  }
-
-  const body = neonResponse.data || {};
-  const neonUser = body.user || body?.data?.user;
-  if (!neonUser?.email) {
-    return fail(res, 500, 'Authentication response was incomplete.');
-  }
-
-  const localUser = await findOrCreateUserByEmail({ email: neonUser.email });
-  const { token, expiresAt } = await mintLocalSession({ user: localUser, req });
-
-  return res.json({
-    success: true,
-    session: { id: token, token, userId: localUser.id, expiresAt },
-    user: shapeUser(localUser),
-  });
 });
 
 // GET /api/auth/session  — kept for the React client's existing getSession() call.

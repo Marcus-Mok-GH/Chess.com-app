@@ -1,39 +1,18 @@
 # Changelog
 
-## [2026-07-10] - Sleek Chess.com-Style UI Overhaul
-
-### Changed
-- **Global theme tokens** in `index.css` modernized: refined chess.com green palette, darker card surfaces, tighter radii, deeper shadow ramp, smooth focus rings, system-font fallbacks for Nunito.
-- **Landing page** (`pages/Landing.jsx` + `Landing.css`): re-architected with a sleek hero (gradient title, dual-CTA, live demo board), 3-up feature grid with hover lift, and a 4-stat social-proof row. Replaced emoji icons with Lucide icons for a more polished feel.
-- **Home page** (`pages/Home.jsx` + `Home.css`): stat cards now use gradient icon tiles, action cards have lift-on-hover + accent border, page header uses gradient text for the username highlight. Refreshed mobile/tablet breakpoints.
-- **Sidebar** (`App.css`): refined surface, glow-tinted active state, gradient avatar chip in the user profile, smoother hover transitions. Sidebar width is wider on large desktops and collapses to icon-only on tablets.
-- **OnlinePlay** (`pages/OnlinePlay.css`): lobby card now uses a subtle radial gradient and a top-illuminated border. Mode-option cards have a left accent bar on hover, gradient ELO display, and a friendlier empty/loading state.
-- **BotSelector** (`components/BotSelector.css`): card hover lifts, color-coded top accent line driven by `--bot-color`, selected state now has a soft glow ring.
-- **PlaySetup / Login / LoginModal / Settings / GameHistory / Analysis**: tightened spacing, gradient primary buttons, modernized focus rings, smoother transitions, refined mobile sheets.
-- **Changelog** and Settings pages re-aligned to the new design system tokens.
-
-### Added
-- New CSS variable `--accent-gradient` for gradient primary buttons across the app.
-- New `--shadow-glow` and `--shadow-elevated` shadow tokens for cards/buttons.
-- A reusable `.surface-card` utility class in `index.css` for consistent elevated cards.
-- Lucide icon imports in `Landing.jsx` and `Home.jsx` for a more modern visual language.
-
-### Notes
-- All existing dark + chess.com green palette tokens are preserved, so any other components using them keep working.
-
 ## [2026-07-10] - Neon Auth Email Verification
 
 ### Changed
-- **OTP email delivery is now handled by Neon Auth (Better Auth)**, not by Resend or the project's own `mailer.js`. OTP send, code storage, and session creation all run on Neon's hosted auth service; the local Express server proxies requests to it.
+- **OTP email delivery is now handled by Neon Auth (Better Auth)**, not by Resend or the project's own `mailer.js`. OTP send and code storage run on Neon's hosted auth service; the local Express server proxies requests using `NEON_AUTH_BASE_URL` and creates local sessions via `mintLocalSession`.
 - Deleted `artifacts/api-server/src/chess-server/mailer.js`. Removed `nodemailer` from `artifacts/api-server` runtime dependencies.
 - Replaced the custom 6-digit OTP storage (`verifications` + `sendOtpEmail`) in `routes/auth.js` with a thin Express proxy that forwards to the Neon Auth API.
 
 ### Added
-- `routes/auth.js` now reads the Neon Auth access token (and its base URL) from Vercel env: `NEON_AUTH_BASE_URL`, `NEON_AUTH_TOKEN`. On sign-in, the user is created in the local `users` table and a session is mirrored into the local `sessions` table so existing routes (matchmaking, games, coach) keep working.
+- `routes/auth.js` now proxies OTP requests to the Neon Auth service at `NEON_AUTH_BASE_URL`. On successful sign-in, the user is created in the local `users` table and a session is mirrored into the local `sessions` table via `mintLocalSession` so existing routes (matchmaking, games, coach) keep working.
 - Bearer-token auth on `/api/auth/session` and `/api/auth/update-username` for clients that already have a token.
 
 ### Notes
-- Configure `NEON_AUTH_BASE_URL` and `NEON_AUTH_TOKEN` in Vercel environment variables for Production and Preview.
+- Configure `NEON_AUTH_BASE_URL` and `NEON_AUTH_COOKIE_SECRET` in Vercel environment variables for Production and Preview.
 - Configure the email provider (Resend or Neon shared) in the Neon Auth dashboard so codes are actually delivered.
 
 ## [2026-07-09] - OTP Endpoint Reliability Fix
@@ -124,11 +103,11 @@
 
 ### Changed
 - **UI/UX Overhaul**: Completely redesigned the Landing, Home, Login, and Play Setup pages with modern aesthetics, improved spacing, and refined interactive elements.
-- **Component Modernization**: Updated `BotSelector`, `EloSlider`, `MoveHistory", and `GameControls` with sleek, professional styling.
-- **Chessboard Refinement**: Refactored `ChessBoard.jsx" to fully comply with the `react-chessboard` v5 options API, resolving the "stuck board" and interaction issues.
+- **Component Modernization**: Updated `BotSelector`, `EloSlider`, `MoveHistory`, and `GameControls` with sleek, professional styling.
+- **Chessboard Refinement**: Refactored `ChessBoard.jsx` to fully comply with the `react-chessboard` v5 options API, resolving the "stuck board" and interaction issues.
 
 ### Fixed
-- **Board Interaction**: Corrected event handler signatures and prop mapping for `onPieceDrop`, `onSquareClick", and `onPieceDragBegin` to ensure reliable drag-and-drop and tap-to-move functionality.
+- **Board Interaction**: Corrected event handler signatures and prop mapping for `onPieceDrop`, `onSquareClick`, and `onPieceDragBegin` to ensure reliable drag-and-drop and tap-to-move functionality.
 
 ### Fixed (deploy)
 - **Vercel preview build failed with `ERR_PNPM_OUTDATED_LOCKFILE`**: removed the lingering `nodemailer` entry from the root `package.json` so the lockfile matches; `pnpm install` is now consistent and the build runs through.
