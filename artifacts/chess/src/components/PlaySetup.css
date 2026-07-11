@@ -4,42 +4,59 @@
   align-items: center;
   justify-content: center;
   padding: 3rem 2rem;
+  background-image: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(129, 182, 76, 0.06), transparent 60%);
 }
 
 .play-setup-card {
   width: 100%;
-  max-width: 780px;
+  max-width: 820px;
   background: var(--card);
+  background-image: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 3rem;
+  padding: 2.75rem;
   box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
-  gap: 2.5rem;
+  gap: 2.25rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.play-setup-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(129, 182, 76, 0.4), transparent);
 }
 
 .play-setup-title {
-  font-size: 3rem;
+  font-size: 2.5rem;
   font-weight: 800;
-  letter-spacing: -0.05em;
+  letter-spacing: -0.025em;
   margin: 0;
+  color: var(--text-primary);
 }
 
 .play-setup-subtitle {
   color: var(--text-dim);
-  font-size: 1.1rem;
+  font-size: 1.05rem;
+  margin: 0;
+  line-height: 1.5;
 }
 
 .play-setup-section {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1rem;
 }
 
 .play-setup-label {
-  font-size: 0.875rem;
-  font-weight: 700;
+  font-size: 0.75rem;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--text-secondary);
@@ -48,66 +65,90 @@
 .color-choice {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .color-btn {
-  padding: 1.5rem;
-  background: var(--background);
+  padding: 1.5rem 1rem;
+  background: var(--bg-surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   color: var(--text-dim);
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 800;
   cursor: pointer;
   transition: var(--transition-smooth);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 100px;
 }
 
 .color-btn:hover {
-  border-color: var(--text-secondary);
-  background: rgba(255,255,255,0.02);
+  border-color: var(--border-hover);
+  background: var(--bg-surface-3);
+  transform: translateY(-2px);
 }
 
 .color-btn.selected {
   border-color: var(--primary);
   background: rgba(129, 182, 76, 0.1);
   color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(129, 182, 76, 0.1);
+}
+
+.color-btn-emoji {
+  font-size: 2rem;
+  line-height: 1;
 }
 
 .play-setup-actions {
-  margin-top: 2rem;
-  padding-top: 3rem;
+  margin-top: 1rem;
+  padding-top: 2rem;
   border-top: 1px solid var(--border);
   display: flex;
   justify-content: flex-end;
+  gap: 0.75rem;
 }
 
 .start-btn {
-  padding: 1.25rem 4rem;
-  background: var(--primary);
+  padding: 1rem 3rem;
+  background: linear-gradient(180deg, var(--primary), var(--primary-dim));
   color: white;
   font-weight: 800;
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   border-radius: var(--radius-md);
   border: none;
   cursor: pointer;
   transition: var(--transition-smooth);
-  box-shadow: 0 10px 30px rgba(129, 182, 76, 0.3);
+  box-shadow: 0 6px 20px rgba(129, 182, 76, 0.3);
+  letter-spacing: 0.01em;
 }
 
 .start-btn:hover:not(:disabled) {
-  background: var(--accent);
-  transform: translateY(-4px) scale(1.05);
+  background: linear-gradient(180deg, var(--primary-hover), var(--primary));
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(129, 182, 76, 0.45);
+}
+
+.start-btn:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .start-btn:disabled {
-  opacity: 0.3;
+  opacity: 0.4;
   cursor: not-allowed;
   box-shadow: none;
 }
 
 @media (max-width: 768px) {
-  .play-setup-card { padding: 2rem; }
-  .play-setup-title { font-size: 2rem; }
+  .play-setup { padding: 1.5rem 1rem; }
+  .play-setup-card { padding: 1.75rem; gap: 1.75rem; border-radius: var(--radius-md); }
+  .play-setup-title { font-size: 1.875rem; }
+  .play-setup-subtitle { font-size: 0.95rem; }
   .color-choice { grid-template-columns: 1fr; }
+  .color-btn { min-height: 80px; padding: 1rem; }
+  .start-btn { width: 100%; padding: 1rem; font-size: 1rem; }
+  .play-setup-actions { flex-direction: column-reverse; }
 }

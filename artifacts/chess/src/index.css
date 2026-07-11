@@ -69,18 +69,19 @@
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 22px;
   --radius-full: 9999px;
 
   --transition-fast: 120ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-smooth: 220ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 360ms cubic-bezier(0.22, 1, 0.36, 1);
 
   /* safe areas (mobile) */
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 
-  /* shadcn-style aliases — files like Login.css, SetUsernameModal.css, OnlinePlay.css, etc.
-     were written against this token namespace. Map them to the chess.com palette so the
-     whole app shares one theme. */
+  /* shadcn-style aliases */
   --background: #1a1a1a;
   --foreground: #ffffff;
   --card: #272522;
@@ -107,13 +108,28 @@
   --radius: 8px;
   --radius-xl: 18px;
   --font-display: 'Nunito', 'Inter', system-ui, sans-serif;
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.5);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.45);
-  --shadow-lg: 0 12px 32px rgba(0,0,0,0.55);
-  --shadow-xl: 0 30px 80px rgba(0,0,0,0.6);
-  --shadow-glow: 0 0 28px rgba(129, 182, 76, 0.35);
 
-  /* shadcn sidebar tokens (set so Sidebar components render predictably) */
+  /* Modern, layered shadows — softer and more diffuse for a "sleek" feel */
+  --shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.35);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.18);
+  --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.32), 0 2px 4px rgba(0, 0, 0, 0.18);
+  --shadow-lg: 0 14px 32px rgba(0, 0, 0, 0.42), 0 4px 8px rgba(0, 0, 0, 0.18);
+  --shadow-xl: 0 30px 60px rgba(0, 0, 0, 0.5), 0 8px 16px rgba(0, 0, 0, 0.18);
+  --shadow-2xl: 0 40px 100px rgba(0, 0, 0, 0.55);
+  --shadow-glow: 0 0 32px rgba(129, 182, 76, 0.32);
+  --shadow-glow-soft: 0 0 24px rgba(129, 182, 76, 0.18);
+  --shadow-inner: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
+  /* Gradients — chess.com brand-forward, used sparingly for accent */
+  --gradient-primary: linear-gradient(180deg, #a3d16e 0%, #81b64c 50%, #6e9c40 100%);
+  --gradient-primary-hover: linear-gradient(180deg, #b3dc7e 0%, #92c25d 50%, #7aac49 100%);
+  --gradient-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.025) 0%, rgba(255, 255, 255, 0) 100%);
+  --gradient-elevated: linear-gradient(180deg, #2e2b28 0%, #272522 100%);
+  --gradient-hero: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(129, 182, 76, 0.08) 0%, transparent 70%);
+  --gradient-gold: linear-gradient(180deg, #f4d35e 0%, #d4a72c 100%);
+  --gradient-red: linear-gradient(180deg, #ff6b5b 0%, #e74c3c 100%);
+
+  /* shadcn sidebar tokens */
   --sidebar: #1a1a1a;
   --sidebar-foreground: #ffffff;
   --sidebar-primary: #81b64c;
@@ -136,82 +152,149 @@
     height: 100%;
   }
 
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+
   body {
     background-color: var(--bg-page);
     color: var(--text-primary);
     font-family: 'Nunito', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     margin: 0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overscroll-behavior-y: none;
+    line-height: 1.5;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Nunito', sans-serif;
     font-weight: 800;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+    margin: 0;
   }
+
+  h1 { font-size: clamp(1.875rem, 3vw + 1rem, 3.25rem); letter-spacing: -0.025em; }
+  h2 { font-size: clamp(1.5rem, 1.5vw + 1rem, 2.25rem); letter-spacing: -0.02em; }
+  h3 { font-size: 1.25rem; }
+  h4 { font-size: 1.0625rem; }
 
   a { color: inherit; text-decoration: none; }
   button { font-family: inherit; }
 
+  ::selection {
+    background: rgba(129, 182, 76, 0.32);
+    color: #fff;
+  }
+
   /* Hide scrollbar for clean chess.com feel */
-  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.16); background-clip: padding-box; border: 2px solid transparent; }
 }
 
 @layer components {
   .btn-primary {
-    background-color: var(--primary);
+    background: var(--gradient-primary);
     color: white;
-    font-weight: 700;
+    font-weight: 800;
     padding: 0.75rem 1.5rem;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     transition: var(--transition-smooth);
-    border: none;
+    border: 1px solid rgba(0, 0, 0, 0.25);
     cursor: pointer;
+    box-shadow: var(--shadow-md), var(--shadow-inner);
+    letter-spacing: 0.01em;
   }
-  .btn-primary:hover { background-color: var(--primary-hover); }
-  .btn-primary:active { transform: translateY(1px); }
-  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary:hover { background: var(--gradient-primary-hover); transform: translateY(-1px); box-shadow: var(--shadow-lg), var(--shadow-glow-soft); }
+  .btn-primary:active { transform: translateY(0); box-shadow: var(--shadow-sm); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: var(--shadow-sm); }
 
   .btn-secondary {
     background-color: var(--bg-elevated);
     color: var(--text-primary);
     font-weight: 700;
     padding: 0.75rem 1.5rem;
-    border-radius: var(--radius-sm);
-    border: none;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.06);
     cursor: pointer;
     transition: var(--transition-smooth);
+    box-shadow: var(--shadow-inner);
   }
-  .btn-secondary:hover { background-color: #565452; }
+  .btn-secondary:hover { background-color: #565452; transform: translateY(-1px); box-shadow: var(--shadow-md); }
+  .btn-secondary:active { transform: translateY(0); }
 
   .card-surface {
-    background-color: var(--bg-surface);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-md);
+    background: var(--gradient-elevated);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    transition: border-color var(--transition-smooth), box-shadow var(--transition-smooth), transform var(--transition-smooth);
+  }
+  .card-surface:hover {
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: var(--shadow-md);
+  }
+
+  /* Modern section dividers */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+    border: 0;
   }
 }
 
-/* Mobile-friendly tap targets globally */
 @layer utilities {
   .tap-target {
     min-height: 44px;
     min-width: 44px;
   }
-  
-  /* Improved touch feedback for mobile */
+
   .touch-feedback {
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
   }
-  
+
   .touch-feedback:active {
     opacity: 0.7;
     transform: scale(0.98);
+  }
+
+  /* Subtle chess.com brand-tinted glow ring used on focus / active */
+  .ring-brand:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+
+  /* Gradient brand text */
+  .text-gradient {
+    background: linear-gradient(180deg, #ffffff 0%, #c5c5c5 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .text-gradient-brand {
+    background: linear-gradient(180deg, #b3dc7e 0%, #81b64c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Glassy surface used on hero/elevated cards */
+  .surface-glass {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
 }
 
@@ -220,14 +303,19 @@
   html {
     font-size: 15px;
   }
-  
-  h1 { font-size: 1.75rem !important; }
-  h2 { font-size: 1.5rem !important; }
-  h3 { font-size: 1.25rem !important; }
 }
 
 @media (min-width: 1440px) {
   html {
     font-size: 17px;
+  }
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
