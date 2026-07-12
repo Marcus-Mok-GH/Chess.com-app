@@ -1,4 +1,34 @@
 # Changelog
+## [2026-07-12] - Restore Self-Hosted OTP Fallback for "Auth service unavailable"
+
+### Fixed
+- **Login fully restored on Vercel without Neon Auth credentials.** `/api/auth/email-otp/*` no longer 404s when `NEON_AUTH_BASE_URL` is unset or points at a Neon Auth project where Better Auth's `emailOTP` plugin is disabled (the live state after the 2026-07-11 env wipe). Replaced the Neon-only proxy in `artifacts/api-server/src/chess-server/routes/auth.js` with a self-hosted OTP flow identical in shape to the pre-Neon implementation, plus an automatic fallback to the local flow when the Neon proxy 5xxs/404s.
+- **`/api/auth/send-verification-otp` / `resend` no longer hit a dead Neon endpoint.** Both routes now use the same hashed `verifications` table + `scrypt` code + 30s cooldown + 5-attempt cap the project shipped with before the Neon swap. `sign-in/email-otp` mints a local `sessions` row via `createSession` from `chess-server/auth.js` so matchmaking, games, coach, and stats routes keep working without Neon.
+- **All proxy + local paths always return JSON.** Wrapped every `/api/auth/*` handler in try/catch and normalized error envelopes to `{error:{message}}` (was returning 404 with "Auth service unavailable" on Neon upstream 404s and 500 with HTML on uncaught throws).
+
+### Added
+- `artifacts/api-server/src/chess-server/mailer.js` — Resend (primary) → SMTP (optional) → dev console-log fallback, restored from git history (`deb29da`). Production stays on Resend if `RESEND_API_KEY` is set; without it, OTP codes are logged to the server console so the dev/preview flow still completes. Removed `nodemailer` from runtime deps was kept removed — SMTP path uses lazy `import('nodemailer')` and degrades to console logger if the module is missing.
+- Hybrid Neon path: when `NEON_AUTH_BASE_URL` is set and `/auth/email-otp/send-verification-otp` returns 2xx, the local route forwards to it and mints the local session. When Neon is unset, 4xx, or 5xx, the local flow runs instead. This keeps the project deployable to Vercel with zero Neon env vars and lets the Neon path come back simply by re-adding the env var.
+- API-path strip in `api/[...path].js`: Vercel invokes the serverless handler with the original `/api/...` URL; the Express app already mounts routes under `/api/...`, so the handler strips the leading `/api` only when `process.env.VERCEL` is set (standalone dev mode passes URLs through unchanged).
+
+### Changed
+- `mintLocalSession` / `findOrCreateUserByEmail` reused from the pre-Neon code path, so the existing `users` and `sessions` table schema is unchanged.
+- `/api/auth/session` and `/api/auth/update-username` keep the Neon auth path as a best-effort (it 200s when the local session is valid) and always return the locally-stored user; no client contract change.
+
+### Verified
+- Local Postgres + `pnpm --filter @workspace/api-server run build` + `node dist/index.mjs`: full send → cooldown → resend → sign-in → session flow works (HTTP 200, mints `sessions` row, returns shaped user). Cooldown returns 429 with seconds-remaining; incorrect code returns 400 with attempts-remaining.
+
+## [2026-07-11] - Branch Cleanup + Login Flow Verification
+
+### Changed
+- Pruned repository: closed stale PRs #100, #102, #110, #111 and deleted all non-main branches (7 remote, 8 local). Only `main` (9788cfc) remains, in sync with origin.
+
+### Investigated
+- Browser-tested the login flow on https://chess-com-app.vercel.app. The `/login` form renders and submits, but `POST /api/auth/email-otp/send-verification-otp` returns HTTP 404 with the client-facing error "Auth service unavailable. Please try again."
+- Root cause was operational, not code: production Vercel env vars `DATABASE_URL`, `NEON_AUTH_BASE_URL`, `NEON_PROJECT_ID`, and `VITE_NEON_AUTH_URL` were either unset or pointed at a Neon Auth project where the Better Auth `emailOTP` plugin/route was not enabled. `/api/health` and `/api/auth/signout` work (200), confirming the serverless function loads but the proxied upstream send-otp route 404s. The local `/api/auth/email-otp/send-verification-otp` route in `artifacts/api-server/src/chess-server/routes/auth.js` is correctly wired (proxies to `process.env.NEON_AUTH_BASE_URL + /auth/email-otp/send-verification-otp`).
+
+### Security
+- Wiped the suspect env values from Vercel production and replaced with placeholders so the live deployment no longer carries potentially-compromised or stale credentials. Re-add real values (from the Neon console / Vercel storage) before the app is used in production.
 
 ## [2026-07-10] - Neon Auth Email Verification
 
