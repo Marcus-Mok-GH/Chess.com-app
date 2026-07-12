@@ -3,16 +3,16 @@
 ## [2026-07-12] - Restore Self-Hosted OTP Fallback
 
 ### Fixed
-- **Login restored after Neon Auth env wipe.** `/api/auth/email-otp/*` routes 404'd with "Auth service unavailable" once `NEON_AUTH_BASE_URL` was cleared in Vercel (2026-07-11). `routes/auth.js` now falls back to the self-hosted OTP flow (hashed `verifications` table, scrypt code, 30s cooldown, 5-attempt cap) whenever Neon is unset, 4xx, or 5xx — so login works with **zero** Neon env vars.
+- **Login restored after Neon Auth env wipe.** `/api/auth/email-otp/*` routes 404'd with "Auth service unavailable" once `NEON_AUTH_BASE_URL` was cleared in Vercel (2026-07-11). `routes/auth.js` now runs a fully self-hosted OTP flow (hashed `verifications` table, scrypt code, 30s cooldown, 5-attempt cap) so login works with **zero** Neon env vars.
 - **No more "Auth service unavailable" on the client.** All `/api/auth/*` handlers always return `{error:{message}}` JSON, including on proxy failures and uncaught throws. Previously a Neon upstream 404 surfaced as 404 + "Auth service unavailable. Please try again." on the user.
 
 ### Added
-- `artifacts/api-server/src/chess-server/mailer.js` reinstated with Resend (primary, when `RESEND_API_KEY` is set) → SMTP (optional, lazy-loaded) → dev console-log fallback. Without any mailer, OTP codes are logged to the server console so dev/preview sign-in still works.
+- `artifacts/api-server/src/chess-server/mailer.js` reinstated with Resend (primary, when `RESEND_API_KEY` is set) → SMTP (optional, lazy-loaded) → dev console-log fallback. Without any mailer in non-production (`NODE_ENV !== 'production'` or `OTP_DEV_LOG=1`), OTP codes are logged to the server console so dev sign-in still works; in production, the route reports a delivery error instead of fake-success so the raw code is never leaked.
 - `api/[...path].js` strips the leading `/api` from the request URL when running on Vercel (gated on `process.env.VERCEL`) so the Express app's `/api/...` mounts still match under the serverless rewrite; standalone dev mode is unchanged.
 
 ### Changed
 - `sign-in/email-otp` mints a local `sessions` row via `createSession` from `chess-server/auth.js`; `send-verification-otp` and `resend` write to the existing `verifications` table directly. No schema changes; existing `users` / `sessions` tables unchanged.
-- `session` and `update-username` look up the local user/session first; they still forward to Neon as a best-effort when the local lookup succeeds, so enabling Neon in the future is just an env-var add.
+- `session` and `update-username` are local-only — they read and write the local `users` and `sessions` tables directly. There is no Neon forwarding in this path.
 
 ## [2026-07-10] - Neon Auth Email Verification
 

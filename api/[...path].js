@@ -28,12 +28,6 @@ function handler(req, res) {
     // routes like `/api/auth/...` and `/api/matchmaking/...` still match.
     const stripped = req.url.replace(/^\/api(?=\/|$)/, '') || '/';
     req.url = stripped;
-    // Vercel also exposes the captured path segments as an array; some
-    // downstream middleware reads `req.params` shape — keep a consistent
-    // object so `req.params[0]` works for `[...slug]` style routes.
-    if (req.query && Array.isArray(req.query.path)) {
-      // already an array — nothing to do
-    }
   }
   return app(req, res);
 }

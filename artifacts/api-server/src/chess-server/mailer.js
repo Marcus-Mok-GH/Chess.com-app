@@ -104,9 +104,18 @@ export async function sendOtpEmail({ to, code }) {
 
   // 3) No mailer configured — dev/test fallback: log the code to stdout so
   //    the OTP flow still succeeds locally without external email creds.
-  //    This prevents the OTP endpoint from returning 500 in environments
-  //    without RESEND_API_KEY or SMTP_* configured, and keeps the app
-  //    working when the upstream Neon Auth proxy is misconfigured.
+  //    This is intentionally gated to non-production environments (and the
+  //    explicit OTP_DEV_LOG opt-in for safety). In production/preview the
+  //    endpoint fails loudly instead of silently leaking live auth codes
+  //    and PII into server logs while reporting success.
+  const isDev = process.env.NODE_ENV !== 'production';
+  const devLogEnabled = process.env.OTP_DEV_LOG === '1';
+  if (!isDev && !devLogEnabled) {
+    throw new Error(
+      'No mailer configured in production. Set RESEND_API_KEY (or SMTP_*) ' +
+        'to deliver OTP emails.'
+    );
+  }
   console.warn(
     '[Auth] No mailer configured — logging OTP to console (dev fallback). ' +
       'Set RESEND_API_KEY (or SMTP_*) for production delivery.'
