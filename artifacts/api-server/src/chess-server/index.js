@@ -33,6 +33,35 @@ const io = new Server(httpServer, {
 app.use(cors(corsOptions));
 app.use(express.json());
 
+let serverlessInitPromise = null;
+
+const ensureServerlessDatabaseReady = () => {
+  if (!process.env.VERCEL) return Promise.resolve();
+
+  serverlessInitPromise ||= initDatabase()
+    .then(() => {
+      console.log('✅ Database initialized for serverless auth request handling');
+    })
+    .catch((err) => {
+      serverlessInitPromise = null;
+      console.error('❌ Database initialization error:', err.message);
+      throw err;
+    });
+
+  return serverlessInitPromise;
+};
+
+app.use('/api/auth', async (req, res, next) => {
+  try {
+    await ensureServerlessDatabaseReady();
+    next();
+  } catch {
+    res.status(503).json({
+      error: { message: 'Auth service is starting. Please try again in a moment.' },
+    });
+  }
+});
+
 // Routes
 app.use('/api/matchmaking', matchmakingRoutes);
 app.use('/api/games', gameRoutes);
