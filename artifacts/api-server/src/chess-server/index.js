@@ -17,6 +17,7 @@ import statsRoutes from './routes/stats.js';
 import { registerSocketHandlers } from './socket/index.js';
 import { query } from './db.js';
 import { initDatabase } from './db/init.js';
+import { setDatabaseReady } from './db/status.js';
 
 dotenv.config();
 
@@ -33,34 +34,26 @@ const io = new Server(httpServer, {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-let serverlessInitPromise = null;
+// Auth routes perform their own database work through the shared query helper,
+// which lazily initializes and self-heals the schema when needed. Do not gate
+// the entire auth router behind a cold-start init middleware: if that init fails
+// once on Vercel, users only see the misleading "Auth service is starting"
+// response even though the service is not actually warming up.
+const startServerlessDatabaseWarmup = () => {
+  if (!process.env.VERCEL) return;
 
-const ensureServerlessDatabaseReady = () => {
-  if (!process.env.VERCEL) return Promise.resolve();
-
-  serverlessInitPromise ||= initDatabase()
+  initDatabase()
     .then(() => {
-      console.log('✅ Database initialized for serverless auth request handling');
+      setDatabaseReady(true);
+      console.log('✅ Database warm-up completed for serverless auth routes');
     })
     .catch((err) => {
-      serverlessInitPromise = null;
-      console.error('❌ Database initialization error:', err.message);
-      throw err;
+      setDatabaseReady(false);
+      console.warn('[DB] Background serverless database warm-up failed; auth routes will retry on demand:', err?.message || err);
     });
-
-  return serverlessInitPromise;
 };
 
-app.use('/api/auth', async (req, res, next) => {
-  try {
-    await ensureServerlessDatabaseReady();
-    next();
-  } catch {
-    res.status(503).json({
-      error: { message: 'Auth service is starting. Please try again in a moment.' },
-    });
-  }
-});
+startServerlessDatabaseWarmup();
 
 // Routes
 app.use('/api/matchmaking', matchmakingRoutes);

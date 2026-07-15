@@ -1,5 +1,11 @@
 # Changelog
 
+## [2026-07-15] - Auth Startup Gate Fix
+
+### Fixed
+- **Login startup gate removed**: Fixed login requests getting stuck behind a serverless database warm-up gate that returned "Auth service is starting. Please try again in a moment." indefinitely. Auth routes now use the existing lazy database initialization path so users receive the real auth response instead of a stale startup message.
+- **Non-blocking auth warm-up retained**: Serverless deployments still start a background database warm-up and mark the shared database readiness flag on success, but failures no longer block login requests; auth handlers retry initialization on demand.
+
 ## [2026-07-16] - Restore Neon Auth Native Email Verification with Retries
 
 ### Fixed
