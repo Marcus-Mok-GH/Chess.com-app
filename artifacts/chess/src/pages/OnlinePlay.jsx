@@ -180,31 +180,34 @@ export default function OnlinePlay() {
       }
 
       // Recover color from server if still unknown (e.g. shared link / lost localStorage)
-      if ((!resolvedColor || !resolvedPlayerId) && (user || resolvedPlayerId)) {
+      // Re-run when auth finishes loading so refreshes do not strand the user on the wrong side.
+      if (!resolvedColor || !resolvedPlayerId) {
         const pid = resolvedPlayerId || (user ? `user_${user.id}` : null);
-        api.getGameByCode(code)
-          .then((data) => {
-            if (!data || !pid) return;
-            let color = resolvedColor;
-            if (data.white_player_id === pid) color = 'white';
-            else if (data.black_player_id === pid) color = 'black';
-            // Also match by numeric user id stored without prefix
-            else if (user) {
-              const uid = String(user.id);
-              if (String(data.white_player_id) === uid || data.white_player_id === `user_${uid}`) color = 'white';
-              else if (String(data.black_player_id) === uid || data.black_player_id === `user_${uid}`) color = 'black';
-            }
-            if (color) {
-              setPlayerColor(color);
-              setPlayerId(pid);
-              persistGameSession({
-                gameId: code,
-                playerId: pid,
-                playerColor: color,
-              });
-            }
-          })
-          .catch(() => {});
+        if (pid) {
+          api.getGameByCode(code)
+            .then((data) => {
+              if (!data || !pid) return;
+              let color = resolvedColor;
+              if (data.white_player_id === pid) color = 'white';
+              else if (data.black_player_id === pid) color = 'black';
+              // Also match by numeric user id stored without prefix
+              else if (user) {
+                const uid = String(user.id);
+                if (String(data.white_player_id) === uid || data.white_player_id === `user_${uid}`) color = 'white';
+                else if (String(data.black_player_id) === uid || data.black_player_id === `user_${uid}`) color = 'black';
+              }
+              if (color) {
+                setPlayerColor(color);
+                setPlayerId(pid);
+                persistGameSession({
+                  gameId: code,
+                  playerId: pid,
+                  playerColor: color,
+                });
+              }
+            })
+            .catch(() => {});
+        }
       } else {
         persistGameSession({
           gameId: code,
@@ -221,7 +224,7 @@ export default function OnlinePlay() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [routeGameId, searchParams]);
+  }, [routeGameId, searchParams, user, isLoggedIn]);
 
   useEffect(() => {
     const handleMatchFound = (data) => {
