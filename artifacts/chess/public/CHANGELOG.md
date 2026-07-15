@@ -1,5 +1,11 @@
 # Changelog
 
+## [2026-07-15] - Auth Routing and Serverless Startup Hardening
+
+### Fixed
+- **Login route prefix drift**: `api/[...path].js` now normalizes known Vercel catch-all API requests so Express receives `/api/...`, whether the platform forwards `/api/auth/...` or strips the function prefix to `/auth/...`. The normalizer leaves unrelated paths untouched and preserves `/api` / `/api?...` exactly, preventing login and OTP endpoints from regressing into 404/405-style routing failures.
+- **Serverless auth cold starts**: `/api/auth/*` requests now lazily run the database initializer on Vercel before hitting OTP/session handlers. This keeps the self-hosted OTP tables and columns self-healing even when the serverless entry point does not start the standalone listener.
+
 ## [2026-07-12] - Restore Self-Hosted OTP Fallback
 
 ### Fixed
