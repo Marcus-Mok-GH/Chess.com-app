@@ -1,4 +1,6 @@
 # Changelog
+
+# Changelog
 ## [2026-07-17] - Use Vercel's Native Neon Integration for Email OTP
 
 ### Changed
@@ -8,6 +10,63 @@
 ## [2026-07-12] - Restore Self-Hosted OTP Fallback for "Auth service unavailable"
 
 ### Fixed
+- **Login fully restored on Vercel without Neon Auth credentials.** `/api/auth/email-otp/*` no longer 404s when `NEON_AUTH_BASE_URL` is unset or points at a Neon Auth project where Better Auth's `emailOTP` plugin is disabled (the live state after the 2026-07-11 env wipe). Replaced the Neon-only proxy in `artifacts/api-server/src/chess-server/routes/auth.js` with a self-hosted OTP flow identical in shape to the pre-Neon implementation, so the login flow no longer depends on any upstream Neon Auth project being reachable.
+- **`/api/auth/email-otp/send-verification-otp` and `/resend` no longer hit a dead Neon endpoint.** Both routes now use the same hashed `verifications` table + `scrypt` code + 30s cooldown + 5-attempt cap the project shipped with before the Neon swap. `sign-in/email-otp` mints a local `sessions` row via `createSession` from `chess-server/auth.js` so matchmaking, games, coach, and stats routes keep working without Neon.
+- **All `/api/auth/*` handlers always return JSON.** Wrapped every handler in try/catch and normalized error envelopes to `{error:{message}}` (was returning 404 with "Auth service unavailable" on upstream 404s and 500 with HTML on uncaught throws).
+
+### Added
+- `artifacts/api-server/src/chess-server/mailer.js` — Resend (primary) → SMTP (optional) → dev console-log fallback, restored from git history (`deb29da`). Production stays on Resend if `RESEND_API_KEY` is set; the dev console-log branch is gated to `NODE_ENV !== 'production'` (or the explicit `OTP_DEV_LOG=1` opt-in) so a live auth code and recipient email can never be written to server logs in a production/preview build without an explicit dev flag.
+- `scrypt`-hashed `verifications.value` with timing-safe comparison on every sign-in attempt, consistent with the pre-Neon `routes/auth.js`.
+- API-path strip in `api/[...path].js`: Vercel invokes the serverless handler with the original `/api/...` URL; the Express app already mounts routes under `/api/...`, so the handler strips the leading `/api` only when `process.env.VERCEL` is set (standalone dev mode passes URLs through unchanged).
+
+### Changed
+- `routes/auth.js` now uses `createSession` and `findOrCreateUserByEmail` from `chess-server/auth.js` directly; the Neon proxying and hybrid fallback that the previous version attempted have been removed. The existing `users` and `sessions` table schema is unchanged.
+- `/api/auth/session` and `/api/auth/update-username` always read from and write to the local `users` / `sessions` tables; no client contract change.
+
+### Verified
+- Local Postgres + `pnpm --filter @workspace/api-server run build` + `node dist/index.mjs`: full send → cooldown → resend → sign-in → session flow works (HTTP 200, mints `sessions` row, returns shaped user). Cooldown returns 429 with seconds-remaining; incorrect code returns 400 with attempts-remaining.
+
+## [2026-07-11] - Branch Cleanup + Login Flow Verification
+
+### Changed
+- Pruned repository: closed stale PRs #100, #102, #110, #111 and deleted all non-main branches (7 remote, 8 local). Only `main` (9788cfc) remains, in sync with origin.
+
+### Investigated
+- Browser-tested the login flow on https://chess-com-app.vercel.app. The `/login` form renders and submits, but `POST /api/auth/email-otp/send-verification-otp` returns HTTP 404 with the client-facing error "Auth service unavailable. Please try again."
+- Root cause was operational, not code: production Vercel env vars `DATABASE_URL`, `NEON_AUTH_BASE_URL`, `NEON_PROJECT_ID`, and `VITE_NEON_AUTH_URL` were either unset or pointed at a Neon Auth project where the Better Auth `emailOTP` plugin/route was not enabled. `/api/health` and `/api/auth/signout` work (200), confirming the serverless function loads but the proxied upstream send-otp route 404s. The local `/api/auth/email-otp/send-verification-otp` route in `artifacts/api-server/src/chess-server/routes/auth.js` is correctly wired (proxies to `process.env.NEON_AUTH_BASE_URL + /auth/email-otp/send-verification-otp`).
+
+
+## [2026-07-16] - Restore Neon Auth Native Email Verification with Retries
+
+### Fixed
+- **Restored Neon Auth native email verification flow**: Modified `/api/auth/*` endpoints in `routes/auth.js` to proxy OTP requests to the Neon Auth API (`NEON_AUTH_BASE_URL`), allowing native email OTP generation and delivery without relying on a local/custom email mailer.
+- **Added robust retry logic in proxying**: Built `proxyToNeonAuth` with 3 retries and exponential backoff (delaying 500ms, 1000ms, and 2000ms) on HTTP 5xx errors and connection/network failures to prevent login errors on transient service glitches.
+- **Detailed error surfacing**: Hardened error handling to gracefully catch exhausted retries and surface detailed, underlying error messages (such as exact HTTP statuses and network exceptions) back to the client UI to make future debugging clear and friction-free.
+
+## [2026-07-12] - Restore Self-Hosted OTP Fallback for "Auth service unavailable"
+
+### Fixed
+- **Login fully restored on Vercel without Neon Auth credentials.** `/api/auth/email-otp/*` no longer 404s when `NEON_AUTH_BASE_URL` is unset or points at a Neon Auth project where Better Auth's `emailOTP` plugin is disabled (the live state after the 2026-07-11 env wipe). Replaced the Neon-only proxy in `artifacts/api-server/src/chess-server/routes/auth.js` with a self-hosted OTP flow identical in shape to the pre-Neon implementation, so the login flow no longer depends on any upstream Neon Auth project being reachable.
+- **`/api/auth/email-otp/send-verification-otp` and `/resend` no longer hit a dead Neon endpoint.** Both routes now use the same hashed `verifications` table + `scrypt` code + 30s cooldown + 5-attempt cap the project shipped with before the Neon swap. `sign-in/email-otp` mints a local `sessions` row via `createSession` from `chess-server/auth.js` so matchmaking, games, coach, and stats routes keep working without Neon.
+- **All `/api/auth/*` handlers always return JSON.** Wrapped every handler in try/catch and normalized error envelopes to `{error:{message}}` (was returning 404 with "Auth service unavailable" on upstream 404s and 500 with HTML on uncaught throws).
+
+### Added
+- `artifacts/api-server/src/chess-server/mailer.js` — Resend (primary) → SMTP (optional) → dev console-log fallback, restored from git history (`deb29da`). Production stays on Resend if `RESEND_API_KEY` is set; the dev console-log branch is gated to `NODE_ENV !== 'production'` (or the explicit `OTP_DEV_LOG=1` opt-in) so a live auth code and recipient email can never be written to server logs in a production/preview build without an explicit dev flag.
+- `scrypt`-hashed `verifications.value` with timing-safe comparison on every sign-in attempt, consistent with the pre-Neon `routes/auth.js`.
+- API-path strip in `api/[...path].js`: Vercel invokes the serverless handler with the original `/api/...` URL; the Express app already mounts routes under `/api/...`, so the handler strips the leading `/api` only when `process.env.VERCEL` is set (standalone dev mode passes URLs through unchanged).
+
+### Changed
+- `routes/auth.js` now uses `createSession` and `findOrCreateUserByEmail` from `chess-server/auth.js` directly; the Neon proxying and hybrid fallback that the previous version attempted have been removed. The existing `users` and `sessions` table schema is unchanged.
+- `/api/auth/session` and `/api/auth/update-username` always read from and write to the local `users` / `sessions` tables; no client contract change.
+
+### Verified
+- Local Postgres + `pnpm --filter @workspace/api-server run build` + `node dist/index.mjs`: full send → cooldown → resend → sign-in → session flow works (HTTP 200, mints `sessions` row, returns shaped user). Cooldown returns 429 with seconds-remaining; incorrect code returns 400 with attempts-remaining.
+
+## [2026-07-11] - Branch Cleanup + Login Flow Verification
+
+### Changed
+- Pruned repository: closed stale PRs #100, #102, #110, #111 and deleted all non-main branches (7 remote, 8 local). Only `main` (9788cfc) remains, in sync with origin.
+
 - **Login fully restored on Vercel without Neon Auth credentials.** `/api/auth/email-otp/*` no longer 404s when `NEON_AUTH_BASE_URL` is unset or points at a Neon Auth project where Better Auth's `emailOTP` plugin is disabled (the live state after the 2026-07-11 env wipe). Replaced the Neon-only proxy in `artifacts/api-server/src/chess-server/routes/auth.js` with a self-hosted OTP flow identical in shape to the pre-Neon implementation, so the login flow no longer depends on any upstream Neon Auth project being reachable.
 - **`/api/auth/email-otp/send-verification-otp` and `/resend` no longer hit a dead Neon endpoint.** Both routes now use the same hashed `verifications` table + `scrypt` code + 30s cooldown + 5-attempt cap the project shipped with before the Neon swap. `sign-in/email-otp` mints a local `sessions` row via `createSession` from `chess-server/auth.js` so matchmaking, games, coach, and stats routes keep working without Neon.
 - **All `/api/auth/*` handlers always return JSON.** Wrapped every handler in try/catch and normalized error envelopes to `{error:{message}}` (was returning 404 with "Auth service unavailable" on upstream 404s and 500 with HTML on uncaught throws).

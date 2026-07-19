@@ -1,5 +1,24 @@
 # Changelog
 
+## [2026-07-15] - Auth Startup Gate Fix
+
+### Fixed
+- **Login startup gate removed**: Fixed login requests getting stuck behind a serverless database warm-up gate that returned "Auth service is starting. Please try again in a moment." indefinitely. Auth routes now use the existing lazy database initialization path so users receive the real auth response instead of a stale startup message.
+- **Non-blocking auth warm-up retained**: Serverless deployments still start a background database warm-up and mark the shared database readiness flag on success, but failures no longer block login requests; auth handlers retry initialization on demand.
+
+## [2026-07-16] - Restore Neon Auth Native Email Verification with Retries
+
+### Fixed
+- **Restored Neon Auth native email verification flow**: Modified `/api/auth/*` endpoints in `routes/auth.js` to proxy OTP requests to the Neon Auth API (`NEON_AUTH_BASE_URL`), allowing native email OTP generation and delivery without relying on a local/custom email mailer.
+- **Added robust retry logic in proxying**: Built `proxyToNeonAuth` with 3 retries and exponential backoff (delaying 500ms, 1000ms, and 2000ms) on HTTP 5xx errors and connection/network failures to prevent login errors on transient service glitches.
+- **Detailed error surfacing**: Hardened error handling to gracefully catch exhausted retries and surface detailed, underlying error messages (such as exact HTTP statuses and network exceptions) back to the client UI to make future debugging clear and friction-free.
+
+## [2026-07-15] - Auth Routing and Serverless Startup Hardening
+
+### Fixed
+- **Login route prefix drift**: `api/[...path].js` now normalizes known Vercel catch-all API requests so Express receives `/api/...`, whether the platform forwards `/api/auth/...` or strips the function prefix to `/auth/...`. The normalizer leaves unrelated paths untouched and preserves `/api` / `/api?...` exactly, preventing login and OTP endpoints from regressing into 404/405-style routing failures.
+- **Serverless auth cold starts**: `/api/auth/*` requests now lazily run the database initializer on Vercel before hitting OTP/session handlers. This keeps the self-hosted OTP tables and columns self-healing even when the serverless entry point does not start the standalone listener.
+
 ## [2026-07-12] - Restore Self-Hosted OTP Fallback
 
 ### Fixed
