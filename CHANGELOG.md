@@ -1,4 +1,10 @@
 # Changelog
+## [2026-07-17] - Use Vercel's Native Neon Integration for Email OTP
+
+### Changed
+- Restored the managed Neon Auth email-OTP flow. The app now delegates verification-code delivery and validation to Neon Auth through `NEON_AUTH_BASE_URL`; it no longer uses the local Resend/SMTP mailer for login.
+- Removed empty project-level Neon/Postgres environment-variable overrides so the attached Vercel Neon resource can supply its deployment configuration.
+
 ## [2026-07-12] - Restore Self-Hosted OTP Fallback for "Auth service unavailable"
 
 ### Fixed

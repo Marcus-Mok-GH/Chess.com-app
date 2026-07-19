@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@neondatabase/auth": "0.4.2-beta",
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",
     "chess.js": "^1.4.0",
