@@ -75,7 +75,7 @@ export function FeedbackPanel() {
           onClick={() => setIsOpen(true)}
           aria-label="Send feedback"
         >
-          💬 Feedback
+          Feedback
         </button>
         <button
           className="feedback-dismiss"

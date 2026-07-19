@@ -160,7 +160,18 @@ function ok(res, data) {
 }
 
 function fail(res, status, message) {
-  return res.status(status).json({ error: { message } });
+  // Clean error messages from Neon Auth
+  const cleanMsg = cleanErrorMessage(message);
+  return res.status(status).json({ error: { message: cleanMsg } });
+}
+
+function cleanErrorMessage(message) {
+  if (typeof message !== 'string') return message;
+  // Remove common prefixes from Neon Auth
+  return message
+    .replace(/^Neon Auth error: /i, '')
+    .replace(/^Auth error: /i, '')
+    .trim();
 }
 
 // ---------------------------------------------------------------------------
@@ -180,7 +191,7 @@ router.post('/email-otp/send-verification-otp', async (req, res) => {
 
     if (!result.ok) {
       const errMessage = result.data?.error?.message || result.data?.message || JSON.stringify(result.data);
-      return fail(res, result.status, `Neon Auth error: ${errMessage}`);
+      return fail(res, result.status, errMessage);
     }
 
     return res.status(result.status).json(result.data);
@@ -207,7 +218,7 @@ router.post('/email-otp/resend', async (req, res) => {
 
     if (!result.ok) {
       const errMessage = result.data?.error?.message || result.data?.message || JSON.stringify(result.data);
-      return fail(res, result.status, `Neon Auth resend error: ${errMessage}`);
+      return fail(res, result.status, errMessage);
     }
 
     return res.status(result.status).json(result.data);
@@ -234,7 +245,7 @@ router.post('/sign-in/email-otp', async (req, res) => {
 
     if (!result.ok) {
       const errMessage = result.data?.error?.message || result.data?.message || JSON.stringify(result.data);
-      return fail(res, result.status, `Neon Auth sign-in error: ${errMessage}`);
+      return fail(res, result.status, errMessage);
     }
 
     const neonData = result.data;

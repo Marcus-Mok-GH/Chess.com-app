@@ -93,8 +93,9 @@
 
 .login-field input:focus {
   border-color: var(--primary);
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(129, 182, 76, 0.15);
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--ring, var(--primary));
 }
 
 .login-btn {
@@ -136,6 +137,23 @@
   font-size: 0.9rem;
   font-weight: 600;
   text-align: center;
+}
+
+.login-validator {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.login-legal {
+  margin-top: 1.5rem;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.login-legal a {
+  color: var(--primary);
+  text-decoration: underline;
 }
 
 .spinner {
