@@ -90,6 +90,15 @@ function AppHeader() {
       <header className="mobile-header">
         <Link to="/" className="app-logo">♟️ Chess</Link>
         <h1 className="page-title">{getTitle(location.pathname)}</h1>
+        <button
+          className="feedback-trigger"
+          onClick={() => setIsFeedbackOpen(true)}
+          aria-label="Send Feedback"
+          style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600, padding: '0.5rem' }}
+        >
+          Send Feedback
+        </button>
+        <FeedbackPanel isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} />
         {!isOnline && <span className="offline-badge">Offline</span>}
       </header>
 
