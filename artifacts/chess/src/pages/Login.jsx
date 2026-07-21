@@ -22,9 +22,6 @@ export default function Login() {
   const [error, setError] = useState(searchParams.get('error') || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Add state for success feedback
-  const [emailSent, setEmailSent] = useState(false);
-
   // Redirect if already logged in
   useEffect(() => {
     if (!isLoading && isLoggedIn) {
@@ -33,15 +30,16 @@ export default function Login() {
   }, [isLoading, isLoggedIn, navigate]);
 
   const validateEmail = (value) => {
-    if (!value.trim()) return false;
+    const trimmed = value.trim();
+    if (!trimmed) return false;
     // Basic email regex
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(value);
+    return re.test(trimmed);
   };
 
   const handleSendCode = async () => {
+    if (isSubmitting) return;
     setError('');
-    setEmailSent(false);
     if (!email.trim()) {
       setError('Please enter your email address.');
       return;
@@ -58,8 +56,6 @@ export default function Login() {
         setError(result.error);
         return;
       }
-      // Show success message
-      setEmailSent(true);
       // GlobalVerificationGuard picks up isAwaitingVerification and navigates to /verify-email
       navigate('/verify-email', { replace: true });
     } finally {
@@ -70,6 +66,7 @@ export default function Login() {
   const handleEmailChange = (e) => {
     const value = e.target.value;
     setEmail(value);
+    setError('');
     // Real-time validation for non-empty values
     if (value && !validateEmail(value)) {
       setEmailInvalid(true);
@@ -107,8 +104,8 @@ export default function Login() {
               placeholder="your@email.com"
               autoComplete="email"
               autoFocus
-              aria-describedby={error ? 'email-error' : undefined}
-              aria-invalid={error ? 'true' : undefined}
+              aria-describedby={error ? 'email-error' : emailInvalid ? 'login-validator' : undefined}
+              aria-invalid={error ? 'true' : emailInvalid ? 'true' : undefined}
               onKeyDown={(e) => e.key === 'Enter' && handleSendCode()}
             />
           </div>

@@ -19,6 +19,8 @@ const Settings = lazy(() => import('./pages/Settings'))
 const Changelog = lazy(() => import('./pages/Changelog'))
 const Landing = lazy(() => import('./pages/Landing'))
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail'))
+const Terms = lazy(() => import('./pages/Terms'))
+const Privacy = lazy(() => import('./pages/Privacy'))
 
 function getTitle(path) {
   if (path.startsWith('/online/') || path.startsWith('/game/')) return 'Online Play'
@@ -82,6 +84,8 @@ function AppHeader() {
             <Link to="/settings" className={`sidebar-item ${currentPath === '/settings' ? 'active' : ''}`} title="Settings">
               <span className="sidebar-icon">⚙️</span>
             </Link>
+            <Link to="/terms" className="sidebar-item">Terms</Link>
+            <Link to="/privacy" className="sidebar-item">Privacy</Link>
           </div>
         </div>
       </aside>
@@ -90,16 +94,6 @@ function AppHeader() {
       <header className="mobile-header">
         <Link to="/" className="app-logo">♟️ Chess</Link>
         <h1 className="page-title">{getTitle(location.pathname)}</h1>
-        <button
-          className="feedback-trigger"
-          onClick={() => setIsFeedbackOpen(true)}
-          aria-label="Send Feedback"
-          style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600, padding: '0.5rem' }}
-        >
-          Send Feedback
-        </button>
-        <FeedbackPanel isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} />
-        {!isOnline && <span className="offline-badge">Offline</span>}
       </header>
 
       {/* Bottom Mobile Navigation */}
@@ -205,6 +199,8 @@ export default function App() {
                   <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                   <Route path="/changelog" element={<Changelog />} />
                 </Route>
+                <Route path="/terms" element={<Terms />} />
+                <Route path="/privacy" element={<Privacy />} />
               </Routes>
               <FeedbackPanel />
             </BrowserRouter>
