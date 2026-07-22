@@ -17,8 +17,11 @@ export default function SetUsernameModal() {
     const trimmed = username.trim();
     if (trimmed.length < 2) return setError('Username is too short (min 2 chars).');
     if (trimmed.length > 20) return setError('Username is too long (max 20 chars).');
+    if (trimmed !== username) {
+      return setError('Usernames can\'t start or end with a space.');
+    }
     if (!/^[a-zA-Z0-9._-]+$/.test(trimmed)) {
-      return setError('Only letters, numbers, dots, hyphens, and underscores allowed. No spaces.');
+      return setError('Only letters, numbers, dots (.), hyphens (-), and underscores (_) are allowed. Spaces are not allowed.');
     }
 
     setIsLoading(true);

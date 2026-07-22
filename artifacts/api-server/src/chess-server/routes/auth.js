@@ -368,8 +368,11 @@ router.post('/update-username', async (req, res) => {
 
     const { username } = req.body || {};
     const trimmed = (username || '').trim();
+    if (trimmed.length < 2 || trimmed.length > 20) {
+      return fail(res, 400, `Username must be 2-20 characters (yours is ${trimmed.length}).`);
+    }
     if (!USERNAME_RE.test(trimmed)) {
-      return fail(res, 400, 'Username must be 2-20 characters.');
+      return fail(res, 400, 'Usernames can only contain letters, numbers, dots (.), hyphens (-), and underscores (_). No spaces, @, or special characters.');
     }
 
     const userId = await validateSession(token);
