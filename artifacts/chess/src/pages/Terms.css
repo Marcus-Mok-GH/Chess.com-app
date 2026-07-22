@@ -1,5 +1,5 @@
 .legal-page {
-  min-height: 100vh;
+  min-height: 100svh;
   background: var(--background);
   padding: 2rem;
 }

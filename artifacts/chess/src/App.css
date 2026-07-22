@@ -1,6 +1,6 @@
 .app {
   display: flex;
-  min-height: 100vh;
+  min-height: 100dvh;
   background-color: var(--background);
   color: var(--foreground);
   position: relative;
@@ -16,6 +16,7 @@
   position: sticky;
   top: 0;
   height: 100vh;
+  height: 100dvh;
   z-index: 100;
   transition: width 0.2s;
   flex-shrink: 0;
@@ -380,6 +381,15 @@ main {
   position: relative;
 }
 
+/* ── Mobile bottom-nav spacing ──
+   The bottom-nav is position:fixed (~64px + safe-area), so reserve
+   space at the bottom of scrolling content so it can't be obscured. */
+@media (max-width: 768px) {
+  main {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+}
+
 /* ── Desktop page content wrapper ── */
 @media (min-width: 769px) {
   main {
@@ -399,7 +409,7 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  min-height: 100dvh;
   background-color: var(--background);
   flex-direction: column;
   gap: 1rem;
