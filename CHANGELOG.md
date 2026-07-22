@@ -1,5 +1,15 @@
 # Changelog
 
+## [2026-07-22] - Mobile frontend optimisation sweep
+
+- **Dynamic viewport units**: replaced `min-height/height: 100vh` with `100svh`/`100dvh` across all layout surfaces (`App.css` `.app` + `.loading-screen`, `ChessGame.css`, `PlaySetup.css`, `Home.css`, `Landing.css`, `Terms.css`, `ErrorBoundary.css`) so content no longer hides behind the iOS/Android URL bar or home indicator on mobile.
+- **`Login.css` (the previously unstyled-for-mobile page)**: added explicit mobile + extra-small-phone media queries — `safe-area-inset` padding around the notch, `100svh` height, narrower card with `box-sizing: border-box`, and a ≤380px variant that aligns to the top on tiny phones to avoid clipping by the home indicator. Removed a redundant duplicated `padding` declaration.
+- **`Home.css`**: added a small-phones (`≤380px`) media query that scales the welcome title (1.625rem), subtitle, stat-card padding, and action-card typography so the entry screen no longer overflows on iPhone SE/mini-class devices.
+- Applied CodeRabbit review feedback (PR #124): removed a trailing `padding: 2rem` override in `ErrorBoundary.css` that nullified the safe-area-aware inset padding, and corrected the `Login.css` padding shorthand to use `inset-right`/`inset-left` in their CSS-spec positions (top/right/bottom/left) so cutout-side phones are padded correctly.
+- Verified with `bun run build` (production bundle) — all changes pass and no new errors.
+
+---
+
 ## [2026-07-22] - Fix Neon Auth email-OTP proxy: wrong upstream path + missing body.type
 
 - Fixed `proxyToNeonAuth` in `artifacts/api-server/src/chess-server/routes/auth.js`:

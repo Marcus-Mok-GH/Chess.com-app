@@ -1,9 +1,13 @@
 .login-page {
-  min-height: 100vh;
+  min-height: 100svh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
+  padding:
+    max(2rem, env(safe-area-inset-top))
+    max(2rem, env(safe-area-inset-right))
+    max(2rem, env(safe-area-inset-bottom))
+    max(2rem, env(safe-area-inset-left));
   background: var(--bg-page);
   background-image:
     radial-gradient(ellipse 60% 40% at 50% 0%, rgba(129, 182, 76, 0.08), transparent 60%),
@@ -168,4 +172,62 @@
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* ── Mobile optimisation (≤640px) ─────── */
+@media (max-width: 640px) {
+  .login-page {
+    padding:
+      max(1rem, env(safe-area-inset-top))
+      1rem
+      max(1.25rem, env(safe-area-inset-bottom))
+      1rem;
+  }
+
+  .login-card {
+    padding: 1.5rem 1.25rem;
+    margin-top: 1rem;
+  }
+
+  .login-card h1 {
+    font-size: 1.5rem;
+  }
+
+  .login-card p,
+  .login-card label {
+    font-size: 0.875rem;
+  }
+
+  /* Larger, easier-to-hit inputs and buttons on phones */
+  .login-card input[type="email"],
+  .login-card input[type="text"],
+  .login-card button[type="submit"],
+  .login-card .btn-google,
+  .login-card .btn-otp {
+    min-height: 48px;
+    font-size: 1rem;
+  }
+
+  /* Submit / OAuth buttons reach full width for thumb reach */
+  .login-card button[type="submit"],
+  .login-card .btn-google {
+    width: 100%;
+  }
+
+  /* Terms/Privacy links get more breathing room */
+  .login-card .terms-text {
+    font-size: 0.8rem;
+    line-height: 1.4;
+  }
+}
+
+/* ── Extra-small phones (≤380px) ──────── */
+@media (max-width: 380px) {
+  .login-page {
+    align-items: flex-start;
+  }
+  .login-card {
+    padding: 1.25rem 1rem;
+    margin-top: env(safe-area-inset-top);
+  }
 }
