@@ -2,22 +2,22 @@
 
 .feedback-trigger-wrapper {
   position: fixed;
-  top: 70px;
-  right: 20px;
+  bottom: 18px;
+  left: 18px;
   display: inline-flex;
   align-items: center;
-  gap: 0;
+  gap: 4px;
   z-index: 999;
 }
 
 .feedback-trigger {
-  padding: 10px 16px;
+  padding: 10px 18px;
   font-size: 0.8125rem;
   font-weight: 600;
   background: #7fa650;
   color: #fff;
   border: none;
-  border-radius: 20px 0 0 20px;
+  border-radius: 20px;
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   transition: all 0.15s;
@@ -293,8 +293,8 @@
 /* Mobile - bottom sheet */
 @media (max-width: 480px) {
   .feedback-trigger-wrapper {
-    top: 70px;
-    right: 16px;
+    bottom: 14px;
+    left: 14px;
   }
 
   .feedback-trigger {
@@ -367,8 +367,8 @@
 
 @media (max-width: 360px) {
   .feedback-trigger-wrapper {
-    top: 70px;
-    right: 12px;
+    bottom: 12px;
+    left: 12px;
   }
 
   .feedback-trigger {
