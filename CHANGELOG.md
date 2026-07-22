@@ -1,6 +1,17 @@
 # Changelog
 
-# Changelog
+## [2026-07-22] - Fix Neon Auth email-OTP proxy: wrong upstream path + missing body.type
+
+- Fixed `proxyToNeonAuth` in `artifacts/api-server/src/chess-server/routes/auth.js`:
+  - Strips `/api/auth` prefix before joining on `NEON_AUTH_BASE_URL` (which already ends in `/neondb/auth`).
+  - Fixes 404/empty-error responses on `email-otp/send-verification-otp`, `email-otp/resend`, `sign-in/email-otp`, and `sign-out`.
+- Added default OTP `body.type = "sign-in"` for `send-verification-otp` and `resend` (Neon Auth requires explicit `type`: `sign-in` | `email-verification` | `forget-password`). Callers can still override.
+- Frontend unchanged — it still POSTs `{ email }` / `{ email, otp }` to `/api/auth/...`, which now proxies correctly.
+- Added unit tests (`artifacts/api-server/src/chess-server/routes/auth.proxy.test.js`, Node native test runner): verify prefix stripping, default `type` injection, and explicit `type` override.
+- Verified end-to-end against live `NEON_AUTH_BASE_URL`: returns HTTP 200 `{"success":true}` instead of HTTP 404 / `{"error":{"message":"\"\""}}`.
+
+---
+
 ## [2026-07-17] - Use Vercel's Native Neon Integration for Email OTP
 
 ### Changed

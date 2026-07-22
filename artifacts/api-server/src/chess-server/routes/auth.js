@@ -58,7 +58,12 @@ async function proxyToNeonAuth(path, { method = 'POST', headers = {}, body = nul
   if (!baseUrl) {
     throw new Error('NEON_AUTH_BASE_URL is not configured.');
   }
-  const url = `${baseUrl}${path}`;
+  // NEON_AUTH_BASE_URL points at the auth root (e.g. .../neondb/auth), so
+  // upstream paths are Neon Auth-native (e.g. /email-otp/send-verification-otp)
+  // and must NOT include the local /api/auth prefix. Strip it defensively so
+  // all four call sites are correct regardless of how the caller writes them.
+  const upstreamPath = path.replace(/^\/api\/auth/, '');
+  const url = `${baseUrl}${upstreamPath}`;
 
   const opts = { method, headers: { ...headers } };
   if (body && method !== 'GET') {
@@ -183,10 +188,14 @@ router.post('/email-otp/send-verification-otp', async (req, res) => {
 
   try {
     const headers = extractProxyHeaders(req);
+    // Neon Auth requires an explicit OTP `type`. Default to "sign-in" for the
+    // login flow; allow callers to override with email-verification / forget-password.
+    const incoming = req.body || {};
+    const body = { ...incoming, type: incoming.type || 'sign-in' };
     const result = await proxyToNeonAuth('/api/auth/email-otp/send-verification-otp', {
       method: 'POST',
       headers,
-      body: req.body,
+      body,
     });
 
     if (!result.ok) {
@@ -210,10 +219,12 @@ router.post('/email-otp/resend', async (req, res) => {
 
   try {
     const headers = extractProxyHeaders(req);
+    const incoming = req.body || {};
+    const body = { ...incoming, type: incoming.type || 'sign-in' };
     const result = await proxyToNeonAuth('/api/auth/email-otp/send-verification-otp', {
       method: 'POST',
       headers,
-      body: req.body,
+      body,
     });
 
     if (!result.ok) {
