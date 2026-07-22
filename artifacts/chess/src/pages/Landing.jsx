@@ -173,7 +173,7 @@ export default function Landing() {
           <span className="sidebar-logo-icon">
             <Crown size={22} />
           </span>
-          <span className="sidebar-logo-text">Chess.com</span>
+          <span className="sidebar-logo-text">PlayChess</span>
         </Link>
 
         <nav className="sidebar-nav" aria-label="Main">
@@ -380,7 +380,7 @@ export default function Landing() {
           <div className="app-promo-content">
             <Sparkles size={20} className="app-promo-icon" />
             <div>
-              <h3 className="app-promo-title">Play Anywhere with the Chess.com App</h3>
+              <h3 className="app-promo-title">Play Anywhere with the PlayChess App</h3>
               <p className="app-promo-sub">
                 Free, fast, and your games sync across every device. No download required — just
                 open this site and start playing.
@@ -429,7 +429,7 @@ export default function Landing() {
           </div>
 
           <p className="footer-copyright">
-            Chess.com, LLC © 2026 · Inspired by{' '}
+            PlayChess · © 2026 · Inspired by{' '}
             <a href="https://www.chess.com" target="_blank" rel="noopener noreferrer">
               Chess.com
             </a>
