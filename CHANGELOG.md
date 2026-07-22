@@ -1,5 +1,13 @@
 # Changelog
 
+## [2026-07-22] - Better SetUsername validation messages (root cause of the "always errors on valid 2-20" bug)
+
+- **Bug**: User typed a valid-looking 2-20 username (e.g. `John Doe` with an interior space, or a username starting/ending with a space) and got the generic `"Username must be 2-20 characters."` error — which told them nothing useful and made it look like the length check itself was broken. The real rejection was the `USERNAME_RE = /^[a-zA-Z0-9._-]{2,20}$/` character-class test firing on space/special chars.
+- **`auth.js` `/update-username` route**: split the single regex check into two checks so the error message actually names the failed rule — first a length check (`"Username must be 2-20 characters (yours is N)."`), then a character check (`"Usernames can only contain letters, numbers, dots (.), hyphens (-), and underscores (_). No spaces, @, or special characters."`).
+- **`SetUsernameModal.jsx`**: added a frontend pre-check for leading/trailing spaces (`"Usernames can't start or end with a space."`) and clarified the rejected-characters message. Catches the most likely accidental case before it ever hits the server.
+- Verified with Vite production build — `node_modules/.bin/vite build` passes with no new errors.
+- Files changed: `artifacts/api-server/src/chess-server/routes/auth.js`, `artifacts/chess/src/components/SetUsernameModal.jsx`.
+
 ## [2026-07-22] - Mobile frontend optimisation sweep
 
 - **Dynamic viewport units**: replaced `min-height/height: 100vh` with `100svh`/`100dvh` across all layout surfaces (`App.css` `.app` + `.loading-screen`, `ChessGame.css`, `PlaySetup.css`, `Home.css`, `Landing.css`, `Terms.css`, `ErrorBoundary.css`) so content no longer hides behind the iOS/Android URL bar or home indicator on mobile.

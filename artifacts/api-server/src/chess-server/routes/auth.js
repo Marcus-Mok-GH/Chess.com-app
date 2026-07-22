@@ -367,9 +367,16 @@ router.post('/update-username', async (req, res) => {
     if (!token) return fail(res, 401, 'Session token missing');
 
     const { username } = req.body || {};
-    const trimmed = (username || '').trim();
+    const rawUsername = typeof username === 'string' ? username : '';
+    const trimmed = rawUsername.trim();
+    if (trimmed !== rawUsername) {
+      return fail(res, 400, 'Usernames cannot start or end with a space.');
+    }
+    if (trimmed.length < 2 || trimmed.length > 20) {
+      return fail(res, 400, `Username must be 2-20 characters (yours is ${trimmed.length}).`);
+    }
     if (!USERNAME_RE.test(trimmed)) {
-      return fail(res, 400, 'Username must be 2-20 characters.');
+      return fail(res, 400, 'Usernames can only contain letters, numbers, dots (.), hyphens (-), and underscores (_). No spaces, @, or special characters.');
     }
 
     const userId = await validateSession(token);
