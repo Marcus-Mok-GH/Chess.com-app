@@ -1,5 +1,13 @@
 # Changelog
 
+## [2026-07-22] - Landing redesign: chess.com theme + UI parity, Feedback button → bottom-left
+
+- **`Landing.jsx`**: rewrote the landing page so its layout mirrors chess.com's homepage ("`marcusmok` mode"): fixed left sidebar (logo → Play / Puzzles / Learn / Train / Watch / Community nav → Sign Up / Log In buttons → search), a hero with a real `react-chessboard` board + "Play Chess Online — by Marcus" headline + green **Get Started** CTA, a live-stats strip (players online / games / members), a row of compact feature cards (Lessons / Bots / Puzzles / Watch), alternating full-width feature blocks each with its own board position, an app download promo, and a footer with social links. Distinctive departures kept on purpose: live-player count fetched from `/stats/public`, local Play Online / Play Computer CTAs instead of chess.com's "Today's Leader", and an in-app brand mark. Analytes precomputed once at module scope (was `useMemo` inside `.map` — invalid hook call).
+- **`Landing.css`**: complete rewrite to match chess.com's visual language — page `#1a1a1a`, surfaces `#272522` / `#312e2b`, primary `#81b64c` (green) with `#6e9c3f` hover, board `#779556` light / `#ebecd0` dark square, 12px rounded corners, 200ms transitions, Nunito (already global). Sidebar collapses into a top mobile bar + off-canvas drawer at ≤1024px. Full responsive breakpoints at 1024 / 768 / 480px.
+- **`FeedbackPanel.css`**: moved the floating Feedback trigger from top-right (`top: 70px; right: 20px`) to the **bottom-left corner** (`position: fixed; bottom: 18px; left: 18px`) at desktop, 480px, and 360px breakpoints. Modal and overlay positioning retained.
+- Verified end-to-end: `pnpm run build` passes (2428 modules → 3.86s), preview server renders the new layout (sidebar → board hero → stats → feature cards → alternating blocks → footer) and confirms the Feedback button sits bottom-left as requested. Fixed two icon imports surfaced by the build: `PuzzlesIcon` → `Puzzle`, `Pawn` → `Crown` (the installed lucide-react version has no `Pawn` glyph).
+- Files changed: `artifacts/chess/src/pages/Landing.jsx`, `artifacts/chess/src/pages/Landing.css`, `artifacts/chess/src/components/FeedbackPanel.css`.
+
 ## [2026-07-22] - Better SetUsername validation messages (root cause of the "always errors on valid 2-20" bug)
 
 - **Bug**: User typed a valid-looking 2-20 username (e.g. `John Doe` with an interior space, or a username starting/ending with a space) and got the generic `"Username must be 2-20 characters."` error — which told them nothing useful and made it look like the length check itself was broken. The real rejection was the `USERNAME_RE = /^[a-zA-Z0-9._-]{2,20}$/` character-class test firing on space/special chars.
