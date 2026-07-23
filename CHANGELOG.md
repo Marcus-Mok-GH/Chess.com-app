@@ -1,3 +1,29 @@
+## [2026-07-23] - Fix username always rejected as "length 0"
+
+- **Bug**: In `SetUsername`, no matter what was typed, the server always returned `Username must be 2-20 characters (yours is 0).` The root cause was a header-merge ordering bug in `services/api.js` `request()`:
+  ```js
+  // OLD — broken
+  const config = {
+    headers: { 'Content-Type': 'application/json', ...options.headers },  // built first
+    ...options,                                                            // then WIPED by options
+  };
+  ```
+  Because `{...options}` came *last*, it shallow-copied `options.headers` (overwriting the freshly-built `headers`) for any call that passed its own headers — which `updateUsername` always does. `updateUsername` only sets `Authorization`, never `Content-Type`, so every username request left the client with **no `Content-Type` header**.
+- **Impact**: With no `Content-Type: application/json`, Express's `json()` middleware skipped parsing, so `req.body` was `undefined` → `const { username } = req.body || {}` → `''` → length 0 → the misleading "too short" error on every single attempt. Other calls sending custom headers still worked (login path unaffected because it sets no custom headers).
+- **Fix**: Reorder the merge so `...options` is applied first and `headers` last, preserving the `Authorization` passed by callers while always setting `Content-Type`:
+  ```js
+  const config = {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  };
+  ```
+- **Verification**: Built a harness simulating the exact `ConfigMerge` + Headers + Express `json()` middleware for old vs. new. OLD: 3/3 fail (Content-Type dropped → body unparsed → validator sees length 0) for any input. NEW: dummy username `testuser` → length 8, accepted; genuinely-short `a` → length 1, still rejected (validator intact); login-style calls with no custom headers unaffected. Verified both `api-server` (`dist/index.mjs`, 1.3 MB) and `chess` (`dist/public`) builds compile cleanly. **Live server test**: booted the real `auth.js` route (the same file Vercel runs) on a localhost Express app with DB/auth helpers stubbed, and hit `/api/auth/update-username` via the exact `fetch()` shape the frontend uses. Fixed merge -> server returned `{ success: true, user: { username: "testuser", ... } }` (status 200, length 8). Buggy merge -> server returned `Username must be 2-20 characters (yours is 0).` (status 400) for the identical input, reproducing the reported symptom end-to-end.
+- **Files**: `artifacts/chess/src/services/api.js` (canonical `/home/workspace/Chess.com-app`), plus the same one-line reorder applied to sibling copies `chess.com-app/artifacts/chess/src/services/api.js` and `Chess.com-app-neon-swap/artifacts/chess/src/services/api.js` for consistency.
+- **Regression test**: Added `api.test.js` case asserting `request()` sends both `Content-Type` and caller-provided `Authorization` headers (the merge-order invariant this fix restores). `npx vitest run` passes (2/2).
+
 ## [2026-07-23] - Fix landing page boards overlaying all content
 
 - **Critical visual fix**: Each decorative `ChessBoard` wrapper uses absolute positioning. The landing page board frames were not positioned containers, so the wrappers could be positioned against the page rather than their intended frame, rendering oversized boards and pieces across the landing page.
