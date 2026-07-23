@@ -187,6 +187,7 @@ export default function App() {
               <Routes>
                 <Route path="/" element={<Suspense fallback={<RouteFallback />}><Landing /></Suspense>} />
                 <Route path="/login" element={<Suspense fallback={<RouteFallback />}><Login /></Suspense>} />
+                <Route path="/signup" element={<Navigate to="/login" replace />} />
                 <Route path="/verify-email" element={<Suspense fallback={<RouteFallback />}><VerifyEmail /></Suspense>} />
                 <Route element={<AppShell />}>
                   <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
