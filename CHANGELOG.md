@@ -1,3 +1,9 @@
+## [2026-07-24] - Fix `/signup` black screen
+
+- **Bug**: Landing-page Sign Up and Get Started controls navigate to `/signup`, but `App.jsx` had no `/signup` route. Vercel correctly served the SPA, then React rendered no matching route — resulting in a blank/black screen.
+- **Fix**: Added a `/signup` compatibility route that redirects to the existing `/login` passwordless email-OTP flow.
+- **Verification**: `pnpm --filter @workspace/chess run build` passes.
+
 ## [2026-07-23] - Fix username always rejected as "length 0"
 
 - **Bug**: In `SetUsername`, no matter what was typed, the server always returned `Username must be 2-20 characters (yours is 0).` The root cause was a header-merge ordering bug in `services/api.js` `request()`:
