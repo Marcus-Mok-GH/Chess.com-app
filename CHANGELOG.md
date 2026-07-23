@@ -1,3 +1,10 @@
+## [2026-07-23] - Fix mobile nav drawer on the landing page
+
+- **Bug**: On screens ≤1024px the hamburger menu button toggled `mobileNavOpen` state but the sidebar/backdrop never appeared, leaving the mobile landing broken — nav links unreachable and the layout misaligned.
+- **Root cause**: `Landing.jsx` toggles a `nav-open` class on the root `.landing` element, but `Landing.css` was checking for an `.open` class on the sidebar/backdrop themselves (`.landing-sidebar.open`, `.landing-nav-backdrop.open`). Those selectors never matched, so the off-canvas transform and backdrop never applied.
+- **`Landing.css`**: replaced the dead `.open` rules with `.landing.nav-open .landing-sidebar { transform: translateX(0); }` and `.landing.nav-open .landing-nav-backdrop { display: block; }`. No JSX change needed — the JS class toggle was already correct.
+- Verified in the local preview: desktop (1440×900) keeps the inline sidebar; mobile (390×844) collapses to a top bar with a hamburger that opens a Play / Puzzles / Learn / Train / Watch / Community drawer over a dimmed backdrop, and the Feedback button stays in the bottom-left corner. `tsc` and the production build pass.
+
 # Changelog
 
 ## [2026-07-22] - Landing redesign: chess.com theme + UI parity, Feedback button → bottom-left
