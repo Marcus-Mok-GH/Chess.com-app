@@ -88,10 +88,29 @@ export default function Login() {
   return (
     <div className="login-page">
       <div className="login-card">
-        <div className="login-logo">♟️</div>
+        <div className="login-logo">
+          <svg
+            width="64"
+            height="64"
+            viewBox="0 0 64 64"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+          >
+            <path
+              d="M32 4c-1.5 0-2.75 1-3.2 2.4C27.5 7.2 26 9 26 11c0 1.5.7 2.8 1.8 3.7-.5.8-1.3 1.8-2.3 2.8C23 20 19.5 22 16 23c-1 .3-1.5 1.3-1.2 2.3.3 1 1.3 1.5 2.3 1.2 2.5-.7 4.8-1.8 6.9-3.2V28H14c-1.1 0-2 .9-2 2s.9 2 2 2h4l-4 20H12c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2h40c1.1 0 2-.9 2-2v-4c0-1.1-.9-2-2-2h-2l-4-20h4c1.1 0 2-.9 2-2s-.9-2-2-2H40v-4.7c2.1 1.4 4.4 2.5 6.9 3.2 1 .3 2-.2 2.3-1.2.3-1-.2-2-1.2-2.3-3.5-1-7-3-9.5-5.5-1-.9-1.8-2-2.3-2.8C37.3 13.8 38 12.5 38 11c0-2-1.5-3.8-2.8-4.6C34.75 5 33.5 4 32 4zm-6 48l4-20h4l4 20H26z"
+              fill="#81b64c"
+            />
+          </svg>
+        </div>
 
-        <h1 className="login-title">Sign in to Chess</h1>
-        <p className="login-subtitle">We'll email you a 6-digit code to sign in</p>
+        <div className="login-header">
+          <span className="login-eyebrow">Chess.com App</span>
+          <h1 className="login-title">Welcome Back</h1>
+          <p className="login-subtitle">Sign in to your Chess account</p>
+        </div>
+
+        <hr className="login-divider" />
 
         <form className="login-form" onSubmit={(e) => e.preventDefault()}>
           <div className="login-field">
