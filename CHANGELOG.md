@@ -1,3 +1,8 @@
+## [2026-07-23] - Fix landing page boards overlaying all content
+
+- **Critical visual fix**: Each decorative `ChessBoard` wrapper uses absolute positioning. The landing page board frames were not positioned containers, so the wrappers could be positioned against the page rather than their intended frame, rendering oversized boards and pieces across the landing page.
+- **`Landing.css`**: added `position: relative` to `.hero-board-frame` and `.feature-block-board`, containing each board within its fixed square frame at every viewport size.
+
 ## [2026-07-23] - Fix mobile nav drawer on the landing page
 
 - **Bug**: On screens ≤1024px the hamburger menu button toggled `mobileNavOpen` state but the sidebar/backdrop never appeared, leaving the mobile landing broken — nav links unreachable and the layout misaligned.
