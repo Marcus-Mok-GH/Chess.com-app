@@ -12,6 +12,23 @@
   background-image:
     radial-gradient(ellipse 60% 40% at 50% 0%, rgba(129, 182, 76, 0.08), transparent 60%),
     radial-gradient(ellipse 50% 30% at 50% 100%, rgba(129, 182, 76, 0.04), transparent 60%);
+  position: relative;
+}
+
+/* Chess board pattern overlay */
+.login-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(45deg, rgba(255, 255, 255, 0.03) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(255, 255, 255, 0.03) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.03) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.03) 75%);
+  background-size: 60px 60px;
+  background-position: 0 0, 0 30px, 30px -30px, -30px 0px;
+  opacity: 0.6;
+  pointer-events: none;
 }
 
 .login-card {
@@ -25,9 +42,13 @@
   display: flex;
   flex-direction: column;
   gap: 1.75rem;
-  box-shadow: var(--shadow-xl);
+  box-shadow:
+    var(--shadow-xl),
+    inset 0 0 60px rgba(129, 182, 76, 0.03),
+    0 0 80px rgba(129, 182, 76, 0.06);
   position: relative;
   overflow: hidden;
+  z-index: 1;
 }
 
 .login-card::before {
@@ -36,14 +57,36 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(129, 182, 76, 0.5), transparent);
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(129, 182, 76, 0.6), rgba(163, 209, 110, 0.8), rgba(129, 182, 76, 0.6), transparent);
 }
 
 .login-logo {
-  font-size: 2.5rem;
   text-align: center;
   line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-logo svg {
+  filter: drop-shadow(0 0 12px rgba(129, 182, 76, 0.3));
+}
+
+.login-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.login-eyebrow {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--primary);
+  opacity: 0.8;
 }
 
 .login-title {
@@ -61,6 +104,13 @@
   font-size: 0.95rem;
   margin: 0;
   line-height: 1.5;
+}
+
+.login-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+  border: 0;
+  margin: 0;
 }
 
 .login-form {
@@ -88,6 +138,7 @@
   padding: 0.875rem 1rem;
   background: var(--background);
   border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
   border-radius: var(--radius-md);
   color: white;
   font-size: 1rem;
@@ -95,35 +146,45 @@
   transition: var(--transition-smooth);
 }
 
+.login-field input::placeholder {
+  color: var(--text-dim);
+  opacity: 0.6;
+}
+
 .login-field input:focus {
   border-color: var(--primary);
+  border-left-color: var(--primary);
+  border-left-width: 3px;
   outline: 2px solid var(--primary);
   outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--ring, var(--primary));
+  box-shadow: 0 0 0 4px rgba(129, 182, 76, 0.1), inset 3px 0 0 0 transparent;
+  background: rgba(26, 26, 26, 0.8);
 }
 
 .login-btn {
   padding: 0.875rem 1rem;
-  background: linear-gradient(180deg, var(--primary), var(--primary-dim));
+  background: var(--gradient-primary);
   color: white;
   font-weight: 800;
   font-size: 0.95rem;
   border-radius: var(--radius-md);
-  border: none;
+  border: 1px solid rgba(0, 0, 0, 0.25);
   cursor: pointer;
   transition: var(--transition-smooth);
-  box-shadow: 0 4px 14px rgba(129, 182, 76, 0.25);
-  letter-spacing: 0.01em;
+  box-shadow: 0 4px 14px rgba(129, 182, 76, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 .login-btn:hover:not(:disabled) {
-  background: linear-gradient(180deg, var(--primary-hover), var(--primary));
+  background: var(--gradient-primary-hover);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(129, 182, 76, 0.4);
+  box-shadow: 0 6px 24px rgba(129, 182, 76, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .login-btn:active:not(:disabled) {
   transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(129, 182, 76, 0.2);
 }
 
 .login-btn:disabled {
@@ -153,6 +214,7 @@
   margin-top: 1.5rem;
   font-size: 0.8rem;
   color: var(--text-dim);
+  text-align: center;
 }
 
 .login-legal a {
@@ -184,6 +246,11 @@
       1rem;
   }
 
+  .login-page::before {
+    background-size: 40px 40px;
+    background-position: 0 0, 0 20px, 20px -20px, -20px 0px;
+  }
+
   .login-card {
     padding: 1.5rem 1.25rem;
     margin-top: 1rem;
@@ -198,7 +265,11 @@
     font-size: 0.875rem;
   }
 
-  /* Larger, easier-to-hit inputs and buttons on phones */
+  .login-logo svg {
+    width: 48px;
+    height: 48px;
+  }
+
   .login-card input[type="email"],
   .login-card input[type="text"],
   .login-card button[type="submit"],
@@ -208,13 +279,11 @@
     font-size: 1rem;
   }
 
-  /* Submit / OAuth buttons reach full width for thumb reach */
   .login-card button[type="submit"],
   .login-card .btn-google {
     width: 100%;
   }
 
-  /* Terms/Privacy links get more breathing room */
   .login-card .terms-text {
     font-size: 0.8rem;
     line-height: 1.4;
