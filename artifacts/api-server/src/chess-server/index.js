@@ -68,8 +68,14 @@ app.use('/api/stats', statsRoutes);
 app.get('/health', (req, res) => res.status(200).json({ status: 'ok' }));
 app.get('/api/health', (req, res) => res.status(200).json({ status: 'ok' }));
 
-// Static files (for production)
-if (process.env.NODE_ENV === 'production') {
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: { message: 'API endpoint not found.' } });
+});
+
+// Static files are served only by the standalone production server. Vercel
+// serves the frontend from its output directory and imports this app solely as
+// the /api/* function, where the frontend bundle is not present.
+if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
   app.use(express.static(path.join(__dirname, '../dist')));
   app.get('/*all', (req, res) => {
     res.sendFile(path.join(__dirname, '../dist/index.html'));

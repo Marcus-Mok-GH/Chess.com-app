@@ -1,3 +1,9 @@
+## [2026-07-24] - Fix Vercel API fallthrough 500s
+
+- Disabled the legacy production SPA static-file fallback when the Express app runs inside Vercel. The Vercel function bundle does not contain `artifacts/api-server/src/dist/index.html`, so unmatched `/api/*` requests previously fell through to `sendFile()` and returned HTTP 500 with `ENOENT`.
+- Added an API-scoped JSON 404 handler before the standalone frontend fallback so unknown or mistyped endpoints now return `{"error":{"message":"API endpoint not found."}}` instead of attempting to serve frontend HTML.
+- Added Node regression tests covering unknown feature paths and the `/api/` root under production Vercel environment flags.
+
 ## [2026-07-24] - Address CodeRabbit review on PR #132
 
 - **Frontend** (`artifacts/chess/src/contexts/UserContext.jsx`):
