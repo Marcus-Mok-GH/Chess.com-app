@@ -210,7 +210,7 @@ export default function App() {
                   <Route path="/history" element={<ProtectedRoute><GameHistory /></ProtectedRoute>} />
                   <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                   <Route path="/changelog" element={<Changelog />} />
-                  <Route path="/puzzles" element={<Suspense fallback={<RouteFallback />}><Puzzles /></Suspense>} />
+                  <Route path="/puzzles" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Puzzles /></Suspense>}</ProtectedRoute>} />
                 </Route>
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />
