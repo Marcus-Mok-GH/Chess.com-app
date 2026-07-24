@@ -139,15 +139,17 @@ export function UserProvider({ children }) {
 
       if (!cacheFresh && !session && !serverUser) {
         // No fresh cache AND backend says/implies "not logged in" → real logout.
-        if (isMounted && !localStorage.getItem(PENDING_OTP_KEY)) {
-          setUser(null);
-          setToken(null);
-          try {
-            localStorage.removeItem(SESSION_USER_KEY);
-            localStorage.removeItem(SESSION_USER_DATA_KEY);
-            localStorage.removeItem(SESSION_TOKEN_KEY);
-            localStorage.removeItem(SESSION_CACHE_EPOCH_KEY);
-          } catch {}
+        if (isMounted) {
+          if (!localStorage.getItem(PENDING_OTP_KEY)) {
+            setUser(null);
+            setToken(null);
+            try {
+              localStorage.removeItem(SESSION_USER_KEY);
+              localStorage.removeItem(SESSION_USER_DATA_KEY);
+              localStorage.removeItem(SESSION_TOKEN_KEY);
+              localStorage.removeItem(SESSION_CACHE_EPOCH_KEY);
+            } catch {}
+          }
           setIsLoading(false);
         }
         return;
@@ -175,9 +177,22 @@ export function UserProvider({ children }) {
           setIsAwaitingVerification(false);
           try { localStorage.removeItem(PENDING_OTP_KEY); } catch {}
         }
-      } else if (cacheFresh) {
-        // Transient backend failure with a fresh cache — keep the cached login.
+      } else if (transient && cacheFresh) {
+        // Genuinely transient (DB outage / 503) with a fresh cache → keep the cached login.
         if (isMounted) setIsAwaitingVerification(false);
+      } else if (!transient && cacheFresh) {
+        // Backend gave a definitive "not logged in" response (ok===true, no session/user).
+        // Honor it even with a fresh cache — don't let a stale 7-day cache bypass logout.
+        if (isMounted && !localStorage.getItem(PENDING_OTP_KEY)) {
+          setUser(null);
+          setToken(null);
+          try {
+            localStorage.removeItem(SESSION_USER_KEY);
+            localStorage.removeItem(SESSION_USER_DATA_KEY);
+            localStorage.removeItem(SESSION_TOKEN_KEY);
+            localStorage.removeItem(SESSION_CACHE_EPOCH_KEY);
+          } catch {}
+        }
       }
 
       if (isMounted) setIsLoading(false);

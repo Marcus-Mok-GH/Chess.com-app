@@ -1,3 +1,12 @@
+## [2026-07-24] - Address CodeRabbit review on PR #132
+
+- **Frontend** (`artifacts/chess/src/contexts/UserContext.jsx`):
+  - Definitive logout now wins over a fresh cache. Previously a backend `200 { session: null, user: null }` with a <7d cache silently kept the stale login until the cache expired — a backend-confirmed logout/revocation stayed visible on the client. The `else if (cacheFresh)` branch is now `else if (transient && cacheFresh)`, so only genuinely transient failures preserve the cache; a non-transient null response clears auth state even when the cache is fresh.
+  - Fixed `isLoading` getting stuck `true` when the cache was stale AND a pending-OTP marker was present. `setIsLoading(false)` now runs whenever the component is mounted, regardless of `PENDING_OTP_KEY`.
+- **Backend** (`artifacts/api-server/src/chess-server/routes/auth.js`):
+  - Short-circuited the `/session` handler: `if (!userId)` now runs immediately after `validateSession(token)`, so invalid/expired/missing tokens never trigger a `SELECT * FROM users` round-trip. The users lookup (and its 503-on-throw) only runs for validated user IDs.
+- **Verification**: `bun run build` passes (~5s), `node --check` on the route.
+
 ## [2026-07-24] - Persist login for up to 7 days across navigation
 
 - **Bug**: Login state was being dropped within seconds of changing pages in the app. `UserContext`'s init effect re-ran on route navigation and called `/api/auth/session` every time; any transient backend hiccup (cold Neon connection, network blip) was indistinguishable from a real "logged out" and cleared `localStorage`, logging the user out.
