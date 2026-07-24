@@ -1,65 +1,79 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Chess } from 'chess.js';
 import ChessBoard from '../components/ChessBoard';
-import { useUser } from '../contexts/UserContext';
 import { Puzzle, Check, X, Lightbulb, SkipForward, RotateCcw, Trophy, Target, Zap } from 'lucide-react';
 import './Puzzles.css';
 
-// Tactical puzzles. `solution` is the side-to-move's key move; `followup` is the
-// reply that the trainer plays automatically so a multi-move combo lines up.
-// Each puzzle is verified against chess.js at load (see validatePuzzle).
-const PUZZLES = [
+const RAW_PUZZLES = [
   {
     id: 'back-rank-mate',
-    fen: '6k1/5ppp/8/8/8/8/8/R3K2r w Q - 0 1',
+    fen: '6k1/5ppp/8/8/8/8/8/R3K3 w Q - 0 1',
     sideToMove: 'white',
     rating: 800,
     theme: 'Back Rank',
     hint: 'The black king has no luft. Find the mating square.',
-    solution: 'Ra8',
-    followup: 'Rxa8', // black captures on a8, white has no Qs (castling rights) — but for the demo we end here
+    solution: 'Ra8#',
+    followup: null,
   },
   {
-    id: 'knight-fork',
-    fen: '4k3/8/8/3n4/8/3K4/8/4R3 b - - 0 1',
+    id: 'knight-check',
+    fen: '4k3/8/8/3n4/8/3K4/8/7R b - - 0 1',
     sideToMove: 'black',
     rating: 950,
-    theme: 'Knight Fork',
-    hint: 'Use the knight to fork the king and the rook.',
-    solution: 'Nf4',
+    theme: 'Knight Check',
+    hint: 'Use the knight to check the exposed king.',
+    solution: 'Nf4+',
     followup: 'Ke4',
   },
   {
     id: 'pin-win',
-    fen: '4k3/8/8/8/8/8/4r3/1R2K3 b - - 0 1',
+    fen: '4k3/8/8/8/8/8/1r6/1R2K3 b - - 0 1',
     sideToMove: 'black',
     rating: 700,
     theme: 'Absolute Pin',
     hint: 'The rook pins the white rook to the king. Win material.',
-    solution: 'Rxb1',
+    solution: 'Rxb1+',
     followup: null,
   },
   {
-    id: 'smothered-mate-prep',
+    id: 'smothered-mate',
     fen: '6rk/6pp/8/6N1/8/8/8/6K1 w - - 0 1',
     sideToMove: 'white',
     rating: 1200,
     theme: 'Smothered Mate',
-    hint: 'Sacrifice to drag the king into the corner, then mate with the knight.',
-    solution: 'Nf7',
-    followup: 'Kg8',
+    hint: 'The knight can mate a king boxed in by its own pieces.',
+    solution: 'Nf7#',
+    followup: null,
   },
   {
-    id: 'rook-6th-attack',
+    id: 'rook-exchange',
     fen: '4k3/8/8/8/8/3r4/8/3RK3 b - - 0 1',
     sideToMove: 'black',
     rating: 850,
-    theme: 'Rook on the 6th',
-    hint: 'The rook should attack the king from the 6th rank.',
-    solution: 'Rd1',
+    theme: 'Rook Exchange',
+    hint: 'Exchange rooks with check.',
+    solution: 'Rxd1+',
     followup: 'Kxd1',
   },
 ];
+
+function isValidPuzzle(puzzle) {
+  try {
+    const chess = new Chess(puzzle.fen);
+    if (chess.turn() !== puzzle.sideToMove[0]) return false;
+    chess.move(puzzle.solution);
+    if (puzzle.followup) chess.move(puzzle.followup);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const PUZZLES = RAW_PUZZLES.filter(isValidPuzzle);
+
+if (PUZZLES.length !== RAW_PUZZLES.length) {
+  throw new Error('Puzzle data contains an illegal FEN or move sequence.');
+}
 
 function getSideToMove(fen) {
   return fen.split(' ')[1];
@@ -76,8 +90,6 @@ function loadFen(fen) {
 }
 
 export default function Puzzles() {
-  const { isLoggedIn, isLoading } = useUser();
-
   const [index, setIndex] = useState(0);
   const [willPlayFollowup, setWillPlayFollowup] = useState(false); // after the solution, black/white auto-plays the followup
   const [solved, setSolved] = useState(false);
@@ -89,27 +101,34 @@ export default function Puzzles() {
   const [attemptedCount, setAttemptedCount] = useState(0);
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
+  const timerIds = useRef([]);
 
   const puzzle = PUZZLES[index];
   const [position, setPosition] = useState(puzzle.fen);
 
-  useEffect(() => {
-    if (!isLoading && !isLoggedIn) {
-      // puzzles are still playable logged-out, but most other protected routes
-      // redirect; keep this public so the landing page's puzzle CTA works for
-      // new visitors without forcing a login mid-session.
-    }
-  }, [isLoading, isLoggedIn]);
+  function clearTimers() {
+    timerIds.current.forEach((timerId) => window.clearTimeout(timerId));
+    timerIds.current = [];
+  }
 
-  // With the auto-followup, `position` may temporarily hold a state past the
-  // solution move. Reset board state when index changes.
+  function schedule(callback, delay) {
+    const timerId = window.setTimeout(() => {
+      timerIds.current = timerIds.current.filter((id) => id !== timerId);
+      callback();
+    }, delay);
+    timerIds.current.push(timerId);
+  }
+
   useEffect(() => {
+    clearTimers();
     setPosition(puzzle.fen);
     setWillPlayFollowup(false);
     setSolved(false);
     setFailed(false);
     setShowHint(false);
   }, [index, puzzle.fen]);
+
+  useEffect(() => () => clearTimers(), []);
 
   const game = useMemo(() => loadFen(position), [position]);
 
@@ -144,8 +163,13 @@ export default function Puzzles() {
     }
     if (!move) return false;
 
-    // accept the move on the board regardless of correctness, then evaluate.
     const isSolution = move.san === puzzle.solution || moveSquaresMatch(moveStr, puzzle.solution);
+    if (!isSolution) {
+      setFailed(true);
+      setSolved(false);
+      return false;
+    }
+
     setPosition(chess.fen());
 
     if (isSolution) {
@@ -164,18 +188,14 @@ export default function Puzzles() {
           reply = null;
         }
         if (reply) {
-          window.setTimeout(() => {
+          schedule(() => {
             setPosition(replyChess.fen());
-            window.setTimeout(() => goToNextPuzzle(true), 750);
+            schedule(() => goToNextPuzzle(true), 750);
           }, 450);
           return true;
         }
       }
-      window.setTimeout(() => goToNextPuzzle(true), 900);
-    } else {
-      // any other move registers a miss.
-      setFailed(true);
-      setSolved(false);
+      schedule(() => goToNextPuzzle(true), 900);
     }
     return true;
   }
@@ -202,6 +222,7 @@ export default function Puzzles() {
   }
 
   function handleReset() {
+    clearTimers();
     setIndex(0);
     setPosition(PUZZLES[0].fen);
     setWillPlayFollowup(false);
@@ -214,6 +235,7 @@ export default function Puzzles() {
   }
 
   function handleSkip() {
+    clearTimers();
     setStreak(0);
     setIndex((i) => (i + 1) % PUZZLES.length);
   }
