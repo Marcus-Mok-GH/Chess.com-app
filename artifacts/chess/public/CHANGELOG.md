@@ -1,4 +1,13 @@
 # Changelog
+## [2026-07-24] - Fix /puzzles Black Screen
+
+### Fixed
+- **/puzzles route 404 / black screen**: The `/puzzles` link in the landing and navigation pointed to a route that did not exist in `App.jsx`, so React Router matched nothing and the app shell rendered an empty (dark) main area — appearing as a black screen. Added a new auth-protected `Puzzles` page (`src/pages/Puzzles.jsx` + `Puzzles.css`) inside `ProtectedRoute` (consistent with `/settings`), and registered it inside the shared `AppShell` layout. Also added a `Puzzles` entry to the bottom mobile nav and the `getTitle()` mapping so the route renders with a proper title.
+- **Catch-all 404 for unknown routes**: Added a `*` catch-all route rendering the existing `not-found.tsx` 404 card, so any future dead link shows a clear "Page Not Found" page instead of a blank/black main area.
+
+### Added
+- **Tactical Trainer feature**: New `/puzzles` page with an embedded, chess.js-validated set of starter positions, drag-to-move validation against the puzzle solution, hint highlighting, skip/next controls, session statistics (solved, current streak, best streak), wrong-move board reset, and cancellation of delayed transitions on skip/reset.
+
 
 ## [2026-07-15] - Auth Startup Gate Fix
 
