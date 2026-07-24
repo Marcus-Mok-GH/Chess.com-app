@@ -21,6 +21,8 @@ const Landing = lazy(() => import('./pages/Landing'))
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail'))
 const Terms = lazy(() => import('./pages/Terms'))
 const Privacy = lazy(() => import('./pages/Privacy'))
+const Puzzles = lazy(() => import('./pages/Puzzles'))
+const NotFound = lazy(() => import('./pages/not-found'))
 
 function getTitle(path) {
   if (path.startsWith('/online/') || path.startsWith('/game/')) return 'Online Play'
@@ -28,6 +30,7 @@ function getTitle(path) {
   if (path === '/history') return 'Game History'
   if (path === '/settings') return 'Settings'
   if (path === '/changelog') return 'Changelog'
+  if (path === '/puzzles') return 'Puzzles'
   return 'Chess'
 }
 
@@ -58,6 +61,10 @@ function AppHeader() {
             <Link to="/online" className={`sidebar-item ${currentPath === '/online' ? 'active' : ''}`}>
               <span className="sidebar-icon">🌐</span>
               <span className="sidebar-label">Online Play</span>
+            </Link>
+            <Link to="/puzzles" className={`sidebar-item ${currentPath === '/puzzles' ? 'active' : ''}`}>
+              <span className="sidebar-icon">🧩</span>
+              <span className="sidebar-label">Puzzles</span>
             </Link>
             <Link to="/history" className={`sidebar-item ${currentPath === '/history' ? 'active' : ''}`}>
               <span className="sidebar-icon">📚</span>
@@ -109,6 +116,10 @@ function AppHeader() {
         <Link to="/online" className={`nav-item ${currentPath === '/online' ? 'active' : ''}`}>
           <div className="nav-icon">🌐</div>
           <span>Online</span>
+        </Link>
+        <Link to="/puzzles" className={`nav-item ${currentPath === '/puzzles' ? 'active' : ''}`}>
+          <div className="nav-icon">🧩</div>
+          <span>Puzzles</span>
         </Link>
         <Link to="/history" className={`nav-item ${currentPath === '/history' ? 'active' : ''}`}>
           <div className="nav-icon">📚</div>
@@ -199,9 +210,11 @@ export default function App() {
                   <Route path="/history" element={<ProtectedRoute><GameHistory /></ProtectedRoute>} />
                   <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                   <Route path="/changelog" element={<Changelog />} />
+                  <Route path="/puzzles" element={<Suspense fallback={<RouteFallback />}><Puzzles /></Suspense>} />
                 </Route>
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />
+                <Route path="*" element={<Suspense fallback={<RouteFallback />}><NotFound /></Suspense>} />
               </Routes>
               <FeedbackPanel />
             </BrowserRouter>
