@@ -9,7 +9,10 @@
   - Self-suppresses once `gameStatus === 'ended'` (read via `gameStatusRef` to avoid re-subscribing each tick).
   - Reuses the same `setGame` / `setMoveHistory` / `setGameStatus` / `setWinner` setters as the socket path, so board-hydrate, haptics, and end-of-game flow are identical.
 - **Compatibility**: additive only — when Socket.IO is wired up (e.g. a Railway backend with `VITE_SOCKET_URL` set), the socket handler still fires instantly; this fallback simply keeps the board in sync in the no-socket deployment without conflicting with it.
-- **Verification**: `bun run build` passes (~5s).
+- **CodeRabbit review fixes (PR #135)**:
+  - Declare `gameStatusRef` via `useRef(gameStatus)` alongside the other refs — previously referenced but never declared, which would `ReferenceError` on mount and prevent the polling effect from initializing.
+  - Re-flow terminal-status reconciliation so `setGameStatus('ended')` / `setWinner(result)` / `clearOnlineSession()` run **independently** of whether a new remote move arrived this tick. Previously the `lastMoveIsLocal` early-return (and the no-new-history early-return) skipped the `ended` block, so a locally-submitted checkmate echoed by the server never cleared the session or surfaced the win via polling. Board rebuild + haptics stay gated on a genuine new remote move (strict ply count delta + parity skip for the local player's own echo).
+- **Verification**: `bun run build` passes (~7s).
 
 ## [2026-07-24] - Fix Vercel API fallthrough 500s
 
