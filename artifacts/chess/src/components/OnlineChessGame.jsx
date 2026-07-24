@@ -192,6 +192,117 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
       // should close the seat. Leaving here races with reconnect and can end the game.
     };
   }, [gameId, playerId, setGame, setMoveHistory, setGameStatus, setEndReason, setWinner, setMoveError]);
+  // HTTP polling fallback so opponent moves appear without a manual refresh.
+  // On Vercel (where VITE_SOCKET_URL is unset) Socket.IO cannot run, so the
+  // dedicated server room broadcast never reaches the client. This interval pulls
+  // the authoritative game state from the existing /api/games/by-code endpoint
+  // every 2s while the game is active and applies new moves through the same
+  // setters the socket handlers use.
+  //
+  // Two correctness rules:
+  //   1. Only react when the server has STRICTLY MORE moves than we last applied
+  //      (tracked via appliedHistoryLenRef, kept in sync by both the socket
+  //      `move_made` handler and the local makeMove path). This avoids a stale
+  //      closure over `moveHistory.length` that would otherwise never advance.
+  //   2. Skip moves whose ply parity matches the local player's color, so we
+  //      never re-apply the local player's own just-submitted move and clobber
+  //      the optimistic board state while the server is still echoing it back.
+  const appliedHistoryLenRef = useRef(0);
+  // Mirrors gameStatus so the polling interval (whose deps are identity-only)
+  // can observe transitions to 'ended' and short-circuit without re-subscribing.
+  const gameStatusRef = useRef(gameStatus);
+
+  useEffect(() => {
+    appliedHistoryLenRef.current = Math.max(appliedHistoryLenRef.current, moveHistory.length);
+  }, [moveHistory.length]);
+
+  // Keep gameStatusRef in sync with the live status so the polling interval
+  // (which only re-subscribes on game/player identity change) can see status
+  // transitions to 'ended' and short-circuit without re-subscribing each tick.
+  useEffect(() => {
+    gameStatusRef.current = gameStatus;
+  }, [gameStatus]);
+
+  useEffect(() => {
+    if (!gameId || !playerId) return;
+
+    let cancelled = false;
+    let inFlight = false;
+    const intervalId = setInterval(async () => {
+      if (cancelled || inFlight) return;
+      if (gameStatusRef.current === 'ended') return;
+      inFlight = true;
+      try {
+        const data = await api.getGameByCode(gameId);
+        if (cancelled || !data) return;
+
+        const serverHistory = normalizeMoveHistory(data.move_history);
+        const knownLen = appliedHistoryLenRef.current;
+        // Genuinely new opponent move only if the server history grew past
+        // what we've already applied.
+        const hasNewRemoteMove = serverHistory.length > knownLen;
+
+        // Reconcile terminal status/result INDEPENDENTLY of whether a new
+        // remote move exists. The server may flip to 'ended' via a local
+        // (optimistic) checkmate echo, a server-side timeout, or an opponent-
+        // side decision that didn't grow our move history this tick.
+        const serverStatus =
+          data.status === 'ended' || data.status === 'completed'
+            ? 'ended'
+            : data.status || 'playing';
+        if (serverStatus === 'ended') {
+          setGameStatus('ended');
+          if (data.result) setWinner(data.result);
+          clearOnlineSession();
+        } else if (gameStatusRef.current !== 'ended' && (data.status === 'playing' || data.status === 'in_progress')) {
+          setGameStatus('playing');
+        }
+
+        if (!hasNewRemoteMove) {
+          // No new remote move to apply this tick — terminal handling above
+          // (if any) has already run. Bail out before touching the board.
+          return;
+        }
+
+        // Plies are 0-indexed (move 0 = white's first). White plays even
+        // plies, black plays odd plies. The last entry index is history - 1.
+        const lastPlyIndex = serverHistory.length - 1;
+        const lastIsWhiteMove = lastPlyIndex % 2 === 0;
+        const localIsWhite = playerColor === 'white';
+        const lastMoveIsLocal = lastIsWhiteMove === localIsWhite;
+
+        // Always advance the ref so we don't reapply the same delta next tick.
+        appliedHistoryLenRef.current = serverHistory.length;
+
+        if (lastMoveIsLocal) return; // our own echo — keep optimistic board
+
+        // Opponent moved (strictly more moves on server). Reapply authoritative
+        // board state through the same path as the socket `move_made` handler.
+        setGame(buildGameFromHistory(serverHistory, data.fen));
+        setMoveHistory(serverHistory);
+
+        const lastEntry = serverHistory[serverHistory.length - 1];
+        let lastEntryObj = null;
+        if (typeof lastEntry === 'object' && lastEntry) lastEntryObj = lastEntry;
+        else if (typeof lastEntry === 'string') {
+          try { lastEntryObj = JSON.parse(lastEntry); } catch { lastEntryObj = null; }
+        }
+        if (lastEntryObj && lastEntryObj.captured) haptics.capture(); else haptics.move();
+      } catch {
+        // Transient network/DB blip — keep polling; a manual refresh would not be
+        // safer or better than waiting for the next tick.
+      } finally {
+        inFlight = false;
+      }
+    }, 2000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
+    // Identity-only deps; moveHistory parity is read via refs inside poll.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameId, playerId, playerColor, setGame, setMoveHistory, setGameStatus, setWinner]);
 
   useEffect(() => {
     if (opponentInfo) {
