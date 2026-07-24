@@ -315,24 +315,38 @@ router.get('/session', async (req, res) => {
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
   if (!token) return res.json({ session: null, user: null });
 
-  const userId = await validateSession(token);
+  let userId;
+  // validateSession can throw on a cold/failed Neon connection. Previously a throw
+  // was silently returned as `{ session: null, user: null }`, which is
+  // INDISTINGUISHABLE from a real "logged out" — so a DB hiccup would log the client
+  // out. Return 503 { kind: 'transient' } instead, so the client keeps its cached
+  // login when the backend is briefly unavailable.
+  try {
+    userId = await validateSession(token);
+  } catch (err) {
+    console.error('[Auth] session validation failed:', err);
+    return res.status(503).json({ kind: 'transient', message: 'Session store temporarily unavailable' });
+  }
+
+  // Invalid/expired/missing token → definitive "logged out". Short-circuit before the
+  // users-table round-trip so routine invalid sessions never trigger a DB query.
   if (!userId) return res.json({ session: null, user: null });
 
+  let u;
   try {
-    const result = await query(
-      'SELECT id, username, email, elo, games_played, wins, losses, draws, created_at, email_verified FROM users WHERE id::TEXT = $1::TEXT',
-      [userId]
-    );
-    if (result.rows.length === 0) return res.json({ session: null, user: null });
-    const u = result.rows[0];
-    return res.json({
-      session: { id: token, token, userId: u.id },
-      user: shapeUser(u),
-    });
+    const result = await query('SELECT * FROM users WHERE id = $1', [userId]);
+    u = result.rows[0];
   } catch (err) {
     console.error('[Auth] session lookup failed:', err);
-    return res.json({ session: null, user: null });
+    return res.status(503).json({ kind: 'transient', message: 'Session store temporarily unavailable' });
   }
+
+  if (!u) return res.json({ session: null, user: null });
+
+  return res.json({
+    session: { id: token, token, userId: u.id },
+    user: shapeUser(u),
+  });
 });
 
 // ---------------------------------------------------------------------------

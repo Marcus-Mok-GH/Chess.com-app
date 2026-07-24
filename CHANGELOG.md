@@ -1,3 +1,24 @@
+## [2026-07-24] - Address CodeRabbit review on PR #132
+
+- **Frontend** (`artifacts/chess/src/contexts/UserContext.jsx`):
+  - Definitive logout now wins over a fresh cache. Previously a backend `200 { session: null, user: null }` with a <7d cache silently kept the stale login until the cache expired — a backend-confirmed logout/revocation stayed visible on the client. The `else if (cacheFresh)` branch is now `else if (transient && cacheFresh)`, so only genuinely transient failures preserve the cache; a non-transient null response clears auth state even when the cache is fresh.
+  - Fixed `isLoading` getting stuck `true` when the cache was stale AND a pending-OTP marker was present. `setIsLoading(false)` now runs whenever the component is mounted, regardless of `PENDING_OTP_KEY`.
+- **Backend** (`artifacts/api-server/src/chess-server/routes/auth.js`):
+  - Short-circuited the `/session` handler: `if (!userId)` now runs immediately after `validateSession(token)`, so invalid/expired/missing tokens never trigger a `SELECT * FROM users` round-trip. The users lookup (and its 503-on-throw) only runs for validated user IDs.
+- **Verification**: `bun run build` passes (~5s), `node --check` on the route.
+
+## [2026-07-24] - Persist login for up to 7 days across navigation
+
+- **Bug**: Login state was being dropped within seconds of changing pages in the app. `UserContext`'s init effect re-ran on route navigation and called `/api/auth/session` every time; any transient backend hiccup (cold Neon connection, network blip) was indistinguishable from a real "logged out" and cleared `localStorage`, logging the user out.
+- **Fix (frontend)**: `artifacts/chess/src/contexts/UserContext.jsx`
+  - Cache-first: render the remembered user from `localStorage` instantly before any backend call.
+  - Init guard (`initRanRef`) so verification runs once per provider mount, not on every route change.
+  - 7-day TTL (`SESSION_CACHE_TTL_MS`), mirroring the backend `SESSION_DAYS = 7` sliding window; successful re-validation slides the window forward (updates `cachedAt`).
+  - Transient tolerance: if `/api/auth/session` returns non-2xx or the fetch throws, keep the cached login while the cache is still fresh (< 7d). Only a definitive `200 { session: null, user: null }` with a stale/missing cache triggers a real logout.
+- **Fix (backend)**: `artifacts/api-server/src/chess-server/routes/auth.js`
+  - `GET /api/auth/session` returns `503 { kind: 'transient' }` when the DB query itself throws (broken/cold Neon), instead of `200 { session: null, user: null }` which was being conflated with a real logout. Missing token, invalid token, and user-not-found still return `200 { session: null, user: null }` (those ARE real logouts).
+- **Verification**: `bun run build` passes (~5s).
+
 ## [2026-07-24] - Fix `/signup` black screen
 
 - **Bug**: Landing-page Sign Up and Get Started controls navigate to `/signup`, but `App.jsx` had no `/signup` route. Vercel correctly served the SPA, then React rendered no matching route — resulting in a blank/black screen.
