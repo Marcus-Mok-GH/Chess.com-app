@@ -234,6 +234,23 @@
   color: var(--primary);
 }
 
+/* ── Semantic move classification colors (Game Review) ── */
+.analysis-move.move-best { color: var(--move-best); }
+.analysis-move.move-brilliant { color: var(--move-brilliant); font-weight: 800; }
+.analysis-move.move-good { color: var(--move-good); }
+.analysis-move.move-book { color: var(--move-book); }
+.analysis-move.move-inaccuracy { color: var(--move-inaccuracy); }
+.analysis-move.move-mistake { color: var(--move-mistake); }
+.analysis-move.move-blunder { color: var(--move-blunder); font-weight: 800; }
+
+.analysis-move.move-best.active { background: rgba(129, 182, 76, 0.15); }
+.analysis-move.move-brilliant.active { background: rgba(76, 175, 154, 0.15); }
+.analysis-move.move-good.active { background: rgba(150, 188, 75, 0.12); }
+.analysis-move.move-book.active { background: rgba(164, 135, 245, 0.12); }
+.analysis-move.move-inaccuracy.active { background: rgba(247, 192, 69, 0.12); }
+.analysis-move.move-mistake.active { background: rgba(229, 143, 44, 0.12); }
+.analysis-move.move-blunder.active { background: rgba(231, 76, 60, 0.12); }
+
 .analysis-move:disabled {
   color: var(--text-muted);
   cursor: default;

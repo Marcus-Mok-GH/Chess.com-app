@@ -120,6 +120,30 @@
   --shadow-glow-soft: 0 0 24px rgba(129, 182, 76, 0.18);
   --shadow-inner: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 
+  /* Chess.com semantic aliases — scoped page layers re-use these */
+  --chesscom-bg: #1a1a1a;
+  --chesscom-card: #272522;
+  --chesscom-border: #403d39;
+  --chesscom-text: #ffffff;
+  --chesscom-text-dim: #bababa;
+  --chesscom-green: #81b64c;
+  --chesscom-red: #e74c3c;
+  --chesscom-gold: #f1c40f;
+  --primary-dim: #6e9c40;
+  --border-hover: #5a5550;
+  --text-muted: #8b8987;
+  --neutral-600: #6f6b66;
+  --neutral-700: #514d48;
+
+  /* Move-classification colors for analysis */
+  --move-best: #81b64c;
+  --move-good: #96bc4b;
+  --move-book: #a487f5;
+  --move-inaccuracy: #f7c045;
+  --move-mistake: #e58f2c;
+  --move-blunder: #e74c3c;
+  --move-brilliant: #4caf9a;
+
   /* Gradients — chess.com brand-forward, used sparingly for accent */
   --gradient-primary: linear-gradient(180deg, #a3d16e 0%, #81b64c 50%, #6e9c40 100%);
   --gradient-primary-hover: linear-gradient(180deg, #b3dc7e 0%, #92c25d 50%, #7aac49 100%);
@@ -296,6 +320,104 @@
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
   }
+}
+
+/* ── Not-Found page (lost position) ── */
+.not-found-page {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: var(--bg-page);
+  background-image:
+    radial-gradient(ellipse 60% 40% at 50% 0%, rgba(129, 182, 76, 0.06), transparent 60%);
+}
+
+.not-found-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 3rem 2.5rem;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.not-found-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--primary-hover), var(--primary));
+}
+
+.not-found-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(129, 182, 76, 0.1);
+  color: var(--primary);
+  margin-bottom: 1.25rem;
+}
+
+.not-found-code {
+  font-size: 4rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  color: var(--primary);
+  margin: 0;
+  line-height: 1;
+}
+
+.not-found-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0.5rem 0 1rem;
+  letter-spacing: -0.01em;
+}
+
+.not-found-desc {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin: 0 0 2rem;
+}
+
+.not-found-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.875rem 2rem;
+  background: var(--gradient-primary);
+  color: white;
+  font-weight: 800;
+  font-size: 0.95rem;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  box-shadow: var(--shadow-md);
+  letter-spacing: 0.01em;
+}
+
+.not-found-btn:hover {
+  background: var(--gradient-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg), var(--shadow-glow-soft);
+}
+
+.not-found-btn:active {
+  transform: translateY(0);
 }
 
 /* ── Responsive typography ───────── */

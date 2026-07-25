@@ -1,4 +1,19 @@
-## [2026-07-24] - Auto-update opponent moves in online play (no refresh needed)
+## [2026-07-24] - Chess.com Theme Overhaul: Every Page Themed
+
+### Changed
+- **Centralized token aliases**: Added chess.com semantic aliases (`--chesscom-*`, `--move-best`, `--move-blunder`, etc.) to `index.css` so all pages share consistent color references without hardcoded fallbacks.
+- **Branding consistency**: Renamed sidebar logo "Chess.com App" → "PlayChess", updated login eyebrow, HTML `<title>`, and `getTitle()` route mapping to use the unified brand name.
+- **Puzzles page**: Replaced fallback `--chesscom-bg`/`--chesscom-card`/`--chesscom-text` color variables with canonical tokens (`--bg-page`, `--card`, `--text-primary`, etc.) for consistent theming.
+- **Not-found page**: Replaced Tailwind utility classes with dedicated `.not-found-*` CSS classes using the chess.com dark panel card, green accent 404 code, and "Lost Position" title.
+- **Analysis page**: Added semantic move classification colors (`.move-best`, `.move-brilliant`, `.move-good`, `.move-book`, `.move-inaccuracy`, `.move-mistake`, `.move-blunder`) for Game Review move lists.
+- **Changelog page**: Restyled as a "release scorebook" with `--card` surfaces, `--border` separators, green markers on list items, and updated sidebar version pills.
+- **Terms/Privacy pages**: Restyled as "chess handbook" pages with a green top accent bar, `--card` surface, green-accent section headers, and refined typography.
+- **CloudFlare page**: Extracted inline styles into `CloudFlare.css` with a themed card, green accent bar, and proper token usage.
+- **Play page**: Updated to use canonical `--bg-page`, `--card`, `--border`, `--text-primary` tokens instead of `--color-bg-*` aliases.
+
+### Fixed
+- **Puzzles route JSX tag mismatch**: Corrected a stray `}` in the Puzzles `<Route>` element in `App.jsx` that produced a JSX parse warning on build.
+- **Changelog CSS token drift**: Unified remaining `--color-*` sidebar selectors to use `--bg-surface-2`, `--border`, `--text-primary`, `--text-muted` directly.
 
 - **Bug**: In live online games the opponent's moves only appeared after a manual page refresh.
 - **Root cause**: The online game relied on Socket.IO (`io.to(gameId).emit('move_made', ...)` on the server, `socketService.on('move_made', ...)` on the client). On the Vercel deployment `VITE_SOCKET_URL` is unset, so the client's `resolveSocketConfig()` resolves to `url: null` and `connect()` is a no-op — no socket, no room join, no broadcasts. The board only updated when the user refreshed, which re-hydrated from the `/api/games/by-code` REST endpoint. The standalone Express server's Socket.IO layer is also not reachable from a Vercel serverless function (the `httpServer` listener is gated behind `!process.env.VERCEL`).

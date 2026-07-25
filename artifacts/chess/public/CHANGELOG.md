@@ -1,5 +1,20 @@
 # Changelog
-## [2026-07-24] - Fix /puzzles Black Screen
+## [2026-07-24] - Chess.com Theme Overhaul: Every Page Themed
+
+### Changed
+- **Centralized token aliases**: Added chess.com semantic aliases (`--chesscom-*`, `--move-best`, `--move-blunder`, etc.) to `index.css` so all pages share consistent color references without hardcoded fallbacks.
+- **Branding consistency**: Renamed sidebar logo "Chess.com App" → "PlayChess", updated login eyebrow, HTML `<title>`, and `getTitle()` route mapping to use the unified brand name.
+- **Puzzles page**: Replaced fallback `--chesscom-bg`/`--chesscom-card`/`--chesscom-text` color variables with canonical tokens (`--bg-page`, `--card`, `--text-primary`, etc.) for consistent theming.
+- **Not-found page**: Replaced Tailwind utility classes with dedicated `.not-found-*` CSS classes using the chess.com dark panel card, green accent 404 code, and "Lost Position" title.
+- **Analysis page**: Added semantic move classification colors (`.move-best`, `.move-brilliant`, `.move-good`, `.move-book`, `.move-inaccuracy`, `.move-mistake`, `.move-blunder`) for Game Review move lists.
+- **Changelog page**: Restyled as a "release scorebook" with `--card` surfaces, `--border` separators, green markers on list items, and updated sidebar version pills.
+- **Terms/Privacy pages**: Restyled as "chess handbook" pages with a green top accent bar, `--card` surface, green-accent section headers, and refined typography.
+- **CloudFlare page**: Extracted inline styles into `CloudFlare.css` with a themed card, green accent bar, and proper token usage.
+- **Play page**: Updated to use canonical `--bg-page`, `--card`, `--border`, `--text-primary` tokens instead of `--color-bg-*` aliases.
+
+### Fixed
+- **Puzzles route JSX tag mismatch**: Corrected a stray `}` in the Puzzles `<Route>` element in `App.jsx` that produced a JSX parse warning on build.
+- **Changelog CSS token drift**: Unified remaining `--color-*` sidebar selectors to use `--bg-surface-2`, `--border`, `--text-primary`, `--text-muted` directly.
 
 ### Fixed
 - **/puzzles route 404 / black screen**: The `/puzzles` link in the landing and navigation pointed to a route that did not exist in `App.jsx`, so React Router matched nothing and the app shell rendered an empty (dark) main area — appearing as a black screen. Added a new auth-protected `Puzzles` page (`src/pages/Puzzles.jsx` + `Puzzles.css`) inside `ProtectedRoute` (consistent with `/settings`), and registered it inside the shared `AppShell` layout. Also added a `Puzzles` entry to the bottom mobile nav and the `getTitle()` mapping so the route renders with a proper title.

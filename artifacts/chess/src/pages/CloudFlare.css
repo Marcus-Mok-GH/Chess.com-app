@@ -1,0 +1,63 @@
+/* ── CloudFlare protection — styled fallback ── */
+.cf-page {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+  background: var(--bg-page);
+  background-image:
+    radial-gradient(ellipse 60% 40% at 50% 0%, rgba(129, 182, 76, 0.06), transparent 60%);
+  text-align: center;
+}
+
+.cf-card {
+  max-width: 440px;
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 3rem 2.5rem;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.cf-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--primary-hover), var(--primary));
+}
+
+.cf-title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0 0 16px;
+  letter-spacing: -0.02em;
+}
+
+.cf-desc {
+  color: var(--text-secondary);
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.cf-retry {
+  color: var(--primary);
+  font-weight: 800;
+  font-size: 1rem;
+  margin: 0 0 16px;
+}
+
+.cf-note {
+  color: var(--text-muted);
+  margin: 0;
+  font-size: 0.85rem;
+}

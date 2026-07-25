@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import './CloudFlare.css';
 
 export default function CloudFlare() {
   const [retryCount, setRetryCount] = useState(0);
@@ -12,27 +13,19 @@ export default function CloudFlare() {
   }, []);
 
   return (
-    <div style={{ 
-      padding: '40px 20px', 
-      textAlign: 'center', 
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: 'var(--color-bg-primary)',
-      color: 'var(--color-text-primary)'
-    }}>
-      <h3 style={{ fontSize: '2rem', marginBottom: '16px' }}>CloudFlare Protection</h3>
-      <p style={{ color: 'var(--color-text-secondary)', marginBottom: '8px' }}>
-        You're being rate-limited or blocked by CloudFlare.
-      </p>
-      <p style={{ color: 'var(--color-accent-primary)', fontWeight: 'bold' }}>
-        Attempt {retryCount + 1}
-      </p>
-      <p style={{ color: 'var(--color-text-muted)', marginTop: '16px' }}>
-        This typically resolves on retry.
-      </p>
+    <div className="cf-page">
+      <div className="cf-card">
+        <h3 className="cf-title">CloudFlare Protection</h3>
+        <p className="cf-desc">
+          You're being rate-limited or blocked by CloudFlare.
+        </p>
+        <p className="cf-retry">
+          Attempt {retryCount + 1}
+        </p>
+        <p className="cf-note">
+          This typically resolves on retry.
+        </p>
+      </div>
     </div>
   );
 }

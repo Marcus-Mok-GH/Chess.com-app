@@ -26,12 +26,15 @@ const NotFound = lazy(() => import('./pages/not-found'))
 
 function getTitle(path) {
   if (path.startsWith('/online/') || path.startsWith('/game/')) return 'Online Play'
-  if (path === '/analysis') return 'Game Analysis'
+  if (path.startsWith('/analysis')) return 'Game Review'
+  if (path === '/home') return 'Home'
+  if (path === '/play') return 'Play'
+  if (path === '/online') return 'Online Play'
   if (path === '/history') return 'Game History'
   if (path === '/settings') return 'Settings'
   if (path === '/changelog') return 'Changelog'
   if (path === '/puzzles') return 'Puzzles'
-  return 'Chess'
+  return 'PlayChess'
 }
 
 function AppHeader() {
@@ -50,7 +53,7 @@ function AppHeader() {
       <aside className="sidebar-nav">
         <div className="sidebar-content">
           <Link to="/home" className="sidebar-logo">
-            <span className="logo-text"><a href="http://Chess.com">Chess.com</a> App</span>
+            <span className="logo-text">PlayChess</span>
           </Link>
 
           <div className="sidebar-links">
@@ -210,7 +213,7 @@ export default function App() {
                   <Route path="/history" element={<ProtectedRoute><GameHistory /></ProtectedRoute>} />
                   <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                   <Route path="/changelog" element={<Changelog />} />
-                  <Route path="/puzzles" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Puzzles /></Suspense>}</ProtectedRoute>} />
+                  <Route path="/puzzles" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Puzzles /></Suspense></ProtectedRoute>} />
                 </Route>
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />
