@@ -15,8 +15,8 @@
 ### Fixed
 - **Puzzles route JSX tag mismatch**: Corrected a stray `}` in the Puzzles `<Route>` element in `App.jsx` that produced a JSX parse warning on build.
 - **Changelog CSS token drift**: Unified remaining `--color-*` sidebar selectors to use `--bg-surface-2`, `--border`, `--text-primary`, `--text-muted` directly.
+- **CodeRabbit review fixes (PR #136)**: Completed PlayChess branding in the mobile header and login copy, and removed the duplicate `Fixed` heading below.
 
-### Fixed
 - **/puzzles route 404 / black screen**: The `/puzzles` link in the landing and navigation pointed to a route that did not exist in `App.jsx`, so React Router matched nothing and the app shell rendered an empty (dark) main area — appearing as a black screen. Added a new auth-protected `Puzzles` page (`src/pages/Puzzles.jsx` + `Puzzles.css`) inside `ProtectedRoute` (consistent with `/settings`), and registered it inside the shared `AppShell` layout. Also added a `Puzzles` entry to the bottom mobile nav and the `getTitle()` mapping so the route renders with a proper title.
 - **Catch-all 404 for unknown routes**: Added a `*` catch-all route rendering the existing `not-found.tsx` 404 card, so any future dead link shows a clear "Page Not Found" page instead of a blank/black main area.
 

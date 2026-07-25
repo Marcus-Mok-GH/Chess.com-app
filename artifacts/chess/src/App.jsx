@@ -102,7 +102,7 @@ function AppHeader() {
 
       {/* Top Mobile Header */}
       <header className="mobile-header">
-        <Link to="/" className="app-logo">♟️ Chess</Link>
+        <Link to="/" className="app-logo">♟️ PlayChess</Link>
         <h1 className="page-title">{getTitle(location.pathname)}</h1>
       </header>
 
