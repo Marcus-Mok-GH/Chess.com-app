@@ -1,29 +1,28 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { AlertCircle } from "lucide-react";
+import { useNavigate } from 'react-router-dom';
+import { AlertCircle } from 'lucide-react';
 
 export default function NotFound() {
-  return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-background">
-      <Card className="w-full max-w-md mx-4 bg-card border-border shadow-xl">
-        <CardContent className="pt-6 text-center">
-          <div className="flex flex-col items-center mb-4 gap-4">
-            <AlertCircle className="h-16 w-16 text-primary" />
-            <h1 className="text-3xl font-extrabold text-foreground">404</h1>
-            <h2 className="text-xl font-bold text-foreground">Page Not Found</h2>
-          </div>
+  const navigate = useNavigate();
 
-          <p className="mt-4 text-text-dim">
-            The page you're looking for doesn't exist or has been moved.
-          </p>
-          
-          <button 
-            onClick={() => window.location.href = '/'}
-            className="mt-8 px-6 py-3 bg-primary text-white font-bold rounded-lg hover:opacity-90 transition-all"
-          >
-            Go Home
-          </button>
-        </CardContent>
-      </Card>
+  return (
+    <div className="not-found-page">
+      <div className="not-found-card">
+        <div className="not-found-icon">
+          <AlertCircle size={56} />
+        </div>
+        <h1 className="not-found-code">404</h1>
+        <h2 className="not-found-title">Lost Position</h2>
+        <p className="not-found-desc">
+          The page you're looking for doesn't exist, has been moved, or is off the board.
+        </p>
+        <button
+          className="not-found-btn"
+          onClick={() => navigate('/')}
+          type="button"
+        >
+          Return to Home
+        </button>
+      </div>
     </div>
   );
 }

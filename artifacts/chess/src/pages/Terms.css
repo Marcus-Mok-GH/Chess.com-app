@@ -1,29 +1,49 @@
+/* ── Legal pages — chess handbook ── */
 .legal-page {
   min-height: 100svh;
-  background: var(--background);
+  background: var(--bg-page);
+  background-image:
+    radial-gradient(ellipse 60% 40% at 50% 0%, rgba(129, 182, 76, 0.05), transparent 60%);
   padding: 2rem;
+  display: flex;
+  justify-content: center;
 }
 
 .legal-container {
   max-width: 800px;
-  margin: 0 auto;
+  width: 100%;
   background: var(--card);
   border-radius: var(--radius-lg);
   padding: 2.5rem;
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.legal-container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--primary-hover), var(--primary));
 }
 
 .legal-container h1 {
   font-size: 2rem;
   font-weight: 800;
   margin-bottom: 0.5rem;
-  color: var(--foreground);
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
 }
 
 .last-updated {
-  color: var(--text-dim);
+  color: var(--text-muted);
   font-size: 0.875rem;
   margin-bottom: 2rem;
+  font-weight: 600;
 }
 
 .legal-container section {
@@ -34,13 +54,32 @@
   font-size: 1.25rem;
   font-weight: 700;
   margin-bottom: 0.75rem;
-  color: var(--foreground);
+  color: var(--text-primary);
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
 }
 
 .legal-container p {
-  color: var(--text-primary);
-  line-height: 1.6;
+  color: var(--text-secondary);
+  line-height: 1.7;
   margin: 0;
+  font-size: 0.95rem;
+}
+
+.legal-container ul {
+  padding-left: 1.25rem;
+  margin: 0;
+}
+
+.legal-container li {
+  padding: 0.35rem 0;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.legal-container li::marker {
+  color: var(--primary);
 }
 
 @media (max-width: 640px) {

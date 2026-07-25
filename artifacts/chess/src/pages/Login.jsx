@@ -105,9 +105,9 @@ export default function Login() {
         </div>
 
         <div className="login-header">
-          <span className="login-eyebrow">Chess.com App</span>
+          <span className="login-eyebrow">PlayChess</span>
           <h1 className="login-title">Welcome Back</h1>
-          <p className="login-subtitle">Sign in to your Chess account</p>
+          <p className="login-subtitle">Sign in to your PlayChess account</p>
         </div>
 
         <hr className="login-divider" />

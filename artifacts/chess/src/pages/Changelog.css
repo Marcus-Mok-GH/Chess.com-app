@@ -1,7 +1,10 @@
+/* ── Changelog — release scorebook ── */
 .changelog-page {
   min-height: 100svh;
-  background: var(--color-bg-primary);
-  color: var(--color-text-secondary);
+  background: var(--bg-page);
+  background-image:
+    radial-gradient(ellipse 60% 40% at 50% 0%, rgba(129, 182, 76, 0.05), transparent 60%);
+  color: var(--text-secondary);
   padding: 3rem 2rem;
 }
 
@@ -17,13 +20,16 @@
 
 .changelog-header h1 {
   font-size: 2.1rem;
-  color: var(--color-text-primary);
+  font-weight: 800;
+  color: var(--text-primary);
   margin: 0 0 8px;
+  letter-spacing: -0.02em;
 }
 
 .changelog-header p {
   margin: 0;
-  color: var(--color-text-secondary);
+  color: var(--text-muted);
+  font-size: 0.95rem;
 }
 
 .changelog-layout {
@@ -39,52 +45,53 @@
 }
 
 .changelog-version {
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border-default);
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 12px 16px;
   text-align: left;
   cursor: pointer;
-  color: var(--color-text-primary);
-  transition: all 0.2s;
+  color: var(--text-primary);
+  transition: var(--transition-smooth);
 }
 
 .changelog-version:hover {
-  border-color: var(--color-bg-hover);
+  border-color: var(--border-hover);
   transform: translateY(-1px);
 }
 
 .changelog-version.active {
-  border-color: var(--color-accent-primary);
+  border-color: var(--primary);
   background: rgba(129, 182, 76, 0.15);
-  box-shadow: 0 0 0 1px var(--color-accent-primary);
+  box-shadow: 0 0 0 1px var(--primary);
 }
 
 .version-label {
   display: block;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--text-primary);
 }
 
 .version-date {
   display: block;
   font-size: 0.8rem;
-  color: var(--color-text-muted);
+  color: var(--text-muted);
   margin-top: 4px;
 }
 
 .changelog-entries {
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border-default);
-  border-radius: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   padding: 24px 28px;
+  box-shadow: var(--shadow-sm);
 }
 
 .changelog-entry header {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  border-bottom: 1px solid var(--color-border-default);
+  border-bottom: 1px solid var(--border);
   padding-bottom: 12px;
   margin-bottom: 20px;
 }
@@ -92,11 +99,15 @@
 .changelog-entry h2 {
   margin: 0;
   font-size: 1.4rem;
-  color: var(--color-text-primary);
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
 }
 
 .changelog-entry header span {
-  color: var(--color-text-muted);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .changelog-section {
@@ -105,10 +116,27 @@
 
 .changelog-section h3 {
   font-size: 1rem;
-  color: var(--color-accent-primary);
+  font-weight: 800;
+  color: var(--primary);
   margin: 0 0 10px;
   text-transform: uppercase;
   letter-spacing: 0.6px;
+}
+
+.changelog-entry ul {
+  padding-left: 1.25rem;
+  margin: 0;
+}
+
+.changelog-entry li {
+  padding: 0.35rem 0;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  font-size: 0.925rem;
+}
+
+.changelog-entry li::marker {
+  color: var(--primary);
 }
 
 /* ── Navigation row ─────────────── */
@@ -120,19 +148,19 @@
 }
 
 .changelog-home-btn {
-  background: var(--color-bg-tertiary);
-  border: 1px solid var(--color-border-default);
-  color: var(--color-text-primary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
   padding: 8px 16px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: var(--transition-smooth);
 }
 
 .changelog-home-btn:hover {
-  background: var(--color-bg-hover);
+  background: var(--bg-hover);
 }
 
 @media (max-width: 800px) {
