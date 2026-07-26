@@ -98,3 +98,32 @@
     flex: 1 1 calc(50% - 6px);
   }
 }
+
+@media (max-width: 360px) {
+  .game-bottom-bar {
+    gap: 6px;
+    padding: 8px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0));
+  }
+
+  .gbb-bot-message {
+    padding: 6px 10px;
+    margin-bottom: 6px;
+  }
+
+  .gbb-bot-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 1rem;
+  }
+
+  .gbb-bot-quote {
+    font-size: 0.75rem;
+  }
+
+  .gbb-btn {
+    padding: 8px 6px;
+    min-height: 40px;
+    font-size: 0.75rem;
+  }
+}

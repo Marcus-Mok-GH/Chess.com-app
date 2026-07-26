@@ -181,3 +181,54 @@
     width: 100%;
   }
 }
+
+@media (max-width: 390px) {
+  .winrate-chart-container {
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  .winrate-chart-title {
+    font-size: 1.1rem;
+  }
+
+  .legend-item {
+    font-size: 0.8125rem;
+  }
+
+  .winrate-chart-placeholder {
+    padding: 32px 16px;
+  }
+
+  .stat-item {
+    font-size: 0.8125rem;
+  }
+
+  .tooltip-game {
+    font-size: 0.8125rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .winrate-chart-container {
+    padding: 12px;
+  }
+
+  .winrate-chart-title {
+    font-size: 1rem;
+  }
+
+  .winrate-chart-legend {
+    gap: 10px;
+  }
+
+  .legend-item {
+    font-size: 0.75rem;
+    gap: 4px;
+  }
+
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+  }
+}

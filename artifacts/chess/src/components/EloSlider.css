@@ -80,3 +80,41 @@
   color: var(--text-secondary);
   font-weight: 600;
 }
+
+/* ── Mobile ─────────────────────────── */
+@media (max-width: 768px) {
+  .elo-slider {
+    padding: 1.25rem;
+  }
+
+  .elo-slider-label {
+    font-size: 0.8rem;
+  }
+
+  .elo-number {
+    font-size: 1.75rem;
+  }
+
+  .elo-slider-input::-webkit-slider-thumb {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+@media (max-width: 390px) {
+  .elo-slider {
+    padding: 1rem;
+  }
+
+  .elo-slider-header {
+    margin-bottom: 1.25rem;
+  }
+
+  .elo-number {
+    font-size: 1.5rem;
+  }
+
+  .elo-slider-marks span {
+    font-size: 0.65rem;
+  }
+}

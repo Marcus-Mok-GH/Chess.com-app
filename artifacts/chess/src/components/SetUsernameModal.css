@@ -114,3 +114,64 @@
 .username-form .btn-full {
   width: 100%;
 }
+
+/* ── Mobile ─────────────────────────── */
+@media (max-width: 480px) {
+  .username-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .username-modal {
+    padding: 2rem 1.5rem;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-width: 100%;
+    max-height: 90vh;
+    max-height: 90dvh;
+    overflow-y: auto;
+  }
+
+  .username-header h2 {
+    font-size: 1.35rem;
+  }
+
+  .username-form input {
+    min-height: 48px;
+    font-size: 1rem;
+  }
+
+  .username-form .btn {
+    min-height: 48px;
+  }
+}
+
+@media (max-width: 360px) {
+  .username-modal {
+    padding: 1.5rem 1.25rem;
+  }
+
+  .username-header h2 {
+    font-size: 1.25rem;
+  }
+
+  .username-header p {
+    font-size: 0.85rem;
+    margin-bottom: 1.5rem;
+  }
+}
+
+/* Keyboard-open: reduce size when viewport is short */
+@media (max-height: 600px) and (max-width: 768px) {
+  .username-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .username-modal {
+    padding: 1.5rem 1.25rem;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-height: 85vh;
+    max-height: 85dvh;
+    overflow-y: auto;
+  }
+}

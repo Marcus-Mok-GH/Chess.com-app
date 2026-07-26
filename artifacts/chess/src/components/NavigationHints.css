@@ -119,18 +119,81 @@ kbd {
   .nav-hints-overlay {
     padding: 1rem;
   }
-  
+
   .nav-hints-content {
     padding: 1rem;
   }
-  
+
   .hint-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
   }
-  
+
   .hint-item span {
     margin-left: 0;
+  }
+}
+
+@media (max-width: 390px) {
+  .nav-hints-overlay {
+    padding: 0.75rem;
+  }
+
+  .nav-hints-modal {
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+
+  .nav-hints-header {
+    padding: 1rem;
+  }
+
+  .nav-hints-header h3 {
+    font-size: 1.1rem;
+  }
+
+  .close-btn {
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .nav-hints-content {
+    padding: 0.875rem;
+  }
+
+  .hint-group {
+    margin-bottom: 1rem;
+  }
+
+  .hint-group h4 {
+    font-size: 0.9rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .hint-item {
+    padding: 0.375rem;
+    margin-bottom: 0.5rem;
+  }
+
+  kbd {
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .nav-hints-header h3 {
+    font-size: 1rem;
+  }
+
+  .hint-group h4 {
+    font-size: 0.85rem;
+  }
+
+  .hint-item span {
+    font-size: 0.8125rem;
   }
 }

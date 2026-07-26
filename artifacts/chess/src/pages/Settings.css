@@ -356,6 +356,55 @@
   }
 }
 
+@media (max-width: 390px) {
+  .settings-page {
+    padding: 1rem 0.75rem 6rem;
+  }
+
+  .settings-container h1 {
+    font-size: 1.35rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .settings-section {
+    padding: 1rem;
+  }
+
+  .setting-info label {
+    font-size: 0.875rem;
+  }
+
+  .setting-desc {
+    font-size: 0.75rem;
+  }
+
+  .account-value {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .settings-page {
+    padding: 0.875rem 0.625rem 6rem;
+  }
+
+  .settings-section {
+    padding: 0.875rem;
+  }
+
+  .setting-item {
+    padding: 0.75rem 0;
+  }
+
+  .link-button,
+  .logout-btn,
+  .reset-btn {
+    min-height: 44px;
+    padding: 0.625rem 0.75rem;
+    font-size: 0.85rem;
+  }
+}
+
 @media (min-width: 1440px) {
   .settings-page {
     padding: 4rem 3rem;
