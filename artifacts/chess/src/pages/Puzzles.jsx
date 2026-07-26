@@ -1,86 +1,24 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Chess } from 'chess.js';
-import ChessBoard from '../components/ChessBoard';
-import { Puzzle, Check, X, Lightbulb, SkipForward, RotateCcw, Trophy, Target, Zap } from 'lucide-react';
-import './Puzzles.css';
-
-const RAW_PUZZLES = [
-  {
-    id: 'back-rank-mate',
-    fen: '6k1/5ppp/8/8/8/8/8/R3K3 w Q - 0 1',
-    sideToMove: 'white',
-    rating: 800,
-    theme: 'Back Rank',
-    hint: 'The black king has no luft. Find the mating square.',
-    solution: 'Ra8#',
-    followup: null,
-  },
-  {
-    id: 'knight-check',
-    fen: '4k3/8/8/3n4/8/3K4/8/7R b - - 0 1',
-    sideToMove: 'black',
-    rating: 950,
-    theme: 'Knight Check',
-    hint: 'Use the knight to check the exposed king.',
-    solution: 'Nf4+',
-    followup: 'Ke4',
-  },
-  {
-    id: 'pin-win',
-    fen: '4k3/8/8/8/8/8/1r6/1R2K3 b - - 0 1',
-    sideToMove: 'black',
-    rating: 700,
-    theme: 'Absolute Pin',
-    hint: 'The rook pins the white rook to the king. Win material.',
-    solution: 'Rxb1+',
-    followup: null,
-  },
-  {
-    id: 'smothered-mate',
-    fen: '6rk/6pp/8/6N1/8/8/8/6K1 w - - 0 1',
-    sideToMove: 'white',
-    rating: 1200,
-    theme: 'Smothered Mate',
-    hint: 'The knight can mate a king boxed in by its own pieces.',
-    solution: 'Nf7#',
-    followup: null,
-  },
-  {
-    id: 'rook-exchange',
-    fen: '4k3/8/8/8/8/3r4/8/3RK3 b - - 0 1',
-    sideToMove: 'black',
-    rating: 850,
-    theme: 'Rook Exchange',
-    hint: 'Exchange rooks with check.',
-    solution: 'Rxd1+',
-    followup: 'Kxd1',
-  },
-];
-
-function isValidPuzzle(puzzle) {
-  try {
-    const chess = new Chess(puzzle.fen);
-    if (chess.turn() !== puzzle.sideToMove[0]) return false;
-    chess.move(puzzle.solution);
-    if (puzzle.followup) chess.move(puzzle.followup);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-const PUZZLES = RAW_PUZZLES.filter(isValidPuzzle);
-
-if (PUZZLES.length !== RAW_PUZZLES.length) {
-  throw new Error('Puzzle data contains an illegal FEN or move sequence.');
-}
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Chess } from "chess.js";
+import ChessBoard from "../components/ChessBoard";
+import {
+  Puzzle,
+  Check,
+  X,
+  Lightbulb,
+  SkipForward,
+  RotateCcw,
+  Trophy,
+  Target,
+  Zap,
+} from "lucide-react";
+import { generatePuzzle } from "../engine/puzzles/puzzleGenerator";
+import "./Puzzles.css";
 
 function getSideToMove(fen) {
-  return fen.split(' ')[1];
+  return fen.split(" ")[1];
 }
 
-// Build a chess.js instance. chess.js throws on fen parse errors in newer
-// versions, so guard it.
 function loadFen(fen) {
   try {
     return new Chess(fen);
@@ -89,8 +27,17 @@ function loadFen(fen) {
   }
 }
 
+function nextPuzzle(previousPuzzle) {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const puzzle = generatePuzzle();
+    if (puzzle.fen !== previousPuzzle?.fen) return puzzle;
+  }
+  return generatePuzzle((Date.now() + 1) >>> 0);
+}
+
 export default function Puzzles() {
-  const [index, setIndex] = useState(0);
+  const [puzzleNumber, setPuzzleNumber] = useState(1);
+  const [puzzle, setPuzzle] = useState(() => generatePuzzle());
   const [willPlayFollowup, setWillPlayFollowup] = useState(false); // after the solution, black/white auto-plays the followup
   const [solved, setSolved] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -103,7 +50,6 @@ export default function Puzzles() {
   const [bestStreak, setBestStreak] = useState(0);
   const timerIds = useRef([]);
 
-  const puzzle = PUZZLES[index];
   const [position, setPosition] = useState(puzzle.fen);
 
   function clearTimers() {
@@ -126,7 +72,7 @@ export default function Puzzles() {
     setSolved(false);
     setFailed(false);
     setShowHint(false);
-  }, [index, puzzle.fen]);
+  }, [puzzle.id, puzzle.fen]);
 
   useEffect(() => () => clearTimers(), []);
 
@@ -148,7 +94,8 @@ export default function Puzzles() {
     } else {
       setStreak(0);
     }
-    setIndex((i) => (i + 1) % PUZZLES.length);
+    setPuzzle((current) => nextPuzzle(current));
+    setPuzzleNumber((number) => number + 1);
   }
 
   function handlePieceDrop(sourceSquare, targetSquare) {
@@ -157,13 +104,19 @@ export default function Puzzles() {
     const chess = loadFen(position);
     let move = null;
     try {
-      move = chess.move({ from: sourceSquare, to: targetSquare, promotion: 'q' });
+      move = chess.move({
+        from: sourceSquare,
+        to: targetSquare,
+        promotion: "q",
+      });
     } catch {
       move = null;
     }
     if (!move) return false;
 
-    const isSolution = move.san === puzzle.solution || moveSquaresMatch(moveStr, puzzle.solution);
+    const isSolution =
+      move.san === puzzle.solution ||
+      moveSquaresMatch(moveStr, puzzle.solution);
     if (!isSolution) {
       setFailed(true);
       setSolved(false);
@@ -206,10 +159,7 @@ export default function Puzzles() {
     try {
       const probe = loadFen(position);
       const probeMove = probe.move(sanStr);
-      return (
-        probeMove &&
-        probeMove.from + probeMove.to === coordStr
-      );
+      return probeMove && probeMove.from + probeMove.to === coordStr;
     } catch {
       return false;
     }
@@ -223,8 +173,10 @@ export default function Puzzles() {
 
   function handleReset() {
     clearTimers();
-    setIndex(0);
-    setPosition(PUZZLES[0].fen);
+    const freshPuzzle = nextPuzzle(puzzle);
+    setPuzzle(freshPuzzle);
+    setPuzzleNumber(1);
+    setPosition(freshPuzzle.fen);
     setWillPlayFollowup(false);
     setSolved(false);
     setFailed(false);
@@ -237,7 +189,8 @@ export default function Puzzles() {
   function handleSkip() {
     clearTimers();
     setStreak(0);
-    setIndex((i) => (i + 1) % PUZZLES.length);
+    setPuzzle((current) => nextPuzzle(current));
+    setPuzzleNumber((number) => number + 1);
   }
 
   function handleShowHint() {
@@ -254,11 +207,11 @@ export default function Puzzles() {
               <span>Tactical Trainer</span>
             </div>
             <span className="puzzles-meta">
-              Puzzle {index + 1} of {PUZZLES.length} · {puzzle.theme}
+              Puzzle {puzzleNumber} · {puzzle.theme}
             </span>
           </div>
           <h1 className="puzzles-title">
-            {puzzle.sideToMove === 'white' ? 'White' : 'Black'} to move
+            {puzzle.sideToMove === "white" ? "White" : "Black"} to move
           </h1>
           <p className="puzzles-subtitle">
             Find the tactic. <strong>{ratingLabel(puzzle.rating)}</strong>
@@ -277,14 +230,14 @@ export default function Puzzles() {
                 solved
                   ? lastMoveSquares(game)
                   : failed
-                  ? lastMoveSquares(game)
-                  : {}
+                    ? lastMoveSquares(game)
+                    : {}
               }
             />
             {solved && (
               <div className="puzzle-result puzzle-result--solved">
                 <Check size={18} /> Correct!
-                {puzzle.followup && ' (+followup)'}
+                {puzzle.followup && " (+followup)"}
               </div>
             )}
             {failed && (
@@ -330,7 +283,7 @@ export default function Puzzles() {
                 onClick={handleShowHint}
                 disabled={showHint}
               >
-                <Lightbulb size={16} /> {showHint ? 'Hint shown' : 'Hint'}
+                <Lightbulb size={16} /> {showHint ? "Hint shown" : "Hint"}
               </button>
               <button
                 type="button"
@@ -360,9 +313,9 @@ export default function Puzzles() {
             <div className="puzzle-side-card puzzle-to-move-hint">
               <span className="dot" data-color={puzzle.sideToMove} />
               <span>
-                {puzzle.sideToMove === 'white'
-                  ? 'White to move and win material or mate.'
-                  : 'Black to move and win material or mate.'}
+                {puzzle.sideToMove === "white"
+                  ? "White to move and win material or mate."
+                  : "Black to move and win material or mate."}
               </span>
             </div>
           </aside>
@@ -373,10 +326,10 @@ export default function Puzzles() {
 }
 
 function ratingLabel(r) {
-  if (r < 900) return 'Beginner';
-  if (r < 1100) return 'Easy';
-  if (r < 1300) return 'Intermediate';
-  return 'Advanced';
+  if (r < 900) return "Beginner";
+  if (r < 1100) return "Easy";
+  if (r < 1300) return "Intermediate";
+  return "Advanced";
 }
 
 // highlight played move squares (last-move highlight)
@@ -385,7 +338,11 @@ function lastMoveSquares(chessInstance) {
   if (!hist || hist.length === 0) return {};
   const last = hist[hist.length - 1];
   const styles = {};
-  if (last?.from) styles[last.from] = { boxShadow: 'inset 0 0 0 4px rgba(255, 215, 0, 0.55)' };
-  if (last?.to) styles[last.to] = { boxShadow: 'inset 0 0 0 4px rgba(255, 215, 0, 0.55)' };
+  if (last?.from)
+    styles[last.from] = {
+      boxShadow: "inset 0 0 0 4px rgba(255, 215, 0, 0.55)",
+    };
+  if (last?.to)
+    styles[last.to] = { boxShadow: "inset 0 0 0 4px rgba(255, 215, 0, 0.55)" };
   return styles;
 }

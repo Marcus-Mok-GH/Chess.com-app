@@ -1,3 +1,9 @@
+## [2026-07-27] - Dynamic Puzzle Generation
+
+### Added
+
+- **Procedural tactical puzzles**: Replaced the fixed puzzle rotation with runtime-generated, chess.js-verified mate-in-one positions. Each position has exactly one legal mating move, randomized orientation/theme metadata, deterministic seed support for testing, coverage in the standard test suite, and immediate generation of a fresh puzzle after solve, skip, or reset.
+
 ## [2026-07-26] - Comprehensive Mobile Responsive Optimization
 
 ### Changed
