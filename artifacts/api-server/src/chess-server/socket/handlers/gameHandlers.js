@@ -7,6 +7,7 @@ import {
 } from '../utils.js';
 import { getGameService } from '../gameService.js';
 import { censorMessage } from '../profanity.js';
+import { getOnlineGameKv } from '../../kv/onlineGameKv.js';
 
 const upsertMatchMoves = async ({ gameId, username, moveHistory, isWhite }) => {
   if (!gameId || !username || typeof isWhite !== 'boolean') return;
@@ -117,42 +118,32 @@ export function setupGameHandlers(io, socket) {
     const { gameId, fen, lastMove, moveHistory, playerId } = data;
 
     if (!gameId || typeof gameId !== 'string') {
-      socket.emit('move_error', { message: 'Invalid game ID' });
+      socket.emit('move_error', { gameId: gameId || undefined, message: 'Invalid game ID' });
       return;
     }
 
     if (!playerId || typeof playerId !== 'string') {
-      socket.emit('move_error', { message: 'Invalid player ID' });
-      return;
-    }
-
-    if (!fen || typeof fen !== 'string') {
-      socket.emit('move_error', { message: 'Invalid FEN string' });
-      return;
-    }
-
-    if (!lastMove || (typeof lastMove !== 'string' && typeof lastMove !== 'object')) {
-      socket.emit('move_error', { message: 'Invalid move data' });
+      socket.emit('move_error', { gameId, message: 'Invalid player ID' });
       return;
     }
 
     if (!moveHistory || !Array.isArray(moveHistory)) {
-      socket.emit('move_error', { message: 'Invalid move history' });
+      socket.emit('move_error', { gameId, message: 'Invalid move history' });
       return;
     }
 
-    console.log(`[Socket] Move in game ${gameId} by ${playerId}: ${lastMove}`);
+    console.log(`[Socket] Move in game ${gameId} by ${playerId}`);
 
     const game = await service.getGame(gameId);
 
     if (!game || game.status !== 'playing') {
-      socket.emit('move_error', { message: 'Game not found or not active' });
+      socket.emit('move_error', { gameId, message: 'Game not found or not active' });
       return;
     }
 
     const auth = verifyPlayerAuth(socket, game, playerId);
     if (!auth.valid) {
-      socket.emit('move_error', { message: auth.error });
+      socket.emit('move_error', { gameId, message: auth.error });
       return;
     }
 
@@ -162,52 +153,50 @@ export function setupGameHandlers(io, socket) {
     const expectedColor = activeColor === 'w' ? 'white' : 'black';
 
     if (auth.color !== expectedColor) {
-      socket.emit('move_error', { message: 'Not your turn' });
+      socket.emit('move_error', { gameId, message: 'Not your turn' });
+      return;
+    }
+
+    const serverHistory = Array.isArray(game.move_history) ? game.move_history : [];
+    const expectedMoveCount = game.move_count || 0;
+    const clientMoveCount = moveHistory.length;
+
+    if (clientMoveCount !== serverHistory.length + 1) {
+      socket.emit('move_error', { gameId, message: 'Stale move: history out of sync' });
       return;
     }
 
     let chess;
     try {
-      chess = new Chess();
+      chess = new Chess(game.fen);
 
-      for (const entry of moveHistory) {
-        let parsedEntry = entry;
-        if (typeof parsedEntry === 'string') {
-          const trimmed = parsedEntry.trim();
-          if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-            try {
-              parsedEntry = JSON.parse(trimmed);
-            } catch {
-              parsedEntry = entry;
-            }
-          }
+      const lastEntry = moveHistory[moveHistory.length - 1];
+      let moveNotation = lastEntry;
+      if (typeof lastEntry === 'string') {
+        const trimmed = lastEntry.trim();
+        if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+          try { moveNotation = JSON.parse(trimmed); } catch { moveNotation = lastEntry; }
         }
-
-        let moveNotation = parsedEntry;
-        if (parsedEntry && typeof parsedEntry === 'object') {
-          if (parsedEntry.from && parsedEntry.to) {
-            moveNotation = {
-              from: parsedEntry.from,
-              to: parsedEntry.to,
-              promotion: parsedEntry.promotion || 'q',
-            };
-          } else if (parsedEntry.san) {
-            moveNotation = parsedEntry.san;
-          }
-        }
-
-        const applied = chess.move(moveNotation);
-        if (!applied) {
-          console.log(`[Socket] Invalid move detected in game ${gameId}: ${JSON.stringify(moveNotation)}`);
-          socket.emit('move_error', { message: 'Invalid move' });
-          return;
+      }
+      if (moveNotation && typeof moveNotation === 'object') {
+        if (moveNotation.from && moveNotation.to) {
+          moveNotation = { from: moveNotation.from, to: moveNotation.to, promotion: moveNotation.promotion || 'q' };
+        } else if (moveNotation.san) {
+          moveNotation = moveNotation.san;
         }
       }
 
-      const newFen = chess.fen();
-      const lastMoveText = typeof lastMove === 'string' ? lastMove : lastMove?.san || '';
+      const applied = chess.move(moveNotation);
+      if (!applied) {
+        socket.emit('move_error', { gameId, message: 'Illegal move' });
+        return;
+      }
 
-      await service.updateGameState(gameId, newFen, lastMoveText, moveHistory);
+      const casResult = await service.updateGameStateCAS(gameId, chess.fen(), moveHistory, expectedMoveCount);
+      if (!casResult) {
+        socket.emit('move_error', { gameId, message: 'Stale move: state changed' });
+        return;
+      }
 
       const matchIdentity = resolveMatchMoveOwner(game, socket.id, playerId);
       await upsertMatchMoves({
@@ -216,20 +205,27 @@ export function setupGameHandlers(io, socket) {
         moveHistory,
         isWhite: matchIdentity.isWhite
       });
+
+      socket.emit('move_ack', {
+        gameId,
+        fen: chess.fen(),
+        moveCount: expectedMoveCount + 1,
+        playerId,
+        timestamp: Date.now()
+      });
+
+      io.to(gameId).emit('move_made', {
+        gameId,
+        fen: chess.fen(),
+        lastMove,
+        moveHistory,
+        playerId,
+        timestamp: Date.now()
+      });
     } catch (error) {
       console.error('[Socket] Chess validation error:', error);
-      socket.emit('move_error', { message: 'Invalid move or FEN' });
-      return;
+      socket.emit('move_error', { gameId, message: 'Invalid move' });
     }
-
-    io.to(gameId).emit('move_made', {
-      gameId,
-      fen: chess.fen(),
-      lastMove,
-      moveHistory,
-      playerId,
-      timestamp: Date.now()
-    });
   });
 
   socket.on('game_over', async (data) => {
@@ -486,6 +482,11 @@ export function setupGameHandlers(io, socket) {
         null,
         nextStatus === 'ended' ? 'completed' : nextStatus
       );
+
+      if (bothPlayersGone || nextStatus === 'ended') {
+        const kv = getOnlineGameKv();
+        await kv.del(gameId);
+      }
     }
 
     socket.leave(gameId);

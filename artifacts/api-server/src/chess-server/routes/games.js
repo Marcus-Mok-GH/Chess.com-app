@@ -2,7 +2,11 @@ import express from 'express';
 import { query } from '../db.js';
 import { getPool } from '../db/pool.js';
 import crypto from 'crypto';
+import { Chess } from 'chess.js';
 import { errorResponse, handleRouteError } from '../middleware/errors.js';
+import { userIdFromPlayerId } from '../socket/utils.js';
+import { validateSession } from '../auth.js';
+import { getOnlineGameKv } from '../kv/onlineGameKv.js';
 
 const router = express.Router();
 
@@ -239,6 +243,16 @@ router.post('/online/create', async (req, res) => {
        isWhite ? playerElo || null : null, isWhite ? null : playerElo || null,
        'waiting', 'friendly']
     );
+    const kv = getOnlineGameKv();
+    await kv.set(gameCode, {
+      game_id: gameCode, game_code: gameCode,
+      fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      move_history: [], move_count: 0, status: 'waiting', game_mode: 'friendly',
+      white_player_id: isWhite ? playerId : null, black_player_id: isWhite ? null : playerId,
+      white_player_name: isWhite ? playerName : null, black_player_name: isWhite ? null : playerName,
+      white_elo: isWhite ? playerElo || null : null, black_elo: isWhite ? null : playerElo || null,
+    });
+
     res.json({ success: true, gameCode, playerColor });
   } catch (error) {
     return handleRouteError(res, error, 'Failed to create online game');
@@ -277,6 +291,21 @@ router.post('/online/join', async (req, res) => {
        isWhiteOpen ? playerName : null, isWhiteOpen ? null : playerName,
        isWhiteOpen ? playerElo || null : null, isWhiteOpen ? null : playerElo || null]
     );
+
+    const kv = getOnlineGameKv();
+    await kv.set(gameCode.toUpperCase(), {
+      game_id: gameCode.toUpperCase(), game_code: gameCode.toUpperCase(),
+      fen: game.fen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      move_history: game.move_history || [], move_count: game.move_count || 0,
+      status: 'playing', game_mode: game.game_mode || 'friendly',
+      white_player_id: isWhiteOpen ? playerId : game.white_player_id,
+      black_player_id: isWhiteOpen ? game.black_player_id : playerId,
+      white_player_name: isWhiteOpen ? playerName : game.white_player_name,
+      black_player_name: isWhiteOpen ? game.black_player_name : playerName,
+      white_elo: isWhiteOpen ? playerElo || null : game.white_elo,
+      black_elo: isWhiteOpen ? game.black_elo : playerElo || null,
+    });
+
     res.json({ success: true, gameCode: gameCode.toUpperCase(), playerColor: assignedColor });
   } catch (error) {
     return handleRouteError(res, error, 'Failed to join online game');
@@ -293,6 +322,10 @@ router.post('/online/leave', async (req, res) => {
        WHERE game_id = $1 AND (white_player_id = $2 OR black_player_id = $2)`,
       [gameCode.toUpperCase(), playerId]
     );
+
+    const kv = getOnlineGameKv();
+    await kv.del(gameCode.toUpperCase());
+
     res.json({ success: true });
   } catch (error) {
     return handleRouteError(res, error, 'Failed to leave online game');
@@ -339,38 +372,258 @@ router.get('/match-moves/:gameId/:username', async (req, res) => {
   }
 });
 
-// Get game by code
+// Normalize a raw DB row or KV state into a consistent response shape
+// so clients always receive the same fields regardless of source.
+function normalizeGameResponse(row) {
+  if (!row) return null;
+  const move_history = Array.isArray(row.move_history)
+    ? row.move_history
+    : [];
+  return {
+    game_id: row.game_id || row.game_code || null,
+    game_code: row.game_code || row.game_id || null,
+    fen: row.fen || null,
+    move_history,
+    move_count: typeof row.move_count === 'number' ? row.move_count : move_history.length,
+    status: row.status || 'unknown',
+    game_mode: row.game_mode || 'friendly',
+    white_player_id: row.white_player_id || null,
+    black_player_id: row.black_player_id || null,
+    white_player_name: row.white_player_name || null,
+    black_player_name: row.black_player_name || null,
+    white_elo: typeof row.white_elo === 'number' ? row.white_elo : null,
+    black_elo: typeof row.black_elo === 'number' ? row.black_elo : null,
+    result: row.result || null,
+    created_at: row.created_at || null,
+  };
+}
+
+// Get game by code — query active_games first; KV serves as fast-path when at
+// least as new, otherwise DB is authoritative and repopulates KV.
+// DB errors fall back to KV as degraded mode.
 router.get('/by-code/:gameCode', async (req, res) => {
   try {
     const { gameCode } = req.params;
     if (!gameCode) return errorResponse(res, 400, 'Game code is required');
 
     const normalizedCode = gameCode.toUpperCase();
-    const result = await query(
-      `SELECT game_code, result, fen, move_history, game_mode, status, created_at,
-              white_player_id, black_player_id, white_player_name, black_player_name
-       FROM games WHERE game_code = $1 LIMIT 1`,
-      [normalizedCode]
-    );
+    const kv = getOnlineGameKv();
 
-    if (result.rows.length > 0) {
-      return res.json(result.rows[0]);
+    const kvState = await kv.get(normalizedCode);
+
+    let dbRow = null;
+    try {
+      const activeResult = await query(
+        `SELECT game_id AS game_code, NULL AS result, fen, move_history,
+                game_mode, status, created_at,
+                white_player_id, black_player_id,
+                white_player_name, black_player_name,
+                white_elo, black_elo, move_count
+         FROM active_games WHERE game_id = $1 LIMIT 1`,
+        [normalizedCode]
+      );
+      if (activeResult.rows.length > 0) {
+        dbRow = activeResult.rows[0];
+      }
+    } catch (dbErr) {
+      console.error('[Games] active_games query failed (non-fatal):', dbErr?.message);
+      if (kvState) return res.json(normalizeGameResponse(kvState));
+      return handleRouteError(res, dbErr, 'Failed to get game');
+    }
+
+    if (dbRow) {
+      if (kvState && typeof kvState.move_count === 'number' && typeof dbRow.move_count === 'number') {
+        if (kvState.status !== dbRow.status) {
+          await kv.set(normalizedCode, dbRow);
+          return res.json(normalizeGameResponse(dbRow));
+        }
+        if (kvState.move_count >= dbRow.move_count) {
+          return res.json(normalizeGameResponse(kvState));
+        }
+        await kv.set(normalizedCode, dbRow);
+        return res.json(normalizeGameResponse(dbRow));
+      }
+      await kv.set(normalizedCode, dbRow);
+      return res.json(normalizeGameResponse(dbRow));
+    }
+
+    let completedRow = null;
+    try {
+      const result = await query(
+        `SELECT game_code, result, fen, move_history, game_mode, status, created_at,
+                white_player_id, black_player_id, white_player_name, black_player_name
+         FROM games WHERE game_code = $1 LIMIT 1`,
+        [normalizedCode]
+      );
+      if (result.rows.length > 0) {
+        completedRow = result.rows[0];
+      }
+    } catch (gameErr) {
+      console.error('[Games] games query failed (non-fatal):', gameErr?.message);
+      if (kvState) return res.json(normalizeGameResponse(kvState));
+      return handleRouteError(res, gameErr, 'Failed to get game');
+    }
+
+    if (completedRow) return res.json(normalizeGameResponse(completedRow));
+
+    if (kvState) return res.json(normalizeGameResponse(kvState));
+    return errorResponse(res, 404, 'Game not found');
+  } catch (error) {
+    return handleRouteError(res, error, 'Failed to get game');
+  }
+});
+
+// Server-authoritative move endpoint for online games.
+// Accepts only the attempted move + player identity + expected move_count.
+// Validates with chess.js from stored FEN, atomically compare-and-set updates.
+router.post('/:gameId/move', async (req, res) => {
+  try {
+    const gameId = (req.params.gameId || '').toUpperCase();
+    const { move, playerId, expectedMoveCount } = req.body;
+
+    if (!gameId || typeof gameId !== 'string' || gameId.length < 2) {
+      return errorResponse(res, 400, 'Invalid game ID');
+    }
+    if (!playerId || typeof playerId !== 'string') {
+      return errorResponse(res, 400, 'Invalid player ID');
+    }
+    if (!move || typeof move !== 'object') {
+      return errorResponse(res, 400, 'Invalid move payload');
+    }
+    if (typeof expectedMoveCount !== 'number') {
+      return errorResponse(res, 400, 'Invalid expected move count');
+    }
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return errorResponse(res, 401, 'Authentication required');
+    }
+    const token = authHeader.slice(7).trim();
+    const authUserId = await validateSession(token);
+    if (!authUserId) {
+      return errorResponse(res, 401, 'Invalid or expired session');
+    }
+    const requestUid = userIdFromPlayerId(playerId);
+    if (requestUid == null || String(authUserId) !== String(requestUid)) {
+      return errorResponse(res, 403, 'Session identity does not match player');
     }
 
     const activeResult = await query(
-      `SELECT game_id AS game_code, NULL AS result, fen, move_history,
-              game_mode, status, created_at,
-              white_player_id, black_player_id,
-              white_player_name, black_player_name,
-              white_elo, black_elo
-       FROM active_games WHERE game_id = $1 LIMIT 1`,
-      [normalizedCode]
+      `SELECT * FROM active_games WHERE game_id = $1`,
+      [gameId]
+    );
+    const game = activeResult.rows[0];
+
+    if (!game || game.status !== 'playing') {
+      return errorResponse(res, 404, 'Game not found or not active');
+    }
+
+    const whiteUid = userIdFromPlayerId(game.white_player_id);
+    const blackUid = userIdFromPlayerId(game.black_player_id);
+    const isWhite = requestUid != null && whiteUid != null && requestUid === whiteUid;
+    const isBlack = requestUid != null && blackUid != null && requestUid === blackUid;
+    if (!isWhite && !isBlack) {
+      return errorResponse(res, 403, 'Unauthorized — not your game');
+    }
+
+    const activeColor = game.fen && typeof game.fen === 'string'
+      ? game.fen.trim().split(/\s+/)[1]
+      : 'w';
+    const expectedColor = activeColor === 'w' ? 'white' : 'black';
+    if ((isWhite ? 'white' : 'black') !== expectedColor) {
+      return errorResponse(res, 409, 'Not your turn');
+    }
+
+    const serverMoveCount = game.move_count || 0;
+    if (expectedMoveCount !== serverMoveCount) {
+      return errorResponse(res, 409, 'Stale move: state changed since you last saw it');
+    }
+
+    let chess;
+    try {
+      chess = new Chess(game.fen);
+    } catch {
+      return errorResponse(res, 500, 'Server game state invalid');
+    }
+
+    let applied;
+    try {
+      const moveSpec = (move.from && move.to)
+        ? { from: move.from, to: move.to, promotion: move.promotion || 'q' }
+        : (move.san || move);
+      applied = chess.move(moveSpec);
+    } catch {
+      applied = null;
+    }
+    if (!applied) {
+      return errorResponse(res, 422, 'Illegal move');
+    }
+
+    const newHistory = Array.isArray(game.move_history)
+      ? [...game.move_history, JSON.stringify({ san: applied.san, from: applied.from, to: applied.to, promotion: applied.promotion, captured: applied.captured || null, color: applied.color, piece: applied.piece })]
+      : [JSON.stringify({ san: applied.san, from: applied.from, to: applied.to, promotion: applied.promotion, captured: applied.captured || null, color: applied.color, piece: applied.piece })];
+
+    const casResult = await query(
+      `UPDATE active_games
+       SET fen = $1, move_history = $2, move_count = move_count + 1, updated_at = CURRENT_TIMESTAMP
+       WHERE game_id = $3 AND move_count = $4 AND status = 'playing'
+       RETURNING *`,
+      [chess.fen(), newHistory, gameId, serverMoveCount]
     );
 
-    if (activeResult.rows.length === 0) return errorResponse(res, 404, 'Game not found');
-    res.json(activeResult.rows[0]);
+    if (!casResult.rows[0]) {
+      return errorResponse(res, 409, 'Stale move: concurrent state change');
+    }
+
+    const updatedGame = casResult.rows[0];
+
+    // Persist snapshot to games table
+    try {
+      const whiteUserId = userIdFromPlayerId(game.white_player_id);
+      const blackUserId = userIdFromPlayerId(game.black_player_id);
+      await query(
+        `INSERT INTO games (
+          game_code, white_player_id, black_player_id,
+          white_player_name, black_player_name,
+          fen, move_history, status, game_mode
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        ON CONFLICT (game_code)
+        DO UPDATE SET
+          fen = EXCLUDED.fen, move_history = EXCLUDED.move_history,
+          status = EXCLUDED.status, updated_at = CURRENT_TIMESTAMP`,
+        [gameId, whiteUserId, blackUserId,
+         game.white_player_name, game.black_player_name,
+         chess.fen(), newHistory, game.status, game.game_mode]
+      );
+    } catch (snapErr) {
+      console.error('[Games] Persist snapshot failed (non-fatal):', snapErr?.message);
+    }
+
+    console.log(`[Games] HTTP move in ${gameId} by ${playerId} (count ${serverMoveCount} → ${serverMoveCount + 1})`);
+
+    const kv = getOnlineGameKv();
+    await kv.set(gameId, {
+      game_id: gameId, game_code: gameId,
+      fen: chess.fen(), move_history: newHistory,
+      move_count: serverMoveCount + 1,
+      status: updatedGame.status || game.status,
+      game_mode: game.game_mode,
+      white_player_id: game.white_player_id,
+      black_player_id: game.black_player_id,
+      white_player_name: game.white_player_name,
+      black_player_name: game.black_player_name,
+      white_elo: game.white_elo,
+      black_elo: game.black_elo,
+    });
+
+    return res.json({
+      success: true,
+      fen: chess.fen(),
+      moveCount: serverMoveCount + 1,
+      moveHistory: newHistory,
+    });
   } catch (error) {
-    return handleRouteError(res, error, 'Failed to get game');
+    return handleRouteError(res, error, 'Failed to submit move');
   }
 });
 

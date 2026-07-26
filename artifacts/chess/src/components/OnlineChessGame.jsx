@@ -23,7 +23,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
   const {
     game, setGame, moveHistory, setMoveHistory, gameStatus, setGameStatus,
     endReason, setEndReason, winner, setWinner, moveError, setMoveError,
-    makeMove, colorCode, restoredMeta,
+    makeMove, colorCode, moveInFlightRef, restoredMeta,
   } = useGameCore(gameId, playerId, playerColor, settings);
 
   const [chatMessages, setChatMessages] = useState([]);
@@ -47,7 +47,6 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
   const animationIdRef = useRef(0);
   const boardOrientation = playerColor || 'white';
 
-  // Keep session metadata sticky for refresh recovery
   useEffect(() => {
     if (!gameId || !playerId) return;
     saveOnlineSession({
@@ -58,7 +57,6 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     });
   }, [gameId, playerId, playerColor, opponentInfo]);
 
-  // Recover from DB if local snapshot is empty / incomplete
   useEffect(() => {
     if (!gameId || hasHydratedFromDb.current) return;
     let cancelled = false;
@@ -67,7 +65,6 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
       .then((data) => {
         if (cancelled || !data) return;
         const history = normalizeMoveHistory(data.move_history);
-        // Prefer server if it has more moves (or local is empty)
         if (history.length >= moveHistory.length) {
           setGame(buildGameFromHistory(history, data.fen));
           setMoveHistory(history);
@@ -76,7 +73,6 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
           } else if (data.status) {
             setGameStatus(data.status === 'playing' || data.status === 'in_progress' ? 'playing' : data.status);
           }
-          console.log('[OnlineGame] Recovered state from DB');
         }
         if (data.white_player_name || data.black_player_name) {
           if (data.white_player_name) {
@@ -94,35 +90,22 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
         }
         hasHydratedFromDb.current = true;
       })
-      .catch(() => {
-        hasHydratedFromDb.current = true;
-      });
+      .catch(() => { hasHydratedFromDb.current = true; });
 
-    return () => {
-      cancelled = true;
-    };
-    // Only run once per gameId mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => { cancelled = true; };
   }, [gameId]);
 
   useEffect(() => {
     if (!gameId || !playerId) return;
 
     const ensureJoin = async () => {
-      try {
-        await socketService.connect();
-      } catch {
-        // continue; join is no-op if disconnected
-      }
+      try { await socketService.connect(); } catch {}
       socketService.joinGame(gameId, playerId);
     };
     ensureJoin();
 
-    // Re-join after reconnect so refresh + brief disconnects recover
     const handleConnectionStatus = (status) => {
-      if (status?.connected) {
-        socketService.joinGame(gameId, playerId);
-      }
+      if (status?.connected) socketService.joinGame(gameId, playerId);
     };
     socketService.on('connection_status', handleConnectionStatus);
 
@@ -139,12 +122,12 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     const handleMoveMade = (data) => {
       const history = normalizeMoveHistory(data.moveHistory);
       if (data.playerId !== playerId) {
+        setDrawOffered(false);
         const lastMove = history[history.length - 1];
         if (lastMove) {
           if (lastMove.captured) haptics.capture(); else haptics.move();
         }
       }
-      // Always apply authoritative server state (handles re-sync after refresh)
       setGame(buildGameFromHistory(history, data.fen));
       setMoveHistory(history);
     };
@@ -153,6 +136,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
       setGameStatus('ended');
       setEndReason(data.reason);
       setWinner(data.result);
+      setDrawOffered(false);
       clearOnlineSession();
     };
 
@@ -161,10 +145,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     const handleDrawOffered = (data) => {
       if (data.offeredBy !== playerId) setDrawOffered(true);
     };
-    const handleMoveError = (data) => setMoveError(data.message);
-    const handleChatMessage = (data) => {
-      setChatMessages((prev) => [...prev, data]);
-    };
+    const handleChatMessage = (data) => setChatMessages((prev) => [...prev, data]);
     const handlePlayerJoined = () => setOpponentStatus('connected');
 
     socketService.on('game_state', handleGameState);
@@ -174,7 +155,6 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     socketService.on('player_joined', handlePlayerJoined);
     socketService.on('elo_updated', handleEloUpdated);
     socketService.on('draw_offered', handleDrawOffered);
-    socketService.on('move_error', handleMoveError);
     socketService.on('chat_message', handleChatMessage);
 
     return () => {
@@ -186,39 +166,21 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
       socketService.off('player_joined', handlePlayerJoined);
       socketService.off('elo_updated', handleEloUpdated);
       socketService.off('draw_offered', handleDrawOffered);
-      socketService.off('move_error', handleMoveError);
       socketService.off('chat_message', handleChatMessage);
-      // Do NOT leave the game room on unmount from refresh — only explicit leave
-      // should close the seat. Leaving here races with reconnect and can end the game.
     };
   }, [gameId, playerId, setGame, setMoveHistory, setGameStatus, setEndReason, setWinner, setMoveError]);
-  // HTTP polling fallback so opponent moves appear without a manual refresh.
-  // On Vercel (where VITE_SOCKET_URL is unset) Socket.IO cannot run, so the
-  // dedicated server room broadcast never reaches the client. This interval pulls
-  // the authoritative game state from the existing /api/games/by-code endpoint
-  // every 2s while the game is active and applies new moves through the same
-  // setters the socket handlers use.
-  //
-  // Two correctness rules:
-  //   1. Only react when the server has STRICTLY MORE moves than we last applied
-  //      (tracked via appliedHistoryLenRef, kept in sync by both the socket
-  //      `move_made` handler and the local makeMove path). This avoids a stale
-  //      closure over `moveHistory.length` that would otherwise never advance.
-  //   2. Skip moves whose ply parity matches the local player's color, so we
-  //      never re-apply the local player's own just-submitted move and clobber
-  //      the optimistic board state while the server is still echoing it back.
-  const appliedHistoryLenRef = useRef(0);
-  // Mirrors gameStatus so the polling interval (whose deps are identity-only)
-  // can observe transitions to 'ended' and short-circuit without re-subscribing.
+
+  // HTTP polling — primary source of truth for opponent moves.
+  // Local player's own moves are confirmed via the POST response, but opponent
+  // moves arrive only through this poll.  The interval avoids overlapping polls
+  // via the inFlight guard and stops when the game ends.
+  const appliedMoveCountRef = useRef(moveHistory.length);
   const gameStatusRef = useRef(gameStatus);
 
   useEffect(() => {
-    appliedHistoryLenRef.current = Math.max(appliedHistoryLenRef.current, moveHistory.length);
+    appliedMoveCountRef.current = Math.max(appliedMoveCountRef.current, moveHistory.length);
   }, [moveHistory.length]);
 
-  // Keep gameStatusRef in sync with the live status so the polling interval
-  // (which only re-subscribes on game/player identity change) can see status
-  // transitions to 'ended' and short-circuit without re-subscribing each tick.
   useEffect(() => {
     gameStatusRef.current = gameStatus;
   }, [gameStatus]);
@@ -237,47 +199,26 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
         if (cancelled || !data) return;
 
         const serverHistory = normalizeMoveHistory(data.move_history);
-        const knownLen = appliedHistoryLenRef.current;
-        // Genuinely new opponent move only if the server history grew past
-        // what we've already applied.
-        const hasNewRemoteMove = serverHistory.length > knownLen;
+        const knownCount = appliedMoveCountRef.current;
+        const hasNewMoves = serverHistory.length > knownCount;
 
-        // Reconcile terminal status/result INDEPENDENTLY of whether a new
-        // remote move exists. The server may flip to 'ended' via a local
-        // (optimistic) checkmate echo, a server-side timeout, or an opponent-
-        // side decision that didn't grow our move history this tick.
         const serverStatus =
           data.status === 'ended' || data.status === 'completed'
             ? 'ended'
             : data.status || 'playing';
         if (serverStatus === 'ended') {
           setGameStatus('ended');
+          setDrawOffered(false);
           if (data.result) setWinner(data.result);
           clearOnlineSession();
         } else if (gameStatusRef.current !== 'ended' && (data.status === 'playing' || data.status === 'in_progress')) {
           setGameStatus('playing');
         }
 
-        if (!hasNewRemoteMove) {
-          // No new remote move to apply this tick — terminal handling above
-          // (if any) has already run. Bail out before touching the board.
-          return;
-        }
+        if (!hasNewMoves) return;
 
-        // Plies are 0-indexed (move 0 = white's first). White plays even
-        // plies, black plays odd plies. The last entry index is history - 1.
-        const lastPlyIndex = serverHistory.length - 1;
-        const lastIsWhiteMove = lastPlyIndex % 2 === 0;
-        const localIsWhite = playerColor === 'white';
-        const lastMoveIsLocal = lastIsWhiteMove === localIsWhite;
+        appliedMoveCountRef.current = serverHistory.length;
 
-        // Always advance the ref so we don't reapply the same delta next tick.
-        appliedHistoryLenRef.current = serverHistory.length;
-
-        if (lastMoveIsLocal) return; // our own echo — keep optimistic board
-
-        // Opponent moved (strictly more moves on server). Reapply authoritative
-        // board state through the same path as the socket `move_made` handler.
         setGame(buildGameFromHistory(serverHistory, data.fen));
         setMoveHistory(serverHistory);
 
@@ -289,19 +230,16 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
         }
         if (lastEntryObj && lastEntryObj.captured) haptics.capture(); else haptics.move();
       } catch {
-        // Transient network/DB blip — keep polling; a manual refresh would not be
-        // safer or better than waiting for the next tick.
+        // Transient network blip — keep polling
       } finally {
         inFlight = false;
       }
-    }, 2000);
+    }, 1500);
 
     return () => {
       cancelled = true;
       clearInterval(intervalId);
     };
-    // Identity-only deps; moveHistory parity is read via refs inside poll.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId, playerId, playerColor, setGame, setMoveHistory, setGameStatus, setWinner]);
 
   useEffect(() => {
@@ -313,19 +251,12 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
 
   useEffect(() => {
     if (!game) return;
-
     const isCheckmate = game.isCheckmate();
     const winningColor = isCheckmate ? (game.turn() === 'w' ? 'black' : 'white') : null;
     const didPlayerWin = isCheckmate && winningColor === playerColor;
-
-    if (!didPlayerWin) {
-      setShowVictory(false);
-      return;
-    }
-
+    if (!didPlayerWin) { setShowVictory(false); return; }
     const victoryKey = `${game.fen()}-${winningColor}`;
     if (lastVictoryKeyRef.current === victoryKey) return;
-
     lastVictoryKeyRef.current = victoryKey;
     setShowVictory(true);
     if (victoryTimeoutRef.current) clearTimeout(victoryTimeoutRef.current);
@@ -337,20 +268,20 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     setAnimatingPieces(prev => [...prev, { id, piece: { type: move.piece, color: move.color }, fromSquare: move.from, toSquare: move.to }]);
   }, []);
 
-  const handlePieceDrop = useCallback((from, to) => {
+  const handlePieceDrop = useCallback(async (from, to) => {
+    if (moveInFlightRef.current) return false;
     if (game.turn() !== colorCode || gameStatus !== 'playing') return false;
-
     const piece = game.get(from);
     if (!piece || piece.color !== colorCode) return false;
-
-    const moved = makeMove({ from, to, promotion: 'q' });
+    const moved = await makeMove({ from, to, promotion: 'q' });
     if (moved) {
       haptics.move();
       setSelectedSquare(null);
       setPossibleMoves([]);
+      setDrawOffered(false);
     }
     return moved;
-  }, [game, colorCode, gameStatus, makeMove]);
+  }, [game, colorCode, gameStatus, makeMove, moveInFlightRef]);
 
   const canDragPiece = useCallback((pieceType, square) => {
     if (game.turn() !== colorCode || gameStatus !== 'playing') return false;
@@ -361,36 +292,18 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
   const onSquareClick = useCallback(
     (square) => {
       if (game.turn() !== colorCode || gameStatus !== 'playing') return;
-      
       const piece = game.get(square);
-
-      // 1. Selection logic: If clicking our own piece, always select it
       if (piece && piece.color === colorCode) {
-        // If clicking same square, deselect
-        if (square === selectedSquare) {
-          setSelectedSquare(null);
-          setPossibleMoves([]);
-          return;
-        }
-        
-        // Otherwise select new piece
+        if (square === selectedSquare) { setSelectedSquare(null); setPossibleMoves([]); return; }
         setSelectedSquare(square);
         haptics.select();
         setPossibleMoves(game.moves({ square, verbose: true }).map(m => m.to));
         return;
       }
-
-      // 2. Move logic: If we have a selection and click a non-own-piece square
       if (selectedSquare) {
         const isLegal = possibleMoves.includes(square);
-        
-        if (isLegal) {
-          handlePieceDrop(selectedSquare, square);
-          return;
-        }
+        if (isLegal) { handlePieceDrop(selectedSquare, square); return; }
       }
-
-      // 3. Deselect if clicking anywhere else or invalid move
       setSelectedSquare(null);
       setPossibleMoves([]);
     },
@@ -402,9 +315,9 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     if (selectedSquare) styles[selectedSquare] = { backgroundColor: 'rgba(255, 255, 0, 0.4)' };
     possibleMoves.forEach(s => {
       const isCapture = game.get(s);
-      styles[s] = { 
-        background: isCapture 
-          ? 'radial-gradient(circle, rgba(0, 0, 0, 0.1) 85%, transparent 85%)' 
+      styles[s] = {
+        background: isCapture
+          ? 'radial-gradient(circle, rgba(0, 0, 0, 0.1) 85%, transparent 85%)'
           : 'radial-gradient(circle, rgba(0, 0, 0, 0.2) 25%, transparent 25%)',
         borderRadius: '50%'
       };
@@ -445,17 +358,19 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
         removeAnimation={(id) => setAnimatingPieces(prev => prev.filter(a => a.id !== id))}
         showVictory={showVictory} gameId={gameId} opponentStatus={opponentStatus}
         eloChange={eloChange} moveError={moveError} getStatusMessage={getStatusMessage}
-        drawOffered={drawOffered} handleRespondDraw={(acc) => socketService.respondDraw(gameId, playerId, acc)}
+        drawOffered={drawOffered}         handleRespondDraw={(acc) => { setDrawOffered(false); socketService.respondDraw(gameId, playerId, acc); }}
         REACTIONS={REACTIONS} handleSendReaction={(r) => socketService.sendMessage(gameId, playerId, r)}
         chatMessages={chatMessages} handleSendMessage={(m) => socketService.sendMessage(gameId, playerId, m)} playerId={playerId}
         moveHistory={moveHistory} gameStatus={gameStatus}
         handleOfferDraw={() => socketService.offerDraw(gameId, playerId)}
         handleResign={() => {
+          setDrawOffered(false);
           socketService.resignGame(gameId, playerId);
           clearOnlineSession();
           if (gameId) clearOnlineGameState(gameId);
         }}
         navigate={navigate} canReview={gameStatus === 'ended'} onLeave={() => {
+          setDrawOffered(false);
           clearOnlineSession();
           if (gameId) clearOnlineGameState(gameId);
           onLeave?.();
