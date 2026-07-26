@@ -1,4 +1,10 @@
 # Changelog
+## [2026-07-26] - AI Review Hardening
+
+### Fixed
+- Hardened authoritative online play after AI review: normalized game and player identities, consistent move history, awaited KV operations, correct async move drops, stale matchmaking event rejection, move-request timeouts, and stable socket concurrency tests.
+
+# Changelog
 ## [2026-07-26] - Durable KV Persistence for Online Play
 
 ### Added

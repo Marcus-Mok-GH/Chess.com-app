@@ -1,3 +1,8 @@
+## [2026-07-26] - AI Review Hardening
+
+### Fixed
+- Addressed AI review findings for authoritative online play: normalized game and player identity checks, consistent move-history storage, awaited KV operations, async move-drop handling, stale matchmaking event rejection, move-request timeout recovery, and stable socket CAS tests.
+
 ## [2026-07-26] - Durable KV Persistence for Online Play (Upstash/Vercel-compatible)
 
 ### Added
