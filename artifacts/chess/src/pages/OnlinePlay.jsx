@@ -231,19 +231,13 @@ export default function OnlinePlay() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeGameId, searchParams, user, isLoggedIn]);
 
-  // Capture the matchmaking generation at effect registration time so stale
-  // match_found events from a cancelled/previous search are discarded.
-  const matchGenerationRef = useRef(generationRef.current);
   useEffect(() => {
-    matchGenerationRef.current = generationRef.current;
-  });
-
-  useEffect(() => {
+    // Capture this listener's matchmaking generation so events from a
+    // cancelled or superseded search cannot start a stale game.
+    const registeredGeneration = generationRef.current;
     const handleMatchFound = (data) => {
-      // Ignore if we're no longer in the matchmaking view or the generation
-      // has moved on (user cancelled or started a new search).
       if (view !== 'matchmaking') return;
-      if (generationRef.current !== matchGenerationRef.current) return;
+      if (generationRef.current !== registeredGeneration) return;
       clearMatchmakingTimers();
       pendingMatchmakingRef.current = false;
       const { gameId: matchedGameId, yourColor, yourId, players } = data;
