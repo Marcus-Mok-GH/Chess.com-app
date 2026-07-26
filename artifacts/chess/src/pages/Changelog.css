@@ -172,3 +172,94 @@
     flex-wrap: wrap;
   }
 }
+
+@media (max-width: 640px) {
+  .changelog-page {
+    padding: 2rem 1rem;
+  }
+
+  .changelog-header h1 {
+    font-size: 1.75rem;
+  }
+
+  .changelog-entries {
+    padding: 16px 18px;
+  }
+
+  .changelog-entry h2 {
+    font-size: 1.2rem;
+  }
+
+  .changelog-entry li {
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .changelog-page {
+    padding: 1.5rem 0.75rem;
+  }
+
+  .changelog-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .changelog-entries {
+    padding: 14px;
+    border-radius: var(--radius-md);
+  }
+
+  .changelog-entry header {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .changelog-entry h2 {
+    font-size: 1.1rem;
+  }
+
+  .changelog-version {
+    padding: 10px 12px;
+  }
+
+  .version-label {
+    font-size: 0.85rem;
+  }
+
+  .changelog-entry li {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .changelog-page {
+    padding: 1rem 0.625rem;
+  }
+
+  .changelog-sidebar {
+    gap: 8px;
+  }
+
+  .changelog-version {
+    padding: 8px 10px;
+    border-radius: 8px;
+  }
+}
+
+@media (max-width: 640px) {
+  .changelog-container,
+  .changelog-layout,
+  .changelog-entries,
+  .changelog-entry,
+  .changelog-section,
+  .changelog-entry ul,
+  .changelog-entry li {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .changelog-entry li {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+}

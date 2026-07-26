@@ -219,3 +219,31 @@
     flex-shrink: 0;
   }
 }
+
+@media (max-width: 360px) {
+  .user-badge {
+    padding: 4px 8px;
+  }
+
+  .user-avatar {
+    font-size: 0.95rem;
+  }
+
+  .user-elo {
+    font-size: 0.6875rem;
+    padding: 1px 4px;
+  }
+
+  .dropdown-item {
+    padding: 10px 12px;
+    font-size: 0.8125rem;
+  }
+
+  .dropdown-header {
+    padding: 10px 12px;
+  }
+
+  .dropdown-stats {
+    padding: 8px 12px;
+  }
+}

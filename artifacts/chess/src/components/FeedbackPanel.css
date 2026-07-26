@@ -389,4 +389,38 @@
     padding: 8px 10px;
     font-size: 0.75rem;
   }
+
+  .feedback-buttons .btn {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 320px) {
+  .feedback-trigger-wrapper {
+    bottom: 10px;
+    left: 10px;
+  }
+
+  .feedback-trigger {
+    padding: 6px 10px;
+    font-size: 0.625rem;
+  }
+
+  .feedback-dismiss {
+    padding: 6px 5px;
+    font-size: 0.5625rem;
+  }
+
+  .feedback-modal {
+    padding: 16px 12px;
+  }
+
+  .feedback-header h2 {
+    font-size: 1.125rem;
+  }
+
+  .type-btn {
+    padding: 6px 8px;
+    font-size: 0.6875rem;
+  }
 }

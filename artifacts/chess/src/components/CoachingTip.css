@@ -77,8 +77,41 @@
   .coaching-tip {
     padding: 10px;
   }
-  
+
   .coaching-tip-content {
     font-size: 0.8125rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .coaching-tip {
+    padding: 8px;
+    margin-top: 6px;
+  }
+
+  .coaching-tip-title {
+    font-size: 0.8125rem;
+  }
+
+  .coaching-tip-content {
+    font-size: 0.75rem;
+  }
+
+  .coaching-tip-dismiss {
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 360px) {
+  .coaching-tip {
+    padding: 6px;
+  }
+
+  .coaching-tip-icon {
+    font-size: 1rem;
   }
 }

@@ -1,3 +1,35 @@
+## [2026-07-26] - Comprehensive Mobile Responsive Optimization
+
+### Changed
+- **Online Play** (`OnlinePlay.css`): 768px safe-area fallback, 390px breakpoint (lobby, mode-option, elo, game-code, match-found), 360px breakpoint (mode-option, join-form, btn-primary).
+- **Chess Game** (`ChessGame.css`): 768px comprehensive rewrite (player-bar, board-wrapper, sidebar, move-history, control-buttons, bot-display), 390px breakpoint (tighter padding, move-row), 360px breakpoint (player-bar, move-row).
+- **Game Bottom Bar** (`GameBottomBar.css`): Added 360px breakpoint (tighter gap, bot-avatar, gbb-btn).
+- **Analysis** (`Analysis.css`): 768px rewrite (header-bar safe-area, board-wrap, panel, tabs, move-row, move-nav), 390px breakpoint, 360px breakpoint (tabs, font sizes, move-row).
+- **Game History** (`GameHistory.css`): 390px breakpoint (page padding, h1, game-item, view-game-btn), 360px (h1, game-result, game-mode).
+- **Settings** (`Settings.css`): 390px breakpoint (h1, setting-info, account-value), 360px (padding, min-height 44px buttons).
+- **Puzzles** (`Puzzles.css`): Added 768px+390px+360px breakpoints (puzzles-title, board-wrap, side-card, status-value, puzzle-action).
+- **Terms** (`Terms.css`): Added 390px+360px breakpoints.
+- **Changelog** (`Changelog.css`): Added compact 640px/390px/360px layouts and robust wrapping for long technical release notes to eliminate horizontal overflow.
+- **Login Modal** (`LoginModal.css`): Added 360px, keyboard-open `@media (max-height: 600px)` bottom-sheet style.
+- **Set Username Modal** (`SetUsernameModal.css`): Added 480px bottom-sheet+safe-area, 360px compact, keyboard-open 600px.
+- **Bot Selector** (`BotSelector.css`): 390px breakpoint (2-col grid, min-height), 360px (bot-avatar).
+- **Play Setup** (`PlaySetup.css`): 390px breakpoint, 360px (tighter card padding).
+- **Elo Slider** (`EloSlider.css`): Added 768px+390px mobile breakpoints.
+- **Feedback Panel** (`FeedbackPanel.css`): 360px breakpoint refined, 320px breakpoint (tighter trigger, modal, type-btn).
+- **Coaching Tip** (`CoachingTip.css`): Added 390px+360px breakpoints (padding, font sizes, 44px touch target on dismiss).
+- **User Badge** (`UserBadge.css`): Added 360px breakpoint (tighter padding, avatar, elo, dropdown items).
+- **Guest Blocked** (`GuestBlocked.css`): Added 390px+360px breakpoints (container, icon, title, description, target, btn).
+- **Win Rate Chart** (`WinRateChart.css`): Added 390px+360px breakpoints (container, title, legend, stat-item).
+- **Elo Progress Chart** (`EloProgressChart.css`): Added 390px+360px breakpoints (container, title, legend, tooltip-elo).
+- **Game Analysis Modal** (`GameAnalysis.css`): Added 390px+360px breakpoints (full-screen modal, safe-area header, smaller fonts, max-height).
+- **Quick Nav** (`QuickNav.css`): Added 360px breakpoint (overlay, header, 44px close-btn, item, footer).
+- **Navigation Hints** (`NavigationHints.css`): Added 390px+360px breakpoints (overlay, modal, header, content, hint items, kbd).
+
+### Preserved
+- All existing gameplay, navigation, and feature behavior
+- Touch target minimum: 44px enforced across interactive elements
+- Font sizes >= 16px on inputs to prevent iOS zoom
+
 ## [2026-07-26] - AI Review Hardening
 
 ### Fixed
@@ -80,7 +112,6 @@
 - **Changelog page**: Restyled as a "release scorebook" with `--card` surfaces, `--border` separators, green markers on list items, and updated sidebar version pills.
 - **Terms/Privacy pages**: Restyled as "chess handbook" pages with a green top accent bar, `--card` surface, green-accent section headers, and refined typography.
 - **CloudFlare page**: Extracted inline styles into `CloudFlare.css` with a themed card, green accent bar, and proper token usage.
-- **Play page**: Updated to use canonical `--bg-page`, `--card`, `--border`, `--text-primary` tokens instead of `--color-bg-*` aliases.
 
 ### Fixed
 - **Puzzles route JSX tag mismatch**: Corrected a stray `}` in the Puzzles `<Route>` element in `App.jsx` that produced a JSX parse warning on build.

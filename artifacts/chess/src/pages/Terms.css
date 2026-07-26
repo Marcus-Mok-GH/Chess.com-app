@@ -95,3 +95,37 @@
     font-size: 1.5rem;
   }
 }
+
+@media (max-width: 390px) {
+  .legal-page {
+    padding: 0.75rem;
+  }
+
+  .legal-container {
+    padding: 1.25rem;
+  }
+
+  .legal-container h1 {
+    font-size: 1.35rem;
+  }
+
+  .legal-container p,
+  .legal-container li {
+    font-size: 0.875rem;
+  }
+
+  .legal-container h2 {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .legal-page {
+    padding: 0.5rem;
+  }
+
+  .legal-container {
+    padding: 1rem;
+    border-radius: var(--radius-md);
+  }
+}

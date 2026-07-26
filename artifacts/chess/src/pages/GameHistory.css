@@ -195,3 +195,53 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 390px) {
+  .game-history-page {
+    padding: 1.5rem 0.875rem 6rem;
+  }
+
+  .game-history-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .game-item {
+    padding: 0.875rem 1rem;
+  }
+
+  .game-code {
+    font-size: 0.75rem;
+  }
+
+  .view-game-btn {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8rem;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 360px) {
+  .game-history-page {
+    padding: 1rem 0.75rem 6rem;
+  }
+
+  .game-history-header h1 {
+    font-size: 1.35rem;
+  }
+
+  .game-item {
+    padding: 0.75rem 0.875rem;
+  }
+
+  .game-result {
+    font-size: 0.8rem;
+  }
+
+  .game-mode {
+    font-size: 0.625rem;
+  }
+
+  .game-date {
+    font-size: 0.7rem;
+  }
+}
