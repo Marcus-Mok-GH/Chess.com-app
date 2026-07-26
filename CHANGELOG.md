@@ -1,3 +1,69 @@
+## [2026-07-26] - Durable KV Persistence for Online Play (Upstash/Vercel-compatible)
+
+### Added
+- **`onlineGameKv` service** (`kv/onlineGameKv.js`): Isolated Upstash/Vercel-compatible REST KV layer with dependency injection, testability, namespaced keys (`onlinegame:{gameCode}`), JSON state normalization, 4-hour active-game TTL, and graceful disabled/unavailable behavior (no-op when `KV_REST_API_URL`+`KV_REST_API_TOKEN` or `UPSTASH_REDIS_REST_URL`+`UPSTASH_REDIS_REST_TOKEN` are unset).
+- **Pure service tests** (`kv/onlineGameKv.test.js`): Covers enabled/disabled config, roundtrip, TTL/key namespace, outage fallback, set guards, and normalization. Route-level KV behavior tested in `routes/games.move.test.js`.
+- **Route-level KV tests** (`routes/games.move.test.js`): Mock `onlineGameKv` at route boundary. By-code tests: stale KV + newer DB returns DB with KV repopulation; equal/current KV returns KV without set; missing KV returns DB with set; active DB query failure falls back to valid KV; stale non-playing KV does not shadow completed games table row; status mismatch prefers DB over higher-move-count KV. Move tests: accepted move invokes `kv.set` with incremented move_count; illegal and CAS-stale moves invoke no set.
+
+### Changed
+- **Write-through KV after authoritative changes** (`routes/games.js`, `gameService.js`): Game create, join, move (HTTP + socket CAS), and leave/end now write-through or delete KV after DB success. PostgreSQL remains durable source of truth and CAS authority; KV outage never rejects a valid DB move.
+- **GET by-code prefers KV with status compatibility** (`routes/games.js`): `/api/games/by-code/:gameCode` checks KV first for active playing state, falls back to `active_games` and repopulates KV; completed games may fall back to `games`. Compares `move_count` when both are available and statuses are compatible; when statuses differ (e.g., KV `playing` vs DB `ended`), DB is authoritative. No longer serves a stale non-playing KV without checking the `games` table.
+- **Leave/end updates or removes KV** (`routes/games.js`, `gameService.js`, `gameHandlers.js`): Socket leave/end and HTTP leave delete KV entry.
+- **`@upstash/redis` dependency** added at workspace root.
+
+## [2026-07-26] - HTTP-Only Online Moves (No Optimistic Commit)
+
+- **Authenticated account moves**: The HTTP move endpoint now requires a valid Bearer session and rejects missing, expired, or identity-mismatched credentials before reading or changing game state.
+
+### Added
+- **Server-authoritative HTTP move endpoint** (`routes/games.js`): `POST /api/games/:gameId/move` accepts `{ move, playerId, expectedMoveCount }`, validates Bearer token when provided, verifies player identity and turn from `active_games`, validates the move with `chess.js` from the stored FEN, and atomically compare-and-set updates `fen`, `move_history`, and `move_count`. Returns `4xx` on illegal/stale/unauthorized moves without modifying state.
+- **`api.postMove()`** (`services/api.js`): Frontend method to submit moves via HTTP POST with optional Bearer token from localStorage session.
+- **Endpoint tests** (`routes/games.move.test.js`): 26 tests covering validation, auth, CAS concurrency, illegal moves, active-games-first query ordering, and KV write-through/comparison behavior.
+
+### Changed
+- **Online moves are HTTP-only** (`useGameCore.js`): `makeMove` no longer sends socket `make_move` events or applies optimistic board updates. It locks input via `moveInFlightRef`, sends an HTTP POST, and applies the server response directly. No rollback logic needed — the server is the sole authority.
+- **Polling is primary** (`OnlineChessGame.jsx`): 1.5s polling via `getGameByCode` detects opponent moves by `move_count` advancement. Overlapping polls are prevented by an `inFlight` guard; polling stops on game end.
+- **Socket handlers cleaned up** (`OnlineChessGame.jsx`): Removed `move_ack` and `move_error` socket listeners (board moves no longer go through Socket.IO). Socket.IO remains for `game_state`, `game_ended`, `player_joined`, `draw_offered`, `chat_message`, and reconnect recovery.
+- **`getGameByCode` checks `active_games` first** (`routes/games.js`): Query order reversed so live active games are never shadowed by stale `games` table snapshots.
+
+### Preserved
+- Friendly/ranked flows, reconnect recovery, mobile interaction, and all prior reliability fixes unchanged.
+- Socket.IO retained for optional chat, draw, resign, and game-end notifications.
+
+---
+
+## [2026-07-26] - Online-Play Reliability Pass
+- Added a root Vitest test command and test dependencies so online-play reliability tests run consistently.
+
+### Fixed
+- **Async move/drop handling + duplicate prevention** (`useGameCore.js`, `OnlineChessGame.jsx`): Added a synchronous `moveInFlightRef` that blocks duplicate move submissions from rapid double-clicks or drag-and-drop. `handlePieceDrop` now checks this ref before allowing any move. `makeMove` is guarded end-to-end — the ref is set before the optimistic board update and cleared after the server round-trip.
+- **Rollback/rehydrate on rejected moves** (`useGameCore.js`): When `api.saveGame()` fails, the component now rehydrates from the server via `api.getGameByCode()`. If the server is also unreachable, the optimistic move is rolled back by restoring the previous game state and move history. A transient error message is shown and auto-clears after 4 seconds.
+- **Matchmaking cancel is immediate + immune to late events** (`useMatchmaking.js`, `OnlinePlay.jsx`): Cancel now resets UI state synchronously before the async `leaveMatchmaking` call. A `generationRef` counter is incremented on every start/cancel; stale `match_found` events arriving after a cancel are discarded. The async leave is fire-and-forget so it never blocks the UI.
+- **Matchmaking cleanup on unmount** (`useMatchmaking.js`): The cleanup effect now calls `leaveMatchmaking` and `leaveMatchmaking` on the active player ID ref, preventing zombie queue entries when navigating away mid-search. Active player ID is tracked via `activePlayerIdRef` instead of React state to avoid stale closures.
+- **LoginModal close loop** (`OnlinePlay.jsx`): After successful OTP verification, the `onClose` callback now clears `pendingMode` and only re-triggers mode selection if the user is already logged in (`isLoggedIn` check). This prevents the modal from re-opening in a loop when `UserContext` hasn't re-rendered yet.
+- **Pending guards on create/join** (`OnlinePlay.jsx`): Added `pendingCreateRef`/`pendingJoinRef` synchronous guards and `isCreating`/`isJoining` UI state to prevent double-submission on rapid clicks. Buttons are disabled and show loading text while the API call is in flight.
+- **Friendly creator synchronization** (`OnlinePlay.jsx`): When a creator is in the waiting view, a 3-second poll detects when an opponent joins the game (by checking the opponent player ID in the game record). On detection, the creator is automatically transitioned to the playing view and the socket room is joined.
+- **Stale draw state cleared** (`OnlineChessGame.jsx`): `drawOffered` is now cleared on game end, opponent moves, draw accept/decline, resignation, and leaving the game — preventing stale "Draw offered" UI from persisting across state transitions.
+- **Polling requests use configured API base** (`matchmakingPolling.js`): All hardcoded `/api/` fetch paths now use `API_BASE_URL` from `apiBase.js`, so matchmaking polling, heartbeat, and leave requests route correctly when `VITE_API_URL` is set to a non-default base.
+
+### Changed
+- **useMatchmaking hook API** (`useMatchmaking.js`): Removed `playerId`/`setPlayerId` state in favor of `activePlayerIdRef` (avoids stale-closure issues). Added `generationRef` and `activePlayerIdRef` to the return value for consumer use.
+
+---
+
+## [2026-07-26] - Server-Authoritative Move Validation & CAS Concurrency Safety
+- **Transport reconciliation**: Socket moves no longer race the HTTP fallback; missing acknowledgements first reconcile server state, and all move rejection events carry the game ID so the correct board rolls back.
+
+### Added
+- **Server-authoritative single-move validation** (`gameHandlers.js`): `make_move` now validates exactly one new legal move against the server's stored FEN instead of replaying the full client-submitted history. The server applies the move on a fresh `Chess` instance from its own state, rejecting stale/duplicate/out-of-sync submissions.
+- **Compare-and-set DB updates** (`gameService.js`, `init.js`): `updateGameStateCAS` uses `WHERE move_count = $expected` so simultaneous moves cannot overwrite each other. Added `move_count INTEGER DEFAULT 0` column to `active_games` for optimistic concurrency control.
+- **`move_ack` / `move_error` events** (`gameHandlers.js`, `socket.js`): Server emits `move_ack` with `{gameId, fen, moveCount}` on CAS success and `move_error` on rejection. Client registers listeners and uses `move_ack` to confirm server acceptance.
+- **Client ack-gated in-flight lock** (`useGameCore.js`): `moveInFlightRef` is held until `move_ack` arrives (with 5s safety timeout) when socket is connected, preventing further moves before server confirmation. Falls back to immediate release when socket is disconnected (HTTP-only path).
+- **Normalized player identity for reconnects** (`utils.js`): `verifyPlayerAuth` and `resolveMatchMoveOwner` now use `userIdFromPlayerId` to normalize `user_<uuid>`, `user_<uuid>_<suffix>`, and bare UUID formats, preventing false auth rejections on reconnect.
+- **Tests** (`game.test.js`, `utils.test.js`, `moveHistory.test.js`): Added CAS update tests (success, concurrent stale, wrong status), `verifyPlayerAuth` normalization tests, and frontend pure helper tests for `normalizeMoveHistory`, `buildGameFromHistory`, `getMoveFromEntry`, and `toStoredMoveHistory`.
+
+---
+
 ## [2026-07-24] - Chess.com Theme Overhaul: Every Page Themed
 
 ### Changed

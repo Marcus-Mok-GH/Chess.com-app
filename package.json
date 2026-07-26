@@ -7,11 +7,13 @@
   "scripts": {
     "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
+    "test": "vitest run artifacts/api-server/src/chess-server/socket/game.test.js artifacts/api-server/src/chess-server/socket/utils.test.js artifacts/api-server/src/chess-server/socket/handlers/gameHandlers.test.js artifacts/api-server/src/chess-server/routes/games.move.test.js artifacts/api-server/src/chess-server/kv/onlineGameKv.test.js artifacts/chess/src/engine/game/moveHistory.test.js artifacts/chess/src/services/api.test.js artifacts/chess/src/services/apiBase.test.js artifacts/chess/src/services/matchmakingPolling.test.js",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
   },
   "private": true,
   "dependencies": {
+    "@upstash/redis": "^1.38.0",
     "chess.js": "^1.4.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
@@ -24,7 +26,9 @@
     "stockfish": "^18.0.8"
   },
   "devDependencies": {
+    "jsdom": "^29.1.1",
     "prettier": "^3.8.3",
-    "typescript": "~5.9.3"
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.10"
   }
 }

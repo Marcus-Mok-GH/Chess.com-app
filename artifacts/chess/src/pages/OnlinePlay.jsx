@@ -62,6 +62,10 @@ export default function OnlinePlay() {
   const [foundOpponent, setFoundOpponent] = useState(null);
   const [opponentInfo, setOpponentInfo] = useState(() => savedSession?.opponentInfo || null);
   const [isWaiting, setIsWaiting] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
+  const pendingCreateRef = useRef(false);
+  const pendingJoinRef = useRef(false);
 
   const [playerId, setPlayerId] = useState(() => {
     if (user) return `user_${user.id}`;
@@ -77,7 +81,8 @@ export default function OnlinePlay() {
     error, setError, searchTime, playersInQueue, setPlayersInQueue,
     matchmakingTransport, setMatchmakingTransport,
     matchFound, setMatchFound, startMatchmaking, handleCancelMatchmaking,
-    pendingMatchmakingRef, clearMatchmakingTimers
+    pendingMatchmakingRef, clearMatchmakingTimers,
+    generationRef, activePlayerIdRef,
   } = useMatchmaking(user, isLoggedIn, settings);
 
   const gameSessionRef = useRef({
@@ -226,9 +231,19 @@ export default function OnlinePlay() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeGameId, searchParams, user, isLoggedIn]);
 
+  // Capture the matchmaking generation at effect registration time so stale
+  // match_found events from a cancelled/previous search are discarded.
+  const matchGenerationRef = useRef(generationRef.current);
+  useEffect(() => {
+    matchGenerationRef.current = generationRef.current;
+  });
+
   useEffect(() => {
     const handleMatchFound = (data) => {
+      // Ignore if we're no longer in the matchmaking view or the generation
+      // has moved on (user cancelled or started a new search).
       if (view !== 'matchmaking') return;
+      if (generationRef.current !== matchGenerationRef.current) return;
       clearMatchmakingTimers();
       pendingMatchmakingRef.current = false;
       const { gameId: matchedGameId, yourColor, yourId, players } = data;
@@ -272,7 +287,44 @@ export default function OnlinePlay() {
       pollingService.off('match_found', handleMatchFound);
       pollingService.off('matchmaking_error', handleMatchmakingError);
     };
-  }, [view, clearMatchmakingTimers, navigate, persistGameSession, setPlayerId, settings, handleCancelMatchmaking, setError, setPlayersInQueue, setMatchFound, pendingMatchmakingRef]);
+  }, [view, clearMatchmakingTimers, navigate, persistGameSession, settings, handleCancelMatchmaking, setError, setPlayersInQueue, setMatchFound, pendingMatchmakingRef, generationRef]);
+
+  // Poll for opponent joining a friendly game while in the waiting view.
+  // The creator needs to know when the opponent has filled in the second seat.
+  useEffect(() => {
+    if (view !== 'waiting' || !gameId || !playerId) return;
+    let cancelled = false;
+    let inFlight = false;
+    const pollId = setInterval(async () => {
+      if (cancelled || inFlight) return;
+      inFlight = true;
+      try {
+        const data = await api.getGameByCode(gameId);
+        if (cancelled || !data) { inFlight = false; return; }
+        // Detect opponent: someone other than us has a seat
+        const isWhite = data.white_player_id === playerId;
+        const hasOpponent = isWhite
+          ? !!data.black_player_id
+          : !!data.white_player_id;
+        if (hasOpponent) {
+          const opponentName = isWhite ? data.black_player_name : data.white_player_name;
+          const opponentElo = isWhite ? data.black_elo : data.white_elo;
+          const oppColor = isWhite ? 'black' : 'white';
+          setOpponentInfo({ name: opponentName || 'Opponent', elo: opponentElo });
+          setPlayerColor(isWhite ? 'white' : 'black');
+          persistGameSession({ opponentInfo: { name: opponentName || 'Opponent', elo: opponentElo } });
+          socketService.joinGame(gameId, playerId);
+          setView('playing');
+          navigate(`/online/${gameId}`, { replace: true });
+        }
+      } catch {
+        // Transient blip — keep polling
+      } finally {
+        inFlight = false;
+      }
+    }, 3000);
+    return () => { cancelled = true; clearInterval(pollId); };
+  }, [view, gameId, playerId, navigate, persistGameSession]);
 
   const handleSelectMode = useCallback(async (mode) => {
     if (!isLoggedIn) {
@@ -280,6 +332,8 @@ export default function OnlinePlay() {
       setShowLoginModal(true);
       return;
     }
+    // Clear pending mode once we act on it so stale callbacks can't re-trigger
+    setPendingMode(null);
     if (mode === 'ranked') {
       const started = await startMatchmaking();
       if (started) setView('matchmaking');
@@ -290,7 +344,10 @@ export default function OnlinePlay() {
   }, [isLoggedIn, startMatchmaking]);
 
   const handleCreateGame = useCallback(async () => {
+    if (pendingCreateRef.current) return;
     if (!isLoggedIn || !user) return setError('Sign in required.');
+    pendingCreateRef.current = true;
+    setIsCreating(true);
     try {
       const res = await api.createOnlineGame({
         playerId: `user_${user.id}`,
@@ -307,13 +364,19 @@ export default function OnlinePlay() {
       setIsWaiting(true);
     } catch (e) {
       setError('Failed to create game.');
+    } finally {
+      pendingCreateRef.current = false;
+      setIsCreating(false);
     }
   }, [selectedColor, isLoggedIn, user, setError, persistGameSession]);
 
   const handleJoinGame = useCallback(async () => {
+    if (pendingJoinRef.current) return;
     const code = joinCode.trim().toUpperCase();
     if (!code) return setError('Please enter a game code');
     if (!isLoggedIn || !user) return setError('Sign in required.');
+    pendingJoinRef.current = true;
+    setIsJoining(true);
     try {
       const res = await api.joinOnlineGame({
         gameCode: code,
@@ -330,6 +393,9 @@ export default function OnlinePlay() {
       navigate(`/online/${res.gameCode}`, { replace: true });
     } catch (e) {
       setError('Game not found or full.');
+    } finally {
+      pendingJoinRef.current = false;
+      setIsJoining(false);
     }
   }, [joinCode, isLoggedIn, user, setError, persistGameSession, navigate]);
 
@@ -388,10 +454,14 @@ export default function OnlinePlay() {
         <div className="lobby-container">
           <div className="lobby-content">
             <h2>Friendly Game</h2>
-            <button className="btn btn-primary" onClick={handleCreateGame}>Create Game</button>
+            <button className="btn btn-primary" onClick={handleCreateGame} disabled={isCreating}>
+              {isCreating ? 'Creating...' : 'Create Game'}
+            </button>
             <div className="join-form">
               <input value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="Game Code" />
-              <button className="btn btn-secondary" onClick={handleJoinGame}>Join</button>
+              <button className="btn btn-secondary" onClick={handleJoinGame} disabled={isJoining || !joinCode.trim()}>
+                {isJoining ? 'Joining...' : 'Join'}
+              </button>
             </div>
             <button className="btn btn-ghost" onClick={() => setView('mode-select')}>Back</button>
           </div>
@@ -419,8 +489,13 @@ export default function OnlinePlay() {
         <LoginModal
           onClose={() => {
             setShowLoginModal(false);
-            if (pendingMode) {
-              handleSelectMode(pendingMode);
+            const mode = pendingMode;
+            setPendingMode(null);
+            // Only re-trigger mode selection if the user is now logged in.
+            // If they just verified OTP, UserContext may not have re-rendered
+            // yet — in that case, skip to avoid re-opening the modal.
+            if (mode && isLoggedIn) {
+              handleSelectMode(mode);
             }
           }}
         />

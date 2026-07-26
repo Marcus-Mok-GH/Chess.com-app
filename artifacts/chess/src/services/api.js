@@ -122,6 +122,16 @@ class ApiService {
     return this.request(`/games/by-code/${encodeURIComponent(gameCode)}`);
   }
 
+  async postMove({ gameId, move, playerId, expectedMoveCount, token }) {
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return this.request(`/games/${encodeURIComponent(gameId)}/move`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ move, playerId, expectedMoveCount }),
+    });
+  }
+
   async getEngineMove({ fen, bot }) {
     return this.request('/engine/move', {
       method: 'POST',

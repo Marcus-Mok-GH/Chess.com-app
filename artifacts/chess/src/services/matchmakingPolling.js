@@ -1,4 +1,5 @@
 import api from './api.js';
+import { API_BASE_URL } from './apiBase.js';
 
 class MatchmakingPollingService {
   constructor() {
@@ -55,7 +56,7 @@ class MatchmakingPollingService {
   // Join matchmaking queue via HTTP
   async joinMatchmaking(playerId, playerName, elo, isRanked = true) {
     try {
-      const response = await fetch('/api/matchmaking/join', {
+      const response = await fetch(`${API_BASE_URL}/matchmaking/join`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -93,7 +94,7 @@ class MatchmakingPollingService {
     this.stopPolling();
 
     try {
-      await fetch('/api/matchmaking/leave', {
+      await fetch(`${API_BASE_URL}/matchmaking/leave`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -116,7 +117,7 @@ class MatchmakingPollingService {
 
     try {
       const blob = new Blob([JSON.stringify({ playerId })], { type: 'application/json' });
-      const success = navigator.sendBeacon('/api/matchmaking/leave', blob);
+      const success = navigator.sendBeacon(`${API_BASE_URL}/matchmaking/leave`, blob);
       console.log('[MatchmakingPolling] Leave beacon sent:', playerId, success ? 'success' : 'queued');
     } catch (error) {
       console.error('[MatchmakingPolling] Error sending leave beacon:', error);
@@ -143,7 +144,7 @@ class MatchmakingPollingService {
 
       try {
         const response = await fetch(
-          `/api/matchmaking/check-match?playerId=${encodeURIComponent(playerId)}`,
+          `${API_BASE_URL}/matchmaking/check-match?playerId=${encodeURIComponent(playerId)}`,
           {
             cache: 'no-cache',
             headers: {
@@ -244,7 +245,7 @@ class MatchmakingPollingService {
     // Send heartbeat at configured interval
     const heartbeatLoop = async () => {
       try {
-        const response = await fetch('/api/matchmaking/heartbeat', {
+        const response = await fetch(`${API_BASE_URL}/matchmaking/heartbeat`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

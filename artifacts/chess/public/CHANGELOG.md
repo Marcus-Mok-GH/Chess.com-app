@@ -1,4 +1,55 @@
 # Changelog
+## [2026-07-26] - Durable KV Persistence for Online Play
+
+### Added
+- **`onlineGameKv` service**: Upstash/Vercel REST KV layer for fast active-game lookups. Uses `KV_REST_API_URL`+`KV_REST_API_TOKEN` or `UPSTASH_REDIS_REST_URL`+`UPSTASH_REDIS_REST_TOKEN`. Gracefully disabled when credentials are absent.
+- **Route-level KV tests**: Mock KV at route boundary. Tests stale-KV vs DB comparison, status compatibility, missing-KV repopulation, DB-outage fallback, and move write-through assertions.
+
+### Changed
+- **Write-through KV**: Active game create, join, move, and leave/end persist to KV after DB CAS. PostgreSQL remains source of truth.
+- **GET by-code with stale-KV guard**: Polling endpoint checks KV first, compares `move_count` and status compatibility against `active_games`; when statuses differ DB is authoritative. Falls back to `games` table — stale non-playing KV no longer shadows a completed games row.
+
+## [2026-07-26] - HTTP-Only Online Moves (No Optimistic Commit)
+
+- **Authenticated account moves**: The HTTP move endpoint now requires a valid Bearer session and rejects missing, expired, or identity-mismatched credentials before reading or changing game state.
+
+### Added
+- **`api.postMove()`**: Submits moves via `POST /api/games/:gameId/move` with Bearer token from localStorage.
+- **Endpoint tests**: Server-side tests for the HTTP move endpoint, active-games-first query, and KV behavior.
+
+### Changed
+- **Online moves are HTTP-only**: `useGameCore.makeMove` sends an HTTP POST instead of socket `make_move`. Input is locked during the request; board updates only from the server response. No optimistic commit.
+- **Polling is primary**: 1.5s polling detects opponent moves by `move_count` advancement. Overlapping polls prevented; stops on game end.
+- **Socket cleaned up**: Removed `move_ack`/`move_error` listeners. Socket.IO kept for chat, draw, resign, game-end, and reconnect.
+
+## [2026-07-26] - Online-Play Reliability Pass
+- Added a root Vitest test command and test dependencies so online-play reliability tests run consistently.
+
+### Fixed
+- **Async move/drop handling + duplicate prevention** (`useGameCore.js`, `OnlineChessGame.jsx`): Added a synchronous `moveInFlightRef` that blocks duplicate move submissions from rapid double-clicks or drag-and-drop. `handlePieceDrop` now checks this ref before allowing any move. `makeMove` is guarded end-to-end — the ref is set before the optimistic board update and cleared after the server round-trip.
+- **Rollback/rehydrate on rejected moves** (`useGameCore.js`): When `api.saveGame()` fails, the component now rehydrates from the server via `api.getGameByCode()`. If the server is also unreachable, the optimistic move is rolled back by restoring the previous game state and move history. A transient error message is shown and auto-clears after 4 seconds.
+- **Matchmaking cancel is immediate + immune to late events** (`useMatchmaking.js`, `OnlinePlay.jsx`): Cancel now resets UI state synchronously before the async `leaveMatchmaking` call. A `generationRef` counter is incremented on every start/cancel; stale `match_found` events arriving after a cancel are discarded. The async leave is fire-and-forget so it never blocks the UI.
+- **Matchmaking cleanup on unmount** (`useMatchmaking.js`): The cleanup effect now calls `leaveMatchmaking` and `leaveMatchmaking` on the active player ID ref, preventing zombie queue entries when navigating away mid-search.
+- **LoginModal close loop** (`OnlinePlay.jsx`): After successful OTP verification, the `onClose` callback now clears `pendingMode` and only re-triggers mode selection if the user is already logged in. This prevents the modal from re-opening in a loop.
+- **Pending guards on create/join** (`OnlinePlay.jsx`): Added synchronous guards and loading state to prevent double-submission on rapid clicks. Buttons are disabled while the API call is in flight.
+- **Friendly creator synchronization** (`OnlinePlay.jsx`): Creator waiting view now polls every 3s to detect when an opponent joins, automatically transitioning to the playing view.
+- **Stale draw state cleared** (`OnlineChessGame.jsx`): `drawOffered` is now cleared on game end, opponent moves, draw accept/decline, resignation, and leave — preventing stale UI.
+- **Polling requests use configured API base** (`matchmakingPolling.js`): All hardcoded `/api/` fetch paths now use `API_BASE_URL` from `apiBase.js`.
+
+### Changed
+- **useMatchmaking hook API**: Removed `playerId`/`setPlayerId` state in favor of `activePlayerIdRef`. Added `generationRef` for stale-event immunity.
+
+## [2026-07-26] - Server-Authoritative Move Validation & CAS Concurrency Safety
+- **Transport reconciliation**: Socket moves no longer race the HTTP fallback; missing acknowledgements first reconcile server state, and all move rejection events carry the game ID so the correct board rolls back.
+
+### Added
+- **Server-authoritative single-move validation** (`gameHandlers.js`): `make_move` validates exactly one new legal move against the server's stored FEN instead of replaying the full client history. Server applies the move on a fresh Chess instance from its own state.
+- **Compare-and-set DB updates** (`gameService.js`, `init.js`): `updateGameStateCAS` uses `WHERE move_count = $expected` so simultaneous moves cannot overwrite each other. Added `move_count` column to `active_games`.
+- **`move_ack` / `move_error` events** (`gameHandlers.js`, `socket.js`): Server emits `move_ack` on CAS success and `move_error` on rejection. Client uses `move_ack` to confirm server acceptance.
+- **Client ack-gated in-flight lock** (`useGameCore.js`): `moveInFlightRef` held until `move_ack` arrives (5s timeout) when socket is connected. Falls back to immediate release when socket is disconnected.
+- **Normalized player identity for reconnects** (`utils.js`): `verifyPlayerAuth` and `resolveMatchMoveOwner` use `userIdFromPlayerId` to normalize `user_<uuid>`, `user_<uuid>_<suffix>`, and bare UUID formats.
+- **Tests**: CAS update tests, `verifyPlayerAuth` normalization tests, and frontend `moveHistory` helper tests.
+
 ## [2026-07-24] - Chess.com Theme Overhaul: Every Page Themed
 
 ### Changed

@@ -224,6 +224,11 @@ class SocketService {
       console.error('[Socket] Move error:', data);
       this.emit('move_error', data);
     });
+
+    this.socket.on('move_ack', (data) => {
+      console.log('[Socket] Move ack:', data);
+      this.emit('move_ack', data);
+    });
   }
 
   // Event emitter pattern for React components

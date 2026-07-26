@@ -110,3 +110,51 @@ describe('GameService.endGame', () => {
     expect(insertParams[2]).toBe(8);
   });
 });
+
+describe('GameService.updateGameStateCAS', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('updates fen and increments move_count when expected count matches', async () => {
+    const service = new GameService(createIo());
+    const updatedGame = {
+      game_id: 'GAME1', fen: 'new-fen', move_history: ['e4', 'e5'],
+      move_count: 1, status: 'playing', game_mode: 'ranked',
+      white_player_id: 'user_1', black_player_id: 'user_2',
+      white_player_name: 'A', black_player_name: 'B',
+    };
+    query
+      .mockResolvedValueOnce({ rows: [updatedGame], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 });
+
+    const result = await service.updateGameStateCAS('GAME1', 'new-fen', ['e4', 'e5'], 0);
+
+    expect(result).toEqual(updatedGame);
+    expect(query).toHaveBeenCalledTimes(2);
+    const updateSql = query.mock.calls[0][0];
+    expect(updateSql).toContain('move_count = move_count + 1');
+    expect(updateSql).toContain('WHERE game_id = $3 AND move_count = $4');
+    const params = query.mock.calls[0][1];
+    expect(params).toEqual(['new-fen', ['e4', 'e5'], 'GAME1', 0]);
+  });
+
+  it('returns null when CAS condition fails (concurrent move)', async () => {
+    const service = new GameService(createIo());
+    query.mockResolvedValueOnce({ rows: [], rowCount: 0 });
+
+    const result = await service.updateGameStateCAS('GAME1', 'stale-fen', ['e4'], 0);
+
+    expect(result).toBeNull();
+    expect(query).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns null when game status is not playing', async () => {
+    const service = new GameService(createIo());
+    query.mockResolvedValueOnce({ rows: [], rowCount: 0 });
+
+    const result = await service.updateGameStateCAS('GAME1', 'new-fen', ['e4'], 5);
+
+    expect(result).toBeNull();
+  });
+});

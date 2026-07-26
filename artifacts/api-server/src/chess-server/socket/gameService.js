@@ -1,5 +1,6 @@
 import { query } from '../db.js';
 import { userIdFromPlayerId, hasValidEloPair } from './utils.js';
+import { getOnlineGameKv } from '../kv/onlineGameKv.js';
 
 export class GameService {
   constructor(io) {
@@ -102,6 +103,42 @@ export class GameService {
     }
   }
 
+  async updateGameStateCAS(gameId, fen, moveHistory, expectedMoveCount) {
+    try {
+      const result = await query(
+        `UPDATE active_games
+         SET fen = $1, move_history = $2, move_count = move_count + 1, updated_at = CURRENT_TIMESTAMP
+         WHERE game_id = $3 AND move_count = $4 AND status = 'playing'
+         RETURNING *`,
+        [fen, moveHistory, gameId, expectedMoveCount]
+      );
+
+      const game = result.rows[0] || null;
+      if (game) {
+        await this.persistGameSnapshot(game, null, game.status);
+
+        const kv = getOnlineGameKv();
+        kv.set(gameId, {
+          game_id: gameId, game_code: gameId,
+          fen, move_history: moveHistory,
+          move_count: expectedMoveCount + 1,
+          status: game.status, game_mode: game.game_mode,
+          white_player_id: game.white_player_id,
+          black_player_id: game.black_player_id,
+          white_player_name: game.white_player_name,
+          black_player_name: game.black_player_name,
+          white_elo: game.white_elo,
+          black_elo: game.black_elo,
+        });
+      }
+
+      return game;
+    } catch (error) {
+      console.error('[Game] CAS update failed:', error);
+      return null;
+    }
+  }
+
   async updateGameStatus(gameId, status) {
     try {
       const result = await query(
@@ -131,11 +168,12 @@ export class GameService {
 
       if (gameResult.rows.length > 0) {
         const game = gameResult.rows[0];
-        // Store completed game in games table
         await this.persistGameSnapshot(game, result, 'completed');
 
+        const kv = getOnlineGameKv();
+        kv.del(gameId);
+
         if (game.game_mode === 'ranked') {
-          // Update player ELOs
           await this.updatePlayerElos(game, result);
         }
       }

@@ -200,6 +200,7 @@ export async function initDatabase() {
         await client.query("ALTER TABLE active_games ADD COLUMN IF NOT EXISTS game_mode VARCHAR(20) DEFAULT 'ranked'");
         await client.query('ALTER TABLE active_games ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
         await client.query('ALTER TABLE active_games ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+        await client.query("ALTER TABLE active_games ADD COLUMN IF NOT EXISTS move_count INTEGER DEFAULT 0");
 
         await client.query(`
           CREATE TABLE IF NOT EXISTS match_moves (
