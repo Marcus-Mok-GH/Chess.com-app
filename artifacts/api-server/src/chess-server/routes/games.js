@@ -372,6 +372,32 @@ router.get('/match-moves/:gameId/:username', async (req, res) => {
   }
 });
 
+// Normalize a raw DB row or KV state into a consistent response shape
+// so clients always receive the same fields regardless of source.
+function normalizeGameResponse(row) {
+  if (!row) return null;
+  const move_history = Array.isArray(row.move_history)
+    ? row.move_history
+    : [];
+  return {
+    game_id: row.game_id || row.game_code || null,
+    game_code: row.game_code || row.game_id || null,
+    fen: row.fen || null,
+    move_history,
+    move_count: typeof row.move_count === 'number' ? row.move_count : move_history.length,
+    status: row.status || 'unknown',
+    game_mode: row.game_mode || 'friendly',
+    white_player_id: row.white_player_id || null,
+    black_player_id: row.black_player_id || null,
+    white_player_name: row.white_player_name || null,
+    black_player_name: row.black_player_name || null,
+    white_elo: typeof row.white_elo === 'number' ? row.white_elo : null,
+    black_elo: typeof row.black_elo === 'number' ? row.black_elo : null,
+    result: row.result || null,
+    created_at: row.created_at || null,
+  };
+}
+
 // Get game by code — query active_games first; KV serves as fast-path when at
 // least as new, otherwise DB is authoritative and repopulates KV.
 // DB errors fall back to KV as degraded mode.
@@ -401,7 +427,7 @@ router.get('/by-code/:gameCode', async (req, res) => {
       }
     } catch (dbErr) {
       console.error('[Games] active_games query failed (non-fatal):', dbErr?.message);
-      if (kvState) return res.json(kvState);
+      if (kvState) return res.json(normalizeGameResponse(kvState));
       return handleRouteError(res, dbErr, 'Failed to get game');
     }
 
@@ -409,16 +435,16 @@ router.get('/by-code/:gameCode', async (req, res) => {
       if (kvState && typeof kvState.move_count === 'number' && typeof dbRow.move_count === 'number') {
         if (kvState.status !== dbRow.status) {
           await kv.set(normalizedCode, dbRow);
-          return res.json(dbRow);
+          return res.json(normalizeGameResponse(dbRow));
         }
         if (kvState.move_count >= dbRow.move_count) {
-          return res.json(kvState);
+          return res.json(normalizeGameResponse(kvState));
         }
         await kv.set(normalizedCode, dbRow);
-        return res.json(dbRow);
+        return res.json(normalizeGameResponse(dbRow));
       }
       await kv.set(normalizedCode, dbRow);
-      return res.json(dbRow);
+      return res.json(normalizeGameResponse(dbRow));
     }
 
     let completedRow = null;
@@ -434,13 +460,13 @@ router.get('/by-code/:gameCode', async (req, res) => {
       }
     } catch (gameErr) {
       console.error('[Games] games query failed (non-fatal):', gameErr?.message);
-      if (kvState) return res.json(kvState);
+      if (kvState) return res.json(normalizeGameResponse(kvState));
       return handleRouteError(res, gameErr, 'Failed to get game');
     }
 
-    if (completedRow) return res.json(completedRow);
+    if (completedRow) return res.json(normalizeGameResponse(completedRow));
 
-    if (kvState) return res.json(kvState);
+    if (kvState) return res.json(normalizeGameResponse(kvState));
     return errorResponse(res, 404, 'Game not found');
   } catch (error) {
     return handleRouteError(res, error, 'Failed to get game');
@@ -452,10 +478,10 @@ router.get('/by-code/:gameCode', async (req, res) => {
 // Validates with chess.js from stored FEN, atomically compare-and-set updates.
 router.post('/:gameId/move', async (req, res) => {
   try {
-    const { gameId } = req.params;
+    const gameId = (req.params.gameId || '').toUpperCase();
     const { move, playerId, expectedMoveCount } = req.body;
 
-    if (!gameId || typeof gameId !== 'string') {
+    if (!gameId || typeof gameId !== 'string' || gameId.length < 2) {
       return errorResponse(res, 400, 'Invalid game ID');
     }
     if (!playerId || typeof playerId !== 'string') {
@@ -492,8 +518,10 @@ router.post('/:gameId/move', async (req, res) => {
       return errorResponse(res, 404, 'Game not found or not active');
     }
 
-    const isWhite = game.white_player_id === playerId;
-    const isBlack = game.black_player_id === playerId;
+    const whiteUid = userIdFromPlayerId(game.white_player_id);
+    const blackUid = userIdFromPlayerId(game.black_player_id);
+    const isWhite = requestUid != null && whiteUid != null && requestUid === whiteUid;
+    const isBlack = requestUid != null && blackUid != null && requestUid === blackUid;
     if (!isWhite && !isBlack) {
       return errorResponse(res, 403, 'Unauthorized — not your game');
     }
@@ -532,8 +560,8 @@ router.post('/:gameId/move', async (req, res) => {
     }
 
     const newHistory = Array.isArray(game.move_history)
-      ? [...game.move_history, { san: applied.san, from: applied.from, to: applied.to, promotion: applied.promotion, captured: applied.captured || null, color: applied.color, piece: applied.piece }]
-      : [{ san: applied.san, from: applied.from, to: applied.to, promotion: applied.promotion, captured: applied.captured || null, color: applied.color, piece: applied.piece }];
+      ? [...game.move_history, JSON.stringify({ san: applied.san, from: applied.from, to: applied.to, promotion: applied.promotion, captured: applied.captured || null, color: applied.color, piece: applied.piece })]
+      : [JSON.stringify({ san: applied.san, from: applied.from, to: applied.to, promotion: applied.promotion, captured: applied.captured || null, color: applied.color, piece: applied.piece })];
 
     const casResult = await query(
       `UPDATE active_games

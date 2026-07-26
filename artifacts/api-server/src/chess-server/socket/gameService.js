@@ -118,7 +118,7 @@ export class GameService {
         await this.persistGameSnapshot(game, null, game.status);
 
         const kv = getOnlineGameKv();
-        kv.set(gameId, {
+        await kv.set(gameId, {
           game_id: gameId, game_code: gameId,
           fen, move_history: moveHistory,
           move_count: expectedMoveCount + 1,
@@ -171,7 +171,7 @@ export class GameService {
         await this.persistGameSnapshot(game, result, 'completed');
 
         const kv = getOnlineGameKv();
-        kv.del(gameId);
+        await kv.del(gameId);
 
         if (game.game_mode === 'ranked') {
           await this.updatePlayerElos(game, result);

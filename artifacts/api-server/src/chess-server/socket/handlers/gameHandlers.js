@@ -485,7 +485,7 @@ export function setupGameHandlers(io, socket) {
 
       if (bothPlayersGone || nextStatus === 'ended') {
         const kv = getOnlineGameKv();
-        kv.del(gameId);
+        await kv.del(gameId);
       }
     }
 

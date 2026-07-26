@@ -5,11 +5,13 @@ vi.mock('../../db.js', () => ({ query: vi.fn() }));
 vi.mock('../profanity.js', () => ({ censorMessage: (m) => m }));
 
 const mockGetGame = vi.fn();
+const mockUpdateGameStateCAS = vi.fn().mockResolvedValue(undefined);
+const mockEndGame = vi.fn();
 vi.mock('../gameService.js', () => ({
   getGameService: () => ({
     getGame: mockGetGame,
-    updateGameStateCAS: vi.fn(),
-    endGame: vi.fn(),
+    updateGameStateCAS: mockUpdateGameStateCAS,
+    endGame: mockEndGame,
     persistGameSnapshot: vi.fn(),
   }),
 }));
@@ -160,8 +162,7 @@ describe('make_move handler — move_error includes gameId', () => {
     const { verifyPlayerAuth } = await import('../utils.js');
     verifyPlayerAuth.mockReturnValue({ valid: true, color: 'white' });
 
-    const gameService = await import('../gameService.js');
-    gameService.getGameService().updateGameStateCAS.mockResolvedValue(null);
+    mockUpdateGameStateCAS.mockResolvedValueOnce(null);
 
     const socket = createMockSocket();
     const io = createMockIo();

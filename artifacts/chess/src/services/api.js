@@ -125,11 +125,14 @@ class ApiService {
   async postMove({ gameId, move, playerId, expectedMoveCount, token }) {
     const headers = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
     return this.request(`/games/${encodeURIComponent(gameId)}/move`, {
       method: 'POST',
       headers,
       body: JSON.stringify({ move, playerId, expectedMoveCount }),
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeoutId));
   }
 
   async getEngineMove({ fen, bot }) {

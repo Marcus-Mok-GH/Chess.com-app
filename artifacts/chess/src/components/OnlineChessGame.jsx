@@ -268,12 +268,12 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
     setAnimatingPieces(prev => [...prev, { id, piece: { type: move.piece, color: move.color }, fromSquare: move.from, toSquare: move.to }]);
   }, []);
 
-  const handlePieceDrop = useCallback((from, to) => {
+  const handlePieceDrop = useCallback(async (from, to) => {
     if (moveInFlightRef.current) return false;
     if (game.turn() !== colorCode || gameStatus !== 'playing') return false;
     const piece = game.get(from);
     if (!piece || piece.color !== colorCode) return false;
-    const moved = makeMove({ from, to, promotion: 'q' });
+    const moved = await makeMove({ from, to, promotion: 'q' });
     if (moved) {
       haptics.move();
       setSelectedSquare(null);

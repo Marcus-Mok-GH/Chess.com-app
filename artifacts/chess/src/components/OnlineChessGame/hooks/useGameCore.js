@@ -75,7 +75,12 @@ export function useGameCore(gameId, playerId, playerColor, settings) {
     if (game.turn() !== colorCode || game.isGameOver() || gameStatus !== 'playing') return false;
 
     const gameCopy = buildGameFromHistory(moveHistory, game.fen());
-    const move = gameCopy.move(moveAttempt);
+    let move;
+    try {
+      move = gameCopy.move(moveAttempt);
+    } catch {
+      return false;
+    }
     if (!move) return false;
 
     moveInFlightRef.current = true;
