@@ -222,6 +222,7 @@
 
 @media (max-width: 360px) {
   .user-badge {
+    min-height: 44px;
     padding: 4px 8px;
   }
 

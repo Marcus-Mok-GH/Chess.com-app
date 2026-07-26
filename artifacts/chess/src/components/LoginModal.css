@@ -321,6 +321,7 @@
     padding-top: 2rem;
     max-height: 85vh;
     max-height: 85dvh;
+    overflow-y: auto;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   }
 

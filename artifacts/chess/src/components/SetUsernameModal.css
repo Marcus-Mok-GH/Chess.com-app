@@ -172,5 +172,6 @@
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     max-height: 85vh;
     max-height: 85dvh;
+    overflow-y: auto;
   }
 }

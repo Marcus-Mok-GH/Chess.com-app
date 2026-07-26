@@ -1,6 +1,7 @@
 ## [2026-07-26] - Comprehensive Mobile Responsive Optimization
 
 ### Changed
+- **AI review follow-up**: Kept keyboard-constrained modals scrollable, removed deprecated changelog wrapping CSS, and enforced 44px minimum touch targets for compact online-play and user controls.
 - **Online Play** (`OnlinePlay.css`): 768px safe-area fallback, 390px breakpoint (lobby, mode-option, elo, game-code, match-found), 360px breakpoint (mode-option, join-form, btn-primary).
 - **Chess Game** (`ChessGame.css`): 768px comprehensive rewrite (player-bar, board-wrapper, sidebar, move-history, control-buttons, bot-display), 390px breakpoint (tighter padding, move-row), 360px breakpoint (player-bar, move-row).
 - **Game Bottom Bar** (`GameBottomBar.css`): Added 360px breakpoint (tighter gap, bot-avatar, gbb-btn).
