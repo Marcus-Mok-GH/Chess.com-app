@@ -1,3 +1,9 @@
+## July 26, 2026 - Dynamic Puzzle Generation
+
+### Added
+
+- Replaced the fixed puzzle rotation with an on-demand procedural generator that transforms vetted tactical motifs, verifies legal positions and a unique mate-in-one, and creates a fresh puzzle after solve, skip, or reset.
+
 # Changelog
 ## [2026-07-26] - Comprehensive Mobile Responsive Optimization
 
