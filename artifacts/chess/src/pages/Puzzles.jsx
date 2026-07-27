@@ -12,7 +12,10 @@ import {
   Target,
   Zap,
 } from "lucide-react";
-import { generatePuzzle } from "../engine/puzzles/puzzleGenerator";
+import {
+  BASE_PUZZLES,
+  generatePuzzle,
+} from "../engine/puzzles/puzzleGenerator";
 import "./Puzzles.css";
 
 function getSideToMove(fen) {
@@ -27,17 +30,48 @@ function loadFen(fen) {
   }
 }
 
+function fallbackPuzzle() {
+  const base = BASE_PUZZLES[0];
+  const chess = new Chess(base.fen);
+  const matingMoves = chess.moves().filter((move) => {
+    chess.move(move);
+    const isMate = chess.isCheckmate();
+    chess.undo();
+    return isMate;
+  });
+  return {
+    ...base,
+    id: "fallback-mate-in-one",
+    sideToMove: chess.turn() === "w" ? "white" : "black",
+    solution: matingMoves[0],
+    followup: null,
+    generated: false,
+  };
+}
+
+function generatePuzzleSafely(previousPuzzle) {
+  try {
+    return generatePuzzle();
+  } catch {
+    return previousPuzzle ?? fallbackPuzzle();
+  }
+}
+
 function nextPuzzle(previousPuzzle) {
   for (let attempt = 0; attempt < 8; attempt += 1) {
-    const puzzle = generatePuzzle();
+    const puzzle = generatePuzzleSafely(previousPuzzle);
     if (puzzle.fen !== previousPuzzle?.fen) return puzzle;
   }
-  return generatePuzzle((Date.now() + 1) >>> 0);
+  try {
+    return generatePuzzle((Date.now() + 1) >>> 0);
+  } catch {
+    return previousPuzzle ?? fallbackPuzzle();
+  }
 }
 
 export default function Puzzles() {
   const [puzzleNumber, setPuzzleNumber] = useState(1);
-  const [puzzle, setPuzzle] = useState(() => generatePuzzle());
+  const [puzzle, setPuzzle] = useState(() => generatePuzzleSafely(null));
   const [willPlayFollowup, setWillPlayFollowup] = useState(false); // after the solution, black/white auto-plays the followup
   const [solved, setSolved] = useState(false);
   const [failed, setFailed] = useState(false);

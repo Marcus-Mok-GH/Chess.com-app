@@ -1,6 +1,6 @@
 import { Chess } from "chess.js";
 
-const BASE_PUZZLES = [
+export const BASE_PUZZLES = [
   {
     fen: "6k1/5ppp/8/8/8/8/8/R3K3 w Q - 0 1",
     rating: 800,
