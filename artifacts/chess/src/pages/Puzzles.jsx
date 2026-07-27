@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import {
   BASE_PUZZLES,
-  generatePuzzle,
+  generatePuzzleAsync,
 } from "../engine/puzzles/puzzleGenerator";
 import "./Puzzles.css";
 
@@ -49,21 +49,34 @@ function fallbackPuzzle() {
   };
 }
 
-function generatePuzzleSafely(previousPuzzle) {
-  try {
-    return generatePuzzle();
-  } catch {
-    return previousPuzzle ?? fallbackPuzzle();
-  }
+function generatePuzzleInWorker(seed) {
+  if (typeof Worker === "undefined") return generatePuzzleAsync(seed);
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(
+      new URL("../engine/puzzles/puzzleGenerator.worker.js", import.meta.url),
+      { type: "module" },
+    );
+    worker.onmessage = ({ data }) => {
+      worker.terminate();
+      if (data.error) reject(new Error(data.error));
+      else resolve(data.puzzle);
+    };
+    worker.onerror = (event) => {
+      worker.terminate();
+      reject(new Error(event.message || "Puzzle worker failed."));
+    };
+    worker.postMessage({ seed });
+  });
 }
 
-function nextPuzzle(previousPuzzle) {
-  for (let attempt = 0; attempt < 8; attempt += 1) {
-    const puzzle = generatePuzzleSafely(previousPuzzle);
-    if (puzzle.fen !== previousPuzzle?.fen) return puzzle;
-  }
+async function generatePuzzleSafely(previousPuzzle, sessionId) {
   try {
-    return generatePuzzle((Date.now() + 1) >>> 0);
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const seed = (Date.now() + sessionId + attempt * 2654435761) >>> 0;
+      const puzzle = await generatePuzzleInWorker(seed);
+      if (!previousPuzzle || puzzle.fen !== previousPuzzle.fen) return puzzle;
+    }
+    return previousPuzzle ?? fallbackPuzzle();
   } catch {
     return previousPuzzle ?? fallbackPuzzle();
   }
@@ -71,11 +84,13 @@ function nextPuzzle(previousPuzzle) {
 
 export default function Puzzles() {
   const [puzzleNumber, setPuzzleNumber] = useState(1);
-  const [puzzle, setPuzzle] = useState(() => generatePuzzleSafely(null));
+  const [puzzle, setPuzzle] = useState(() => fallbackPuzzle());
+  const [initializing, setInitializing] = useState(true);
   const [willPlayFollowup, setWillPlayFollowup] = useState(false); // after the solution, black/white auto-plays the followup
   const [solved, setSolved] = useState(false);
   const [failed, setFailed] = useState(false);
   const [showHint, setShowHint] = useState(false);
+  const sessionIdRef = useRef(Date.now());
 
   // session stats
   const [solvedCount, setSolvedCount] = useState(0);
@@ -84,7 +99,22 @@ export default function Puzzles() {
   const [bestStreak, setBestStreak] = useState(0);
   const timerIds = useRef([]);
 
-  const [position, setPosition] = useState(puzzle.fen);
+  const [position, setPosition] = useState(() => fallbackPuzzle().fen);
+
+  // Generate the first puzzle asynchronously after mount so the initial render
+  // is not blocked by the (worst-case bounded) search inside generatePuzzle.
+  useEffect(() => {
+    let cancelled = false;
+    generatePuzzleSafely(null, sessionIdRef.current).then((p) => {
+      if (cancelled) return;
+      setPuzzle(p);
+      setPosition(p.fen);
+      setInitializing(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function clearTimers() {
     timerIds.current.forEach((timerId) => window.clearTimeout(timerId));
@@ -116,7 +146,7 @@ export default function Puzzles() {
   // opposite of the puzzle's side.
   const sideToMove = getSideToMove(position);
 
-  function goToNextPuzzle(wasSolved) {
+  async function goToNextPuzzle(wasSolved) {
     setAttemptedCount((n) => n + 1);
     if (wasSolved) {
       setSolvedCount((n) => n + 1);
@@ -128,8 +158,11 @@ export default function Puzzles() {
     } else {
       setStreak(0);
     }
-    setPuzzle((current) => nextPuzzle(current));
+    setInitializing(true);
+    const freshPuzzle = await generatePuzzleSafely(puzzle, sessionIdRef.current);
+    setPuzzle(freshPuzzle);
     setPuzzleNumber((number) => number + 1);
+    setInitializing(false);
   }
 
   function handlePieceDrop(sourceSquare, targetSquare) {
@@ -200,14 +233,15 @@ export default function Puzzles() {
   }
 
   function canDragPiece(pieceType, square) {
-    if (solved) return false;
+    if (solved || initializing) return false;
     const pieceColor = pieceType[0]; // 'w' or 'b'
     return pieceColor === sideToMove[0];
   }
 
-  function handleReset() {
+  async function handleReset() {
     clearTimers();
-    const freshPuzzle = nextPuzzle(puzzle);
+    setInitializing(true);
+    const freshPuzzle = await generatePuzzleSafely(puzzle, sessionIdRef.current);
     setPuzzle(freshPuzzle);
     setPuzzleNumber(1);
     setPosition(freshPuzzle.fen);
@@ -218,13 +252,17 @@ export default function Puzzles() {
     setSolvedCount(0);
     setAttemptedCount(0);
     setStreak(0);
+    setInitializing(false);
   }
 
-  function handleSkip() {
+  async function handleSkip() {
     clearTimers();
     setStreak(0);
-    setPuzzle((current) => nextPuzzle(current));
+    setInitializing(true);
+    const freshPuzzle = await generatePuzzleSafely(puzzle, sessionIdRef.current);
+    setPuzzle(freshPuzzle);
     setPuzzleNumber((number) => number + 1);
+    setInitializing(false);
   }
 
   function handleShowHint() {

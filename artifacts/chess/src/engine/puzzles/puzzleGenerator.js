@@ -120,9 +120,20 @@ function randomSquare(random, used, pieceType) {
   return null;
 }
 
+const MAX_GENERATION_ATTEMPTS = 200;
+const KING_ADJACENCY_LIMIT = 6;
+
+function kingDistance(a, b) {
+  const fileA = a.charCodeAt(0);
+  const rankA = Number(a[1]);
+  const fileB = b.charCodeAt(0);
+  const rankB = Number(b[1]);
+  return Math.max(Math.abs(fileA - fileB), Math.abs(rankA - rankB));
+}
+
 function composePuzzle(random) {
   const majorPieces = ["q", "r", "b", "n"];
-  for (let attempt = 0; attempt < 400; attempt += 1) {
+  for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt += 1) {
     const chess = new Chess();
     chess.clear();
     const used = new Set();
@@ -141,14 +152,31 @@ function composePuzzle(random) {
     }
 
     let placed = true;
+    let whiteKingSquare = null;
+    let blackKingSquare = null;
     for (const piece of pieces) {
       const square = randomSquare(random, used, piece.type);
       if (!square || !chess.put(piece, square)) {
         placed = false;
         break;
       }
+      if (piece.type === "k") {
+        if (piece.color === "w") whiteKingSquare = square;
+        else blackKingSquare = square;
+      }
     }
     if (!placed) continue;
+
+    // Cheap early-rejection: a mate-in-one needs the attacking king close
+    // enough to constrain the defender's escape squares. Skip the expensive
+    // full mate search when the kings are too far apart.
+    if (
+      whiteKingSquare &&
+      blackKingSquare &&
+      kingDistance(whiteKingSquare, blackKingSquare) > KING_ADJACENCY_LIMIT
+    ) {
+      continue;
+    }
 
     try {
       const parts = chess.fen().split(" ");
@@ -206,6 +234,16 @@ function hintForMove(move) {
 function ratePuzzle(chess) {
   const pieceCount = chess.board().flat().filter(Boolean).length;
   return Math.min(1500, 700 + pieceCount * 75);
+}
+
+export async function generatePuzzleAsync(
+  seed = Date.now() ^ Math.floor(Math.random() * 0xffffffff),
+) {
+  // Yield to the event loop so puzzle generation never blocks the render path.
+  // The underlying composition is synchronous (seed-deterministic); this wrapper
+  // keeps the main thread responsive during the search.
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  return generatePuzzle(seed);
 }
 
 export function generatePuzzle(

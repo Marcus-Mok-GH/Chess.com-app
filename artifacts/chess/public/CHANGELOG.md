@@ -2,6 +2,8 @@
 
 ### Changed
 
+- **Responsive puzzle generation**: Moved procedural composition into a Web Worker with a bounded search budget and cheap king-distance rejection so unlucky seeds cannot block the puzzle UI.
+
 - Replaced the two-template puzzle shuffler with seeded procedural mate-in-one composition, producing different piece combinations and layouts while retaining legality and unique-solution validation.
 - Added regression coverage requiring distinct positions, varied material layouts, and multiple tactical themes across generated sessions.
 
