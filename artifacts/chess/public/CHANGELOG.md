@@ -1,3 +1,14 @@
+## July 27, 2026 - Varied Procedural Puzzle Compositions
+
+### Changed
+
+- **Responsive puzzle generation**: Moved procedural composition into a Web Worker with a bounded search budget and cheap king-distance rejection so unlucky seeds cannot block the puzzle UI.
+- **Race-safe puzzle navigation**: Added generation request tokens and disabled Skip/Reset while loading so overlapping worker responses cannot overwrite newer puzzle state.
+- **Bounded failure handling**: Added a five-second worker timeout and explicit board-state resets when fallback generation reuses the current puzzle.
+
+- Replaced the two-template puzzle shuffler with seeded procedural mate-in-one composition, producing different piece combinations and layouts while retaining legality and unique-solution validation.
+- Added regression coverage requiring distinct positions, varied material layouts, and multiple tactical themes across generated sessions.
+
 ## July 26, 2026 - Dynamic Puzzle Generation
 
 ### Added
