@@ -49,19 +49,37 @@ function fallbackPuzzle() {
   };
 }
 
+const WORKER_TIMEOUT_MS = 5000;
+
 function generatePuzzleInWorker(seed) {
-  if (typeof Worker === "undefined") return generatePuzzleAsync(seed);
+  if (typeof Worker === "undefined") {
+    return Promise.race([
+      generatePuzzleAsync(seed),
+      new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Puzzle generation timed out.")),
+          WORKER_TIMEOUT_MS,
+        ),
+      ),
+    ]);
+  }
   return new Promise((resolve, reject) => {
     const worker = new Worker(
       new URL("../engine/puzzles/puzzleGenerator.worker.js", import.meta.url),
       { type: "module" },
     );
+    const timeoutId = window.setTimeout(() => {
+      worker.terminate();
+      reject(new Error("Puzzle generation timed out."));
+    }, WORKER_TIMEOUT_MS);
     worker.onmessage = ({ data }) => {
+      window.clearTimeout(timeoutId);
       worker.terminate();
       if (data.error) reject(new Error(data.error));
       else resolve(data.puzzle);
     };
     worker.onerror = (event) => {
+      window.clearTimeout(timeoutId);
       worker.terminate();
       reject(new Error(event.message || "Puzzle worker failed."));
     };
@@ -168,6 +186,10 @@ export default function Puzzles() {
     );
     if (generationRequestRef.current !== requestId) return;
     setPuzzle(freshPuzzle);
+    setPosition(freshPuzzle.fen);
+    setSolved(false);
+    setFailed(false);
+    setShowHint(false);
     setPuzzleNumber((number) => number + 1);
     setInitializing(false);
   }
@@ -280,6 +302,10 @@ export default function Puzzles() {
     );
     if (generationRequestRef.current !== requestId) return;
     setPuzzle(freshPuzzle);
+    setPosition(freshPuzzle.fen);
+    setSolved(false);
+    setFailed(false);
+    setShowHint(false);
     setPuzzleNumber((number) => number + 1);
     setInitializing(false);
   }
