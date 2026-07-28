@@ -91,6 +91,7 @@ export default function Puzzles() {
   const [failed, setFailed] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const sessionIdRef = useRef(Date.now());
+  const generationRequestRef = useRef(0);
 
   // session stats
   const [solvedCount, setSolvedCount] = useState(0);
@@ -104,15 +105,15 @@ export default function Puzzles() {
   // Generate the first puzzle asynchronously after mount so the initial render
   // is not blocked by the (worst-case bounded) search inside generatePuzzle.
   useEffect(() => {
-    let cancelled = false;
+    const requestId = ++generationRequestRef.current;
     generatePuzzleSafely(null, sessionIdRef.current).then((p) => {
-      if (cancelled) return;
+      if (generationRequestRef.current !== requestId) return;
       setPuzzle(p);
       setPosition(p.fen);
       setInitializing(false);
     });
     return () => {
-      cancelled = true;
+      generationRequestRef.current += 1;
     };
   }, []);
 
@@ -147,6 +148,8 @@ export default function Puzzles() {
   const sideToMove = getSideToMove(position);
 
   async function goToNextPuzzle(wasSolved) {
+    if (initializing) return;
+    const requestId = ++generationRequestRef.current;
     setAttemptedCount((n) => n + 1);
     if (wasSolved) {
       setSolvedCount((n) => n + 1);
@@ -159,7 +162,11 @@ export default function Puzzles() {
       setStreak(0);
     }
     setInitializing(true);
-    const freshPuzzle = await generatePuzzleSafely(puzzle, sessionIdRef.current);
+    const freshPuzzle = await generatePuzzleSafely(
+      puzzle,
+      sessionIdRef.current,
+    );
+    if (generationRequestRef.current !== requestId) return;
     setPuzzle(freshPuzzle);
     setPuzzleNumber((number) => number + 1);
     setInitializing(false);
@@ -239,9 +246,15 @@ export default function Puzzles() {
   }
 
   async function handleReset() {
+    if (initializing) return;
+    const requestId = ++generationRequestRef.current;
     clearTimers();
     setInitializing(true);
-    const freshPuzzle = await generatePuzzleSafely(puzzle, sessionIdRef.current);
+    const freshPuzzle = await generatePuzzleSafely(
+      puzzle,
+      sessionIdRef.current,
+    );
+    if (generationRequestRef.current !== requestId) return;
     setPuzzle(freshPuzzle);
     setPuzzleNumber(1);
     setPosition(freshPuzzle.fen);
@@ -256,10 +269,16 @@ export default function Puzzles() {
   }
 
   async function handleSkip() {
+    if (initializing) return;
+    const requestId = ++generationRequestRef.current;
     clearTimers();
     setStreak(0);
     setInitializing(true);
-    const freshPuzzle = await generatePuzzleSafely(puzzle, sessionIdRef.current);
+    const freshPuzzle = await generatePuzzleSafely(
+      puzzle,
+      sessionIdRef.current,
+    );
+    if (generationRequestRef.current !== requestId) return;
     setPuzzle(freshPuzzle);
     setPuzzleNumber((number) => number + 1);
     setInitializing(false);
@@ -353,7 +372,7 @@ export default function Puzzles() {
                 type="button"
                 className="puzzle-action puzzle-action--hint"
                 onClick={handleShowHint}
-                disabled={showHint}
+                disabled={showHint || initializing}
               >
                 <Lightbulb size={16} /> {showHint ? "Hint shown" : "Hint"}
               </button>
@@ -361,6 +380,7 @@ export default function Puzzles() {
                 type="button"
                 className="puzzle-action puzzle-action--skip"
                 onClick={handleSkip}
+                disabled={initializing}
               >
                 <SkipForward size={16} /> Skip
               </button>
@@ -368,6 +388,7 @@ export default function Puzzles() {
                 type="button"
                 className="puzzle-action puzzle-action--reset"
                 onClick={handleReset}
+                disabled={initializing}
               >
                 <RotateCcw size={16} /> Reset
               </button>
