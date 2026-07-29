@@ -308,3 +308,60 @@
     min-height: 44px;
   }
 }
+
+/* ── Generation Method Selector ─────────────────────────── */
+.puzzle-generation-card {
+  background: var(--bg-elevated);
+  border-color: var(--border);
+}
+
+.puzzle-generation-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.puzzle-generation-options {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.puzzle-gen-option {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0.45rem 0.375rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-page);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.puzzle-gen-option:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--primary, #81b64c);
+  color: var(--text-primary);
+}
+
+.puzzle-gen-option.active {
+  background: rgba(129, 182, 76, 0.15);
+  border-color: var(--primary, #81b64c);
+  color: var(--primary, #81b64c);
+}
+
+.puzzle-gen-option:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
