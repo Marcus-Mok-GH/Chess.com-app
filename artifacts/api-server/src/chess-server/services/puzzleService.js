@@ -109,13 +109,23 @@ export function getPuzzleById(id) {
   if (generatedPuzzles.has(id)) {
     return generatedPuzzles.get(id);
   }
-  
-  // Check base puzzles
+
+  // Check base puzzles. Base puzzles have no stable `id` field; the service
+  // fabricates `base-<index>` ids (see getRandomPuzzle). Decode those indices
+  // so follow-up lookups by GET /api/puzzles/:id actually resolve.
+  if (typeof id === 'string' && id.startsWith('base-')) {
+    const index = Number(id.slice(5));
+    if (Number.isInteger(index) && index >= 0 && index < BASE_PUZZLES.length) {
+      return { ...BASE_PUZZLES[index], id };
+    }
+  }
+
+  // Allow base puzzles that DO carry a real id, if any are added later.
   const basePuzzle = BASE_PUZZLES.find(p => p.id === id);
   if (basePuzzle) {
     return { ...basePuzzle };
   }
-  
+
   return null;
 }
 
@@ -215,9 +225,18 @@ export async function validateSolution(puzzleId, move) {
       };
     }
     
-    // Check if the move matches the expected solution
-    const isCorrect = move === puzzle.solution || 
-                      chess.move(puzzle.solution) !== null;
+    // Check if the move matches the expected solution.
+    // NOTE: compare against the move we just applied (result.san / lan / from+to),
+    // do NOT re-apply puzzle.solution on the resulting position — after the
+    // player's move it becomes the opponent's turn, so a follow-up move would be
+    // illegal and `chess.move(puzzle.solution)` would always return null for the
+    // side that is supposed to move next in the puzzle.
+    const sol = puzzle.solution;
+    const isCorrect =
+      result.san === sol ||
+      result.lan === sol ||
+      `${result.from}${result.to}${result.promotion || ''}` === sol ||
+      `${result.from}${result.to}` === sol;
     
     if (isCorrect) {
       stats.solved++;
