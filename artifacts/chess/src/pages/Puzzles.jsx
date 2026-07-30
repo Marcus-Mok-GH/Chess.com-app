@@ -11,10 +11,13 @@ import {
   Trophy,
   Target,
   Zap,
+  Brain,
+  Code2,
 } from "lucide-react";
 import {
   BASE_PUZZLES,
   generatePuzzleAsync,
+  generatePuzzle,
 } from "../engine/puzzles/puzzleGenerator";
 import "./Puzzles.css";
 
@@ -50,6 +53,34 @@ function fallbackPuzzle() {
 }
 
 const WORKER_TIMEOUT_MS = 5000;
+
+async function fetchPuzzleFromAPI(options = {}) {
+  try {
+    const params = new URLSearchParams();
+    if (options.difficulty) params.append("difficulty", options.difficulty);
+    if (options.type) params.append("type", options.type);
+    if (options.theme) params.append("theme", options.theme);
+    if (options.method) params.append("method", options.method);
+
+    const response = await fetch(`/api/puzzles/generate?${params.toString()}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      console.warn("API puzzle generation failed:", response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    return data.puzzle || data;
+  } catch (error) {
+    console.warn("API puzzle fetch failed:", error.message);
+    return null;
+  }
+}
 
 function generatePuzzleInWorker(seed) {
   if (typeof Worker === "undefined") {
@@ -87,8 +118,19 @@ function generatePuzzleInWorker(seed) {
   });
 }
 
-async function generatePuzzleSafely(previousPuzzle, sessionId) {
+async function generatePuzzleSafely(previousPuzzle, sessionId, method = 'rules') {
   try {
+    // Try API first with the selected method
+    const apiPuzzle = await fetchPuzzleFromAPI({
+      difficulty: 'medium',
+      type: 'mate-in-1',
+      method: method
+    });
+    if (apiPuzzle && (!previousPuzzle || apiPuzzle.fen !== previousPuzzle.fen)) {
+      return apiPuzzle;
+    }
+
+    // Fall back to local generation
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const seed = (Date.now() + sessionId + attempt * 2654435761) >>> 0;
       const puzzle = await generatePuzzleInWorker(seed);
@@ -108,6 +150,7 @@ export default function Puzzles() {
   const [solved, setSolved] = useState(false);
   const [failed, setFailed] = useState(false);
   const [showHint, setShowHint] = useState(false);
+  const [generationMethod, setGenerationMethod] = useState("rules");
   const sessionIdRef = useRef(Date.now());
   const generationRequestRef = useRef(0);
 
@@ -120,20 +163,41 @@ export default function Puzzles() {
 
   const [position, setPosition] = useState(() => fallbackPuzzle().fen);
 
+  // Track when the selected generation method silently fell back to another
+  // method (e.g. Stockfish unavailable, or AI provider down), so the UI can
+  // surface that to the user instead of silently switching methods.
+  const [methodFallbackReason, setMethodFallbackReason] = useState(null);
+
   // Generate the first puzzle asynchronously after mount so the initial render
   // is not blocked by the (worst-case bounded) search inside generatePuzzle.
   useEffect(() => {
     const requestId = ++generationRequestRef.current;
-    generatePuzzleSafely(null, sessionIdRef.current).then((p) => {
+    clearTimers();
+    setInitializing(true);
+    generatePuzzleSafely(null, sessionIdRef.current, generationMethod).then((p) => {
       if (generationRequestRef.current !== requestId) return;
       setPuzzle(p);
       setPosition(p.fen);
+      setSolved(false);
+      setFailed(false);
+      setShowHint(false);
+      const ef = p.effectiveMethod || p.method;
+      const requested = generationMethod.replace(/^auto$/, "rules");
+      setMethodFallbackReason(
+        ef && requested && ef !== requested && ef !== "procedural-fallback"
+          ? `Requested ${requested}, got ${
+              ef === "stockfish-fallback"
+                ? "Stockfish (engine unavailable)"
+                : ef
+            } after fallback.`
+          : null,
+      );
       setInitializing(false);
     });
     return () => {
-      generationRequestRef.current += 1;
+      clearTimers();
     };
-  }, []);
+  }, [generationMethod]);
 
   function clearTimers() {
     timerIds.current.forEach((timerId) => window.clearTimeout(timerId));
@@ -183,6 +247,7 @@ export default function Puzzles() {
     const freshPuzzle = await generatePuzzleSafely(
       puzzle,
       sessionIdRef.current,
+      generationMethod
     );
     if (generationRequestRef.current !== requestId) return;
     setPuzzle(freshPuzzle);
@@ -275,18 +340,15 @@ export default function Puzzles() {
     const freshPuzzle = await generatePuzzleSafely(
       puzzle,
       sessionIdRef.current,
+      generationMethod
     );
     if (generationRequestRef.current !== requestId) return;
     setPuzzle(freshPuzzle);
-    setPuzzleNumber(1);
     setPosition(freshPuzzle.fen);
-    setWillPlayFollowup(false);
+    setPuzzleNumber((n) => n + 1);
     setSolved(false);
     setFailed(false);
     setShowHint(false);
-    setSolvedCount(0);
-    setAttemptedCount(0);
-    setStreak(0);
     setInitializing(false);
   }
 
@@ -299,14 +361,15 @@ export default function Puzzles() {
     const freshPuzzle = await generatePuzzleSafely(
       puzzle,
       sessionIdRef.current,
+      generationMethod
     );
     if (generationRequestRef.current !== requestId) return;
     setPuzzle(freshPuzzle);
     setPosition(freshPuzzle.fen);
+    setPuzzleNumber((n) => n + 1);
     setSolved(false);
     setFailed(false);
     setShowHint(false);
-    setPuzzleNumber((number) => number + 1);
     setInitializing(false);
   }
 
@@ -418,6 +481,43 @@ export default function Puzzles() {
               >
                 <RotateCcw size={16} /> Reset
               </button>
+            </div>
+
+            <div className="puzzle-side-card puzzle-generation-card">
+              <div className="puzzle-generation-eyebrow">
+                <Code2 size={13} /> Generation Method
+              </div>
+              <div className="puzzle-generation-options">
+                <button
+                  type="button"
+                  className={`puzzle-gen-option ${generationMethod === 'rules' ? 'active' : ''}`}
+                  onClick={() => setGenerationMethod('rules')}
+                  title="Hardcoded rules"
+                >
+                  <Brain size={14} /> Rules
+                </button>
+                <button
+                  type="button"
+                  className={`puzzle-gen-option ${generationMethod === 'stockfish' ? 'active' : ''}`}
+                  onClick={() => setGenerationMethod('stockfish')}
+                  title="Stockfish analysis"
+                >
+                  <Code2 size={14} /> Stockfish
+                </button>
+                <button
+                  type="button"
+                  className={`puzzle-gen-option ${generationMethod === 'ai' ? 'active' : ''}`}
+                  onClick={() => setGenerationMethod('ai')}
+                  title="AI generation"
+                >
+                  <Code2 size={14} /> AI
+                </button>
+              </div>
+              {methodFallbackReason && (
+                <p className="puzzle-generation-fallback" role="status">
+                  {methodFallbackReason}
+                </p>
+              )}
             </div>
 
             {showHint && (

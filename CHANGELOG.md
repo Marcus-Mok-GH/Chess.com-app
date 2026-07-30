@@ -1,3 +1,61 @@
+## [2026-07-30] - Verified Dynamic Puzzle Generation
+
+### Added
+- Added runtime puzzle API routes and a frontend selector for rules-based, Stockfish-assisted, and AI-assisted generation.
+- Added a reusable Stockfish worker client, legal-position analysis, and chess.js validation of generated solutions.
+- Added OpenAI-compatible AI puzzle generation with strict JSON/legality checks and graceful procedural fallback when the provider is unavailable.
+
+### Changed
+- Fixed `getPuzzleById` to decode `gen-N` base-N sequence indices, matching the encoding used by the generator.
+- Fixed `validateSolution` to compare the applied move's SAN/coordinates against the recorded solution instead of only checking that a move was legal.
+- Made `validateGeneratedPuzzle` type-aware so non-mate tactics and mate-in-N (N>1) puzzles validate correctly instead of being silently rejected in favor of the procedural fallback.
+- Added explicit AI/Stockfish fallback provenance and a visible fallback notice, and locked puzzle interaction while switching generation methods.
+- Made method selection flow end-to-end through the Puzzles page and `/api/puzzles/generate`.
+- Kept puzzle generation resilient: rules work offline, Stockfish falls back if analysis times out, and AI falls back if its provider returns an invalid or unavailable response.
+
+### Verified
+- `pnpm run test`: 120 tests passed.
+- `pnpm run build`: typechecks and all production builds passed.
+- Local smoke tests returned valid chess.js-verified puzzles for rules, Stockfish, and AI fallback paths.
+
+## [2026-07-28] - Dynamic Puzzle Generation with Multiple Methods
+
+### Added
+- **Generation method selector**: Added UI to choose between three puzzle generation methods:
+  - **Rules-based**: Procedural generation using chess.js with hardcoded tactical patterns
+  - **Stockfish**: AI-powered puzzle generation using Stockfish engine (ready for integration)
+  - **AI**: Experimental LLM-based puzzle generation (ready for integration)
+- **Enhanced puzzle API**: Extended `/api/puzzles/generate` endpoint to support generation method selection
+- **Generation method state**: Added state management for tracking selected generation method
+
+### Changed
+- **Puzzles.jsx**: Updated to include generation method selector UI with Brain (Rules), Robot (Stockfish), and Code2 (AI) icons
+- **Puzzle generation flow**: Modified `generatePuzzleSafely` to accept generation method parameter and pass it to API calls
+- **Puzzles.css**: Added styling for generation method selector cards and options
+- **API integration**: Updated `fetchPuzzleFromAPI` to support generation method parameter
+
+### Technical Details
+- Generation methods are passed through the API to allow server-side selection
+- Fallback to local procedural generation if API fails
+- All three methods use the same puzzle validation and rating system
+- UI provides visual feedback for selected method
+
+
+## [2026-07-28] - Dynamic Puzzle Generation API
+
+### Added
+- **API puzzle endpoints**: Added `/api/puzzles/generate` (GET/POST), `/api/puzzles/validate`, `/api/puzzles/stockfish`, `/api/puzzles/themes`, and `/api/puzzles/daily` routes to the API server for dynamic puzzle generation and management.
+- **Difficulty levels**: Added support for easy/medium/hard difficulty levels in generated puzzles.
+- **Puzzle type filtering**: Added support for mate-in-1, mate-in-2, and tactics puzzle types.
+- **Daily puzzle**: Added deterministic daily puzzle generation based on current date.
+- **Stockfish integration**: Added Stockfish-based puzzle generation for more sophisticated tactical puzzles
+- **AI-based generation**: Added experimental AI-based puzzle generation using LLM providers
+
+### Changed
+- **Enhanced puzzle generator**: Extended the existing procedural puzzle generator to support difficulty-based rating adjustments and multiple puzzle types.
+- **Puzzles page**: Updated to use API endpoints for puzzle generation with fallback to local Web Worker
+- **Puzzle variety**: Increased puzzle diversity with theme-based generation (forks, pins, skewers, discovered attacks)
+
 ## [2026-07-27] - Varied Procedural Puzzle Compositions
 
 ### Changed

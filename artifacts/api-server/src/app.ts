@@ -1,6 +1,6 @@
 import express, { type Express } from "express";
 import cors from "cors";
-import pinoHttp from "pino-http";
+import { pinoHttp } from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
@@ -10,14 +10,14 @@ app.use(
   pinoHttp({
     logger,
     serializers: {
-      req(req) {
+      req(req: any) {
         return {
           id: req.id,
           method: req.method,
           url: req.url?.split("?")[0],
         };
       },
-      res(res) {
+      res(res: any) {
         return {
           statusCode: res.statusCode,
         };
@@ -49,6 +49,7 @@ try {
   const engineRoutes = (await import("./chess-server/routes/engine.js" as any)).default;
   const authRoutes = (await import("./chess-server/routes/auth.js" as any)).default;
   const statsRoutes = (await import("./chess-server/routes/stats.js" as any)).default;
+  const puzzleRoutes = (await import("./chess-server/routes/puzzles.js" as any)).default;
 
   app.use("/api/matchmaking", matchmakingRoutes);
   app.use("/api/games", gameRoutes);
@@ -57,6 +58,7 @@ try {
   app.use("/api/engine", engineRoutes);
   app.use("/api/auth", authRoutes);
   app.use("/api/stats", statsRoutes);
+  app.use("/api/puzzles", puzzleRoutes);
 } catch (err) {
   console.error("Failed to load chess routes:", err);
 }
