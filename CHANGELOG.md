@@ -533,3 +533,4 @@
 
 ### Fixed (deploy)
 - **Vercel preview build failed with `ERR_PNPM_OUTDATED_LOCKFILE`**: removed the lingering `nodemailer` entry from the root `package.json` so the lockfile matches; `pnpm install` is now consistent and the build runs through.
+- Expanded API puzzle templates and added exact frontend/API regression coverage for unique, balanced queen, rook, bishop, knight, and pawn mate-in-one puzzles.

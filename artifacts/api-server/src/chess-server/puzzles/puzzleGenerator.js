@@ -49,6 +49,78 @@ export const BASE_PUZZLES = [
     theme: "Pawn Breakthrough",
     hint: "Promote the pawn with checkmate.",
   },
+  {
+    fen: "7B/8/3R4/kb6/4K3/1Bp5/8/8 w - - 0 1",
+    rating: 1250,
+    theme: "Diagonal Strike",
+    hint: "Find the bishop move that closes the mating net.",
+  },
+  {
+    fen: "1K6/2Q5/k7/8/6p1/8/B7/8 w - - 0 1",
+    rating: 1250,
+    theme: "Diagonal Strike",
+    hint: "Find the bishop move that closes the mating net.",
+  },
+  {
+    fen: "8/8/2B5/8/K7/8/kp5p/2R2N2 w - - 0 1",
+    rating: 1300,
+    theme: "Diagonal Strike",
+    hint: "Find the bishop move that closes the mating net.",
+  },
+  {
+    fen: "8/7B/8/1K6/8/7k/5Q2/8 w - - 0 1",
+    rating: 1200,
+    theme: "Diagonal Strike",
+    hint: "Find the bishop move that closes the mating net.",
+  },
+  {
+    fen: "8/6R1/K2Q4/2p2k2/8/8/4r3/5N2 w - - 0 1",
+    rating: 1300,
+    theme: "Knight Ambush",
+    hint: "Find the knight jump that seals every escape square.",
+  },
+  {
+    fen: "8/6b1/7p/K7/8/k7/n2N4/2N5 w - - 0 1",
+    rating: 1350,
+    theme: "Knight Ambush",
+    hint: "Find the knight jump that seals every escape square.",
+  },
+  {
+    fen: "8/b3N3/8/7Q/1q3k2/5P2/6K1/8 w - - 0 1",
+    rating: 1350,
+    theme: "Knight Ambush",
+    hint: "Find the knight jump that seals every escape square.",
+  },
+  {
+    fen: "2k5/8/P2Q4/8/2N5/1K6/8/8 w - - 0 1",
+    rating: 1250,
+    theme: "Knight Ambush",
+    hint: "Find the knight jump that seals every escape square.",
+  },
+  {
+    fen: "8/2PPk3/4p1B1/8/8/8/8/4B2K w - - 0 1",
+    rating: 1300,
+    theme: "Pawn Breakthrough",
+    hint: "Promote the pawn with checkmate.",
+  },
+  {
+    fen: "8/2k2P1R/8/1K4P1/8/8/6P1/8 w - - 0 1",
+    rating: 1250,
+    theme: "Pawn Breakthrough",
+    hint: "Promote the pawn with checkmate.",
+  },
+  {
+    fen: "B1k5/4P2K/3P4/4P3/8/8/8/8 w - - 0 1",
+    rating: 1200,
+    theme: "Pawn Breakthrough",
+    hint: "Promote the pawn with checkmate.",
+  },
+  {
+    fen: "8/1P6/1k6/1B6/1P1K2B1/8/3p4/8 w - - 0 1",
+    rating: 1300,
+    theme: "Pawn Breakthrough",
+    hint: "Promote the pawn with checkmate.",
+  },
 ];
 
 function normalizeSeed(seed) {

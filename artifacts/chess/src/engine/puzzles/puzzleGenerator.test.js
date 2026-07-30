@@ -27,16 +27,18 @@ describe("procedural puzzle generator", () => {
       puzzles.map((puzzle) => puzzle.fen.split(" ")[0].replace(/[1-8/]/g, "")),
     );
     const themes = new Set(puzzles.map((puzzle) => puzzle.theme));
-    const matingPieces = new Set(
-      puzzles.map((puzzle) => {
-        const chess = new Chess(puzzle.fen);
-        return chess.move(puzzle.solution).piece;
-      }),
+    const matingPieceCounts = Object.fromEntries(
+      ["q", "r", "b", "n", "p"].map((piece) => [piece, 0]),
     );
+    for (const puzzle of puzzles) {
+      const chess = new Chess(puzzle.fen);
+      const piece = chess.move(puzzle.solution).piece;
+      matingPieceCounts[piece] += 1;
+    }
 
     expect(positions.size).toBe(40);
     expect(pieceLayouts.size).toBeGreaterThan(20);
     expect(themes.size).toBeGreaterThan(2);
-    expect(matingPieces).toEqual(new Set(["q", "r", "b", "n", "p"]));
+    expect(matingPieceCounts).toEqual({ q: 8, r: 8, b: 8, n: 8, p: 8 });
   }, 30000);
 });
