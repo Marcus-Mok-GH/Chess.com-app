@@ -6,6 +6,10 @@
 - Added OpenAI-compatible AI puzzle generation with strict JSON/legality checks and graceful procedural fallback when the provider is unavailable.
 
 ### Changed
+- Fixed `getPuzzleById` to decode `gen-N` base-N sequence indices, matching the encoding used by the generator.
+- Fixed `validateSolution` to compare the applied move's SAN/coordinates against the recorded solution instead of only checking that a move was legal.
+- Made `validateGeneratedPuzzle` type-aware so non-mate tactics and mate-in-N (N>1) puzzles validate correctly instead of being silently rejected in favor of the procedural fallback.
+- Added explicit AI/Stockfish fallback provenance and a visible fallback notice, and locked puzzle interaction while switching generation methods.
 - Made method selection flow end-to-end through the Puzzles page and `/api/puzzles/generate`.
 - Kept puzzle generation resilient: rules work offline, Stockfish falls back if analysis times out, and AI falls back if its provider returns an invalid or unavailable response.
 

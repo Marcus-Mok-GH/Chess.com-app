@@ -349,6 +349,13 @@
   transition: all var(--transition-fast);
 }
 
+.puzzle-generation-fallback {
+  margin: 0.55rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
 .puzzle-gen-option:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.05);
   border-color: var(--primary, #81b64c);

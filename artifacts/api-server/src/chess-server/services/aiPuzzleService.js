@@ -67,7 +67,7 @@ export async function generatePuzzleWithAI(description, options = {}) {
   console.warn("[AI Puzzle] Model output illegal or unparseable; falling back to procedural generation.");
   try {
     const fallback = generateProceduralPuzzle(seed ?? Date.now());
-    return { ...fallback, method: "ai", aiDescription: description, aiGenerated: false };
+    return { ...fallback, method: "ai-fallback", requestedMethod: "ai", aiDescription: description, aiGenerated: false };
   } catch (error) {
     throw new Error(`AI puzzle generation failed and procedural fallback errored: ${error.message}`);
   }

@@ -163,19 +163,40 @@ export default function Puzzles() {
 
   const [position, setPosition] = useState(() => fallbackPuzzle().fen);
 
+  // Track when the selected generation method silently fell back to another
+  // method (e.g. Stockfish unavailable, or AI provider down), so the UI can
+  // surface that to the user instead of silently switching methods.
+  const [methodFallbackReason, setMethodFallbackReason] = useState(null);
+
   // Generate the first puzzle asynchronously after mount so the initial render
   // is not blocked by the (worst-case bounded) search inside generatePuzzle.
   useEffect(() => {
     const requestId = ++generationRequestRef.current;
+    clearTimers();
+    setInitializing(true);
     generatePuzzleSafely(null, sessionIdRef.current, generationMethod).then((p) => {
       if (generationRequestRef.current !== requestId) return;
       setPuzzle(p);
       setPosition(p.fen);
-      setInitializing(false);
       setSolved(false);
       setFailed(false);
       setShowHint(false);
+      const ef = p.effectiveMethod || p.method;
+      const requested = generationMethod.replace(/^auto$/, "rules");
+      setMethodFallbackReason(
+        ef && requested && ef !== requested && ef !== "procedural-fallback"
+          ? `Requested ${requested}, got ${
+              ef === "stockfish-fallback"
+                ? "Stockfish (engine unavailable)"
+                : ef
+            } after fallback.`
+          : null,
+      );
+      setInitializing(false);
     });
+    return () => {
+      clearTimers();
+    };
   }, [generationMethod]);
 
   function clearTimers() {
@@ -492,6 +513,11 @@ export default function Puzzles() {
                   <Code2 size={14} /> AI
                 </button>
               </div>
+              {methodFallbackReason && (
+                <p className="puzzle-generation-fallback" role="status">
+                  {methodFallbackReason}
+                </p>
+              )}
             </div>
 
             {showHint && (

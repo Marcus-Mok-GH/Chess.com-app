@@ -157,6 +157,7 @@ export async function generatePuzzle(options = {}) {
       if (!puzzle) {
         puzzle = generatePuzzleFromGenerator(Date.now());
         puzzle.method = 'stockfish-fallback';
+        puzzle.requestedMethod = 'stockfish';
       }
       stats.byMethod.stockfish++;
       break;
