@@ -31,6 +31,24 @@ export const BASE_PUZZLES = [
     theme: "Knight-Supported Queen",
     hint: "The knight guards the key square. Find the queen mate.",
   },
+  {
+    fen: "8/8/1BK5/4k3/6Q1/8/8/8 w - - 0 1",
+    rating: 1200,
+    theme: "Diagonal Strike",
+    hint: "Find the bishop move that closes the mating net.",
+  },
+  {
+    fen: "8/8/1NK5/4k3/6Q1/8/8/8 w - - 0 1",
+    rating: 1250,
+    theme: "Knight Ambush",
+    hint: "Find the knight jump that seals every escape square.",
+  },
+  {
+    fen: "7k/5P2/8/8/3KB3/8/8/8 w - - 0 1",
+    rating: 1150,
+    theme: "Pawn Breakthrough",
+    hint: "Promote the pawn with checkmate.",
+  },
 ];
 
 function normalizeSeed(seed) {
@@ -163,8 +181,9 @@ function randomSquare(random, used, pieceType) {
   return null;
 }
 
-const MAX_GENERATION_ATTEMPTS = 200;
+const MAX_GENERATION_ATTEMPTS = 80;
 const KING_ADJACENCY_LIMIT = 6;
+const TARGET_MATING_PIECES = ["q", "r", "b", "n", "p"];
 
 function kingDistance(a, b) {
   const fileA = a.charCodeAt(0);
@@ -174,8 +193,9 @@ function kingDistance(a, b) {
   return Math.max(Math.abs(fileA - fileB), Math.abs(rankA - rankB));
 }
 
-function composePuzzle(random) {
+function composePuzzle(random, targetMatingPiece) {
   const majorPieces = ["q", "r", "b", "n"];
+  const supportPieces = ["q", "r", "b", "n", "p"];
   for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt += 1) {
     const chess = new Chess();
     chess.clear();
@@ -183,8 +203,8 @@ function composePuzzle(random) {
     const pieces = [
       { type: "k", color: "w" },
       { type: "k", color: "b" },
-      { type: pick(random, majorPieces), color: "w" },
-      { type: pick(random, majorPieces), color: "w" },
+      { type: targetMatingPiece ?? pick(random, majorPieces), color: "w" },
+      { type: pick(random, supportPieces), color: "w" },
     ];
     const extraPieces = Math.floor(random() * 4);
     for (let index = 0; index < extraPieces; index += 1) {
@@ -241,7 +261,8 @@ function composePuzzle(random) {
       ) {
         continue;
       }
-      if (!findUniqueMate(chess)) continue;
+      const mate = findUniqueMate(chess);
+      if (!mate || (targetMatingPiece && mate.piece !== targetMatingPiece)) continue;
       return { fen: chess.fen() };
     } catch {
       continue;
@@ -294,11 +315,22 @@ export function generatePuzzle(
 ) {
   const normalizedSeed = normalizeSeed(seed);
   const random = randomSource(normalizedSeed);
-  const composed = composePuzzle(random);
-  const base =
-    composed ?? BASE_PUZZLES[Math.floor(random() * BASE_PUZZLES.length)];
-  const mirrorFiles = random() >= 0.5;
-  const flipColors = random() >= 0.5;
+  const targetMatingPiece = TARGET_MATING_PIECES[normalizedSeed % TARGET_MATING_PIECES.length];
+  const matchingBasePuzzles = BASE_PUZZLES.filter((candidate) => {
+    const chess = new Chess(candidate.fen);
+    return findUniqueMate(chess)?.piece === targetMatingPiece;
+  });
+  const fallbackPuzzles = matchingBasePuzzles.length > 0
+    ? matchingBasePuzzles
+    : BASE_PUZZLES;
+  const usesTemplate = targetMatingPiece === "b" || targetMatingPiece === "n" || targetMatingPiece === "p";
+  const composed = usesTemplate ? null : composePuzzle(random, targetMatingPiece);
+  const sequence = Math.floor((normalizedSeed - 1) / TARGET_MATING_PIECES.length);
+  const fallbackIndex = sequence % fallbackPuzzles.length;
+  const transformIndex = Math.floor(sequence / fallbackPuzzles.length) % 4;
+  const base = composed ?? fallbackPuzzles[fallbackIndex];
+  const mirrorFiles = composed ? random() >= 0.5 : transformIndex % 2 === 1;
+  const flipColors = composed ? random() >= 0.5 : transformIndex >= 2;
   const fen = transformedFen(base.fen, mirrorFiles, flipColors);
   const chess = new Chess(fen);
   const mate = findUniqueMate(chess);

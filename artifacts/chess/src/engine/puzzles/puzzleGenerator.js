@@ -40,6 +40,96 @@ export const BASE_PUZZLES = [
     theme: "Knight-Supported Queen",
     hint: "The knight guards the key square. Find the queen mate.",
   },
+  {
+    fen: "8/8/1BK5/4k3/6Q1/8/8/8 w - - 0 1",
+    rating: 1200,
+    theme: "Diagonal Strike",
+    hint: "Find the bishop move that closes the mating net.",
+  },
+  {
+    fen: "8/8/1NK5/4k3/6Q1/8/8/8 w - - 0 1",
+    rating: 1250,
+    theme: "Knight Ambush",
+    hint: "Find the knight jump that seals every escape square.",
+  },
+  {
+    fen: "7k/5P2/8/8/3KB3/8/8/8 w - - 0 1",
+    rating: 1150,
+    theme: "Pawn Breakthrough",
+    hint: "Promote the pawn with checkmate.",
+  },
+  {
+    fen: "7B/8/3R4/kb6/4K3/1Bp5/8/8 w - - 0 1",
+    rating: 1250,
+    theme: "Diagonal Strike",
+    hint: "Find the bishop move that closes the mating net.",
+  },
+  {
+    fen: "1K6/2Q5/k7/8/6p1/8/B7/8 w - - 0 1",
+    rating: 1250,
+    theme: "Diagonal Strike",
+    hint: "Find the bishop move that closes the mating net.",
+  },
+  {
+    fen: "8/8/2B5/8/K7/8/kp5p/2R2N2 w - - 0 1",
+    rating: 1300,
+    theme: "Diagonal Strike",
+    hint: "Find the bishop move that closes the mating net.",
+  },
+  {
+    fen: "8/7B/8/1K6/8/7k/5Q2/8 w - - 0 1",
+    rating: 1200,
+    theme: "Diagonal Strike",
+    hint: "Find the bishop move that closes the mating net.",
+  },
+  {
+    fen: "8/6R1/K2Q4/2p2k2/8/8/4r3/5N2 w - - 0 1",
+    rating: 1300,
+    theme: "Knight Ambush",
+    hint: "Find the knight jump that seals every escape square.",
+  },
+  {
+    fen: "8/6b1/7p/K7/8/k7/n2N4/2N5 w - - 0 1",
+    rating: 1350,
+    theme: "Knight Ambush",
+    hint: "Find the knight jump that seals every escape square.",
+  },
+  {
+    fen: "8/b3N3/8/7Q/1q3k2/5P2/6K1/8 w - - 0 1",
+    rating: 1350,
+    theme: "Knight Ambush",
+    hint: "Find the knight jump that seals every escape square.",
+  },
+  {
+    fen: "2k5/8/P2Q4/8/2N5/1K6/8/8 w - - 0 1",
+    rating: 1250,
+    theme: "Knight Ambush",
+    hint: "Find the knight jump that seals every escape square.",
+  },
+  {
+    fen: "8/2PPk3/4p1B1/8/8/8/8/4B2K w - - 0 1",
+    rating: 1300,
+    theme: "Pawn Breakthrough",
+    hint: "Promote the pawn with checkmate.",
+  },
+  {
+    fen: "8/2k2P1R/8/1K4P1/8/8/6P1/8 w - - 0 1",
+    rating: 1250,
+    theme: "Pawn Breakthrough",
+    hint: "Promote the pawn with checkmate.",
+  },
+  {
+    fen: "B1k5/4P2K/3P4/4P3/8/8/8/8 w - - 0 1",
+    rating: 1200,
+    theme: "Pawn Breakthrough",
+    hint: "Promote the pawn with checkmate.",
+  },
+  {
+    fen: "8/1P6/1k6/1B6/1P1K2B1/8/3p4/8 w - - 0 1",
+    rating: 1300,
+    theme: "Pawn Breakthrough",
+    hint: "Promote the pawn with checkmate.",
+  },
 ];
 
 // ============================================================================
@@ -133,8 +223,9 @@ function randomSquare(random, used, pieceType) {
   return null;
 }
 
-const MAX_GENERATION_ATTEMPTS = 200;
+const MAX_GENERATION_ATTEMPTS = 80;
 const KING_ADJACENCY_LIMIT = 6;
+const TARGET_MATING_PIECES = ["q", "r", "b", "n", "p"];
 
 function kingDistance(a, b) {
   const fileA = a.charCodeAt(0);
@@ -148,8 +239,9 @@ function kingDistance(a, b) {
 // Method 1: Hardcoded Rules (Procedural Generation)
 // ============================================================================
 
-function composePuzzle(random) {
+function composePuzzle(random, targetMatingPiece) {
   const majorPieces = ["q", "r", "b", "n"];
+  const supportPieces = ["q", "r", "b", "n", "p"];
   for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt += 1) {
     const chess = new Chess();
     chess.clear();
@@ -157,8 +249,8 @@ function composePuzzle(random) {
     const pieces = [
       { type: "k", color: "w" },
       { type: "k", color: "b" },
-      { type: pick(random, majorPieces), color: "w" },
-      { type: pick(random, majorPieces), color: "w" },
+      { type: targetMatingPiece ?? pick(random, majorPieces), color: "w" },
+      { type: pick(random, supportPieces), color: "w" },
     ];
     const extraPieces = Math.floor(random() * 4);
     for (let index = 0; index < extraPieces; index += 1) {
@@ -215,7 +307,8 @@ function composePuzzle(random) {
       ) {
         continue;
       }
-      if (!findUniqueMate(chess)) continue;
+      const mate = findUniqueMate(chess);
+      if (!mate || (targetMatingPiece && mate.piece !== targetMatingPiece)) continue;
       return { fen: chess.fen() };
     } catch {
       continue;
@@ -369,11 +462,22 @@ export function generatePuzzle(
 ) {
   const normalizedSeed = normalizeSeed(seed);
   const random = randomSource(normalizedSeed);
-  const composed = composePuzzle(random);
-  const base =
-    composed ?? BASE_PUZZLES[Math.floor(random() * BASE_PUZZLES.length)];
-  const mirrorFiles = random() >= 0.5;
-  const flipColors = random() >= 0.5;
+  const targetMatingPiece = TARGET_MATING_PIECES[normalizedSeed % TARGET_MATING_PIECES.length];
+  const matchingBasePuzzles = BASE_PUZZLES.filter((candidate) => {
+    const chess = new Chess(candidate.fen);
+    return findUniqueMate(chess)?.piece === targetMatingPiece;
+  });
+  const fallbackPuzzles = matchingBasePuzzles.length > 0
+    ? matchingBasePuzzles
+    : BASE_PUZZLES;
+  const usesTemplate = targetMatingPiece === "b" || targetMatingPiece === "n" || targetMatingPiece === "p";
+  const composed = usesTemplate ? null : composePuzzle(random, targetMatingPiece);
+  const sequence = Math.floor((normalizedSeed - 1) / TARGET_MATING_PIECES.length);
+  const fallbackIndex = sequence % fallbackPuzzles.length;
+  const transformIndex = Math.floor(sequence / fallbackPuzzles.length) % 4;
+  const base = composed ?? fallbackPuzzles[fallbackIndex];
+  const mirrorFiles = composed ? random() >= 0.5 : transformIndex % 2 === 1;
+  const flipColors = composed ? random() >= 0.5 : transformIndex >= 2;
   const fen = transformedFen(base.fen, mirrorFiles, flipColors);
   const chess = new Chess(fen);
   const mate = findUniqueMate(chess);

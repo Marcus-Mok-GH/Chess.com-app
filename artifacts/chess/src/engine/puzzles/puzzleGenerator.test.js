@@ -1,3 +1,4 @@
+import { Chess } from "chess.js";
 import { describe, expect, it } from "vitest";
 import { generatePuzzle, validateGeneratedPuzzle } from "./puzzleGenerator.js";
 
@@ -26,9 +27,16 @@ describe("procedural puzzle generator", () => {
       puzzles.map((puzzle) => puzzle.fen.split(" ")[0].replace(/[1-8/]/g, "")),
     );
     const themes = new Set(puzzles.map((puzzle) => puzzle.theme));
+    const matingPieces = new Set(
+      puzzles.map((puzzle) => {
+        const chess = new Chess(puzzle.fen);
+        return chess.move(puzzle.solution).piece;
+      }),
+    );
 
     expect(positions.size).toBe(40);
     expect(pieceLayouts.size).toBeGreaterThan(20);
     expect(themes.size).toBeGreaterThan(2);
+    expect(matingPieces).toEqual(new Set(["q", "r", "b", "n", "p"]));
   }, 30000);
 });

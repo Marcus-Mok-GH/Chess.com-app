@@ -18,6 +18,13 @@
 - `pnpm run build`: typechecks and all production builds passed.
 - Local smoke tests returned valid chess.js-verified puzzles for rules, Stockfish, and AI fallback paths.
 
+## [2026-07-31] - Balance puzzle tactics across chess pieces
+
+### Fixed
+- Reworked procedural mate-in-one selection to rotate evenly across queen, rook, bishop, knight, and pawn-delivered mates instead of disproportionately accepting queen and rook solutions.
+- Added verified bishop, knight, and promotion-mate templates with deterministic mirroring and color transforms so balanced fallback puzzles remain non-repetitive.
+- Extended the puzzle-generator regression test to require all five mating-piece types while preserving 40 unique positions per session sample.
+
 ## [2026-07-28] - Dynamic Puzzle Generation with Multiple Methods
 
 ### Added
