@@ -1,3 +1,8 @@
+## [2026-08-01] - Game Code UI Redesign
+
+### Fixed
+- Addressed CodeRabbit review comments: moved `.game-code-label` and `.game-code-value` outside media query block so they apply at all viewport sizes; removed quotes from Inter font-family declaration; increased top/right padding on `.game-code` to reserve space for absolute ::before CODE label.
+
 ## [2026-07-31] - Key-Value Persistence Packaging and Coverage
 
 ### Added
