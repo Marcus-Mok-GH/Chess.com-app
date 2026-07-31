@@ -1,11 +1,15 @@
-import { test } from 'node:test';
-import assert from 'node:assert/strict';
+import { describe, expect, it, beforeAll, afterAll } from 'vitest';
 import http from 'node:http';
 
 process.env.NODE_ENV = 'production';
 process.env.VERCEL = '1';
 
-const { default: app } = await import('./index.js');
+let app;
+
+beforeAll(async () => {
+  const mod = await import('./index.js');
+  app = mod.default;
+});
 
 function loopback(path) {
   return new Promise((resolve, reject) => {
@@ -31,20 +35,22 @@ function loopback(path) {
   });
 }
 
-test('unknown API routes return JSON 404 instead of the frontend index', async () => {
-  const response = await loopback('/api/matchmaking/queue');
+describe('Vercel API routes', () => {
+  it('unknown API routes return JSON 404 instead of the frontend index', async () => {
+    const response = await loopback('/api/matchmaking/queue');
 
-  assert.equal(response.status, 404);
-  assert.deepEqual(JSON.parse(response.body), {
-    error: { message: 'API endpoint not found.' },
+    expect(response.status).toBe(404);
+    expect(JSON.parse(response.body)).toEqual({
+      error: { message: 'API endpoint not found.' },
+    });
   });
-});
 
-test('API root returns JSON 404 in the Vercel runtime', async () => {
-  const response = await loopback('/api/');
+  it('API root returns JSON 404 in the Vercel runtime', async () => {
+    const response = await loopback('/api/');
 
-  assert.equal(response.status, 404);
-  assert.deepEqual(JSON.parse(response.body), {
-    error: { message: 'API endpoint not found.' },
+    expect(response.status).toBe(404);
+    expect(JSON.parse(response.body)).toEqual({
+      error: { message: 'API endpoint not found.' },
+    });
   });
 });

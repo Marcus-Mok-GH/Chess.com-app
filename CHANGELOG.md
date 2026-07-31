@@ -1,8 +1,19 @@
-## [2026-07-31] - Key-Value Persistence Packaging and Coverage
+## [2026-07-31] - Test Suite Expansion and Coverage
 
 ### Added
-- Declared `@upstash/redis` as a direct dependency of the API server so production/serverless builds resolve the online-game KV adapter without relying on workspace-level hoisting.
-- Added configuration coverage for disabled credentials, partial credentials, supported Upstash environment-variable aliases, and memoized client lifecycle.
+- Added 6 new React component tests: LoginModal OTP flow (14 tests), UserContext requestOtp/logout (10 tests), Changelog page (2 tests), and Login page (5 tests).
+- Updated `pnpm test` root command to include all new test files alongside the existing 10 test suites.
+- Configured root `vitest.config.ts` with jsdom environment and esbuild JSX automatic transform so `.test.jsx` files run correctly from the workspace root.
+
+### Fixed
+- Added `vi` to vitest import in `auth.proxy.test.js` (used by stubs but was missing from import).
+- Renamed `username` input to `email` in `Login.test.jsx` to match the current Login page form.
+- Added mock setup for `window.location.protocol` in `apiBase.test.js` to ensure consistent https fallback behavior across node and jsdom environments.
+
+### Verified
+- `pnpm run test`: 163 tests passed across 17 test files.
+
+---
 - Added normalization coverage for JSON-encoded KV responses and malformed stored values.
 
 ### Fixed

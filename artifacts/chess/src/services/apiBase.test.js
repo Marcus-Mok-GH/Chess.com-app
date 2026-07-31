@@ -1,7 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { normalizeApiBaseUrl } from './apiBase.js';
 
 describe('normalizeApiBaseUrl', () => {
+  beforeEach(() => {
+    // Ensure consistent behavior across environments: treat as if no browser protocol
+    if (typeof globalThis.window !== 'undefined') {
+      vi.stubGlobal('window', { location: { protocol: '' } });
+    }
+  });
+
   it('returns /api for undefined input', () => {
     expect(normalizeApiBaseUrl(undefined)).toBe('/api');
   });
