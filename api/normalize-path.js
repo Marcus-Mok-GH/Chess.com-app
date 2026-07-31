@@ -16,7 +16,23 @@ const STRIPPED_API_SEGMENTS = new Set([
  * accidentally rewrite frontend/static requests into API requests.
  */
 export function normalizeApiRequestUrl(url) {
-  if (!url || url === '/api' || url.startsWith('/api/') || url.startsWith('/api?')) {
+  if (!url || url === '/api') {
+    return url;
+  }
+
+  // Handle Vercel rewrite format: /api/[...path]?path=games
+  // Extract the actual path from the 'path' query parameter
+  if (url.startsWith('/api/[...path]')) {
+    const match = url.match(/[?&]path=([^&]+)/);
+    if (match) {
+      const actualPath = decodeURIComponent(match[1]);
+      const [pathname, suffix = ''] = actualPath.split(/(?=[?#])/, 2);
+      return `/api${pathname.startsWith('/') ? '' : '/'}${pathname}${suffix}`;
+    }
+    return url;
+  }
+
+  if (url.startsWith('/api/') || url.startsWith('/api?')) {
     return url;
   }
 
