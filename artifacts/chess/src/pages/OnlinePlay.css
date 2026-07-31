@@ -500,11 +500,12 @@
   background: radial-gradient(ellipse at 50% 0%, rgba(129, 182, 76, 0.08), transparent 70%);
   pointer-events: none;
 }
+
 .game-code-label {
   position: absolute;
   top: 0.5rem;
   right: 0.75rem;
-  font-family: Inter, sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 0.625rem;
   font-weight: 600;
   letter-spacing: 0.12em;
@@ -518,8 +519,6 @@
   display: block;
   word-break: break-all;
 }
-
-
 
   .match-found-content { padding: 2rem 1.5rem; }
   .match-found-content h2 { font-size: 1.75rem; }
@@ -578,7 +577,24 @@
   pointer-events: none;
 }
 
+.game-code-label {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  pointer-events: none;
+  z-index: 1;
+}
 
+.game-code-value {
+  display: block;
+  word-break: break-all;
+}
 
   .match-found-content { padding: 1.5rem 1.25rem; }
   .match-found-content h2 { font-size: 1.5rem; }
