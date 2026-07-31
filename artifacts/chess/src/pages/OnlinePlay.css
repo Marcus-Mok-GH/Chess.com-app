@@ -444,6 +444,25 @@
   .mode-title { font-size: 1.6rem; }
 }
 
+.game-code-label {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  font-family: Inter, sans-serif;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.game-code-value {
+  display: block;
+  word-break: break-all;
+}
+
 @media (max-width: 768px) {
   .online-play-page { padding-bottom: calc(env(safe-area-inset-bottom, 0) + 60px); }
   .lobby-container { padding: 1.5rem 1rem 6rem; align-items: flex-start; }
@@ -501,24 +520,6 @@
   pointer-events: none;
 }
 
-.game-code-label {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.75rem;
-  font-family: 'Inter', sans-serif;
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-  pointer-events: none;
-  z-index: 1;
-}
-
-.game-code-value {
-  display: block;
-  word-break: break-all;
-}
 
   .match-found-content { padding: 2rem 1.5rem; }
   .match-found-content h2 { font-size: 1.75rem; }
@@ -577,24 +578,6 @@
   pointer-events: none;
 }
 
-.game-code-label {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.75rem;
-  font-family: 'Inter', sans-serif;
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-  pointer-events: none;
-  z-index: 1;
-}
-
-.game-code-value {
-  display: block;
-  word-break: break-all;
-}
 
   .match-found-content { padding: 1.5rem 1.25rem; }
   .match-found-content h2 { font-size: 1.5rem; }
