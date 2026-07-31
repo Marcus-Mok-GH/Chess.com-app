@@ -1,3 +1,13 @@
+## [2026-07-31] - Key-Value Persistence Packaging and Coverage
+
+### Added
+- Declared `@upstash/redis` as a direct dependency of the API server so production/serverless builds resolve the online-game KV adapter without relying on workspace-level hoisting.
+- Added configuration coverage for disabled credentials, partial credentials, supported Upstash environment-variable aliases, and memoized client lifecycle.
+- Added normalization coverage for JSON-encoded KV responses and malformed stored values.
+
+### Fixed
+- Made KV state normalization tolerate REST adapters that return serialized JSON while safely rejecting malformed values.
+
 ## [2026-07-30] - Verified Dynamic Puzzle Generation
 
 ### Added
