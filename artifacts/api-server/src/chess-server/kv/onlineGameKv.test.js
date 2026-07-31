@@ -21,7 +21,7 @@ vi.mock('../socket/utils.js', () => ({
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1';
 
-import { OnlineGameKv, normalizeKvState, resetOnlineGameKvForTesting } from './onlineGameKv.js';
+import { OnlineGameKv, getOnlineGameKv, normalizeKvState, resetOnlineGameKvForTesting, resolveRedisConfig } from './onlineGameKv.js';
 
 function createMockRedis(store = {}) {
   return {
@@ -82,10 +82,14 @@ describe('normalizeKvState', () => {
     expect(normalized.black_elo).toBeNull();
   });
 
-  it('handles move_history as JSON-encoded string entries', () => {
-    const state = makeGameState({ move_history: ['{ "san": "e4" }', 'e5'] });
-    const normalized = normalizeKvState(state);
-    expect(normalized.move_history).toHaveLength(2);
+  it('normalizes a JSON-encoded state returned by a KV adapter', () => {
+    const normalized = normalizeKvState(JSON.stringify(makeGameState()));
+    expect(normalized.fen).toBe(START_FEN);
+    expect(normalized.move_history).toHaveLength(1);
+  });
+
+  it('returns null for malformed JSON state', () => {
+    expect(normalizeKvState('{not-json')).toBeNull();
   });
 });
 
@@ -241,5 +245,53 @@ describe('OnlineGameKv — get returns null for empty gameCode', () => {
   it('returns null for empty string', async () => {
     const kv = new OnlineGameKv(createMockRedis(), 3600);
     expect(await kv.get('')).toBeNull();
+  });
+});
+
+describe('getOnlineGameKv — configuration', () => {
+  beforeEach(() => {
+    resetOnlineGameKvForTesting();
+    vi.unstubAllEnvs();
+    vi.stubEnv('KV_REST_API_URL', '');
+    vi.stubEnv('KV_REST_API_TOKEN', '');
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', '');
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', '');
+  });
+
+  afterEach(() => {
+    resetOnlineGameKvForTesting();
+    vi.unstubAllEnvs();
+  });
+
+  it('reports disabled when no REST KV credentials are configured', () => {
+    expect(resolveRedisConfig()).toEqual({ url: null, token: null });
+    expect(getOnlineGameKv().enabled).toBe(false);
+  });
+
+  it('reports disabled when only one REST KV credential is configured', () => {
+    vi.stubEnv('KV_REST_API_URL', 'https://example.upstash.io');
+    expect(resolveRedisConfig()).toEqual({ url: 'https://example.upstash.io', token: null });
+    expect(getOnlineGameKv().enabled).toBe(false);
+  });
+
+  it('accepts the UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN aliases', () => {
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://example.upstash.io');
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'test-token');
+    expect(resolveRedisConfig()).toEqual({
+      url: 'https://example.upstash.io',
+      token: 'test-token',
+    });
+    expect(getOnlineGameKv().enabled).toBe(true);
+  });
+
+  it('memoizes the configured instance until reset', () => {
+    vi.stubEnv('KV_REST_API_URL', 'https://example.upstash.io');
+    vi.stubEnv('KV_REST_API_TOKEN', 'test-token');
+    const first = getOnlineGameKv();
+    expect(first).toBe(getOnlineGameKv());
+    resetOnlineGameKvForTesting();
+    const second = getOnlineGameKv();
+    expect(second).not.toBe(first);
+    expect(second).toBe(getOnlineGameKv());
   });
 });
