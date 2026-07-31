@@ -460,7 +460,66 @@
   .waiting-content { padding: 2rem 1.5rem; border-radius: var(--radius-md); }
   .join-form { flex-direction: column; gap: 0.625rem; }
   .join-form input { padding: 0.875rem 1rem; font-size: 1rem; min-height: 48px; }
-  .game-code-box { padding: 0.875rem; font-size: 1.1rem; word-break: break-all; }
+  .game-code-box {
+  position: relative;
+  background: linear-gradient(135deg, rgba(39, 37, 34, 0.95), rgba(26, 26, 26, 0.98));
+  border: 1px solid rgba(129, 182, 76, 0.35);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #a3d16e;
+  letter-spacing: 0.1em;
+  margin: 1.25rem 0;
+  text-align: center;
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  transition: all var(--transition-fast);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.game-code-box::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(129, 182, 76, 0.6), transparent);
+  pointer-events: none;
+}
+
+.game-code-box::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(129, 182, 76, 0.08), transparent 70%);
+  pointer-events: none;
+}
+
+.game-code-label {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.game-code-value {
+  display: block;
+  word-break: break-all;
+}
+
   .match-found-content { padding: 2rem 1.5rem; }
   .match-found-content h2 { font-size: 1.75rem; }
 }
@@ -477,7 +536,66 @@
   .elo-value { font-size: 1.5rem; }
   .waiting-content { padding: 1.5rem 1.25rem; }
   .waiting-content h2 { font-size: 1.25rem; }
-  .game-code-box { font-size: 1rem; letter-spacing: 0.1em; }
+  .game-code-box {
+  position: relative;
+  background: linear-gradient(135deg, rgba(39, 37, 34, 0.95), rgba(26, 26, 26, 0.98));
+  border: 1px solid rgba(129, 182, 76, 0.35);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #a3d16e;
+  letter-spacing: 0.1em;
+  margin: 1.25rem 0;
+  text-align: center;
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  transition: all var(--transition-fast);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.game-code-box::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(129, 182, 76, 0.6), transparent);
+  pointer-events: none;
+}
+
+.game-code-box::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(129, 182, 76, 0.08), transparent 70%);
+  pointer-events: none;
+}
+
+.game-code-label {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.game-code-value {
+  display: block;
+  word-break: break-all;
+}
+
   .match-found-content { padding: 1.5rem 1.25rem; }
   .match-found-content h2 { font-size: 1.5rem; }
   .opponent-avatar { width: 52px; height: 52px; font-size: 1.5rem; }

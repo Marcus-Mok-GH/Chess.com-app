@@ -465,7 +465,10 @@ export default function OnlinePlay() {
         <div className="waiting-container">
           <div className="waiting-content">
             <h2>Waiting for Opponent</h2>
-            <div className="game-code-box">Code: {gameId}</div>
+            <div className="game-code-box">
+              <span className="game-code-label">Game Code</span>
+              <span className="game-code-value">{gameId}</span>
+            </div>
             <button className="btn btn-ghost" onClick={() => { setView('lobby'); setIsWaiting(false); }}>Cancel</button>
           </div>
         </div>

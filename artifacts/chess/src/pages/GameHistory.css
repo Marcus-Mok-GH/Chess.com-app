@@ -63,14 +63,32 @@
 }
 
 .game-code {
+  position: relative;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-weight: 700;
   color: var(--primary);
-  background: var(--accent-muted);
-  padding: 0.25rem 0.5rem;
-  border-radius: var(--radius-xs);
+  background: linear-gradient(135deg, rgba(129, 182, 76, 0.15), rgba(129, 182, 76, 0.08));
+  border: 1px solid rgba(129, 182, 76, 0.3);
+  padding: 0.3125rem 0.625rem;
+  border-radius: var(--radius-sm);
   font-size: 0.8125rem;
   letter-spacing: 0.02em;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  transition: all var(--transition-fast);
+}
+
+.game-code::before {
+  content: "CODE";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(129, 182, 76, 0.5);
+  pointer-events: none;
 }
 
 .view-game-btn {
