@@ -3,7 +3,7 @@ import { Redis } from '@upstash/redis';
 const KEY_PREFIX = 'onlinegame:';
 const DEFAULT_TTL_SECONDS = 4 * 60 * 60;
 
-function resolveRedisConfig() {
+export function resolveRedisConfig() {
   const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL || null;
   const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || null;
   return { url, token };
@@ -14,6 +14,13 @@ function buildKey(gameCode) {
 }
 
 export function normalizeKvState(raw) {
+  if (typeof raw === 'string') {
+    try {
+      raw = JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
   if (!raw || typeof raw !== 'object') return null;
   const fen = typeof raw.fen === 'string' ? raw.fen : null;
   if (!fen) return null;
