@@ -1,3 +1,7 @@
+## 2026-08-01
+
+- Redesigned the friendly-game code request panel with a responsive Chess.com-inspired visual treatment, clearer invite guidance, and one-click copy feedback.
+
 ## [2026-07-31] - Test Suite Expansion and Coverage
 
 ### Added
