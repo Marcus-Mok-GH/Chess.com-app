@@ -1,3 +1,15 @@
+## [2026-08-02] - Coach Connection Prompt on Signup
+
+### Added
+- Added `PollinationsCoachPrompt` modal that explains the user-pays model, consent budget, and encrypted token storage before connecting.
+- New users now see the coach connection prompt immediately after setting their username during signup.
+- Existing logged-in users who have never connected see the prompt once when they open the analysis page; it is dismissed permanently via `localStorage`.
+- Auth errors in `ChessGame` coaching feedback now redirect to `/login` instead of silently showing "Analysis unavailable".
+
+### Changed
+- Updated `SetUsernameModal` to trigger the coach prompt after successful username submission.
+- Updated `GameAnalysis` to show the prompt for unconnected existing users and to redirect unauthenticated visitors to login.
+
 ## [2026-08-01] - Pollinations User-Pays AI Coach
 
 ### Added

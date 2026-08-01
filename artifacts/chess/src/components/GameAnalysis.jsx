@@ -1,13 +1,21 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useUser } from '../contexts/UserContext';
 import { analyzeGame, connectCoach, disconnectCoach, getCoachStatus } from '../engine/coach/coachAI';
+import PollinationsCoachPrompt from './PollinationsCoachPrompt';
 import './GameAnalysis.css';
 
+const COACH_PROMPT_SHOWN_KEY = 'chess_coach_prompt_seen';
+
 export default function GameAnalysis({ moveHistory, gameId = null, onClose, variant = 'modal' }) {
+  const navigate = useNavigate();
+  const { user } = useUser();
   const [analysis, setAnalysis] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [coachStatus, setCoachStatus] = useState(null);
+  const [showCoachPrompt, setShowCoachPrompt] = useState(false);
   const isInline = variant === 'inline';
 
   useEffect(() => {
@@ -16,6 +24,16 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
         const status = await getCoachStatus(true);
         setCoachStatus(status);
         setIsReady(Boolean(status.available && status.connected));
+
+        // For existing users who haven't connected and haven't seen the prompt, show it once
+        if (status.available && !status.connected) {
+          try {
+            const hasSeen = localStorage.getItem(COACH_PROMPT_SHOWN_KEY);
+            if (!hasSeen) {
+              setShowCoachPrompt(true);
+            }
+          } catch {}
+        }
       } catch (error) {
         console.error('[GameAnalysis] Failed to check coach availability:', error);
         setIsReady(false);
@@ -29,6 +47,7 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
   const handleConnect = async () => {
     try {
       await connectCoach();
+      try { localStorage.setItem(COACH_PROMPT_SHOWN_KEY, '1'); } catch {}
     } catch (error) {
       setAnalysis(`Error: ${error.message || 'Unable to open Pollinations authorization.'}`);
     }
@@ -46,16 +65,17 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
 
   const runAnalysis = async () => {
     if (!isReady) {
+      if (!user) { navigate('/login'); return; }
       setAnalysis('Connect the Pollinations AI coach first.');
       return;
     }
 
     setIsAnalyzing(true);
     setAnalysis(null);
-    
+
     try {
       const result = await analyzeGame(moveHistory, null, gameId);
-      
+
       if (result) {
         setAnalysis(result);
       } else {
@@ -103,13 +123,21 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
               <p className="small">The server needs a Pollinations App Key and token encryption secret.</p>
             </div>
           ) : !isReady ? (
-            <div className="coach-error">
-              <p>⚠️ Connect the user-pays AI coach</p>
-              <p className="small">Pollinations will show the consent screen with your budget. You pay for your own approved coaching usage.</p>
-              <button type="button" onClick={handleConnect} className="btn btn-primary">
-                Connect Pollinations
-              </button>
-            </div>
+            !user ? (
+              <div className="coach-error">
+                <p>🔒 Log in to use AI coach</p>
+                <p className="small">Sign in to access Pollinations AI coaching.</p>
+                <button onClick={() => navigate('/login')} className="btn btn-primary" style={{ marginTop: '8px' }}>Log In</button>
+              </div>
+            ) : (
+              <div className="coach-error">
+                <p>⚠️ Connect the user-pays AI coach</p>
+                <p className="small">Pollinations will show the consent screen with your budget. You pay for your own approved coaching usage.</p>
+                <button type="button" onClick={handleConnect} className="btn btn-primary">
+                  Connect Pollinations
+                </button>
+              </div>
+            )
           ) : (
             <>
               <button onClick={runAnalysis} className="btn btn-primary">
@@ -177,14 +205,28 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
   }
 
   return (
-    <div className="analysis-overlay" onClick={onClose}>
-      <div className="analysis-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="analysis-header">
-          <h3>🧠 Game Analysis</h3>
-          <button type="button" className="close-btn" onClick={onClose} aria-label="Close">×</button>
+    <>
+      {showCoachPrompt && (
+        <PollinationsCoachPrompt onConnected={(connected) => {
+          try { localStorage.setItem(COACH_PROMPT_SHOWN_KEY, '1'); } catch {}
+          setShowCoachPrompt(false);
+          if (connected) {
+            getCoachStatus(true).then((s) => {
+              setCoachStatus(s);
+              setIsReady(Boolean(s?.connected));
+            });
+          }
+        }} />
+      )}
+      <div className="analysis-overlay" onClick={onClose}>
+        <div className="analysis-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="analysis-header">
+            <h3>🧠 Game Analysis</h3>
+            <button type="button" className="close-btn" onClick={onClose} aria-label="Close">×</button>
+          </div>
+          {content}
         </div>
-        {content}
       </div>
-    </div>
+    </>
   );
 }
