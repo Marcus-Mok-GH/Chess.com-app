@@ -108,6 +108,24 @@ chess.com-app/
 
 ---
 
+## AI Coach — Pollinations User-Pays Setup
+
+The AI coach uses Pollinations BYOP (Bring Your Own Pollen), not the free/keyless API path. Each player must sign in to Pollinations and approve a budget in the consent screen; coaching requests are then billed against that player's authorized Pollen key. The app never stores a Pollinations app secret or pays for player usage.
+
+Configure the API server with:
+
+- `POLLINATIONS_CLIENT_ID`: the publishable `pk_...` App Key from `https://enter.pollinations.ai/keys`.
+- `POLLINATIONS_REDIRECT_URI`: the exact registered callback URI, normally `https://<your-api-host>/api/coach/callback`.
+- `POLLINATIONS_TOKEN_ENCRYPTION_KEY`: a long random server secret used to encrypt delegated `sk_...` keys at rest. `BETTER_AUTH_SECRET` is accepted as a fallback, but a separate secret is recommended.
+- `POLLINATIONS_COACH_BUDGET`: optional default budget shown in the consent screen; defaults to `5` Pollen.
+- `POLLINATIONS_COACH_EXPIRY_DAYS`: optional authorization lifetime; defaults to `7` days.
+- `POLLINATIONS_COACH_MODELS`: optional comma-separated model restriction; defaults to `openai-fast`.
+- `COACH_MODEL`: optional model sent to the Pollinations OpenAI-compatible endpoint; defaults to `openai-fast`.
+
+The callback must be registered exactly in the Pollinations App Key, including scheme, hostname, path, and any query string. The database migration creates short-lived PKCE state records and encrypted per-user coach tokens. Tokens are never sent to the frontend.
+
+---
+
 **Ready to play?**
 
 Clone it. Run it. Challenge Nelson. Get destroyed by Magnus. Then analyze why it happened.

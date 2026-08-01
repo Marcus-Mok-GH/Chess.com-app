@@ -1,3 +1,17 @@
+## [2026-08-01] - Pollinations User-Pays AI Coach
+
+### Added
+- Added Pollinations BYOP OAuth 2.1 + PKCE connection flow with per-user encrypted delegated tokens, consent budget, expiry, and disconnect support.
+- Added authenticated coach endpoints for status, connection, feedback, move explanations, and game analysis.
+
+### Changed
+- Replaced the previous free/keyless coach API path with Pollinations user-pays requests.
+- Added user-facing connection and billing messaging in the game analysis UI.
+
+### Verified
+- API and frontend production builds pass.
+- Full test suite passes: 165 tests across 17 files.
+
 ## [2026-08-01] - Friendly Game Code Request UI
 
 ### Changed

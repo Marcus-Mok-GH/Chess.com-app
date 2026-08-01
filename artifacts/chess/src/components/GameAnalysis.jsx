@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { analyzeGame, isCoachAIAvailable } from '../engine/coach/coachAI';
+import { analyzeGame, connectCoach, disconnectCoach, getCoachStatus } from '../engine/coach/coachAI';
 import './GameAnalysis.css';
 
 export default function GameAnalysis({ moveHistory, gameId = null, onClose, variant = 'modal' }) {
@@ -7,13 +7,15 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [coachStatus, setCoachStatus] = useState(null);
   const isInline = variant === 'inline';
 
   useEffect(() => {
     async function checkAvailability() {
       try {
-        const available = await isCoachAIAvailable();
-        setIsReady(available);
+        const status = await getCoachStatus(true);
+        setCoachStatus(status);
+        setIsReady(Boolean(status.available && status.connected));
       } catch (error) {
         console.error('[GameAnalysis] Failed to check coach availability:', error);
         setIsReady(false);
@@ -24,9 +26,27 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
     checkAvailability();
   }, []);
 
+  const handleConnect = async () => {
+    try {
+      await connectCoach();
+    } catch (error) {
+      setAnalysis(`Error: ${error.message || 'Unable to open Pollinations authorization.'}`);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    try {
+      await disconnectCoach();
+      setIsReady(false);
+      setCoachStatus((status) => status ? { ...status, connected: false } : status);
+    } catch (error) {
+      setAnalysis(`Error: ${error.message || 'Unable to disconnect Pollinations.'}`);
+    }
+  };
+
   const runAnalysis = async () => {
     if (!isReady) {
-      setAnalysis('Error: AI coach not ready. Please ensure FIREWORKS_BASE_URL is configured.');
+      setAnalysis('Connect the Pollinations AI coach first.');
       return;
     }
 
@@ -77,17 +97,28 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
               <div className="spinner"></div>
               <p>Connecting to AI coach...</p>
             </div>
+          ) : !coachStatus?.available ? (
+            <div className="coach-error">
+              <p>⚠️ AI coach is not configured</p>
+              <p className="small">The server needs a Pollinations App Key and token encryption secret.</p>
+            </div>
           ) : !isReady ? (
             <div className="coach-error">
-              <p>⚠️ AI coach unavailable</p>
-              <p className="small">Please ensure FIREWORKS_BASE_URL (and optionally FIREWORKS_API_KEY) are configured on the server</p>
+              <p>⚠️ Connect the user-pays AI coach</p>
+              <p className="small">Pollinations will show the consent screen with your budget. You pay for your own approved coaching usage.</p>
+              <button type="button" onClick={handleConnect} className="btn btn-primary">
+                Connect Pollinations
+              </button>
             </div>
           ) : (
             <>
               <button onClick={runAnalysis} className="btn btn-primary">
                 🔍 Start Analysis
               </button>
-              <p className="coach-note">Powered by Fireworks AI</p>
+              <button type="button" onClick={handleDisconnect} className="btn btn-secondary">
+                Disconnect
+              </button>
+              <p className="coach-note">Powered by Pollinations AI · user pays</p>
             </>
           )}
         </div>

@@ -235,6 +235,29 @@ export async function initDatabase() {
           )
         `);
 
+        // Pollinations BYOP OAuth state and encrypted delegated keys.
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS pollinations_oauth_states (
+            state VARCHAR(200) PRIMARY KEY,
+            user_id VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            code_verifier TEXT NOT NULL,
+            redirect_uri TEXT NOT NULL,
+            expires_at TIMESTAMP NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS pollinations_coach_tokens (
+            user_id VARCHAR(100) PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+            encrypted_token TEXT NOT NULL,
+            expires_at TIMESTAMP NOT NULL,
+            scope TEXT,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        await client.query('CREATE INDEX IF NOT EXISTS idx_pollinations_oauth_states_expires_at ON pollinations_oauth_states(expires_at)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_pollinations_coach_tokens_expires_at ON pollinations_coach_tokens(expires_at)');
+
         // Indexes
         await client.query('CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)');
         await client.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_games_code_unique ON games(game_code)');
