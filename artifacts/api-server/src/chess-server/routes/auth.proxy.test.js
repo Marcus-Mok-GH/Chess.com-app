@@ -7,14 +7,8 @@
  *      and 404s with an empty body).
  *   2. send-verification-otp / resend default body.type to "sign-in" when the
  *      caller omits it, while preserving an explicit override.
- *
- * Standalone — uses only `express` (already a dependency), Node's built-in
- * `http` for loopback calls, and a monkey-patched global `fetch` to capture
- * the proxy's outbound request. Run with:
- *   node --test routes/auth.proxy.test.js
  */
-import { test } from 'node:test';
-import assert from 'node:assert/strict';
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import http from 'node:http';
 import express from 'express';
 
@@ -29,7 +23,7 @@ const { default: authRouter } = await import('./auth.js');
 /** Queue a fetch mock; returns the list of recorded outbound calls. */
 function mockFetch(response) {
   const calls = [];
-  globalThis.fetch = async (url, opts) => {
+  vi.stubGlobal('fetch', async (url, opts) => {
     calls.push({ url: String(url), opts });
     return {
       ok: response.status >= 200 && response.status < 300,
@@ -39,7 +33,7 @@ function mockFetch(response) {
           ? response.body
           : JSON.stringify(response.body ?? {}),
     };
-  };
+  });
   return calls;
 }
 
@@ -82,56 +76,66 @@ function buildApp() {
 
 // --- tests ------------------------------------------------------------------
 
-test('send-verification-otp: strips /api/auth prefix from upstream URL', async () => {
-  const calls = mockFetch({ status: 200, body: { success: true } });
-  await loopback(
-    buildApp(),
-    'POST',
-    '/api/auth/email-otp/send-verification-otp',
-    { email: 'user@example.com' }
-  );
-  assert.ok(calls.length >= 1, 'proxy did not call fetch');
-  for (const c of calls) {
-    assert.ok(!c.url.includes('/api/auth/'), `upstream URL still has /api/auth/: ${c.url}`);
-    assert.ok(c.url.startsWith(BASE_URL), `upstream URL wrong base: ${c.url}`);
-  }
-});
+describe('Neon Auth proxy', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
 
-test('send-verification-otp: defaults body.type to "sign-in" when omitted', async () => {
-  const calls = mockFetch({ status: 200, body: { success: true } });
-  await loopback(
-    buildApp(),
-    'POST',
-    '/api/auth/email-otp/send-verification-otp',
-    { email: 'user@example.com' }
-  );
-  const outbound = JSON.parse(calls[0].opts.body);
-  assert.equal(outbound.type, 'sign-in');
-  assert.equal(outbound.email, 'user@example.com');
-});
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
 
-test('send-verification-otp: preserves explicit body.type override', async () => {
-  const calls = mockFetch({ status: 200, body: { success: true } });
-  await loopback(
-    buildApp(),
-    'POST',
-    '/api/auth/email-otp/send-verification-otp',
-    { email: 'u@example.com', type: 'email-verification' }
-  );
-  const outbound = JSON.parse(calls[0].opts.body);
-  assert.equal(outbound.type, 'email-verification');
-});
+  it('send-verification-otp: strips /api/auth prefix from upstream URL', async () => {
+    const calls = mockFetch({ status: 200, body: { success: true } });
+    await loopback(
+      buildApp(),
+      'POST',
+      '/api/auth/email-otp/send-verification-otp',
+      { email: 'user@example.com' }
+    );
+    expect(calls.length).toBeGreaterThanOrEqual(1);
+    for (const c of calls) {
+      expect(c.url).not.toContain('/api/auth/');
+      expect(c.url).toMatch(new RegExp(`^${BASE_URL}`));
+    }
+  });
 
-test('resend: defaults type to "sign-in" and strips /api/auth prefix', async () => {
-  const calls = mockFetch({ status: 200, body: { success: true } });
-  await loopback(
-    buildApp(),
-    'POST',
-    '/api/auth/email-otp/resend',
-    { email: 'u@example.com' }
-  );
-  assert.ok(calls.length >= 1, 'resend did not call fetch');
-  assert.ok(!calls[0].url.includes('/api/auth/'), `resend upstream has /api/auth/: ${calls[0].url}`);
-  const outbound = JSON.parse(calls[0].opts.body);
-  assert.equal(outbound.type, 'sign-in');
+  it('send-verification-otp: defaults body.type to "sign-in" when omitted', async () => {
+    const calls = mockFetch({ status: 200, body: { success: true } });
+    await loopback(
+      buildApp(),
+      'POST',
+      '/api/auth/email-otp/send-verification-otp',
+      { email: 'user@example.com' }
+    );
+    const outbound = JSON.parse(calls[0].opts.body);
+    expect(outbound.type).toBe('sign-in');
+    expect(outbound.email).toBe('user@example.com');
+  });
+
+  it('send-verification-otp: preserves explicit body.type override', async () => {
+    const calls = mockFetch({ status: 200, body: { success: true } });
+    await loopback(
+      buildApp(),
+      'POST',
+      '/api/auth/email-otp/send-verification-otp',
+      { email: 'u@example.com', type: 'email-verification' }
+    );
+    const outbound = JSON.parse(calls[0].opts.body);
+    expect(outbound.type).toBe('email-verification');
+  });
+
+  it('resend: defaults type to "sign-in" and strips /api/auth prefix', async () => {
+    const calls = mockFetch({ status: 200, body: { success: true } });
+    await loopback(
+      buildApp(),
+      'POST',
+      '/api/auth/email-otp/resend',
+      { email: 'u@example.com' }
+    );
+    expect(calls.length).toBeGreaterThanOrEqual(1);
+    expect(calls[0].url).not.toContain('/api/auth/');
+    const outbound = JSON.parse(calls[0].opts.body);
+    expect(outbound.type).toBe('sign-in');
+  });
 });

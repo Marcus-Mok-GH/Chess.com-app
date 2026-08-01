@@ -1,3 +1,4 @@
+import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import LoginModal from './LoginModal';
@@ -30,7 +31,7 @@ async function renderAtVerifyStep(userMock = makeDefaultUserMock(), props = {}) 
   render(<LoginModal onClose={onClose} {...props} />);
 
   // Fill email step and send code
-  fireEvent.change(screen.getByLabelText(/choose a username/i), { target: { value: 'testuser' } });
+  fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: 'testuser' } });
   fireEvent.change(screen.getByPlaceholderText(/email/i), { target: { value: 'test@example.com' } });
   fireEvent.click(screen.getByRole('button', { name: /send code/i }));
 
@@ -155,7 +156,7 @@ describe('LoginModal OTP – 6-digit code', () => {
 
     render(<LoginModal onClose={onClose} />);
 
-    fireEvent.change(screen.getByLabelText(/choose a username/i), { target: { value: 'testuser' } });
+    fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: 'testuser' } });
     fireEvent.change(screen.getByPlaceholderText(/email/i), { target: { value: 'test@example.com' } });
     fireEvent.click(screen.getByRole('button', { name: /send code/i }));
 

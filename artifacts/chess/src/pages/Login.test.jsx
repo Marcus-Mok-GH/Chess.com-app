@@ -1,3 +1,4 @@
+import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -56,15 +57,13 @@ describe('Login Page', () => {
       </MemoryRouter>
     );
 
-    const usernameInput = screen.getByLabelText(/username/i);
     const emailInput = screen.getByLabelText(/email/i);
     const sendCodeBtn = screen.getByRole('button', { name: /send code/i });
 
-    fireEvent.change(usernameInput, { target: { value: 'testuser' } });
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
     fireEvent.click(sendCodeBtn);
 
-    expect(requestOtp).toHaveBeenCalledWith({ email: 'test@example.com', username: 'testuser' });
+    expect(requestOtp).toHaveBeenCalledWith({ email: 'test@example.com' });
   });
 });
 
