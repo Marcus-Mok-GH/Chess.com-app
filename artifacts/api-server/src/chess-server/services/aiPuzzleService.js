@@ -23,7 +23,7 @@ const PUZZLE_AI_API_URL =
   process.env.COACH_API_URL ||
   "https://text.pollinations.ai/openai/chat/completions";
 const PUZZLE_AI_MODEL =
-  process.env.PUZZLE_AI_MODEL || process.env.COACH_MODEL || "openai";
+  process.env.PUZZLE_AI_MODEL || process.env.COACH_MODEL || "kimi-k3";
 const PUZZLE_AI_API_KEY =
   process.env.PUZZLE_AI_API_KEY ||
   process.env.COACH_API_KEY ||
