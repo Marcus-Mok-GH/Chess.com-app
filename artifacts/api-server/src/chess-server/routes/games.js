@@ -10,6 +10,30 @@ import { getOnlineGameKv } from '../kv/onlineGameKv.js';
 
 const router = express.Router();
 
+function getStoredMove(entry) {
+  if (entry && typeof entry === 'object') return entry;
+  if (typeof entry !== 'string') return null;
+  const trimmed = entry.trim();
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    try { return JSON.parse(trimmed); } catch { return null; }
+  }
+  return trimmed;
+}
+
+function replayStoredHistory(moveHistory) {
+  if (!Array.isArray(moveHistory)) return null;
+  const replay = new Chess();
+  try {
+    for (const entry of moveHistory) {
+      const move = getStoredMove(entry);
+      if (!move || !replay.move(move)) return null;
+    }
+    return replay;
+  } catch {
+    return null;
+  }
+}
+
 // Generate a unique game code
 function generateGameCode() {
   return crypto.randomBytes(4).toString('hex').toUpperCase();
@@ -650,7 +674,7 @@ router.post('/:gameId/end', async (req, res) => {
     if (!gameId || !playerId || !['white', 'black', 'draw'].includes(result)) {
       return errorResponse(res, 400, 'Invalid game result payload');
     }
-    if (!['checkmate', 'stalemate', 'draw', 'resignation', 'agreement', 'threefold_repetition', 'fivefold_repetition', 'insufficient_material', 'seventyfive_moves'].includes(reason)) {
+    if (!['checkmate', 'stalemate', 'draw', 'resignation', 'agreement', 'threefold_repetition', 'fivefold_repetition', 'insufficient_material', 'fifty_moves', 'seventyfive_moves'].includes(reason)) {
       return errorResponse(res, 400, 'Invalid game end reason');
     }
 
@@ -662,7 +686,7 @@ router.post('/:gameId/end', async (req, res) => {
       return errorResponse(res, 403, 'Session identity does not match player');
     }
     if (reason === 'draw' || reason === 'agreement') {
-      return errorResponse(res, 400, 'Use the draw agreement endpoint for agreed draws');
+      return errorResponse(res, 400, 'Use the socket draw flow for agreed draws');
     }
 
     const activeResult = await query('SELECT * FROM active_games WHERE game_id = $1', [gameId]);
@@ -685,8 +709,32 @@ router.post('/:gameId/end', async (req, res) => {
       const winner = chess.turn() === 'w' ? 'black' : 'white';
       if (!chess.isCheckmate() || result !== winner) return errorResponse(res, 422, 'Invalid checkmate result');
     }
-    if (['stalemate', 'insufficient_material', 'threefold_repetition', 'fivefold_repetition', 'seventyfive_moves'].includes(reason) && result !== 'draw') {
-      return errorResponse(res, 422, 'Invalid draw result');
+    if (reason === 'stalemate' && (!chess.isStalemate() || result !== 'draw')) {
+      return errorResponse(res, 422, 'Invalid stalemate result');
+    }
+    if (reason === 'insufficient_material' && (!chess.isInsufficientMaterial() || result !== 'draw')) {
+      return errorResponse(res, 422, 'Invalid insufficient-material result');
+    }
+    if (reason === 'threefold_repetition') {
+      const replay = replayStoredHistory(game.move_history);
+      if (!replay || replay.fen() !== game.fen || !replay.isThreefoldRepetition() || result !== 'draw') {
+        return errorResponse(res, 422, 'Invalid threefold-repetition result');
+      }
+    }
+    if (reason === 'fifty_moves' && (!chess.isDrawByFiftyMoves() || result !== 'draw')) {
+      return errorResponse(res, 422, 'Invalid fifty-move result');
+    }
+    if (reason === 'seventyfive_moves') {
+      const halfmoveClock = Number(chess.fen().split(/\s+/)[4]);
+      if (!Number.isInteger(halfmoveClock) || halfmoveClock < 150 || result !== 'draw') {
+        return errorResponse(res, 422, 'Invalid seventy-five-move result');
+      }
+    }
+    if (reason === 'fivefold_repetition') {
+      const replay = replayStoredHistory(game.move_history);
+      if (!replay || replay.fen() !== game.fen || !replay.isFivefoldRepetition?.() || result !== 'draw') {
+        return errorResponse(res, 422, 'Invalid fivefold-repetition result');
+      }
     }
     if (reason === 'resignation') {
       const winner = isWhite ? 'black' : 'white';

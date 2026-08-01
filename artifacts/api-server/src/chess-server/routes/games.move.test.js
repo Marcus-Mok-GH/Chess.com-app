@@ -299,7 +299,7 @@ describe('POST /api/games/:gameId/end', () => {
     const res = await loopback(app, 'POST', '/api/games/GAME1/end',
       { playerId: 'user_2', result: 'draw', reason: 'agreement' });
     expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/draw agreement/i);
+    expect(res.body.error).toMatch(/socket draw flow|draw agreement/i);
   });
 
   it('rejects a false checkmate result', async () => {

@@ -110,28 +110,36 @@ export function useGameCore(gameId, playerId, playerColor, settings) {
 
       if (newGame.isGameOver()) {
         let result2 = 'draw';
-        let reason = 'draw';
+        let reason = null;
         if (newGame.isCheckmate()) {
           result2 = newGame.turn() === 'w' ? 'black' : 'white';
           reason = 'checkmate';
         } else if (newGame.isStalemate()) {
           reason = 'stalemate';
+        } else if (newGame.isInsufficientMaterial()) {
+          reason = 'insufficient_material';
+        } else if (newGame.isThreefoldRepetition()) {
+          reason = 'threefold_repetition';
+        } else if (newGame.isDrawByFiftyMoves()) {
+          reason = 'fifty_moves';
         }
         setGameStatus('ended');
         setEndReason(reason);
         setWinner(result2);
-        try {
-          await api.endOnlineGame({
-            gameId,
-            playerId,
-            result: result2,
-            reason,
-            token: getAuthToken(),
-          });
-        } catch (endError) {
-          setMoveError(endError?.message || 'Game ended locally but could not be synchronized');
-          if (moveErrorTimeoutRef.current) clearTimeout(moveErrorTimeoutRef.current);
-          moveErrorTimeoutRef.current = setTimeout(() => setMoveError(''), 5000);
+        if (reason) {
+          try {
+            await api.endOnlineGame({
+              gameId,
+              playerId,
+              result: result2,
+              reason,
+              token: getAuthToken(),
+            });
+          } catch (endError) {
+            setMoveError(endError?.message || 'Game ended locally but could not be synchronized');
+            if (moveErrorTimeoutRef.current) clearTimeout(moveErrorTimeoutRef.current);
+            moveErrorTimeoutRef.current = setTimeout(() => setMoveError(''), 5000);
+          }
         }
         clearOnlineSession();
       }
