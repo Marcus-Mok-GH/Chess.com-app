@@ -160,10 +160,10 @@ export class GameService {
     try {
       const gameResult = await query(
         `UPDATE active_games
-         SET status = 'ended', updated_at = CURRENT_TIMESTAMP
-         WHERE game_id = $1
+         SET status = 'ended', result = $2, updated_at = CURRENT_TIMESTAMP
+         WHERE game_id = $1 AND status = 'playing'
          RETURNING *`,
-        [gameId]
+        [gameId, result]
       );
 
       if (gameResult.rows.length > 0) {

@@ -10,6 +10,30 @@ import { getOnlineGameKv } from '../kv/onlineGameKv.js';
 
 const router = express.Router();
 
+function getStoredMove(entry) {
+  if (entry && typeof entry === 'object') return entry;
+  if (typeof entry !== 'string') return null;
+  const trimmed = entry.trim();
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    try { return JSON.parse(trimmed); } catch { return null; }
+  }
+  return trimmed;
+}
+
+function replayStoredHistory(moveHistory) {
+  if (!Array.isArray(moveHistory)) return null;
+  const replay = new Chess();
+  try {
+    for (const entry of moveHistory) {
+      const move = getStoredMove(entry);
+      if (!move || !replay.move(move)) return null;
+    }
+    return replay;
+  } catch {
+    return null;
+  }
+}
+
 // Generate a unique game code
 function generateGameCode() {
   return crypto.randomBytes(4).toString('hex').toUpperCase();
@@ -221,6 +245,10 @@ router.post('/online/create', async (req, res) => {
     const { gameCode: requestedGameCode, playerId, playerName,
             playerColor = 'white', playerElo } = req.body;
     if (!playerId || !playerName) return errorResponse(res, 400, 'Player id and name are required');
+    if (!['white', 'black'].includes(playerColor)) return errorResponse(res, 400, 'Invalid player color');
+    if (playerElo != null && (!Number.isFinite(playerElo) || playerElo < 0 || playerElo > 4000)) {
+      return errorResponse(res, 400, 'Invalid player ELO');
+    }
 
     const gameCode = (requestedGameCode || generateGameCode()).toString().toUpperCase();
     const isWhite = playerColor === 'white';
@@ -265,6 +293,9 @@ router.post('/online/join', async (req, res) => {
     const { gameCode, playerId, playerName, playerElo } = req.body;
     if (!gameCode || !playerId || !playerName)
       return errorResponse(res, 400, 'Game code, player id, and name are required');
+    if (playerElo != null && (!Number.isFinite(playerElo) || playerElo < 0 || playerElo > 4000)) {
+      return errorResponse(res, 400, 'Invalid player ELO');
+    }
 
     const existing = await query('SELECT * FROM active_games WHERE game_id = $1',
       [gameCode.toUpperCase()]);
@@ -272,11 +303,13 @@ router.post('/online/join', async (req, res) => {
 
     const game = existing.rows[0];
     if (game.status !== 'waiting') return errorResponse(res, 400, 'Game already started or ended');
+    if (game.white_player_id === playerId || game.black_player_id === playerId) {
+      return errorResponse(res, 409, 'You are already assigned to this game');
+    }
 
     const isWhiteOpen = !game.white_player_id;
     const assignedColor = isWhiteOpen ? 'white' : 'black';
-
-    await query(
+    const updated = await query(
       `UPDATE active_games
        SET white_player_id = COALESCE(white_player_id, $2),
            black_player_id = COALESCE(black_player_id, $3),
@@ -285,12 +318,16 @@ router.post('/online/join', async (req, res) => {
            white_elo = COALESCE(white_elo, $6),
            black_elo = COALESCE(black_elo, $7),
            status = 'playing', updated_at = CURRENT_TIMESTAMP
-       WHERE game_id = $1`,
+       WHERE game_id = $1 AND status = 'waiting'
+         AND ((white_player_id IS NULL AND black_player_id IS NOT NULL)
+           OR (white_player_id IS NOT NULL AND black_player_id IS NULL))
+      RETURNING *`,
       [gameCode.toUpperCase(),
        isWhiteOpen ? playerId : null, isWhiteOpen ? null : playerId,
        isWhiteOpen ? playerName : null, isWhiteOpen ? null : playerName,
        isWhiteOpen ? playerElo || null : null, isWhiteOpen ? null : playerElo || null]
     );
+    if (!updated.rows[0]) return errorResponse(res, 409, 'Game was joined by another player');
 
     const kv = getOnlineGameKv();
     await kv.set(gameCode.toUpperCase(), {
@@ -414,7 +451,7 @@ router.get('/by-code/:gameCode', async (req, res) => {
     let dbRow = null;
     try {
       const activeResult = await query(
-        `SELECT game_id AS game_code, NULL AS result, fen, move_history,
+        `SELECT game_id AS game_code, result, fen, move_history,
                 game_mode, status, created_at,
                 white_player_id, black_player_id,
                 white_player_name, black_player_name,
@@ -534,7 +571,9 @@ router.post('/:gameId/move', async (req, res) => {
       return errorResponse(res, 409, 'Not your turn');
     }
 
-    const serverMoveCount = game.move_count || 0;
+    const serverMoveCount = Number.isInteger(game.move_count)
+      ? game.move_count
+      : (Array.isArray(game.move_history) ? game.move_history.length : 0);
     if (expectedMoveCount !== serverMoveCount) {
       return errorResponse(res, 409, 'Stale move: state changed since you last saw it');
     }
@@ -571,7 +610,7 @@ router.post('/:gameId/move', async (req, res) => {
       [chess.fen(), newHistory, gameId, serverMoveCount]
     );
 
-    if (!casResult.rows[0]) {
+    if (!casResult?.rows?.[0]) {
       return errorResponse(res, 409, 'Stale move: concurrent state change');
     }
 
@@ -624,6 +663,111 @@ router.post('/:gameId/move', async (req, res) => {
     });
   } catch (error) {
     return handleRouteError(res, error, 'Failed to submit move');
+  }
+});
+
+
+router.post('/:gameId/end', async (req, res) => {
+  try {
+    const gameId = (req.params.gameId || '').toUpperCase();
+    const { result, reason, playerId } = req.body;
+    if (!gameId || !playerId || !['white', 'black', 'draw'].includes(result)) {
+      return errorResponse(res, 400, 'Invalid game result payload');
+    }
+    if (!['checkmate', 'stalemate', 'draw', 'resignation', 'agreement', 'threefold_repetition', 'fivefold_repetition', 'insufficient_material', 'fifty_moves', 'seventyfive_moves'].includes(reason)) {
+      return errorResponse(res, 400, 'Invalid game end reason');
+    }
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) return errorResponse(res, 401, 'Authentication required');
+    const authUserId = await validateSession(authHeader.slice(7).trim());
+    const requestUid = userIdFromPlayerId(playerId);
+    if (authUserId == null || requestUid == null || String(authUserId) != String(requestUid)) {
+      return errorResponse(res, 403, 'Session identity does not match player');
+    }
+    if (reason === 'draw' || reason === 'agreement') {
+      return errorResponse(res, 400, 'Use the socket draw flow for agreed draws');
+    }
+
+    const activeResult = await query('SELECT * FROM active_games WHERE game_id = $1', [gameId]);
+    const game = activeResult.rows[0];
+    if (!game) return errorResponse(res, 404, 'Game not found');
+
+    const isWhite = userIdFromPlayerId(game.white_player_id) === requestUid;
+    const isBlack = userIdFromPlayerId(game.black_player_id) === requestUid;
+    if (!isWhite && !isBlack) return errorResponse(res, 403, 'Unauthorized — not your game');
+
+    if (game.status === 'ended') {
+      return res.json({ success: true, status: 'ended', result: game.result || null, alreadyEnded: true });
+    }
+    if (game.status !== 'playing') return errorResponse(res, 409, 'Game is not active');
+
+    let chess;
+    try { chess = new Chess(game.fen); } catch { return errorResponse(res, 500, 'Server game state invalid'); }
+
+    if (reason === 'checkmate') {
+      const winner = chess.turn() === 'w' ? 'black' : 'white';
+      if (!chess.isCheckmate() || result !== winner) return errorResponse(res, 422, 'Invalid checkmate result');
+    }
+    if (reason === 'stalemate' && (!chess.isStalemate() || result !== 'draw')) {
+      return errorResponse(res, 422, 'Invalid stalemate result');
+    }
+    if (reason === 'insufficient_material' && (!chess.isInsufficientMaterial() || result !== 'draw')) {
+      return errorResponse(res, 422, 'Invalid insufficient-material result');
+    }
+    if (reason === 'threefold_repetition') {
+      const replay = replayStoredHistory(game.move_history);
+      if (!replay || replay.fen() !== game.fen || !replay.isThreefoldRepetition() || result !== 'draw') {
+        return errorResponse(res, 422, 'Invalid threefold-repetition result');
+      }
+    }
+    if (reason === 'fifty_moves' && (!chess.isDrawByFiftyMoves() || result !== 'draw')) {
+      return errorResponse(res, 422, 'Invalid fifty-move result');
+    }
+    if (reason === 'seventyfive_moves') {
+      const halfmoveClock = Number(chess.fen().split(/\s+/)[4]);
+      if (!Number.isInteger(halfmoveClock) || halfmoveClock < 150 || result !== 'draw') {
+        return errorResponse(res, 422, 'Invalid seventy-five-move result');
+      }
+    }
+    if (reason === 'fivefold_repetition') {
+      const replay = replayStoredHistory(game.move_history);
+      if (!replay || replay.fen() !== game.fen || !replay.isFivefoldRepetition?.() || result !== 'draw') {
+        return errorResponse(res, 422, 'Invalid fivefold-repetition result');
+      }
+    }
+    if (reason === 'resignation') {
+      const winner = isWhite ? 'black' : 'white';
+      if (result !== winner) return errorResponse(res, 422, 'Invalid resignation result');
+    }
+
+    const updated = await query(
+      `UPDATE active_games SET status = 'ended', result = $2, updated_at = CURRENT_TIMESTAMP
+       WHERE game_id = $1 AND status = 'playing' RETURNING *`,
+      [gameId, result]
+    );
+    if (!updated?.rows?.[0]) {
+      const current = await query('SELECT status, result FROM active_games WHERE game_id = $1', [gameId]);
+      return res.json({ success: true, status: current?.rows?.[0]?.status || 'ended', result: current?.rows?.[0]?.result || null, alreadyEnded: true });
+    }
+
+    const finished = updated.rows[0];
+    await query(
+      `INSERT INTO games (
+        game_code, white_player_id, black_player_id, white_player_name, black_player_name,
+        result, fen, move_history, status, game_mode
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'completed', $9)
+      ON CONFLICT (game_code) DO UPDATE SET
+        result = EXCLUDED.result, fen = EXCLUDED.fen, move_history = EXCLUDED.move_history,
+        status = 'completed', updated_at = CURRENT_TIMESTAMP`,
+      [gameId, userIdFromPlayerId(finished.white_player_id), userIdFromPlayerId(finished.black_player_id),
+       finished.white_player_name, finished.black_player_name, result, finished.fen,
+       finished.move_history || [], finished.game_mode]
+    );
+    await getOnlineGameKv().del(gameId);
+    return res.json({ success: true, status: 'ended', result, alreadyEnded: false });
+  } catch (error) {
+    return handleRouteError(res, error, 'Failed to end game');
   }
 });
 

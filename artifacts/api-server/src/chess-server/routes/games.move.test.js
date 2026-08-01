@@ -291,6 +291,28 @@ describe('POST /api/games/:gameId/move', () => {
   });
 });
 
+
+describe('POST /api/games/:gameId/end', () => {
+  it('rejects an agreed draw through the automatic terminal endpoint', async () => {
+    const app = buildApp();
+    app.use('/api/games', gameRoutes);
+    const res = await loopback(app, 'POST', '/api/games/GAME1/end',
+      { playerId: 'user_2', result: 'draw', reason: 'agreement' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/socket draw flow|draw agreement/i);
+  });
+
+  it('rejects a false checkmate result', async () => {
+    const app = buildApp();
+    app.use('/api/games', gameRoutes);
+    query.mockResolvedValueOnce({ rows: [mockActiveGame()] });
+    const res = await loopback(app, 'POST', '/api/games/GAME1/end',
+      { playerId: 'user_2', result: 'black', reason: 'checkmate' });
+    expect(res.status).toBe(422);
+    expect(res.body.error).toMatch(/checkmate/i);
+  });
+});
+
 describe('GET /api/games/by-code/:gameCode — active_games checked first', () => {
   it('returns active_games row even when a stale games row exists', async () => {
     const app = buildApp();
