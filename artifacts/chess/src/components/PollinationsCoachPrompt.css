@@ -1,0 +1,126 @@
+.coach-prompt-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 11000;
+  padding: 1rem;
+  backdrop-filter: blur(6px);
+}
+
+.coach-prompt-modal {
+  background: #262421;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 460px;
+  padding: 2rem;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+  border: 1px solid #403d39;
+}
+
+.coach-prompt-header h2 {
+  color: #fff;
+  margin: 0 0 1rem;
+  font-size: 1.4rem;
+}
+
+.coach-prompt-body {
+  margin-bottom: 1.5rem;
+}
+
+.coach-prompt-desc {
+  color: #bababa;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin: 0 0 1rem;
+}
+
+.coach-prompt-list {
+  color: #9a978f;
+  font-size: 0.88rem;
+  line-height: 1.7;
+  padding-left: 1.2rem;
+  margin: 0 0 1rem;
+}
+
+.coach-prompt-list li {
+  margin-bottom: 0.35rem;
+}
+
+.coach-prompt-error {
+  display: block;
+  color: #fa412d;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.coach-prompt-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.coach-prompt-actions .btn {
+  padding: 0.75rem 1rem;
+  font-weight: bold;
+  font-size: 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.1s, opacity 0.2s;
+}
+
+.coach-prompt-actions .btn:active {
+  transform: scale(0.98);
+}
+
+.coach-prompt-actions .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.coach-prompt-actions .btn-primary {
+  background: #81b64c;
+  color: #fff;
+}
+
+.coach-prompt-actions .btn-primary:hover:not(:disabled) {
+  background: #95bb4a;
+}
+
+.coach-prompt-actions .btn-ghost {
+  background: transparent;
+  color: #bababa;
+  border: 1px solid #403d39;
+}
+
+.coach-prompt-actions .btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.coach-prompt-actions .btn-full {
+  width: 100%;
+}
+
+@media (max-width: 480px) {
+  .coach-prompt-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .coach-prompt-modal {
+    padding: 1.5rem;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+
+  .coach-prompt-header h2 {
+    font-size: 1.25rem;
+  }
+}

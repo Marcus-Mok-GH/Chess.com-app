@@ -521,6 +521,10 @@ function ChessGame(
 
   const requestCoachingFeedback = useCallback(async (fenBefore, move, history) => {
     if (!selectedBotRef.current.isCoach) return;
+    if (!user) {
+      navigate('/login');
+      return;
+    }
     
     setIsCoachingLoading(true);
     setBotMessage('Analyzing your move...');
@@ -534,11 +538,15 @@ function ChessGame(
       }
     } catch (error) {
       console.error('[ChessGame] Coaching feedback error:', error);
-      setBotMessage('Analysis unavailable');
+      if (error.message?.includes('Log in') || error.message?.includes('auth')) {
+        navigate('/login');
+      } else {
+        setBotMessage('Analysis unavailable');
+      }
     } finally {
       setIsCoachingLoading(false);
     }
-  }, []);
+  }, [user, navigate]);
 
   const resolvePromotion = useCallback((from, to, pieceType) => {
     const isPawn = pieceType === 'p';
