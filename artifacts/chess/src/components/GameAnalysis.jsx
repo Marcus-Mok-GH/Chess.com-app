@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
-import { analyzeGame, isCoachAIAvailable } from '../engine/coach/coachAI';
+import { useNavigate } from 'react-router-dom';
+import { useUser } from '../contexts/UserContext';
+import { analyzeGame, isCoachAIAvailable, connectCoach, disconnectCoach } from '../engine/coach/coachAI';
 import './GameAnalysis.css';
 
 export default function GameAnalysis({ moveHistory, gameId = null, onClose, variant = 'modal' }) {
+  const navigate = useNavigate();
+  const { user } = useUser();
   const [analysis, setAnalysis] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isReady, setIsReady] = useState(false);
@@ -26,7 +30,8 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
 
   const runAnalysis = async () => {
     if (!isReady) {
-      setAnalysis('Error: AI coach not ready. Please ensure FIREWORKS_BASE_URL is configured.');
+      if (!user) { navigate('/login'); return; }
+      setAnalysis('Error: AI coach not ready.');
       return;
     }
 
@@ -78,16 +83,24 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
               <p>Connecting to AI coach...</p>
             </div>
           ) : !isReady ? (
-            <div className="coach-error">
-              <p>⚠️ AI coach unavailable</p>
-              <p className="small">Please ensure FIREWORKS_BASE_URL (and optionally FIREWORKS_API_KEY) are configured on the server</p>
-            </div>
+            !user ? (
+              <div className="coach-error">
+                <p>🔒 Log in to use AI coach</p>
+                <p className="small">Sign in to access Pollinations AI coaching.</p>
+                <button onClick={() => navigate('/login')} className="btn btn-primary" style={{ marginTop: '8px' }}>Log In</button>
+              </div>
+            ) : (
+              <div className="coach-error">
+                <p>⚠️ AI coach unavailable</p>
+                <p className="small">The coach service is not configured. Contact the admin.</p>
+              </div>
+            )
           ) : (
             <>
               <button onClick={runAnalysis} className="btn btn-primary">
                 🔍 Start Analysis
               </button>
-              <p className="coach-note">Powered by Fireworks AI</p>
+              <p className="coach-note">Powered by Pollinations AI</p>
             </>
           )}
         </div>
