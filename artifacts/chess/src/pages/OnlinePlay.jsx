@@ -65,6 +65,7 @@ export default function OnlinePlay() {
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [copiedGameCode, setCopiedGameCode] = useState(false);
+  const copyFeedbackTimeoutRef = useRef(null);
   const pendingCreateRef = useRef(false);
   const pendingJoinRef = useRef(false);
 
@@ -399,11 +400,32 @@ export default function OnlinePlay() {
     try {
       await navigator.clipboard.writeText(gameId);
       setCopiedGameCode(true);
-      window.setTimeout(() => setCopiedGameCode(false), 1800);
+      if (copyFeedbackTimeoutRef.current) window.clearTimeout(copyFeedbackTimeoutRef.current);
+      copyFeedbackTimeoutRef.current = window.setTimeout(() => {
+        setCopiedGameCode(false);
+        copyFeedbackTimeoutRef.current = null;
+      }, 1800);
     } catch {
       setCopiedGameCode(false);
     }
   }, [gameId]);
+
+  useEffect(() => () => {
+    if (copyFeedbackTimeoutRef.current) window.clearTimeout(copyFeedbackTimeoutRef.current);
+  }, []);
+
+  const handleCancelFriendlyGame = useCallback(() => {
+    if (gameId && playerId) {
+      api.leaveOnlineGame({ gameCode: gameId, playerId }).catch(() => {});
+      socketService.leaveGame(gameId, playerId);
+    }
+    setGameMode(null);
+    setGameId(null);
+    setOpponentInfo(null);
+    setIsWaiting(false);
+    clearGameSession();
+    setView('lobby');
+  }, [gameId, playerId, clearGameSession]);
 
   const handleLeaveGame = useCallback(() => {
     if (gameId && playerId) {
@@ -500,7 +522,7 @@ export default function OnlinePlay() {
             </button>
             <div className="waiting-divider" aria-hidden="true"><span>or</span></div>
             <p className="waiting-footnote">Keep this window open while your opponent joins.</p>
-            <button className="btn btn-ghost" onClick={() => { setView('lobby'); setIsWaiting(false); }}>Cancel game</button>
+            <button className="btn btn-ghost" onClick={handleCancelFriendlyGame}>Cancel game</button>
           </div>
         </div>
       )}

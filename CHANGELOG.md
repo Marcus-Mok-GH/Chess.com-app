@@ -1,5 +1,6 @@
-## 2026-08-01
+## [2026-08-01] - Friendly Game Code Request UI
 
+### Changed
 - Redesigned the friendly-game code request panel with a responsive Chess.com-inspired visual treatment, clearer invite guidance, and one-click copy feedback.
 
 ## [2026-07-31] - Test Suite Expansion and Coverage
@@ -17,7 +18,9 @@
 ### Verified
 - `pnpm run test`: 163 tests passed across 17 test files.
 
----
+## [2026-07-31] - Key-Value Persistence Packaging and Coverage
+
+### Added
 - Added normalization coverage for JSON-encoded KV responses and malformed stored values.
 
 ### Fixed

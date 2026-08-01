@@ -8,7 +8,7 @@
  *   2. send-verification-otp / resend default body.type to "sign-in" when the
  *      caller omits it, while preserving an explicit override.
  */
-import { describe, expect, it, beforeEach, vi } from 'vitest';
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import http from 'node:http';
 import express from 'express';
 
@@ -79,6 +79,10 @@ function buildApp() {
 describe('Neon Auth proxy', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('send-verification-otp: strips /api/auth prefix from upstream URL', async () => {

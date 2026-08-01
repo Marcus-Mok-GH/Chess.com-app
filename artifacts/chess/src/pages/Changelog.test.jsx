@@ -1,5 +1,5 @@
 import React from 'react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { fireEvent, render, waitFor } from '@testing-library/react';
 import Changelog from './Changelog';
@@ -7,6 +7,10 @@ import Changelog from './Changelog';
 describe('Changelog page', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('loads and renders changelog entries from /CHANGELOG.md', async () => {

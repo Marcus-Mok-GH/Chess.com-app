@@ -472,7 +472,7 @@
   z-index: 1;
   display: block;
   color: #d8f0b1;
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  font-family: 'SF Mono', Monaco, Inconsolata, 'Fira Code', monospace;
   font-size: clamp(1.5rem, 6vw, 2rem);
   font-weight: 800;
   letter-spacing: 0.16em;
