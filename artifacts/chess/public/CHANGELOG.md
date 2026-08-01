@@ -1,3 +1,14 @@
+## [2026-08-01] - Stable Online Game Completion and Join Races
+
+### Fixed
+
+- Added an idempotent server-authoritative terminal-game endpoint so checkmate, stalemate, resignation, and draw outcomes persist for both players.
+- Prevented duplicate socket terminal events and concurrent friendly-game joins from corrupting seats.
+- Added active-game result and move-count schema compatibility and ignored stale real-time snapshots on the client.
+- Added strict terminal-result validation so clients cannot claim an agreed draw through the automatic game-end path.
+- Made terminal completion tolerate an already-lost CAS response without throwing a 500.
+- Added self-healing migration for move_count on databases created before the online move protocol.
+
 ## [2026-07-31] - Key-Value Persistence Packaging and Coverage
 
 ### Added

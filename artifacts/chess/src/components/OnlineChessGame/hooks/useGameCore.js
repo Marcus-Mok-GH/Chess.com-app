@@ -120,6 +120,19 @@ export function useGameCore(gameId, playerId, playerColor, settings) {
         setGameStatus('ended');
         setEndReason(reason);
         setWinner(result2);
+        try {
+          await api.endOnlineGame({
+            gameId,
+            playerId,
+            result: result2,
+            reason,
+            token: getAuthToken(),
+          });
+        } catch (endError) {
+          setMoveError(endError?.message || 'Game ended locally but could not be synchronized');
+          if (moveErrorTimeoutRef.current) clearTimeout(moveErrorTimeoutRef.current);
+          moveErrorTimeoutRef.current = setTimeout(() => setMoveError(''), 5000);
+        }
         clearOnlineSession();
       }
 

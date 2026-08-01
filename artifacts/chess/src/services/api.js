@@ -135,6 +135,16 @@ class ApiService {
     }).finally(() => clearTimeout(timeoutId));
   }
 
+  async endOnlineGame({ gameId, playerId, result, reason, token }) {
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return this.request(`/games/${encodeURIComponent(gameId)}/end`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ playerId, result, reason }),
+    });
+  }
+
   async getEngineMove({ fen, bot }) {
     return this.request('/engine/move', {
       method: 'POST',

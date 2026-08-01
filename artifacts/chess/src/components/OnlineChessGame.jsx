@@ -111,6 +111,8 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
 
     const handleGameState = (data) => {
       const history = normalizeMoveHistory(data.moveHistory);
+      if (history.length < appliedMoveCountRef.current) return;
+      appliedMoveCountRef.current = history.length;
       setGame(buildGameFromHistory(history, data.fen));
       setMoveHistory(history);
       const status = data.status === 'ended' || data.status === 'completed' ? 'ended' : (data.status || 'playing');
@@ -121,6 +123,8 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
 
     const handleMoveMade = (data) => {
       const history = normalizeMoveHistory(data.moveHistory);
+      if (history.length < appliedMoveCountRef.current) return;
+      appliedMoveCountRef.current = history.length;
       if (data.playerId !== playerId) {
         setDrawOffered(false);
         const lastMove = history[history.length - 1];

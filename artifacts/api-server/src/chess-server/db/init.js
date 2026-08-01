@@ -175,6 +175,7 @@ export async function initDatabase() {
             black_player_name VARCHAR(50),
             white_elo INTEGER,
             black_elo INTEGER,
+            result VARCHAR(20),
             fen TEXT DEFAULT 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
             move_history TEXT[] DEFAULT '{}',
             status VARCHAR(20) DEFAULT 'waiting',
@@ -194,6 +195,7 @@ export async function initDatabase() {
         await client.query('ALTER TABLE active_games ADD COLUMN IF NOT EXISTS black_player_name VARCHAR(50)');
         await client.query('ALTER TABLE active_games ADD COLUMN IF NOT EXISTS white_elo INTEGER');
         await client.query('ALTER TABLE active_games ADD COLUMN IF NOT EXISTS black_elo INTEGER');
+        await client.query('ALTER TABLE active_games ADD COLUMN IF NOT EXISTS result VARCHAR(20)');
         await client.query("ALTER TABLE active_games ADD COLUMN IF NOT EXISTS fen TEXT DEFAULT 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'");
         await client.query("ALTER TABLE active_games ADD COLUMN IF NOT EXISTS move_history TEXT[] DEFAULT '{}'");
         await client.query("ALTER TABLE active_games ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'waiting'");

@@ -264,7 +264,8 @@ export function setupGameHandlers(io, socket) {
       return;
     }
 
-    await service.endGame(gameId, result);
+    const endedGame = await service.endGame(gameId, result);
+    if (!endedGame) return;
 
     io.to(gameId).emit('game_ended', {
       gameId,
@@ -302,7 +303,8 @@ export function setupGameHandlers(io, socket) {
 
     const winner = auth.color === 'white' ? 'black' : 'white';
 
-    await service.endGame(gameId, winner);
+    const endedGame = await service.endGame(gameId, winner);
+    if (!endedGame) return;
 
     io.to(gameId).emit('game_ended', {
       gameId,
@@ -372,7 +374,8 @@ export function setupGameHandlers(io, socket) {
     }
 
     if (accepted) {
-      await service.endGame(gameId, 'draw');
+      const endedGame = await service.endGame(gameId, 'draw');
+      if (!endedGame) return;
 
       io.to(gameId).emit('game_ended', {
         gameId,
