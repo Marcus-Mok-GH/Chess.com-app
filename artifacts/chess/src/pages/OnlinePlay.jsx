@@ -64,6 +64,7 @@ export default function OnlinePlay() {
   const [isWaiting, setIsWaiting] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
+  const [copiedGameCode, setCopiedGameCode] = useState(false);
   const pendingCreateRef = useRef(false);
   const pendingJoinRef = useRef(false);
 
@@ -393,6 +394,17 @@ export default function OnlinePlay() {
     }
   }, [joinCode, isLoggedIn, user, setError, persistGameSession, navigate]);
 
+  const handleCopyGameCode = useCallback(async () => {
+    if (!gameId || !navigator.clipboard) return;
+    try {
+      await navigator.clipboard.writeText(gameId);
+      setCopiedGameCode(true);
+      window.setTimeout(() => setCopiedGameCode(false), 1800);
+    } catch {
+      setCopiedGameCode(false);
+    }
+  }, [gameId]);
+
   const handleLeaveGame = useCallback(() => {
     if (gameId && playerId) {
       api.leaveOnlineGame({ gameCode: gameId, playerId }).catch(() => {});
@@ -463,10 +475,32 @@ export default function OnlinePlay() {
       )}
       {view === 'waiting' && (
         <div className="waiting-container">
-          <div className="waiting-content">
-            <h2>Waiting for Opponent</h2>
-            <div className="game-code-box">Code: {gameId}</div>
-            <button className="btn btn-ghost" onClick={() => { setView('lobby'); setIsWaiting(false); }}>Cancel</button>
+          <div className="waiting-content code-request-panel">
+            <div className="waiting-status" aria-hidden="true">
+              <span className="waiting-status-dot" />
+              <span>Game ready</span>
+            </div>
+            <h2>Invite a friend to play</h2>
+            <p className="waiting-description">Share this code with your opponent. We’ll start the game as soon as they join.</p>
+            <div className="game-code-box">
+              <div className="game-code-heading">
+                <span className="game-code-label">Game code</span>
+                <span className="game-code-hint">One-time invite</span>
+              </div>
+              <span className="game-code-value" aria-label={`Game code ${gameId}`}>{gameId}</span>
+            </div>
+            <button
+              className={`copy-code-btn${copiedGameCode ? ' copied' : ''}`}
+              type="button"
+              onClick={handleCopyGameCode}
+              aria-live="polite"
+            >
+              <span aria-hidden="true">{copiedGameCode ? '✓' : '⧉'}</span>
+              {copiedGameCode ? 'Code copied' : 'Copy game code'}
+            </button>
+            <div className="waiting-divider" aria-hidden="true"><span>or</span></div>
+            <p className="waiting-footnote">Keep this window open while your opponent joins.</p>
+            <button className="btn btn-ghost" onClick={() => { setView('lobby'); setIsWaiting(false); }}>Cancel game</button>
           </div>
         </div>
       )}
