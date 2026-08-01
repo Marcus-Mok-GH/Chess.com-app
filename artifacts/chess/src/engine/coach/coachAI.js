@@ -1,129 +1,98 @@
 import { API_BASE_URL, isNetworkError } from '../../services/apiBase';
 
-let coachAvailable = null;
+let coachStatus = null;
 
-/**
- * Check if the AI coach is available
- */
-export async function isCoachAIAvailable() {
-  if (coachAvailable !== null) {
-    return coachAvailable;
+function getToken() {
+  try { return localStorage.getItem('chess_user_token'); } catch { return null; }
+}
+
+function authHeaders() {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function coachRequest(path, options = {}) {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...authHeaders(), ...options.headers },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(data.error?.message || data.error || `Coach request failed (${response.status})`);
+    error.status = response.status;
+    throw error;
   }
-  
+  return data;
+}
+
+export async function getCoachStatus(force = false) {
+  if (coachStatus && !force) return coachStatus;
   try {
-    const response = await fetch(`${API_BASE_URL}/coach/status`);
-    if (response.ok) {
-      const data = await response.json();
-      coachAvailable = data.available;
-      return coachAvailable;
-    }
+    coachStatus = await coachRequest('/coach/status', { headers: { Accept: 'application/json' } });
+    return coachStatus;
   } catch (error) {
     console.error('[CoachAI] Status check failed:', error);
+    coachStatus = { available: false, connected: false, billing: 'user-pays' };
+    return coachStatus;
   }
-  
-  coachAvailable = false;
-  return false;
 }
 
-/**
- * Get AI coaching feedback for a player's move
- * Uses Fireworks AI model via server API
- */
+export async function isCoachAIAvailable() {
+  const status = await getCoachStatus();
+  return Boolean(status.available && status.connected);
+}
+
+export function getCoachConnectionUrl() {
+  return `${API_BASE_URL}/coach/connect`;
+}
+
+export async function connectCoach() {
+  const data = await coachRequest('/coach/connect', { method: 'POST', body: '{}' });
+  if (!data.authorizationUrl) throw new Error('Pollinations connection URL was not returned.');
+  window.location.assign(data.authorizationUrl);
+  return data.authorizationUrl;
+}
+
+export async function disconnectCoach() {
+  const result = await coachRequest('/coach/disconnect', { method: 'POST', body: '{}' });
+  coachStatus = { ...coachStatus, connected: false };
+  return result;
+}
+
 export async function getCoachingFeedback(fen, playerMove, moveHistory, onStream = null) {
   try {
-    const response = await fetch(`${API_BASE_URL}/coach/feedback`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fen, playerMove, moveHistory })
+    const data = await coachRequest('/coach/feedback', {
+      method: 'POST', body: JSON.stringify({ fen, playerMove, moveHistory }),
     });
-
-    if (!response.ok) {
-      console.error('[CoachAI] Feedback request failed:', response.status);
-      return null;
-    }
-
-    const data = await response.json();
-    const feedback = data.feedback || null;
-    
-    if (onStream && feedback) {
-      onStream(feedback);
-    }
-    
-    return feedback;
+    if (onStream && data.feedback) onStream(data.feedback);
+    return data.feedback || null;
   } catch (error) {
-    if (isNetworkError(error)) {
-      console.error('[CoachAI] Feedback network error:', error.message);
-      return null;
-    }
-    console.error('[CoachAI] Feedback error:', error);
-    return null;
+    if (!isNetworkError(error)) console.error('[CoachAI] Feedback error:', error);
+    throw error;
   }
 }
 
-/**
- * Get AI explanation for the coach's move
- * Uses Fireworks AI model via server API
- */
 export async function explainCoachMove(fenBefore, move, fenAfter, onStream = null) {
   try {
-    const response = await fetch(`${API_BASE_URL}/coach/explain`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fenBefore, move, fenAfter })
+    const data = await coachRequest('/coach/explain', {
+      method: 'POST', body: JSON.stringify({ fenBefore, move, fenAfter }),
     });
-
-    if (!response.ok) {
-      console.error('[CoachAI] Explain request failed:', response.status);
-      return null;
-    }
-
-    const data = await response.json();
-    const explanation = data.explanation || null;
-    
-    if (onStream && explanation) {
-      onStream(explanation);
-    }
-    
-    return explanation;
+    if (onStream && data.explanation) onStream(data.explanation);
+    return data.explanation || null;
   } catch (error) {
-    if (isNetworkError(error)) {
-      console.error('[CoachAI] Explain network error:', error.message);
-      return null;
-    }
-    console.error('[CoachAI] Explain error:', error);
-    return null;
+    if (!isNetworkError(error)) console.error('[CoachAI] Explain error:', error);
+    throw error;
   }
 }
 
-/**
- * Analyze a complete game with move-by-move reviews
- * Uses Fireworks AI model via server API
- */
 export async function analyzeGame(moveHistory, result, gameId = null) {
   try {
-    const response = await fetch(`${API_BASE_URL}/coach/analyze`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        moveHistory,
-        result,
-        gameId
-      })
+    const data = await coachRequest('/coach/analyze', {
+      method: 'POST', body: JSON.stringify({ moveHistory, result, gameId }),
     });
-
-    if (!response.ok) {
-      console.error('[CoachAI] Analyze request failed:', response.status);
-      return null;
-    }
-
-    const data = await response.json();
     return data.analysis || null;
   } catch (error) {
-    if (isNetworkError(error)) {
-      console.error('[CoachAI] Analyze network error:', error.message);
-      return null;
-    }
-    console.error('[CoachAI] Analyze error:', error);
-    return null;
+    if (!isNetworkError(error)) console.error('[CoachAI] Analyze error:', error);
+    throw error;
   }
 }
