@@ -1,3 +1,11 @@
+## [2026-08-02] - Conservative Cleanup Refactor
+
+### Changed
+- Removed unused `useUser` import and unused `logout` context access from `GuestBlocked.jsx`.
+- Removed unused default `React` imports from the ELO/Win rate chart components while retaining named imports.
+- Removed the debug `console.log` block from `GameHistory.handleViewGame`, retaining move normalization and navigation.
+- Hoisted the `unable to connect` error check into a single computed value in `LobbyUI.jsx`.
+
 ## [2026-08-02] - Pollinations Coach Prompt Flow
 
 ### Fixed

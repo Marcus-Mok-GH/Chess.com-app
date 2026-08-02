@@ -60,17 +60,6 @@ export default function GameHistory() {
   }, [user, isOnline]);
 
   const handleViewGame = (game) => {
-    // Debug logging to help diagnose grey screen issues
-    console.log('[GameHistory] Viewing game:', {
-      gameCode: game.game_code,
-      moveHistoryType: typeof game.move_history,
-      moveHistoryIsArray: Array.isArray(game.move_history),
-      moveHistoryLength: game.move_history?.length,
-      moveHistoryRaw: game.move_history,
-      result: game.result,
-      gameMode: game.game_mode,
-    });
-
     // Ensure move_history is an array before navigation
     let moveHistory = normalizeMoveHistory(game.move_history);
 
