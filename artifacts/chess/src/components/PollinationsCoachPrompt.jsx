@@ -4,18 +4,20 @@ import './PollinationsCoachPrompt.css';
 
 const COACH_PROMPT_SHOWN_KEY = 'chess_coach_prompt_seen';
 
-export default function PollinationsCoachPrompt({ onConnected }) {
+export default function PollinationsCoachPrompt({ onConnected, onBeforeConnect }) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState('');
 
   function markSeen() {
     try { localStorage.setItem(COACH_PROMPT_SHOWN_KEY, '1'); } catch {}
+    onConnected?.(false);
   }
 
   async function handleConnect() {
     setIsConnecting(true);
     setError('');
     try {
+      await onBeforeConnect?.();
       await connectCoach();
       // After redirect, we can't detect completion here — the callback handles it.
       // Mark as seen so we don't show again on return.
@@ -59,7 +61,7 @@ export default function PollinationsCoachPrompt({ onConnected }) {
           <button
             type="button"
             className="btn btn-ghost btn-full"
-            onClick={() => { markSeen(); onConnected?.(false); }}
+            onClick={markSeen}
           >
             Not now
           </button>

@@ -46,6 +46,17 @@ class ApiService {
     });
   }
 
+  async getUserSettings(username) {
+    return this.request(`/users/${encodeURIComponent(username)}/settings`);
+  }
+
+  async updateUserSettings(username, settings) {
+    return this.request(`/users/${encodeURIComponent(username)}/settings`, {
+      method: 'POST',
+      body: JSON.stringify({ settings }),
+    });
+  }
+
   async getUser(username) {
     return this.request(`/users/${encodeURIComponent(username)}`);
   }

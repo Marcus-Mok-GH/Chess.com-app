@@ -1,10 +1,12 @@
-import { useEffect, Suspense, lazy } from 'react'
+import { useEffect, useState, Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Link, Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom'
 import { UserProvider, useUser } from './contexts/UserContext'
 import { SettingsProvider } from './contexts/SettingsContext'
 import { FeedbackPanel } from './components/FeedbackPanel'
 import ErrorBoundary from './components/ErrorBoundary'
-import SetUsernameModal from "./components/SetUsernameModal"
+import SetUsernameModal from './components/SetUsernameModal'
+import PollinationsCoachPrompt from './components/PollinationsCoachPrompt'
+import api from './services/api'
 import { usePuter } from './hooks/usePuter'
 import './App.css'
 
@@ -171,6 +173,52 @@ function GlobalVerificationGuard() {
   return null;
 }
 
+function PollinationsCoachGate() {
+  const { user, isLoggedIn, isLoading } = useUser();
+  const [showPrompt, setShowPrompt] = useState(false);
+  const [checked, setChecked] = useState(false);
+
+  useEffect(() => {
+    if (isLoading || !isLoggedIn || !user?.username || checked) return;
+    let cancelled = false;
+    async function checkPrompt() {
+      try {
+        const settings = await api.getUserSettings(user.username);
+        const seen = Boolean(settings?.settings?.pollinationsCoachPromptSeen);
+        if (!cancelled && !seen) setShowPrompt(true);
+      } catch (error) {
+        console.error('[PollinationsCoachGate] Failed to load prompt state:', error);
+      } finally {
+        if (!cancelled) setChecked(true);
+      }
+    }
+    checkPrompt();
+    return () => { cancelled = true; };
+  }, [checked, isLoading, isLoggedIn, user?.username]);
+
+  if (!showPrompt) return null;
+
+  async function markPromptSeen() {
+    try {
+      const current = await api.getUserSettings(user.username);
+      await api.updateUserSettings(user.username, {
+        ...(current?.settings || {}),
+        pollinationsCoachPromptSeen: true,
+      });
+    } catch (error) {
+      console.error('[PollinationsCoachGate] Failed to persist prompt state:', error);
+    }
+    setShowPrompt(false);
+  }
+
+  return (
+    <PollinationsCoachPrompt
+      onBeforeConnect={markPromptSeen}
+      onConnected={markPromptSeen}
+    />
+  );
+}
+
 function AppShell() {
   const location = useLocation();
   const isGameRoute = location.pathname.startsWith('/game/') || 
@@ -197,6 +245,7 @@ export default function App() {
           <SettingsProvider>
             <BrowserRouter>
               <SetUsernameModal />
+              <PollinationsCoachGate />
               <GlobalVerificationGuard />
               <Routes>
                 <Route path="/" element={<Suspense fallback={<RouteFallback />}><Landing /></Suspense>} />

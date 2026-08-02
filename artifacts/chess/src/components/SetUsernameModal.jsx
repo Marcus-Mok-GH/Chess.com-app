@@ -1,34 +1,14 @@
 import { useState } from 'react';
 import { useUser } from '../contexts/UserContext';
-import { getCoachStatus } from '../engine/coach/coachAI';
-import PollinationsCoachPrompt from './PollinationsCoachPrompt';
 import './SetUsernameModal.css';
-
-const COACH_PROMPT_SHOWN_KEY = 'chess_coach_prompt_seen';
 
 export default function SetUsernameModal() {
   const { user, updateUsername, logout } = useUser();
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showCoachPrompt, setShowCoachPrompt] = useState(false);
 
   if (!user?.needsUsername) return null;
-
-  async function checkAndShowCoachPrompt() {
-    try {
-      const status = await getCoachStatus(false);
-      if (status?.available && !status?.connected) {
-        const hasSeen = localStorage.getItem(COACH_PROMPT_SHOWN_KEY);
-        if (!hasSeen) {
-          setShowCoachPrompt(true);
-          return;
-        }
-      }
-    } catch {}
-    // No prompt needed — clear the modal
-    try { window.__setUsernameDone?.(); } catch {}
-  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -49,8 +29,6 @@ export default function SetUsernameModal() {
       const result = await updateUsername(trimmed);
       if (result.error) {
         setError(result.error);
-      } else {
-        await checkAndShowCoachPrompt();
       }
     } catch (err) {
       setError('Something went wrong. Please try again.');
@@ -60,17 +38,7 @@ export default function SetUsernameModal() {
   };
 
   return (
-    <>
-      {showCoachPrompt && (
-        <PollinationsCoachPrompt onConnected={(connected) => {
-          try { localStorage.setItem(COACH_PROMPT_SHOWN_KEY, '1'); } catch {}
-          setShowCoachPrompt(false);
-          if (!connected) {
-            try { window.__setUsernameDone?.(); } catch {}
-          }
-        }} />
-      )}
-      <div className="username-overlay">
+    <div className="username-overlay">
         <div className="username-modal">
           <div className="username-header">
             <h2>👟 One last step!</h2>
@@ -113,6 +81,5 @@ export default function SetUsernameModal() {
           </form>
         </div>
       </div>
-    </>
   );
 }
