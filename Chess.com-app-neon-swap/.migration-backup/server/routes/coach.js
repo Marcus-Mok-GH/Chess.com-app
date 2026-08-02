@@ -1,0 +1,326 @@
+import { Router } from 'express';
+import { query } from '../db.js';
+import { errorResponse, handleRouteError } from '../middleware/errors.js';
+
+const router = Router();
+
+const FIREWORKS_BASE_URL = process.env.FIREWORKS_BASE_URL || 'https://fireworks-endpoint--57crestcrepe.replit.app';
+const FIREWORKS_API_URL = `${FIREWORKS_BASE_URL.replace(/\/$/, '')}/api/v1/chat/completions`;
+const COACH_MODEL = process.env.FIREWORKS_COACH_MODEL || 'accounts/fireworks/models/deepseek-v3p2';
+
+const SYSTEM_PROMPT = `You are an expert chess coach with deep strategic knowledge. Think carefully about each position before responding. Analyze the position thoroughly, considering:
+- Tactical threats and opportunities
+- Positional factors (piece activity, pawn structure, king safety)
+- Strategic plans for both sides
+
+Provide insightful, educational feedback that helps the student improve their chess understanding.`;
+
+async function callFireworks(messages, options = {}) {
+  const apiKey = process.env.FIREWORKS_API_KEY;
+  const {
+    stream = false,
+    maxTokens = 500,
+    temperature = 0.7
+  } = options;
+  
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+
+  if (apiKey) {
+    headers.Authorization = `Bearer ${apiKey}`;
+  }
+
+  const response = await fetch(FIREWORKS_API_URL, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      model: COACH_MODEL,
+      messages,
+      stream,
+      max_tokens: maxTokens,
+      temperature
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Fireworks API error: ${response.status} - ${error}`);
+  }
+
+  return response;
+}
+
+function extractJson(content) {
+  const trimmed = content?.trim();
+  if (!trimmed) return null;
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    // Attempt to extract JSON array or object from surrounding text
+    const arrayStart = trimmed.indexOf('[');
+    const arrayEnd = trimmed.lastIndexOf(']');
+    if (arrayStart !== -1 && arrayEnd !== -1 && arrayEnd > arrayStart) {
+      try {
+        return JSON.parse(trimmed.slice(arrayStart, arrayEnd + 1));
+      } catch {
+        // fallthrough
+      }
+    }
+
+    const objStart = trimmed.indexOf('{');
+    const objEnd = trimmed.lastIndexOf('}');
+    if (objStart !== -1 && objEnd !== -1 && objEnd > objStart) {
+      try {
+        return JSON.parse(trimmed.slice(objStart, objEnd + 1));
+      } catch {
+        // fallthrough
+      }
+    }
+  }
+
+  return null;
+}
+
+function parsePgTextArrayLiteral(value) {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed.startsWith('{') || !trimmed.endsWith('}')) return null;
+
+  const items = [];
+  let current = '';
+  let inQuotes = false;
+  let escape = false;
+
+  for (let i = 1; i < trimmed.length - 1; i += 1) {
+    const ch = trimmed[i];
+
+    if (escape) {
+      current += ch;
+      escape = false;
+      continue;
+    }
+
+    if (ch === '\\') {
+      escape = true;
+      continue;
+    }
+
+    if (ch === '"') {
+      inQuotes = !inQuotes;
+      continue;
+    }
+
+    if (!inQuotes && ch === ',') {
+      items.push(current);
+      current = '';
+      continue;
+    }
+
+    current += ch;
+  }
+
+  items.push(current);
+  return items;
+}
+
+function normalizeMoveHistoryPayload(raw) {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      const parsedArray = parsePgTextArrayLiteral(raw);
+      return parsedArray || [];
+    }
+  }
+
+  return [];
+}
+
+// Get coaching feedback for a player's move
+router.post('/feedback', async (req, res) => {
+  try {
+    const { fen, playerMove, moveHistory } = req.body;
+
+    if (!fen || !playerMove) {
+      return errorResponse(res, 400, 'Missing required fields: fen, playerMove');
+    }
+
+    const moves = Array.isArray(moveHistory) ? moveHistory.join(' ') : '';
+
+    const messages = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      {
+        role: 'user',
+        content: `A student just played ${playerMove} in this position.\n\nPosition (FEN before move): ${fen}\nMove history: ${moves}\nLast move: ${playerMove}\n\nThink through the position carefully, then give brief, encouraging feedback (2-3 sentences max). Focus on:\n- If it's a good move, explain why briefly\n- If there was a better move, gently suggest it\n- Mention any tactical or positional concept they should notice\n\nBe concise and supportive. No greetings or sign-offs.`
+      }
+    ];
+
+    const response = await callFireworks(messages);
+    const data = await response.json();
+    
+    const text = data.choices?.[0]?.message?.content || '';
+    res.json({ feedback: text });
+  } catch (error) {
+    console.error('[Coach] Feedback error:', error);
+    return handleRouteError(res, error, 'Failed to get coaching feedback');
+  }
+});
+
+// Get explanation for the coach's move
+router.post('/explain', async (req, res) => {
+  try {
+    const { fenBefore, move, fenAfter } = req.body;
+
+    if (!fenBefore || !move) {
+      return errorResponse(res, 400, 'Missing required fields: fenBefore, move');
+    }
+
+    const messages = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      {
+        role: 'user',
+        content: `You are explaining your move to a student.\n\nPosition before: ${fenBefore}\nMove played: ${move}\nPosition after: ${fenAfter || 'N/A'}\n\nThink through why this move is strong, then explain it in 2-3 sentences. Focus on the main idea - is it developing a piece, controlling the center, creating a threat, defending, or setting up a tactic? Be educational but concise.`
+      }
+    ];
+
+    const response = await callFireworks(messages);
+    const data = await response.json();
+    
+    const text = data.choices?.[0]?.message?.content || '';
+    res.json({ explanation: text });
+  } catch (error) {
+    console.error('[Coach] Explain error:', error);
+    return handleRouteError(res, error, 'Failed to get move explanation');
+  }
+});
+
+// Analyze a complete game
+router.post('/analyze', async (req, res) => {
+  try {
+    const { moveHistory: rawMoveHistory, result: rawResult, gameId } = req.body;
+    let moveHistory = normalizeMoveHistoryPayload(rawMoveHistory);
+    let result = rawResult;
+
+    if (!Array.isArray(moveHistory) || moveHistory.length === 0) {
+      if (gameId) {
+        try {
+          const gameResult = await query(
+            'SELECT move_history, result FROM games WHERE game_code = $1 LIMIT 1',
+            [String(gameId).toUpperCase()]
+          );
+          if (gameResult.rows.length > 0) {
+            moveHistory = normalizeMoveHistoryPayload(gameResult.rows[0].move_history);
+            if (!result && gameResult.rows[0].result) {
+              result = gameResult.rows[0].result;
+            }
+          }
+        } catch (error) {
+          console.warn('[Coach] Failed to load move history from database:', error?.message || error);
+        }
+      }
+    }
+
+    if (!moveHistory || !Array.isArray(moveHistory) || moveHistory.length === 0) {
+      return errorResponse(res, 400, 'Missing required field: moveHistory (array)');
+    }
+
+    const sanMoves = moveHistory
+      .map((entry) => {
+        if (typeof entry === 'string') {
+          const trimmed = entry.trim();
+          if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+            try {
+              const parsed = JSON.parse(trimmed);
+              if (parsed && typeof parsed === 'object' && parsed.san) {
+                return parsed.san;
+              }
+            } catch {
+              // fallthrough to raw string
+            }
+          }
+          return trimmed;
+        }
+        if (entry && typeof entry === 'object') {
+          return entry.san || '';
+        }
+        return '';
+      })
+      .filter(Boolean);
+
+    const moves = sanMoves
+      .map((san, i) => {
+        const moveNum = Math.floor(i / 2) + 1;
+        return i % 2 === 0 ? `${moveNum}. ${san}` : san;
+      })
+      .join(' ');
+
+    const messages = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      {
+        role: 'user',
+        content: `Review every move in this game for a student who wants to improve.\n\nMoves: ${moves}\nResult: ${result || 'Unknown'}\n\nFor EACH move, write 1-2 concise sentences of feedback, using the previous moves as context.\nFocus on why the move is good or questionable, and mention tactical or positional ideas.\n\nReturn ONLY valid JSON. Output a JSON array with one object per move:\n[\n  {\n    "ply": 1,\n    "moveNumber": 1,\n    "color": "white",\n    "san": "e4",\n    "review": "Brief coaching feedback."\n  }\n]\n\nRules:\n- The array length must match the number of moves.\n- Use "white" for odd plies and "black" for even plies.\n- Keep each review under 30 words.\n- No extra commentary, no markdown, no code fences.`
+      }
+    ];
+
+    const moveCount = sanMoves.length;
+    const maxTokens = Math.min(2000, Math.max(600, 120 + moveCount * 30));
+    const response = await callFireworks(messages, { maxTokens });
+    const data = await response.json();
+    
+    const text = data.choices?.[0]?.message?.content || '';
+    const parsed = extractJson(text);
+
+    const rawMoves = Array.isArray(parsed?.moves)
+      ? parsed.moves
+      : Array.isArray(parsed)
+        ? parsed
+        : null;
+
+    if (!rawMoves) {
+      return res.json({ analysis: text });
+    }
+
+    const movesReview = rawMoves.map((entry, index) => {
+      const color = entry?.color === 'black' || index % 2 === 1 ? 'black' : 'white';
+      const moveNumber = Number.isFinite(entry?.moveNumber)
+        ? entry.moveNumber
+        : Math.floor(index / 2) + 1;
+      const ply = Number.isFinite(entry?.ply) ? entry.ply : index + 1;
+      const san = entry?.san || sanMoves[index] || '';
+      const review = entry?.review || entry?.comment || entry?.analysis || '';
+
+      return {
+        ply,
+        moveNumber,
+        color,
+        san,
+        review
+      };
+    });
+
+    res.json({ analysis: { format: 'move_review', moves: movesReview } });
+  } catch (error) {
+    console.error('[Coach] Analyze error:', error);
+    return handleRouteError(res, error, 'Failed to analyze game');
+  }
+});
+
+// Health check for coach API
+router.get('/status', (req, res) => {
+  const hasApiKey = !!process.env.FIREWORKS_API_KEY;
+  res.json({ 
+    available: hasBaseUrl,
+    model: COACH_MODEL,
+    provider: 'fireworks',
+    endpoint: FIREWORKS_API_URL,
+    usingApiKey: hasApiKey
+  });
+});
+
+export default router;

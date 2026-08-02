@@ -1,0 +1,1 @@
+- [Stockfish WASM engine setup](stockfish-engine.md) — Emscripten captures `print` at init time; must use child_process worker with print pre-set before FACTORY()(engine)

@@ -1,0 +1,116 @@
+.username-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 1rem;
+  backdrop-filter: blur(4px);
+}
+
+.username-modal {
+  background: #262421;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 400px;
+  padding: 2rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  border: 1px solid #403d39;
+}
+
+.username-header h2 {
+  color: #fff;
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  font-size: 1.5rem;
+}
+
+.username-header p {
+  color: #bababa;
+  margin-bottom: 2rem;
+}
+
+.username-form .input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.username-form label {
+  color: #bababa;
+  font-size: 0.9rem;
+}
+
+.username-form input {
+  background: #312e2b;
+  border: 1px solid #403d39;
+  border-radius: 4px;
+  padding: 0.75rem 1rem;
+  color: #fff;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.username-form input:focus {
+  border-color: #81b64c;
+}
+
+.username-form input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.username-form .error-text {
+  color: #fa412d;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+.username-form .btn {
+  padding: 0.75rem;
+  font-weight: bold;
+  font-size: 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.1s;
+}
+
+.username-form .btn:active {
+  transform: scale(0.98);
+}
+
+.username-form .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.username-form .btn-secondary {
+  background: #81b64c;
+  color: #fff;
+}
+
+.username-form .btn-secondary:hover:not(:disabled) {
+  background: #95bb4a;
+}
+
+.username-form .btn-ghost {
+  background: transparent;
+  color: #bababa;
+}
+
+.username-form .btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.username-form .btn-full {
+  width: 100%;
+}

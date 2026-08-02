@@ -1,0 +1,115 @@
+/* ========================================
+   ELO SLIDER - Professional Design
+   ======================================== */
+
+.elo-slider {
+  padding: 20px;
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  margin-top: 16px;
+}
+
+.elo-slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.elo-slider-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.elo-value {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.elo-number {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-accent-primary);
+  letter-spacing: -0.02em;
+}
+
+.elo-skill {
+  font-size: 0.6875rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.elo-slider-input {
+  width: 100%;
+  height: 8px;
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-sm);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.elo-slider-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  background: linear-gradient(180deg, var(--color-accent-primary) 0%, #6a9344 100%);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-md);
+}
+
+.elo-slider-input::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
+}
+
+.elo-slider-input::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  background: linear-gradient(180deg, var(--color-accent-primary) 0%, #6a9344 100%);
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-md);
+}
+
+.elo-slider-input::-moz-range-thumb:hover {
+  transform: scale(1.15);
+}
+
+.elo-slider-input:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.elo-slider-input:disabled::-webkit-slider-thumb {
+  cursor: not-allowed;
+}
+
+.elo-slider-input:disabled::-moz-range-thumb {
+  cursor: not-allowed;
+}
+
+.elo-slider-marks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding: 0 4px;
+}
+
+.elo-slider-marks span {
+  font-size: 0.6875rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}

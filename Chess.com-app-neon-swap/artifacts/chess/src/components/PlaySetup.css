@@ -1,0 +1,113 @@
+.play-setup {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+}
+
+.play-setup-card {
+  width: 100%;
+  max-width: 780px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 3rem;
+  box-shadow: var(--shadow-xl);
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.play-setup-title {
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  margin: 0;
+}
+
+.play-setup-subtitle {
+  color: var(--text-dim);
+  font-size: 1.1rem;
+}
+
+.play-setup-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.play-setup-label {
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-secondary);
+}
+
+.color-choice {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.color-btn {
+  padding: 1.5rem;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-dim);
+  font-size: 1.25rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.color-btn:hover {
+  border-color: var(--text-secondary);
+  background: rgba(255,255,255,0.02);
+}
+
+.color-btn.selected {
+  border-color: var(--primary);
+  background: rgba(129, 182, 76, 0.1);
+  color: var(--primary);
+}
+
+.play-setup-actions {
+  margin-top: 2rem;
+  padding-top: 3rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.start-btn {
+  padding: 1.25rem 4rem;
+  background: var(--primary);
+  color: white;
+  font-weight: 800;
+  font-size: 1.25rem;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  box-shadow: 0 10px 30px rgba(129, 182, 76, 0.3);
+}
+
+.start-btn:hover:not(:disabled) {
+  background: var(--accent);
+  transform: translateY(-4px) scale(1.05);
+}
+
+.start-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+@media (max-width: 768px) {
+  .play-setup-card { padding: 2rem; }
+  .play-setup-title { font-size: 2rem; }
+  .color-choice { grid-template-columns: 1fr; }
+}

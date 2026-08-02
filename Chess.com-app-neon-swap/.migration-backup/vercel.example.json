@@ -1,0 +1,30 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
+  "framework": null,
+  "rewrites": [
+    {
+      "source": "/api/:match*",
+      "destination": "/api/:match*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/"
+    }
+  ],
+  "functions": {
+    "api/**/*.js": {
+      "maxDuration": 30
+    }
+  },
+  "env": {
+    "DATABASE_URL": "@database-url",
+    "DATABASE_URL_UNPOOLED": "@database-url-unpooled",
+    "NEON_AUTH_URL": "@neon-auth-url",
+    "FRONTEND_URL": "@vercel-project-url",
+    "PORT": "3001",
+    "VITE_SOCKET_URL": ""
+  }
+}

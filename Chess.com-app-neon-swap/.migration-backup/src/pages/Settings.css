@@ -1,0 +1,358 @@
+.settings-page {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+  background: #312e2b;
+}
+
+.settings-container {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.settings-container h1 {
+  font-size: 1.75rem;
+  color: #fff;
+  margin-bottom: 24px;
+  font-weight: 600;
+}
+
+.settings-guest-note {
+  background: #1f1d1b;
+  border: 1px solid #3d3a36;
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: #dad5d0;
+  font-size: 0.875rem;
+  margin-bottom: 16px;
+}
+
+.settings-section {
+  background: #272522;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.settings-section h2 {
+  font-size: 0.875rem;
+  color: #81b64c;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+.setting-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #3d3a36;
+}
+
+.setting-item:last-child {
+  border-bottom: none;
+}
+
+.setting-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.setting-info label {
+  display: block;
+  color: #dad5d0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.setting-desc {
+  display: block;
+  color: #9a958f;
+  font-size: 0.8125rem;
+}
+
+.link-button {
+  border: 1px solid #4d4a47;
+  background: transparent;
+  color: #dad5d0;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.link-button:hover {
+  border-color: #9a958f;
+  color: #fff;
+}
+
+/* Toggle Switch — wrapped in a larger touch target */
+.toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  min-height: 44px; /* WCAG touch target — visual toggle stays 26px via child */
+  flex-shrink: 0;
+  margin-left: 16px;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #4d4a47;
+  transition: 0.2s;
+  border-radius: 26px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: calc(50% - 10px); /* vertically centre within the taller touch-target container */
+  background-color: #dad5d0;
+  transition: 0.2s;
+  border-radius: 50%;
+}
+
+.toggle input:checked + .toggle-slider {
+  background-color: #81b64c;
+}
+
+.toggle input:checked + .toggle-slider:before {
+  transform: translateX(22px);
+}
+
+/* Theme Selector */
+.theme-selector {
+  display: flex;
+  gap: 8px;
+  margin-left: 16px;
+}
+
+.theme-option {
+  padding: 4px;
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.theme-option:hover {
+  border-color: #4d4a47;
+}
+
+.theme-option.active {
+  border-color: #81b64c;
+}
+
+.theme-preview {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.theme-square {
+  width: 16px;
+  height: 16px;
+}
+
+.theme-square.light {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.theme-square.dark {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+/* Volume Slider */
+.volume-slider {
+  width: 120px;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #4d4a47;
+  border-radius: 3px;
+  outline: none;
+  margin-left: 16px;
+  /* Vertical padding expands the touch target without changing the visual track height */
+  padding: 19px 0;
+  box-sizing: content-box;
+  background-clip: content-box;
+}
+
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;  /* Enlarged for easier mobile interaction */
+  height: 24px;
+  background: #81b64c;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.volume-slider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  background: #81b64c;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+/* Account Section */
+.account-info {
+  margin-bottom: 16px;
+}
+
+.account-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #3d3a36;
+}
+
+.account-row:last-child {
+  border-bottom: none;
+}
+
+.account-label {
+  color: #9a958f;
+  font-size: 0.875rem;
+}
+
+.account-value {
+  color: #dad5d0;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.logout-btn {
+  width: 100%;
+  padding: 12px;
+  background: #c9302c;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.logout-btn:hover {
+  background: #ac2925;
+}
+
+/* Actions */
+.settings-actions {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0;
+}
+
+.reset-btn {
+  padding: 10px 24px;
+  background: transparent;
+  color: #9a958f;
+  border: 1px solid #4d4a47;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reset-btn:hover {
+  color: #dad5d0;
+  border-color: #9a958f;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .settings-page {
+    padding: 16px;
+  }
+
+  .settings-section {
+    padding: 16px;
+  }
+
+  .setting-item {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .toggle,
+  .theme-selector,
+  .volume-slider {
+    margin-left: 0;
+  }
+
+  .theme-selector {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .volume-slider {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .settings-page {
+    padding: 12px;
+  }
+
+  .settings-section {
+    padding: 14px 12px;
+    margin-bottom: 12px;
+  }
+
+  .settings-section h2 {
+    font-size: 1rem;
+  }
+
+  .setting-item {
+    padding: 10px 0;
+  }
+
+  .setting-label {
+    font-size: 0.875rem;
+  }
+
+  .reset-btn,
+  .link-button {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .logout-btn {
+    min-height: 48px;
+  }
+}

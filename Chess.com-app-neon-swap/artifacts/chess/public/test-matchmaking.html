@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="shortcut icon" href="/favicon.svg" />
+  <title>Test Matchmaking</title>
+  <style>
+    body { font-family: monospace; padding: 20px; }
+    button { margin: 5px; padding: 10px; }
+    #log { background: #f0f0f0; padding: 10px; margin-top: 10px; height: 400px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <h1>Matchmaking Test</h1>
+  <button onclick="clearStorage()">Clear Storage</button>
+  <button onclick="joinQueue()">Join Queue</button>
+  <button onclick="findMatch()">Find Match</button>
+  <button onclick="showQueue()">Show Queue</button>
+  <button onclick="testBroadcast()">Test Broadcast</button>
+  <div id="log"></div>
+
+  <script type="module">
+    const QUEUE_STORAGE_KEY = 'chess_matchmaking_queue';
+    const CHANNEL_NAME = 'chess_matchmaking_sync';
+    let sessionPlayerId = crypto.randomUUID();
+    let broadcastChannel = new BroadcastChannel(CHANNEL_NAME);
+
+    broadcastChannel.onmessage = (event) => {
+      log('📡 Received broadcast: ' + JSON.stringify(event.data));
+    };
+
+    function log(msg) {
+      const logDiv = document.getElementById('log');
+      const time = new Date().toLocaleTimeString();
+      logDiv.innerHTML += `[${time}] ${msg}<br>`;
+      logDiv.scrollTop = logDiv.scrollHeight;
+      console.log(msg);
+    }
+
+    window.clearStorage = function() {
+      // localStorage removed; queue now lives server-side
+      log('✓ Storage cleared');
+    };
+
+    window.joinQueue = function() {
+      const queue = [];
+      const elo = 1200;
+      const entry = { playerId: sessionPlayerId, elo, timestamp: Date.now(), isRanked: true };
+      queue.push(entry);
+      // localStorage removed; queue now lives server-side
+      log(`✓ Joined queue. Player ID: ${sessionPlayerId.substring(0, 8)}...`);
+      log(`  Queue size: ${queue.length}`);
+    };
+
+    window.findMatch = function() {
+      const queue = [];
+      log(`Searching queue (${queue.length} players)...`);
+      
+      const playerEntry = queue.find(e => e.playerId === sessionPlayerId);
+      if (!playerEntry) {
+        log('❌ Not in queue');
+        return;
+      }
+
+      const candidates = queue.filter(e => e.playerId !== sessionPlayerId);
+      if (candidates.length === 0) {
+        log('❌ No opponents found');
+        return;
+      }
+
+      const opponent = candidates[0];
+      const sortedIds = [sessionPlayerId, opponent.playerId].sort();
+      const matchId = `MATCH_${sortedIds[0]}_${sortedIds[1]}`;
+      const isCreator = sessionPlayerId === sortedIds[0];
+
+      log(`✓ Match found!`);
+      log(`  Opponent: ${opponent.playerId.substring(0, 8)}...`);
+      log(`  Match ID: ${matchId}`);
+      log(`  You are: ${isCreator ? 'CREATOR' : 'JOINER'}`);
+
+      broadcastChannel.postMessage({
+        type: 'match_found',
+        data: {
+          player1: sortedIds[0],
+          player2: sortedIds[1],
+          matchId,
+          creator: sortedIds[0]
+        }
+      });
+    };
+
+    window.showQueue = function() {
+      const queue = [];
+      log(`Queue (${queue.length} players):`);
+      queue.forEach((e, i) => {
+        const isMe = e.playerId === sessionPlayerId;
+        log(`  ${i + 1}. ${e.playerId.substring(0, 8)}... (${e.elo}) ${isMe ? '← YOU' : ''}`);
+      });
+    };
+
+    window.testBroadcast = function() {
+      broadcastChannel.postMessage({
+        type: 'test',
+        data: { message: 'Hello from ' + sessionPlayerId.substring(0, 8) }
+      });
+      log('✓ Test broadcast sent');
+    };
+
+    log(`Player ID: ${sessionPlayerId}`);
+    log('Ready! Open another tab and test matchmaking.');
+  </script>
+</body>
+</html>

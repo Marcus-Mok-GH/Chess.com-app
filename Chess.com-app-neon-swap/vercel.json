@@ -1,0 +1,18 @@
+{
+  "framework": null,
+  "installCommand": "pnpm install --ignore-scripts",
+  "buildCommand": "pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/chess run build && cp -r artifacts/chess/dist/public ./dist",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/[...path].js": {
+      "maxDuration": 15
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/[...path]?path=$1" },
+    {
+      "source": "/((?!api/|assets/|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|css|js|map|woff2?|json|ico|txt)$).*)",
+      "destination": "/index.html"
+    }
+  ]
+}
