@@ -1,1 +1,0 @@
-api:build:cd /d/Coding/workflow-refactor/api && npm run build
