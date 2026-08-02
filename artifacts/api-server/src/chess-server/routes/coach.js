@@ -145,6 +145,7 @@ router.get('/connect', async (req, res) => {
 router.get('/callback', async (req, res) => {
   try {
     if (req.query.error) return res.redirect(coachAppRedirect(req, `?coach_error=${encodeURIComponent(req.query.error)}`));
+    if (!req.query.code || !req.query.state) return res.redirect(coachAppRedirect(req, '?coach_error=authorization_incomplete'));
     await completeAuthorization(String(req.query.code || ''), String(req.query.state || ''));
     return res.redirect(coachAppRedirect(req, '?coach_connected=1'));
   } catch (error) {

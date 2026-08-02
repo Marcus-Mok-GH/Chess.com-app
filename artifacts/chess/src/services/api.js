@@ -3,10 +3,14 @@ import { API_BASE_URL, isNetworkError } from './apiBase';
 class ApiService {
   async request(endpoint, options = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
+    const token = (() => {
+      try { return localStorage.getItem('chess_user_token'); } catch { return null; }
+    })();
     const config = {
       ...options,
       headers: {
         'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options.headers,
       },
     };
@@ -43,6 +47,20 @@ class ApiService {
         'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({ username }),
+    });
+  }
+
+  async getUserSettings(username, token = null) {
+    return this.request(`/users/${encodeURIComponent(username)}/settings`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+  }
+
+  async updateUserSettings(username, settings, token = null) {
+    return this.request(`/users/${encodeURIComponent(username)}/settings`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: JSON.stringify({ settings }),
     });
   }
 

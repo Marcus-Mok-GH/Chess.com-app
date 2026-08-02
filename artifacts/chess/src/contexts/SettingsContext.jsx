@@ -29,7 +29,7 @@ const DEFAULT_SETTINGS = {
 const SettingsContext = createContext(null);
 
 export function SettingsProvider({ children }) {
-  const { user, isOnline } = useUser();
+  const { user, token, isOnline } = useUser();
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -48,7 +48,7 @@ export function SettingsProvider({ children }) {
       }
 
       try {
-        const response = await api.getUserSettings(user.username);
+        const response = await api.getUserSettings(user.username, token);
         if (isMounted) {
           const merged = { ...DEFAULT_SETTINGS, ...(response?.settings || {}) };
           setSettings(merged);
@@ -70,7 +70,7 @@ export function SettingsProvider({ children }) {
     return () => {
       isMounted = false;
     };
-  }, [user, isOnline]);
+  }, [user, token, isOnline]);
 
   // Save settings to database whenever they change
   useEffect(() => {
@@ -84,14 +84,14 @@ export function SettingsProvider({ children }) {
 
     const saveSettings = async () => {
       try {
-        await api.updateUserSettings(user.username, settings);
+        await api.updateUserSettings(user.username, settings, token);
       } catch (e) {
         console.error('[SettingsContext] Failed to save settings:', e);
       }
     };
 
     saveSettings();
-  }, [settings, isLoaded, user, isOnline]);
+  }, [settings, isLoaded, user, token, isOnline]);
 
   const updateSettings = useCallback((updates) => {
     setSettings(prev => ({ ...prev, ...updates }));

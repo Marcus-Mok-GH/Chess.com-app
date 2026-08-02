@@ -1,3 +1,10 @@
+## [2026-08-02] - Pollinations Coach Prompt Flow
+
+### Fixed
+- Restored the Pollinations AI coach prompt after username completion.
+- Added a persisted, per-user prompt gate for existing accounts and repaired the settings API client methods used to record the one-time display.
+- Fixed failed OAuth handling, authenticated settings access, login redirects, and modal accessibility.
+
 ## [2026-08-01] - Online Game Review Fixes
 
 ### Fixed
