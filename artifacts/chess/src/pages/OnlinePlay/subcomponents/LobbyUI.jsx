@@ -8,6 +8,8 @@ export default function LobbyUI({
   handleSelectMode,
   navigate
 }) {
+  const unableToConnect = error ? error.toLowerCase().includes('unable to connect') : false;
+
   return (
     <div className="lobby-container">
       <div className="lobby-content mode-select-content">
@@ -18,13 +20,13 @@ export default function LobbyUI({
 
         <h2 className="mode-title">Choose Game Mode</h2>
 
-        {error && error.toLowerCase().includes('unable to connect') && (
+        {error && unableToConnect && (
           <div className="error-message error-message-important">
             <div className="error-icon">⚠️</div>
             <div className="error-text">{error}</div>
           </div>
         )}
-        {(!error || !error.toLowerCase().includes('unable to connect')) && (
+        {(!error || !unableToConnect) && (
           error && <div className="error-message">{error}</div>
         )}
 
