@@ -1,15 +1,22 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { connectCoach } from '../engine/coach/coachAI';
 import './PollinationsCoachPrompt.css';
-
-const COACH_PROMPT_SHOWN_KEY = 'chess_coach_prompt_seen';
 
 export default function PollinationsCoachPrompt({ onConnected, onBeforeConnect }) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState('');
+  const connectButtonRef = useRef(null);
+
+  useEffect(() => {
+    connectButtonRef.current?.focus();
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape' && !isConnecting) onConnected?.(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isConnecting, onConnected]);
 
   function markSeen() {
-    try { localStorage.setItem(COACH_PROMPT_SHOWN_KEY, '1'); } catch {}
     onConnected?.(false);
   }
 
@@ -17,12 +24,7 @@ export default function PollinationsCoachPrompt({ onConnected, onBeforeConnect }
     setIsConnecting(true);
     setError('');
     try {
-      await onBeforeConnect?.();
       await connectCoach();
-      // After redirect, we can't detect completion here — the callback handles it.
-      // Mark as seen so we don't show again on return.
-      markSeen();
-      onConnected?.(true);
     } catch (err) {
       setError(err.message || 'Failed to open connection.');
     } finally {
@@ -31,12 +33,12 @@ export default function PollinationsCoachPrompt({ onConnected, onBeforeConnect }
   }
 
   return (
-    <div className="coach-prompt-overlay" onClick={markSeen}>
-      <div className="coach-prompt-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="coach-prompt-overlay" role="presentation">
+      <div className="coach-prompt-modal" role="dialog" aria-modal="true" aria-labelledby="coach-prompt-title" aria-describedby="coach-prompt-description" onClick={(e) => e.stopPropagation()}>
         <div className="coach-prompt-header">
-          <h2>🧠 Connect AI Coach</h2>
+          <h2 id="coach-prompt-title">🧠 Connect AI Coach</h2>
         </div>
-        <div className="coach-prompt-body">
+        <div className="coach-prompt-body" id="coach-prompt-description">
           <p className="coach-prompt-desc">
             The chess coach is powered by <strong>Pollinations AI</strong> using a{' '}
             <strong>user-pays</strong> model — you authorize your own account and control
@@ -53,6 +55,7 @@ export default function PollinationsCoachPrompt({ onConnected, onBeforeConnect }
           <button
             type="button"
             className="btn btn-primary btn-full"
+            ref={connectButtonRef}
             disabled={isConnecting}
             onClick={handleConnect}
           >

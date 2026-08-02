@@ -2,10 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 import { analyzeGame, connectCoach, disconnectCoach, getCoachStatus } from '../engine/coach/coachAI';
-import PollinationsCoachPrompt from './PollinationsCoachPrompt';
 import './GameAnalysis.css';
-
-const COACH_PROMPT_SHOWN_KEY = 'chess_coach_prompt_seen';
 
 export default function GameAnalysis({ moveHistory, gameId = null, onClose, variant = 'modal' }) {
   const navigate = useNavigate();
@@ -15,7 +12,6 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
   const [isReady, setIsReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [coachStatus, setCoachStatus] = useState(null);
-  const [showCoachPrompt, setShowCoachPrompt] = useState(false);
   const isInline = variant === 'inline';
 
   useEffect(() => {
@@ -25,15 +21,6 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
         setCoachStatus(status);
         setIsReady(Boolean(status.available && status.connected));
 
-        // For existing users who haven't connected and haven't seen the prompt, show it once
-        if (status.available && !status.connected) {
-          try {
-            const hasSeen = localStorage.getItem(COACH_PROMPT_SHOWN_KEY);
-            if (!hasSeen) {
-              setShowCoachPrompt(true);
-            }
-          } catch {}
-        }
       } catch (error) {
         console.error('[GameAnalysis] Failed to check coach availability:', error);
         setIsReady(false);
@@ -47,8 +34,11 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
   const handleConnect = async () => {
     try {
       await connectCoach();
-      try { localStorage.setItem(COACH_PROMPT_SHOWN_KEY, '1'); } catch {}
     } catch (error) {
+      if (error.status === 401 || error.status === 403 || error.message?.toLowerCase().includes('log in')) {
+        navigate('/login');
+        return;
+      }
       setAnalysis(`Error: ${error.message || 'Unable to open Pollinations authorization.'}`);
     }
   };
@@ -206,18 +196,6 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
 
   return (
     <>
-      {showCoachPrompt && (
-        <PollinationsCoachPrompt onConnected={(connected) => {
-          try { localStorage.setItem(COACH_PROMPT_SHOWN_KEY, '1'); } catch {}
-          setShowCoachPrompt(false);
-          if (connected) {
-            getCoachStatus(true).then((s) => {
-              setCoachStatus(s);
-              setIsReady(Boolean(s?.connected));
-            });
-          }
-        }} />
-      )}
       <div className="analysis-overlay" onClick={onClose}>
         <div className="analysis-modal" onClick={(e) => e.stopPropagation()}>
           <div className="analysis-header">

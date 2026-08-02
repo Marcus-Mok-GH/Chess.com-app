@@ -1,6 +1,7 @@
 import express from 'express';
 import { query } from '../db.js';
 import { errorResponse, handleRouteError } from '../middleware/errors.js';
+import { authenticatedUserId } from '../coachAuth.js';
 
 const router = express.Router();
 
@@ -99,9 +100,12 @@ router.get('/leaderboard/top', async (req, res) => {
 // Get user settings
 router.get('/:username/settings', async (req, res) => {
   try {
+    const userId = await authenticatedUserId(req);
+    if (!userId) return errorResponse(res, 401, 'Log in to access user settings.');
     const { username } = req.params;
     const userResult = await query('SELECT id FROM users WHERE LOWER(username) = LOWER($1)', [username]);
     if (userResult.rows.length === 0) return errorResponse(res, 404, 'User not found');
+    if (String(userResult.rows[0].id) !== String(userId)) return errorResponse(res, 403, 'You can only access your own settings.');
     const settingsResult = await query('SELECT settings FROM user_settings WHERE user_id = $1', [userResult.rows[0].id]);
     res.json({ settings: settingsResult.rows[0]?.settings || {} });
   } catch (error) {
@@ -112,6 +116,8 @@ router.get('/:username/settings', async (req, res) => {
 // Update user settings
 router.post('/:username/settings', async (req, res) => {
   try {
+    const userId = await authenticatedUserId(req);
+    if (!userId) return errorResponse(res, 401, 'Log in to update user settings.');
     if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
       return errorResponse(res, 400, 'Invalid request body');
     }
@@ -122,6 +128,7 @@ router.post('/:username/settings', async (req, res) => {
     }
     const userResult = await query('SELECT id FROM users WHERE LOWER(username) = LOWER($1)', [username]);
     if (userResult.rows.length === 0) return errorResponse(res, 404, 'User not found');
+    if (String(userResult.rows[0].id) !== String(userId)) return errorResponse(res, 403, 'You can only update your own settings.');
     await query(
       `INSERT INTO user_settings (user_id, settings) VALUES ($1, $2::jsonb)
        ON CONFLICT (user_id) DO UPDATE SET settings = EXCLUDED.settings, updated_at = CURRENT_TIMESTAMP`,

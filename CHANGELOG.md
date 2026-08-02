@@ -15,7 +15,8 @@
 ### Fixed
 - Restored the Pollinations AI coach prompt after username completion.
 - Added a persisted, per-user prompt gate for existing accounts and repaired the settings API client methods used to record the one-time display.
-- The prompt is now marked seen before redirecting to Pollinations or when dismissed, preventing repeated prompts.
+- The prompt is marked seen after dismissal or a successfully started connection, preventing repeated prompts without hiding failed connection attempts.
+- Fixed failed OAuth handling, authenticated settings access, login redirects, and modal accessibility.
 
 ## [2026-08-01] - Pollinations User-Pays AI Coach
 

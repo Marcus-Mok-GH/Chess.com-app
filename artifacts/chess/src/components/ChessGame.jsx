@@ -538,7 +538,7 @@ function ChessGame(
       }
     } catch (error) {
       console.error('[ChessGame] Coaching feedback error:', error);
-      if (error.message?.includes('Log in') || error.message?.includes('auth')) {
+      if (error.status === 401 || error.status === 403 || error.message?.toLowerCase().includes('log in') || error.message?.toLowerCase().includes('auth')) {
         navigate('/login');
       } else {
         setBotMessage('Analysis unavailable');
