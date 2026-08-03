@@ -1,3 +1,10 @@
+## [2026-08-03] - Subtle Chess.com-Inspired Theme
+
+### Changed
+
+- Kept the existing navigation and layout intact while preserving the dark green Chess.com-inspired palette.
+- Removed the heavier branding, extra gradients, and icon treatment so the theme remains understated.
+
 ## [2026-08-03] - Mobile Layout Optimization
 
 ### Changed
