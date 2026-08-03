@@ -381,7 +381,7 @@
   }
 
   .analysis-panel {
-    max-height: 50vh;
+    max-height: none;
   }
 
   .analysis-tabs {
@@ -412,6 +412,10 @@
   .analysis-empty-card {
     padding: 2rem 1.5rem;
     margin: 0 1rem;
+  }
+
+  .analysis-report-pane {
+    padding: 0.875rem;
   }
 }
 

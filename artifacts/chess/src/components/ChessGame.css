@@ -144,7 +144,7 @@
 
 @media (max-width: 768px) {
   .chess-game {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0) + 4rem);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 178px);
   }
 
   .game-container {
@@ -154,6 +154,7 @@
 
   .board-section {
     max-width: 100%;
+    gap: 0.625rem;
   }
 
   .board-wrapper {
@@ -230,6 +231,12 @@
   .game-status {
     padding: 0.5rem;
     font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .chess-game {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 220px);
   }
 }
 

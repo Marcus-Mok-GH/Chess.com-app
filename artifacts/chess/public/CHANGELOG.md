@@ -1,3 +1,13 @@
+## [2026-08-03] - Mobile Layout Optimization
+
+### Changed
+
+- Added safe-area-aware mobile header and page spacing so iPhone-style insets do not overlap content or navigation.
+- Reserved space below local games for the fixed mobile action bar, including extra clearance on narrow phones where controls wrap.
+- Reworked mobile game actions into responsive grids with compact-phone sizing and ellipsis-safe labels.
+- Let mobile game review panels use the full page height for scrolling instead of trapping reports in a half-viewport panel.
+- Made mobile history actions full-width and touch-friendly, and kept lobby/history content clear of the bottom navigation.
+
 ## [2026-08-02] - Conservative Cleanup Refactor
 
 ### Changed
