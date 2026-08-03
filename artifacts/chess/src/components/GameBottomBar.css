@@ -1,3 +1,7 @@
+:root {
+  --mobile-game-bar-reserve: 178px;
+}
+
 .game-bottom-bar {
   position: fixed;
   left: 0;
@@ -105,6 +109,10 @@
 }
 
 @media (max-width: 420px) {
+  :root {
+    --mobile-game-bar-reserve: 238px;
+  }
+
   .gbb-actions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -115,6 +123,10 @@
 }
 
 @media (max-width: 360px) {
+  :root {
+    --mobile-game-bar-reserve: 218px;
+  }
+
   .game-bottom-bar {
     gap: 6px;
     padding: 8px;

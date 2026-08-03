@@ -144,7 +144,7 @@
 
 @media (max-width: 768px) {
   .chess-game {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 178px);
+    padding-bottom: calc(var(--mobile-game-bar-reserve) + env(safe-area-inset-bottom, 0px));
   }
 
   .game-container {
@@ -231,12 +231,6 @@
   .game-status {
     padding: 0.5rem;
     font-size: 0.85rem;
-  }
-}
-
-@media (max-width: 420px) {
-  .chess-game {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 220px);
   }
 }
 
