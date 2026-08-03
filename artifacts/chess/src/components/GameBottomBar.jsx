@@ -26,26 +26,28 @@ export default function GameBottomBar({
           </div>
         </div>
       )}
-      <button type="button" className="gbb-btn" onClick={() => { haptics.button(); onNew(); }}>
-        New
-      </button>
-      <button type="button" className="gbb-btn" onClick={() => { haptics.button(); onUndo(); }} disabled={!canUndo || isThinking}>
-        Undo
-      </button>
-      <button type="button" className="gbb-btn" onClick={() => { haptics.button(); onFlipBoard(); }}>
-        Flip
-      </button>
-      {showHints && (
-        <button type="button" className="gbb-btn" onClick={() => { haptics.button(); onHint(); }} disabled={isThinking}>
-          Hint
+      <div className="gbb-actions">
+        <button type="button" className="gbb-btn" onClick={() => { haptics.button(); onNew(); }}>
+          New
         </button>
-      )}
-      <button type="button" className="gbb-btn" onClick={() => { haptics.button(); onReview(); }} disabled={!canReview}>
-        Game Review
-      </button>
-      <button type="button" className="gbb-btn danger" onClick={() => { haptics.button(); onResign(); }} disabled={isThinking}>
-        Resign
-      </button>
+        <button type="button" className="gbb-btn" onClick={() => { haptics.button(); onUndo(); }} disabled={!canUndo || isThinking}>
+          Undo
+        </button>
+        <button type="button" className="gbb-btn" onClick={() => { haptics.button(); onFlipBoard(); }}>
+          Flip
+        </button>
+        {showHints && (
+          <button type="button" className="gbb-btn" onClick={() => { haptics.button(); onHint(); }} disabled={isThinking}>
+            Hint
+          </button>
+        )}
+        <button type="button" className="gbb-btn" onClick={() => { haptics.button(); onReview(); }} disabled={!canReview}>
+          Game Review
+        </button>
+        <button type="button" className="gbb-btn danger" onClick={() => { haptics.button(); onResign(); }} disabled={isThinking}>
+          Resign
+        </button>
+      </div>
     </div>
   );
 }

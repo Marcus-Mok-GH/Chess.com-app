@@ -185,20 +185,29 @@
 }
 
 @media (max-width: 640px) {
-  .game-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
+  .game-history-page {
+    padding: 1.5rem 1rem calc(5rem + env(safe-area-inset-bottom, 0px));
   }
 
-  .game-history-charts {
-    grid-template-columns: 1fr;
+  .game-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .game-actions,
+  .view-game-btn {
+    width: 100%;
+  }
+
+  .view-game-btn {
+    min-height: 44px;
   }
 }
 
 @media (max-width: 390px) {
   .game-history-page {
-    padding: 1.5rem 0.875rem 6rem;
+    padding: 1.5rem 0.875rem calc(6rem + env(safe-area-inset-bottom, 0px));
   }
 
   .game-history-header h1 {

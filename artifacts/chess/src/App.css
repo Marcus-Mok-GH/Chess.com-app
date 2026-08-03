@@ -296,11 +296,11 @@
   .offline-badge { display: none; }
 
   .mobile-header {
-    display: flex;
-    height: 56px;
+    height: calc(56px + env(safe-area-inset-top, 0px));
     align-items: center;
     justify-content: space-between;
     padding: 0 1rem;
+    padding-top: env(safe-area-inset-top, 0px);
     background: rgba(26, 26, 26, 0.85);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -308,7 +308,14 @@
     position: sticky;
     top: 0;
     z-index: 100;
-    padding-top: env(safe-area-inset-top, 0);
+  }
+
+  .mobile-header .page-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: right;
   }
 
   .app-logo {
@@ -319,13 +326,6 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-  }
-
-  .page-title {
-    font-size: 0.9rem;
-    font-weight: 700;
-    margin: 0;
-    color: #fff;
   }
 
   .bottom-nav {
@@ -339,7 +339,7 @@
     bottom: 0;
     left: 0;
     right: 0;
-    padding: 0.5rem 0 calc(0.5rem + env(safe-area-inset-bottom));
+    min-height: calc(64px + env(safe-area-inset-bottom, 0px));
     z-index: 100;
   }
 
@@ -357,6 +357,7 @@
     min-height: 48px;
     border-radius: var(--radius-sm);
     transition: color 0.15s, background 0.15s;
+    min-width: 0;
   }
 
   .nav-item:hover { color: #fff; }
@@ -386,7 +387,7 @@ main {
    space at the bottom of scrolling content so it can't be obscured. */
 @media (max-width: 768px) {
   main {
-    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
   }
 }
 

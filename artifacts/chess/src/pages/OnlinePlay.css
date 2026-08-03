@@ -613,7 +613,9 @@
 }
 
 @media (max-width: 768px) {
-  .online-play-page { padding-bottom: calc(env(safe-area-inset-bottom, 0) + 60px); }
+  .online-play-page {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 60px);
+  }
   .lobby-container { padding: 1.5rem 1rem 6rem; align-items: flex-start; }
   .lobby-content { padding: 1.5rem; border-radius: var(--radius-md); }
   .mode-title { font-size: 1.4rem; }
