@@ -1,3 +1,15 @@
+[2026-08-05] - Auth and route consistency
+
+- Replaced the dead /game-history landing links with the implemented /history route.
+- Preserved sign-up intent by routing /signup to the shared auth screen in account-creation mode.
+- Kept the responsive landing navigation and CTA fixes from the deployment audit.
+
+
+[2026-08-05] UI consistency fixes
+
+- Fixed landing-page Train, Watch, Community, Game Archive, and master-games links to use the implemented /history route instead of the dead /game-history path.
+- Kept /signup as a real route that renders the authentication screen rather than silently redirecting through a missing signup flow.
+- Preserved the responsive landing navigation and CTA fixes already applied during the deployment audit.
 ## [2026-08-03] - Subtle Chess.com-Inspired Theme
 
 ### Changed
@@ -341,3 +353,9 @@
 
 ### Fixed (deploy)
 - **Vercel preview build failed with `ERR_PNPM_OUTDATED_LOCKFILE`**: removed the lingering `nodemailer` entry from the root `package.json` so the lockfile matches; `pnpm install` is now consistent and the build runs through.
+
+## [2026-08-05] - Deployment UI Consistency Fixes
+
+- Corrected landing-page navigation links to use the live `/history` route instead of the missing `/game-history` path.
+- Preserved the sign-up intent when routing unauthenticated users through the shared login flow.
+- Replaced placeholder landing footer links with working support, jobs, developer, and about destinations.

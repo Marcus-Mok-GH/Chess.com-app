@@ -20,6 +20,7 @@ export default function Login() {
   const [emailInvalid, setEmailInvalid] = useState(false);
 
   const [error, setError] = useState(searchParams.get('error') || '');
+  const isSignupIntent = searchParams.get('mode') === 'signup';
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Redirect if already logged in
@@ -106,8 +107,8 @@ export default function Login() {
 
         <div className="login-header">
           <span className="login-eyebrow">PlayChess</span>
-          <h1 className="login-title">Welcome Back</h1>
-          <p className="login-subtitle">Sign in to your PlayChess account</p>
+          <h1 className="login-title">{isSignupIntent ? 'Create Your Account' : 'Welcome Back'}</h1>
+          <p className="login-subtitle">{isSignupIntent ? 'Start playing on PlayChess' : 'Sign in to your PlayChess account'}</p>
         </div>
 
         <hr className="login-divider" />
@@ -142,7 +143,7 @@ export default function Login() {
           </button>
 
           <div className="login-legal">
-            By signing in, you agree to our{' '}
+            By {isSignupIntent ? 'creating an account' : 'signing in'}, you agree to our{' '}
             <a href="/terms" target="_blank" rel="noopener noreferrer">Terms</a>{' '}
             and{' '}
             <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.
