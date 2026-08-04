@@ -36,15 +36,15 @@ const NAV_LINKS = [
   { icon: Play, label: 'Play', to: '/play' },
   { icon: Puzzle, label: 'Puzzles', to: '/puzzles' },
   { icon: GraduationCap, label: 'Learn', to: '/analysis' },
-  { icon: TrendingUp, label: 'Train', to: '/game-history' },
-  { icon: Eye, label: 'Watch', to: '/game-history' },
-  { icon: UsersRound, label: 'Community', to: '/game-history' },
+  { icon: TrendingUp, label: 'Train', to: '/history' },
+  { icon: Eye, label: 'Watch', to: '/history' },
+  { icon: UsersRound, label: 'Community', to: '/history' },
 ]
 
 // Other-rail links (chess.com collapses less-used destinations here)
 const OTHER_LINKS = [
   { label: 'Analysis Board', to: '/analysis' },
-  { label: 'Game Archive', to: '/game-history' },
+  { label: 'Game Archive', to: '/history' },
   { label: 'Settings', to: '/settings' },
   { label: 'Terms', to: '/terms' },
   { label: 'Privacy', to: '/privacy' },
@@ -94,7 +94,7 @@ const FEATURE_BLOCKS = [
     title: 'Watch the Best in the World Compete',
     description:
       'Replay master games move-by-move with Stockfish evaluation, negatives vs threats, and natural-language commentary.',
-    to: '/game-history',
+    to: '/history',
     cta: 'Watch Chess',
     boardTheme: 'green',
     fen: 'r1bq1rk1/ppp2ppp/2n2n2/3pp3/2P5/2N1PN2/PP3PPP/R1BQ1RK1 b - - 4 8',
@@ -116,11 +116,11 @@ const SOCIAL_LINKS = [
 ]
 
 const FOOTER_LINKS = [
-  { label: 'Support', to: '/terms' },
+  { label: 'Support', href: 'mailto:support@playchess.app' },
   { label: 'Chess Terms', to: '/terms' },
-  { label: 'About', to: '/terms' },
-  { label: 'Jobs', href: '#' },
-  { label: 'Developers', href: '#' },
+  { label: 'About', to: '/' },
+  { label: 'Jobs', href: 'mailto:jobs@playchess.app' },
+  { label: 'Developers', href: 'https://github.com/Marcus-Mok-GH/Chess.com-app' },
   { label: 'User Agreement', to: '/terms' },
   { label: 'Privacy Policy', to: '/privacy' },
   { label: 'Cheating & Fair Play', to: '/terms' },
@@ -229,7 +229,7 @@ export default function Landing() {
             <>
               <button
                 className="btn-green btn-block"
-                onClick={() => goTo('/signup')}
+                onClick={() => goTo('/login?mode=signup')}
                 type="button"
               >
                 <UserPlus size={16} />
@@ -294,7 +294,7 @@ export default function Landing() {
             <div className="hero-actions">
               <button
                 className="btn-green btn-lg"
-                onClick={() => goTo(isLoggedIn ? '/online' : '/signup')}
+                onClick={() => goTo(isLoggedIn ? '/online' : '/login?mode=signup')}
                 type="button"
               >
                 Get Started
@@ -390,7 +390,7 @@ export default function Landing() {
           <div className="app-promo-actions">
             <button
               className="btn-ghost btn-lg"
-              onClick={() => goTo(isLoggedIn ? '/home' : '/signup')}
+              onClick={() => goTo(isLoggedIn ? '/home' : '/login?mode=signup')}
               type="button"
             >
               {isLoggedIn ? 'Open Dashboard' : 'Get Started'}
@@ -404,7 +404,7 @@ export default function Landing() {
           <h2 className="final-cta-title">Learn, Play, and Have Fun!</h2>
           <button
             className="btn-green btn-xl"
-            onClick={() => goTo(isLoggedIn ? '/online' : '/signup')}
+            onClick={() => goTo(isLoggedIn ? '/online' : '/login?mode=signup')}
             type="button"
           >
             Get Started
