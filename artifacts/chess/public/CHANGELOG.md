@@ -8,7 +8,7 @@
 [2026-08-05] UI consistency fixes
 
 - Fixed landing-page Train, Watch, Community, Game Archive, and master-games links to use the implemented /history route instead of the dead /game-history path.
-- Kept /signup as a real route that renders the authentication screen rather than silently redirecting through a missing signup flow.
+- Kept /signup as a route that redirects to the shared authentication screen in account-creation mode.
 - Preserved the responsive landing navigation and CTA fixes already applied during the deployment audit.
 ## [2026-08-03] - Subtle Chess.com-Inspired Theme
 

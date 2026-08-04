@@ -229,7 +229,7 @@ export default function Landing() {
             <>
               <button
                 className="btn-green btn-block"
-                onClick={() => goTo('/login')}
+                onClick={() => goTo('/login?mode=signup')}
                 type="button"
               >
                 <UserPlus size={16} />
@@ -294,7 +294,7 @@ export default function Landing() {
             <div className="hero-actions">
               <button
                 className="btn-green btn-lg"
-                onClick={() => goTo(isLoggedIn ? '/online' : '/login')}
+                onClick={() => goTo(isLoggedIn ? '/online' : '/login?mode=signup')}
                 type="button"
               >
                 Get Started
@@ -390,7 +390,7 @@ export default function Landing() {
           <div className="app-promo-actions">
             <button
               className="btn-ghost btn-lg"
-              onClick={() => goTo(isLoggedIn ? '/home' : '/login')}
+              onClick={() => goTo(isLoggedIn ? '/home' : '/login?mode=signup')}
               type="button"
             >
               {isLoggedIn ? 'Open Dashboard' : 'Get Started'}
@@ -404,7 +404,7 @@ export default function Landing() {
           <h2 className="final-cta-title">Learn, Play, and Have Fun!</h2>
           <button
             className="btn-green btn-xl"
-            onClick={() => goTo(isLoggedIn ? '/online' : '/login')}
+            onClick={() => goTo(isLoggedIn ? '/online' : '/login?mode=signup')}
             type="button"
           >
             Get Started
