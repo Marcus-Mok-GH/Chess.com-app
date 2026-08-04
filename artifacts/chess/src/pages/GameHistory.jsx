@@ -43,7 +43,7 @@ export default function GameHistory() {
     const loadGameData = async () => {
       try {
         const [userGames, historyData] = await Promise.all([
-          api.getGameHistory(user.username),
+          api.getGameHistory(user.id || user.username),
           api.getEloHistory(user.username, 500)
         ]);
         setGames(userGames);
