@@ -376,7 +376,13 @@ router.get('/history/:username', async (req, res) => {
     const limit = Math.max(1, Math.min(parseInt(req.query.limit) || 20, 100));
     const result = await query(
       `SELECT game_code, result, fen, move_history, game_mode, created_at
-       FROM games WHERE white_player_name = $1 OR black_player_name = $1
+       FROM games
+       WHERE white_player_id = $1
+          OR black_player_id = $1
+          OR LOWER(white_player_name) = LOWER($1)
+          OR LOWER(black_player_name) = LOWER($1)
+          OR white_player_id IN (SELECT id FROM users WHERE LOWER(username) = LOWER($1))
+          OR black_player_id IN (SELECT id FROM users WHERE LOWER(username) = LOWER($1))
        ORDER BY created_at DESC LIMIT $2`,
       [username, limit]
     );

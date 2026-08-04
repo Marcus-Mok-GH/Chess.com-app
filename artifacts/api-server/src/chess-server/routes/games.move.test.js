@@ -313,6 +313,26 @@ describe('POST /api/games/:gameId/end', () => {
   });
 });
 
+describe('GET /api/games/history/:username', () => {
+  it('matches completed games by the authenticated user ID as well as username', async () => {
+    const app = buildApp();
+    app.use('/api/games', gameRoutes);
+    const games = [{
+      game_code: 'GAME1', result: 'white', move_history: ['e4'], game_mode: 'ranked',
+    }];
+    query.mockResolvedValueOnce({ rows: games });
+
+    const res = await loopback(app, 'GET', '/api/games/history/550e8400-e29b-41d4-a716-446655440000');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(games);
+    const sql = query.mock.calls[0][0];
+    expect(sql).toContain('white_player_id = $1');
+    expect(sql).toContain('black_player_id = $1');
+    expect(sql).toContain('LOWER(username) = LOWER($1)');
+  });
+});
+
 describe('GET /api/games/by-code/:gameCode — active_games checked first', () => {
   it('returns active_games row even when a stale games row exists', async () => {
     const app = buildApp();

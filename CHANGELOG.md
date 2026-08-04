@@ -1,3 +1,9 @@
+## [2026-08-04] - Online Game History Persistence
+
+### Fixed
+- Game History now requests history by account ID and matches completed online games by account ID as well as display name, including UUID-backed accounts and session-suffixed player IDs.
+- Added regression coverage for ID-based history lookup.
+
 ## [2026-08-02] - Conservative Cleanup Refactor
 
 ### Changed
