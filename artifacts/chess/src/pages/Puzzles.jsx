@@ -13,6 +13,7 @@ import {
   Zap,
   Brain,
   Code2,
+  WandSparkles,
 } from "lucide-react";
 import {
   BASE_PUZZLES,
@@ -150,7 +151,7 @@ export default function Puzzles() {
   const [solved, setSolved] = useState(false);
   const [failed, setFailed] = useState(false);
   const [showHint, setShowHint] = useState(false);
-  const [generationMethod, setGenerationMethod] = useState("rules");
+  const [generationMethod, setGenerationMethod] = useState("auto");
   const sessionIdRef = useRef(Date.now());
   const generationRequestRef = useRef(0);
 
@@ -168,12 +169,24 @@ export default function Puzzles() {
   // surface that to the user instead of silently switching methods.
   const [methodFallbackReason, setMethodFallbackReason] = useState(null);
 
+  function computeMethodFallbackReason(puzzle, requested) {
+    const ef = puzzle.effectiveMethod || puzzle.method;
+    if (!ef || !requested || requested === 'auto' || ef === requested || ef === 'procedural-fallback') {
+      return null;
+    }
+    if (ef === 'stockfish-fallback') {
+      return `Requested ${requested}, got Stockfish (engine unavailable) after fallback.`;
+    }
+    return `Requested ${requested}, got ${ef} after fallback.`;
+  }
+
   // Generate the first puzzle asynchronously after mount so the initial render
   // is not blocked by the (worst-case bounded) search inside generatePuzzle.
   useEffect(() => {
     const requestId = ++generationRequestRef.current;
     clearTimers();
     setInitializing(true);
+    setMethodFallbackReason(null);
     generatePuzzleSafely(null, sessionIdRef.current, generationMethod).then((p) => {
       if (generationRequestRef.current !== requestId) return;
       setPuzzle(p);
@@ -181,17 +194,7 @@ export default function Puzzles() {
       setSolved(false);
       setFailed(false);
       setShowHint(false);
-      const ef = p.effectiveMethod || p.method;
-      const requested = generationMethod.replace(/^auto$/, "rules");
-      setMethodFallbackReason(
-        ef && requested && ef !== requested && ef !== "procedural-fallback"
-          ? `Requested ${requested}, got ${
-              ef === "stockfish-fallback"
-                ? "Stockfish (engine unavailable)"
-                : ef
-            } after fallback.`
-          : null,
-      );
+      setMethodFallbackReason(computeMethodFallbackReason(p, generationMethod));
       setInitializing(false);
     });
     return () => {
@@ -244,6 +247,7 @@ export default function Puzzles() {
       setStreak(0);
     }
     setInitializing(true);
+    setMethodFallbackReason(null);
     const freshPuzzle = await generatePuzzleSafely(
       puzzle,
       sessionIdRef.current,
@@ -255,6 +259,7 @@ export default function Puzzles() {
     setSolved(false);
     setFailed(false);
     setShowHint(false);
+    setMethodFallbackReason(computeMethodFallbackReason(freshPuzzle, generationMethod));
     setPuzzleNumber((number) => number + 1);
     setInitializing(false);
   }
@@ -337,6 +342,7 @@ export default function Puzzles() {
     const requestId = ++generationRequestRef.current;
     clearTimers();
     setInitializing(true);
+    setMethodFallbackReason(null);
     const freshPuzzle = await generatePuzzleSafely(
       puzzle,
       sessionIdRef.current,
@@ -349,6 +355,7 @@ export default function Puzzles() {
     setSolved(false);
     setFailed(false);
     setShowHint(false);
+    setMethodFallbackReason(computeMethodFallbackReason(freshPuzzle, generationMethod));
     setInitializing(false);
   }
 
@@ -358,6 +365,7 @@ export default function Puzzles() {
     clearTimers();
     setStreak(0);
     setInitializing(true);
+    setMethodFallbackReason(null);
     const freshPuzzle = await generatePuzzleSafely(
       puzzle,
       sessionIdRef.current,
@@ -370,6 +378,7 @@ export default function Puzzles() {
     setSolved(false);
     setFailed(false);
     setShowHint(false);
+    setMethodFallbackReason(computeMethodFallbackReason(freshPuzzle, generationMethod));
     setInitializing(false);
   }
 
@@ -490,9 +499,17 @@ export default function Puzzles() {
               <div className="puzzle-generation-options">
                 <button
                   type="button"
+                  className={`puzzle-gen-option puzzle-gen-option--auto ${generationMethod === 'auto' ? 'active' : ''}`}
+                  onClick={() => setGenerationMethod('auto')}
+                  title="Choose the best available generator for the current puzzle state"
+                >
+                  <WandSparkles size={14} /> Auto
+                </button>
+                <button
+                  type="button"
                   className={`puzzle-gen-option ${generationMethod === 'rules' ? 'active' : ''}`}
                   onClick={() => setGenerationMethod('rules')}
-                  title="Hardcoded rules"
+                  title="Verified rules-based generation"
                 >
                   <Brain size={14} /> Rules
                 </button>

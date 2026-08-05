@@ -372,3 +372,15 @@
   opacity: 0.45;
   cursor: default;
 }
+
+@media (min-width: 769px) {
+  .puzzles-page {
+    padding: 2rem clamp(1rem, 3vw, 3rem) 3rem;
+  }
+
+  .puzzles-container { max-width: 1180px; }
+  .puzzles-header { max-width: 760px; }
+  .puzzles-layout { grid-template-columns: minmax(0, 1fr) 320px; gap: 2rem; }
+  .puzzles-board-wrap { width: min(100%, 700px); }
+  .puzzle-side-card { box-shadow: var(--shadow-md); }
+}

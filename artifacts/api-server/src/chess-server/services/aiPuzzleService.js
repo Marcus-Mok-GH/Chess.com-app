@@ -46,6 +46,10 @@ Constraints:
  * @param {object} [options] - { difficulty, type, seed, provider, userId }
  * @returns {Promise<object>} A valid puzzle object (AI-generated if the model output is legal, else a procedural fallback that still satisfies the request shape).
  */
+export function isAIAvailable() {
+  return Boolean(PUZZLE_AI_API_URL);
+}
+
 export async function generatePuzzleWithAI(description, options = {}) {
   const { difficulty = "medium", type = "tactics", seed, provider = "default" } = options;
 
