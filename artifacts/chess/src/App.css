@@ -293,6 +293,7 @@
 @media (max-width: 768px) {
   .app { flex-direction: column; }
   .sidebar-nav { display: none; }
+  .bottom-nav { display: flex; }
   .offline-badge { display: none; }
 
   .mobile-header {
@@ -432,7 +433,8 @@ main {
 /* Keep navigation language consistent across desktop and mobile. */
 @media (min-width: 769px) {
   .app { flex-direction: column; }
-  .sidebar-nav { display: none; }
+  .sidebar-nav { display: flex; }
+  .bottom-nav { display: none; }
 
   .mobile-header {
     display: flex;
@@ -454,22 +456,6 @@ main {
     color: var(--text-secondary);
   }
 
-  .bottom-nav {
-    display: flex;
-    justify-content: center;
-    gap: 0.35rem;
-    padding: 0.5rem 1rem;
-    min-height: 68px;
-    background: rgba(26, 26, 26, 0.94);
-    border-top: 1px solid var(--color-border-subtle);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 100;
-  }
 
   .nav-item {
     display: flex;

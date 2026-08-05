@@ -1,6 +1,22 @@
 import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../contexts/SettingsContext';
 import { useUser } from '../contexts/UserContext';
+import {
+  Palette,
+  Volume2,
+  Smartphone,
+  Bug,
+  Settings2,
+  User2,
+  RotateCcw,
+  LogOut,
+  ScrollText,
+  MousePointer2,
+  Eye,
+  Crosshair,
+  Crown,
+  CheckCircle2,
+} from 'lucide-react';
 import './Settings.css';
 
 const BOARD_THEMES = [
@@ -10,6 +26,48 @@ const BOARD_THEMES = [
   { id: 'purple', name: 'Purple', light: '#e8e0f0', dark: '#9070a0' },
 ];
 
+function Toggle({ checked, onChange }) {
+  return (
+    <label className="toggle">
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <span className="toggle-track">
+        <span className="toggle-thumb" />
+      </span>
+    </label>
+  );
+}
+
+function SettingRow({ icon: Icon, label, desc, children }) {
+  return (
+    <div className="setting-item">
+      <div className="setting-info">
+        <div className="setting-title">
+          {Icon && <Icon className="setting-icon" size={16} />}
+          <span>{label}</span>
+        </div>
+        {desc && <span className="setting-desc">{desc}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function Section({ icon: Icon, title, children }) {
+  return (
+    <section className="settings-section">
+      <div className="section-header">
+        {Icon && (
+          <span className="section-icon">
+            <Icon size={15} />
+          </span>
+        )}
+        <h2>{title}</h2>
+      </div>
+      {children}
+    </section>
+  );
+}
+
 export default function Settings() {
   const { settings, updateSettings, resetSettings } = useSettings();
   const { user, logout } = useUser();
@@ -18,50 +76,55 @@ export default function Settings() {
   return (
     <div className="settings-page">
       <div className="settings-container">
-        <h1>Settings</h1>
+        <div className="settings-header">
+          <span className="settings-header-icon">
+            <Settings2 size={22} />
+          </span>
+          <div>
+            <h1>Settings</h1>
+            <p className="settings-subtitle">Personalize your experience</p>
+          </div>
+        </div>
 
         {!user && (
           <div className="settings-guest-note">
-            Sign in to save settings and game history. Guests can play vs bots without saves or analysis.
+            <CheckCircle2 size={16} />
+            <span>
+              Sign in to save settings and game history. Guests can play vs bots without saves or
+              analysis.
+            </span>
           </div>
         )}
 
-        <section className="settings-section">
-          <h2>Display</h2>
-          
-          <div className="setting-item">
-            <div className="setting-info">
-              <label>Show Coordinates</label>
-              <span className="setting-desc">Display rank and file labels on the board</span>
-            </div>
-            <label className="toggle">
-              <input
-                type="checkbox"
-                checked={settings.showCoordinates}
-                onChange={(e) => updateSettings({ showCoordinates: e.target.checked })}
-              />
-              <span className="toggle-slider"></span>
-            </label>
-          </div>
+        <Section icon={Palette} title="Display">
+          <SettingRow
+            icon={Eye}
+            label="Show Coordinates"
+            desc="Display rank and file labels on the board"
+          >
+            <Toggle
+              checked={settings.showCoordinates}
+              onChange={(v) => updateSettings({ showCoordinates: v })}
+            />
+          </SettingRow>
+
+          <SettingRow
+            icon={Crosshair}
+            label="Highlight Legal Moves"
+            desc="Show dots on squares where pieces can move"
+          >
+            <Toggle
+              checked={settings.highlightMoves}
+              onChange={(v) => updateSettings({ highlightMoves: v })}
+            />
+          </SettingRow>
 
           <div className="setting-item">
             <div className="setting-info">
-              <label>Highlight Legal Moves</label>
-              <span className="setting-desc">Show dots on squares where pieces can move</span>
-            </div>
-            <label className="toggle">
-              <input
-                type="checkbox"
-                checked={settings.highlightMoves}
-                onChange={(e) => updateSettings({ highlightMoves: e.target.checked })}
-              />
-              <span className="toggle-slider"></span>
-            </label>
-          </div>
-
-          <div className="setting-item">
-            <div className="setting-info">
-              <label>Board Theme</label>
+              <div className="setting-title">
+                <Palette className="setting-icon" size={16} />
+                <span>Board Theme</span>
+              </div>
               <span className="setting-desc">Choose your board color scheme</span>
             </div>
             <div className="theme-selector">
@@ -71,89 +134,69 @@ export default function Settings() {
                   className={`theme-option ${settings.boardTheme === theme.id ? 'active' : ''}`}
                   onClick={() => updateSettings({ boardTheme: theme.id })}
                   title={theme.name}
+                  type="button"
                 >
                   <div className="theme-preview">
-                    <div className="theme-square light" style={{ backgroundColor: theme.light }}></div>
-                    <div className="theme-square dark" style={{ backgroundColor: theme.dark }}></div>
+                    <div className="theme-square light" style={{ backgroundColor: theme.light }} />
+                    <div className="theme-square dark" style={{ backgroundColor: theme.dark }} />
                   </div>
+                  <span className="theme-name">{theme.name}</span>
                 </button>
               ))}
             </div>
           </div>
-        </section>
+        </Section>
 
-        <section className="settings-section">
-          <h2>Gameplay</h2>
+        <Section icon={Settings2} title="Gameplay">
+          <SettingRow
+            icon={Crown}
+            label="Auto-Promote to Queen"
+            desc="Automatically promote pawns to queen"
+          >
+            <Toggle checked={settings.autoQueen} onChange={(v) => updateSettings({ autoQueen: v })} />
+          </SettingRow>
 
-          <div className="setting-item">
-            <div className="setting-info">
-              <label>Auto-Promote to Queen</label>
-              <span className="setting-desc">Automatically promote pawns to queen</span>
-            </div>
-            <label className="toggle">
-              <input
-                type="checkbox"
-                checked={settings.autoQueen}
-                onChange={(e) => updateSettings({ autoQueen: e.target.checked })}
-              />
-              <span className="toggle-slider"></span>
-            </label>
-          </div>
+          <SettingRow
+            icon={MousePointer2}
+            label="Confirm Moves"
+            desc="Require confirmation before making a move"
+          >
+            <Toggle
+              checked={settings.confirmMoves}
+              onChange={(v) => updateSettings({ confirmMoves: v })}
+            />
+          </SettingRow>
 
-          <div className="setting-item">
-            <div className="setting-info">
-              <label>Confirm Moves</label>
-              <span className="setting-desc">Require confirmation before making a move</span>
-            </div>
-            <label className="toggle">
-              <input
-                type="checkbox"
-                checked={settings.confirmMoves}
-                onChange={(e) => updateSettings({ confirmMoves: e.target.checked })}
-              />
-              <span className="toggle-slider"></span>
-            </label>
-          </div>
+          <SettingRow
+            icon={Settings2}
+            label="Show Hints Button"
+            desc="Display the hint button during games"
+          >
+            <Toggle checked={settings.showHints} onChange={(v) => updateSettings({ showHints: v })} />
+          </SettingRow>
+        </Section>
 
-          <div className="setting-item">
-            <div className="setting-info">
-              <label>Show Hints Button</label>
-              <span className="setting-desc">Display the hint button during games</span>
-            </div>
-            <label className="toggle">
-              <input
-                type="checkbox"
-                checked={settings.showHints}
-                onChange={(e) => updateSettings({ showHints: e.target.checked })}
-              />
-              <span className="toggle-slider"></span>
-            </label>
-          </div>
-        </section>
-
-        <section className="settings-section">
-          <h2>Sound</h2>
-
-          <div className="setting-item">
-            <div className="setting-info">
-              <label>Sound Effects</label>
-              <span className="setting-desc">Play sounds for moves and game events</span>
-            </div>
-            <label className="toggle">
-              <input
-                type="checkbox"
-                checked={settings.soundEnabled}
-                onChange={(e) => updateSettings({ soundEnabled: e.target.checked })}
-              />
-              <span className="toggle-slider"></span>
-            </label>
-          </div>
+        <Section icon={Volume2} title="Sound">
+          <SettingRow
+            icon={Volume2}
+            label="Sound Effects"
+            desc="Play sounds for moves and game events"
+          >
+            <Toggle
+              checked={settings.soundEnabled}
+              onChange={(v) => updateSettings({ soundEnabled: v })}
+            />
+          </SettingRow>
 
           {settings.soundEnabled && (
-            <div className="setting-item">
+            <div className="setting-item setting-item-vertical">
               <div className="setting-info">
-                <label>Volume</label>
-                <span className="setting-desc">{settings.soundVolume}%</span>
+                <div className="setting-title">
+                  <Volume2 className="setting-icon" size={16} />
+                  <span>Volume</span>
+                  <span className="volume-value">{settings.soundVolume}%</span>
+                </div>
+                <span className="setting-desc">Adjust the sound effect loudness</span>
               </div>
               <input
                 type="range"
@@ -165,62 +208,44 @@ export default function Settings() {
               />
             </div>
           )}
-        </section>
+        </Section>
 
-        <section className="settings-section">
-          <h2>Haptics</h2>
+        <Section icon={Smartphone} title="Haptics">
+          <SettingRow
+            icon={Smartphone}
+            label="Haptic Feedback"
+            desc="Vibrate on moves and captures (mobile only)"
+          >
+            <Toggle
+              checked={settings.hapticEnabled}
+              onChange={(v) => updateSettings({ hapticEnabled: v })}
+            />
+          </SettingRow>
+        </Section>
 
+        <Section icon={Bug} title="Advanced">
+          <SettingRow icon={Bug} label="Debug Mode" desc="Show AI thinking and evaluation data">
+            <Toggle checked={settings.debugMode} onChange={(v) => updateSettings({ debugMode: v })} />
+          </SettingRow>
+        </Section>
+
+        <Section icon={ScrollText} title="About">
           <div className="setting-item">
             <div className="setting-info">
-              <label>Haptic Feedback</label>
-              <span className="setting-desc">Vibrate on moves and captures (mobile only)</span>
-            </div>
-            <label className="toggle">
-              <input
-                type="checkbox"
-                checked={settings.hapticEnabled}
-                onChange={(e) => updateSettings({ hapticEnabled: e.target.checked })}
-              />
-              <span className="toggle-slider"></span>
-            </label>
-          </div>
-        </section>
-
-        <section className="settings-section">
-          <h2>Advanced</h2>
-
-          <div className="setting-item">
-            <div className="setting-info">
-              <label>Debug Mode</label>
-              <span className="setting-desc">Show AI thinking and evaluation data</span>
-            </div>
-            <label className="toggle">
-              <input
-                type="checkbox"
-                checked={settings.debugMode}
-                onChange={(e) => updateSettings({ debugMode: e.target.checked })}
-              />
-              <span className="toggle-slider"></span>
-            </label>
-          </div>
-        </section>
-
-        <section className="settings-section">
-          <h2>About</h2>
-          <div className="setting-item">
-            <div className="setting-info">
-              <label>Changelog</label>
+              <div className="setting-title">
+                <ScrollText className="setting-icon" size={16} />
+                <span>Changelog</span>
+              </div>
               <span className="setting-desc">See recent updates and fixes</span>
             </div>
             <button className="link-button" type="button" onClick={() => navigate('/changelog')}>
               View
             </button>
           </div>
-        </section>
+        </Section>
 
         {user && (
-          <section className="settings-section">
-            <h2>Account</h2>
+          <Section icon={User2} title="Account">
             <div className="account-info">
               <div className="account-row">
                 <span className="account-label">Username</span>
@@ -228,7 +253,7 @@ export default function Settings() {
               </div>
               <div className="account-row">
                 <span className="account-label">Rating</span>
-                <span className="account-value">{user.elo}</span>
+                <span className="account-value account-value-elo">{user.elo}</span>
               </div>
               <div className="account-row">
                 <span className="account-label">Games Played</span>
@@ -236,20 +261,24 @@ export default function Settings() {
               </div>
               <div className="account-row">
                 <span className="account-label">Record</span>
-                <span className="account-value">
-                  {user.wins || 0}W / {user.draws || 0}D / {user.losses || 0}L
+                <span className="account-value record">
+                  <span className="rec-w">{user.wins || 0}W</span>
+                  <span className="rec-d">{user.draws || 0}D</span>
+                  <span className="rec-l">{user.losses || 0}L</span>
                 </span>
               </div>
             </div>
-            <button className="logout-btn" onClick={logout}>
-              Log Out
+            <button className="logout-btn" onClick={logout} type="button">
+              <LogOut size={16} />
+              <span>Log Out</span>
             </button>
-          </section>
+          </Section>
         )}
 
         <div className="settings-actions">
-          <button className="reset-btn" onClick={resetSettings}>
-            Reset to Defaults
+          <button className="reset-btn" onClick={resetSettings} type="button">
+            <RotateCcw size={15} />
+            <span>Reset to Defaults</span>
           </button>
         </div>
       </div>

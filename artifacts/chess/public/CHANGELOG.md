@@ -1,3 +1,10 @@
+[2026-08-05] - Settings UI modernization and desktop nav fix
+
+- Fixed the desktop on which both the left sidebar and the bottom navigation bar appeared at the same time. The mobile media query (`max-width: 768px`) was incorrectly forcing `.sidebar-nav` to `display: flex` and hiding `.bottom-nav`; corrected it so mobile shows the bottom nav only, and the desktop rule (`min-width: 769px`) keeps the sidebar and hides the bottom nav.
+- Reworked the `Settings.jsx` page to use a consistent card-based layout with icon-adorned section headers, `lucide-react` section icons, SettingRow rows that pair a label/description with the appropriate control, theme swatches, and grouped action buttons.
+- Added a sleek modern polish layer to `Settings.css`: glassy section cards with subtle borders and shadows, accent bars on section headers, gradient toggle tracks with smooth transitions, refined hover micro-interactions, and consistent radius/spacing rhythm using the app's design tokens.
+
+
 [2026-08-05] - Auth and route consistency
 
 - Replaced the dead /game-history landing links with the implemented /history route.
