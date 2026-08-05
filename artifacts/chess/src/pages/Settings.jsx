@@ -26,10 +26,15 @@ const BOARD_THEMES = [
   { id: 'purple', name: 'Purple', light: '#e8e0f0', dark: '#9070a0' },
 ];
 
-function Toggle({ checked, onChange }) {
+function Toggle({ checked, onChange, label }) {
   return (
     <label className="toggle">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        aria-label={label}
+      />
       <span className="toggle-track">
         <span className="toggle-thumb" />
       </span>
@@ -103,6 +108,7 @@ export default function Settings() {
             desc="Display rank and file labels on the board"
           >
             <Toggle
+              label="Show Coordinates"
               checked={settings.showCoordinates}
               onChange={(v) => updateSettings({ showCoordinates: v })}
             />
@@ -114,6 +120,7 @@ export default function Settings() {
             desc="Show dots on squares where pieces can move"
           >
             <Toggle
+              label="Highlight Legal Moves"
               checked={settings.highlightMoves}
               onChange={(v) => updateSettings({ highlightMoves: v })}
             />
@@ -132,6 +139,7 @@ export default function Settings() {
                 <button
                   key={theme.id}
                   className={`theme-option ${settings.boardTheme === theme.id ? 'active' : ''}`}
+                  aria-pressed={settings.boardTheme === theme.id}
                   onClick={() => updateSettings({ boardTheme: theme.id })}
                   title={theme.name}
                   type="button"
@@ -153,7 +161,7 @@ export default function Settings() {
             label="Auto-Promote to Queen"
             desc="Automatically promote pawns to queen"
           >
-            <Toggle checked={settings.autoQueen} onChange={(v) => updateSettings({ autoQueen: v })} />
+            <Toggle label="Auto-Promote to Queen" checked={settings.autoQueen} onChange={(v) => updateSettings({ autoQueen: v })} />
           </SettingRow>
 
           <SettingRow
@@ -162,6 +170,7 @@ export default function Settings() {
             desc="Require confirmation before making a move"
           >
             <Toggle
+              label="Confirm Moves"
               checked={settings.confirmMoves}
               onChange={(v) => updateSettings({ confirmMoves: v })}
             />
@@ -172,7 +181,7 @@ export default function Settings() {
             label="Show Hints Button"
             desc="Display the hint button during games"
           >
-            <Toggle checked={settings.showHints} onChange={(v) => updateSettings({ showHints: v })} />
+            <Toggle label="Show Hints Button" checked={settings.showHints} onChange={(v) => updateSettings({ showHints: v })} />
           </SettingRow>
         </Section>
 
@@ -183,6 +192,7 @@ export default function Settings() {
             desc="Play sounds for moves and game events"
           >
             <Toggle
+              label="Sound Effects"
               checked={settings.soundEnabled}
               onChange={(v) => updateSettings({ soundEnabled: v })}
             />
@@ -225,7 +235,7 @@ export default function Settings() {
 
         <Section icon={Bug} title="Advanced">
           <SettingRow icon={Bug} label="Debug Mode" desc="Show AI thinking and evaluation data">
-            <Toggle checked={settings.debugMode} onChange={(v) => updateSettings({ debugMode: v })} />
+            <Toggle label="Debug Mode" checked={settings.debugMode} onChange={(v) => updateSettings({ debugMode: v })} />
           </SettingRow>
         </Section>
 

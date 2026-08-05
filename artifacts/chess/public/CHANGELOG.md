@@ -1,8 +1,9 @@
 [2026-08-05] - Settings UI modernization and desktop nav fix
 
-- Fixed the desktop on which both the left sidebar and the bottom navigation bar appeared at the same time. The mobile media query (`max-width: 768px`) was incorrectly forcing `.sidebar-nav` to `display: flex` and hiding `.bottom-nav`; corrected it so mobile shows the bottom nav only, and the desktop rule (`min-width: 769px`) keeps the sidebar and hides the bottom nav.
-- Reworked the `Settings.jsx` page to use a consistent card-based layout with icon-adorned section headers, `lucide-react` section icons, SettingRow rows that pair a label/description with the appropriate control, theme swatches, and grouped action buttons.
-- Added a sleek modern polish layer to `Settings.css`: glassy section cards with subtle borders and shadows, accent bars on section headers, gradient toggle tracks with smooth transitions, refined hover micro-interactions, and consistent radius/spacing rhythm using the app's design tokens.
+- Fixed the desktop on which both the left sidebar and the bottom navigation bar appeared at the same time. The mobile media query (`max-width: 768px`) was incorrectly forcing `.sidebar-nav` to `display: flex` and hiding `.bottom-nav`; corrected it so mobile shows the bottom nav only, and the desktop rule (`min-width: 769px`) keeps the sidebar and hides the bottom nav. Desktop now uses `flex-direction: row` so the sidebar sits beside main content, and the mobile header stays hidden on desktop.
+- Reworked the `Settings.jsx` page to use a consistent card-based layout with icon-adorned section headers, `lucide-react` section icons, SettingRow rows that pair a label/description with the appropriate control, theme swatches, and grouped action buttons. Theme swatch buttons now expose `aria-pressed` for the active theme, and the `Toggle` control accepts a `label` prop applied as the checkbox `aria-label` so every toggle has an accessible name.
+- Added a sleek modern polish layer to `Settings.css`: glassy section cards with subtle borders and shadows, accent bars on section headers, gradient toggle tracks with smooth transitions, refined hover micro-interactions, and consistent radius/spacing rhythm using the app's design tokens. Added a `:focus-visible` outline on the volume slider so keyboard users can see when it is focused.
+- Addressed CodeRabbit review feedback for the in-scope settings and navigation changes.
 
 
 [2026-08-05] - Auth and route consistency
