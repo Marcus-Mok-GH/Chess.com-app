@@ -169,12 +169,24 @@ export default function Puzzles() {
   // surface that to the user instead of silently switching methods.
   const [methodFallbackReason, setMethodFallbackReason] = useState(null);
 
+  function computeMethodFallbackReason(puzzle, requested) {
+    const ef = puzzle.effectiveMethod || puzzle.method;
+    if (!ef || !requested || requested === 'auto' || ef === requested || ef === 'procedural-fallback') {
+      return null;
+    }
+    if (ef === 'stockfish-fallback') {
+      return `Requested ${requested}, got Stockfish (engine unavailable) after fallback.`;
+    }
+    return `Requested ${requested}, got ${ef} after fallback.`;
+  }
+
   // Generate the first puzzle asynchronously after mount so the initial render
   // is not blocked by the (worst-case bounded) search inside generatePuzzle.
   useEffect(() => {
     const requestId = ++generationRequestRef.current;
     clearTimers();
     setInitializing(true);
+    setMethodFallbackReason(null);
     generatePuzzleSafely(null, sessionIdRef.current, generationMethod).then((p) => {
       if (generationRequestRef.current !== requestId) return;
       setPuzzle(p);
@@ -182,17 +194,7 @@ export default function Puzzles() {
       setSolved(false);
       setFailed(false);
       setShowHint(false);
-      const ef = p.effectiveMethod || p.method;
-      const requested = generationMethod;
-      setMethodFallbackReason(
-        ef && requested && requested !== "auto" && ef !== requested && ef !== "procedural-fallback"
-          ? `Requested ${requested}, got ${
-              ef === "stockfish-fallback"
-                ? "Stockfish (engine unavailable)"
-                : ef
-            } after fallback.`
-          : null,
-      );
+      setMethodFallbackReason(computeMethodFallbackReason(p, generationMethod));
       setInitializing(false);
     });
     return () => {
@@ -245,6 +247,7 @@ export default function Puzzles() {
       setStreak(0);
     }
     setInitializing(true);
+    setMethodFallbackReason(null);
     const freshPuzzle = await generatePuzzleSafely(
       puzzle,
       sessionIdRef.current,
@@ -256,6 +259,7 @@ export default function Puzzles() {
     setSolved(false);
     setFailed(false);
     setShowHint(false);
+    setMethodFallbackReason(computeMethodFallbackReason(freshPuzzle, generationMethod));
     setPuzzleNumber((number) => number + 1);
     setInitializing(false);
   }
@@ -338,6 +342,7 @@ export default function Puzzles() {
     const requestId = ++generationRequestRef.current;
     clearTimers();
     setInitializing(true);
+    setMethodFallbackReason(null);
     const freshPuzzle = await generatePuzzleSafely(
       puzzle,
       sessionIdRef.current,
@@ -350,6 +355,7 @@ export default function Puzzles() {
     setSolved(false);
     setFailed(false);
     setShowHint(false);
+    setMethodFallbackReason(computeMethodFallbackReason(freshPuzzle, generationMethod));
     setInitializing(false);
   }
 
@@ -359,6 +365,7 @@ export default function Puzzles() {
     clearTimers();
     setStreak(0);
     setInitializing(true);
+    setMethodFallbackReason(null);
     const freshPuzzle = await generatePuzzleSafely(
       puzzle,
       sessionIdRef.current,
@@ -371,6 +378,7 @@ export default function Puzzles() {
     setSolved(false);
     setFailed(false);
     setShowHint(false);
+    setMethodFallbackReason(computeMethodFallbackReason(freshPuzzle, generationMethod));
     setInitializing(false);
   }
 
