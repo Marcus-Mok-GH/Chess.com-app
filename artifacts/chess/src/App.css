@@ -435,7 +435,7 @@ main {
    `flex-direction: column` stacked the sidebar above main, and that re-showing
    .mobile-header / styling .nav-item here duplicated mobile-only rules. */
 @media (min-width: 769px) {
-  .app { flex-direction: row; }
+  .app { flex-direction: row; height: 100dvh; }
   .sidebar-nav { display: flex; }
   .bottom-nav { display: none; }
   .mobile-header { display: none; }
