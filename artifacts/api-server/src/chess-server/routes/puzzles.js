@@ -89,7 +89,7 @@ router.get('/random', async (req, res) => {
 router.post('/generate', async (req, res) => {
   try {
     const {
-      method = 'rules',
+      method = 'auto',
       difficulty = 'medium',
       type = 'tactics',
       description = '',
@@ -135,7 +135,7 @@ router.post('/generate', async (req, res) => {
 router.get('/generate', async (req, res) => {
   try {
     const {
-      method = 'rules',
+      method = 'auto',
       difficulty = 'medium',
       type = 'tactics',
       description = '',

@@ -1,3 +1,10 @@
+## [2026-08-05] - Desktop UI and Adaptive Puzzle Generation
+
+### Added
+- Matched the desktop shell and puzzle page styling to the sleek mobile navigation language, including the mobile header, bottom navigation, glass surfaces, spacing, and responsive puzzle layout.
+- Added Auto puzzle generation mode so the backend selects the best available method for the current difficulty, puzzle type, and description.
+- Added effective-method and selection-reason metadata, with graceful fallback behavior preserved for Stockfish and AI generation.
+
 ## [2026-08-04] - Online Game History Persistence
 
 ### Fixed

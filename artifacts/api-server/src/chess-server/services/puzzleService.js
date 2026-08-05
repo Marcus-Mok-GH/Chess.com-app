@@ -11,10 +11,31 @@
 import { Chess } from 'chess.js';
 import { BASE_PUZZLES, generatePuzzle as generatePuzzleFromGenerator, validateGeneratedPuzzle } from '../puzzles/puzzleGenerator.js';
 import aiPuzzleService from './aiPuzzleService.js';
+import { isAIAvailable } from './aiPuzzleService.js';
 import stockfishService from './stockfishService.js';
 
 // In-memory storage for generated puzzles (persist to DB in production)
 const generatedPuzzles = new Map();
+
+export function selectPuzzleMethod(options = {}) {
+  const { requestedMethod = 'auto', difficulty = 'medium', type = 'tactics', description = '' } = options;
+  if (requestedMethod && requestedMethod !== 'auto') {
+    return { method: requestedMethod, reason: `Manual selection: ${requestedMethod}` };
+  }
+
+  if (description && isAIAvailable()) {
+    return { method: 'ai', reason: 'AI is best suited to the requested description.' };
+  }
+
+  const stockfishPreferred =
+    ['hard', 'expert'].includes(String(difficulty).toLowerCase()) ||
+    ['tactics', 'endgame', 'middlegame'].includes(String(type).toLowerCase());
+  if (stockfishPreferred && stockfishService.isStockfishAvailable()) {
+    return { method: 'stockfish', reason: 'Stockfish is available for this tactical position and difficulty.' };
+  }
+
+  return { method: 'rules', reason: 'Verified rules-based generation is fastest for this state.' };
+}
 
 // Statistics tracking
 const stats = {
@@ -136,13 +157,15 @@ export function getPuzzleById(id) {
  */
 export async function generatePuzzle(options = {}) {
   const {
-    method = 'rules',
+    method: requestedMethod = 'auto',
     difficulty = 'medium',
     type = 'tactics',
     description = '',
     provider = 'default',
     userId = null
   } = options;
+  const selection = selectPuzzleMethod({ requestedMethod, difficulty, type, description });
+  const method = selection.method;
   
   let puzzle;
   
@@ -178,6 +201,9 @@ export async function generatePuzzle(options = {}) {
   puzzle.difficulty = puzzle.difficulty || difficulty;
   puzzle.type = puzzle.type || type;
   puzzle.method = puzzle.method || method;
+  puzzle.requestedMethod = requestedMethod;
+  puzzle.effectiveMethod = puzzle.method;
+  puzzle.selectionReason = selection.reason;
   
   if (userId) {
     puzzle.userId = userId;
@@ -539,6 +565,7 @@ export default {
   getPuzzlesByUser,
   deletePuzzle,
   getPuzzleStats,
+  selectPuzzleMethod,
   generateWithMethod,
   generateFromFEN,
   clearGeneratedPuzzles,

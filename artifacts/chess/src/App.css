@@ -428,3 +428,68 @@ main {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* Keep navigation language consistent across desktop and mobile. */
+@media (min-width: 769px) {
+  .app { flex-direction: column; }
+  .sidebar-nav { display: none; }
+
+  .mobile-header {
+    display: flex;
+    position: sticky;
+    top: 0;
+    width: 100%;
+    min-height: 64px;
+    padding: 0 1.5rem;
+    background: rgba(26, 26, 26, 0.88);
+    border-bottom: 1px solid var(--color-border-subtle);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    z-index: 100;
+  }
+
+  .mobile-header .page-title {
+    margin-left: auto;
+    font-size: 1rem;
+    color: var(--text-secondary);
+  }
+
+  .bottom-nav {
+    display: flex;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.5rem 1rem;
+    min-height: 68px;
+    background: rgba(26, 26, 26, 0.94);
+    border-top: 1px solid var(--color-border-subtle);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+  }
+
+  .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    min-width: 76px;
+    min-height: 52px;
+    padding: 0.45rem 0.75rem;
+    border-radius: var(--radius-md);
+    color: var(--text-dim);
+    font-size: 0.7rem;
+    font-weight: 700;
+    transition: color var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
+  }
+
+  .nav-item:hover { color: var(--text-primary); transform: translateY(-1px); }
+  .nav-item.active { color: var(--primary); background: rgba(129, 182, 76, 0.1); }
+  .nav-item .nav-icon { font-size: 1.25rem; line-height: 1; }
+
+  main { padding-bottom: 80px; overflow-y: auto; }
+}

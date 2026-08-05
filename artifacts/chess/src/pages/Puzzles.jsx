@@ -13,6 +13,7 @@ import {
   Zap,
   Brain,
   Code2,
+  WandSparkles,
 } from "lucide-react";
 import {
   BASE_PUZZLES,
@@ -150,7 +151,7 @@ export default function Puzzles() {
   const [solved, setSolved] = useState(false);
   const [failed, setFailed] = useState(false);
   const [showHint, setShowHint] = useState(false);
-  const [generationMethod, setGenerationMethod] = useState("rules");
+  const [generationMethod, setGenerationMethod] = useState("auto");
   const sessionIdRef = useRef(Date.now());
   const generationRequestRef = useRef(0);
 
@@ -182,9 +183,9 @@ export default function Puzzles() {
       setFailed(false);
       setShowHint(false);
       const ef = p.effectiveMethod || p.method;
-      const requested = generationMethod.replace(/^auto$/, "rules");
+      const requested = generationMethod;
       setMethodFallbackReason(
-        ef && requested && ef !== requested && ef !== "procedural-fallback"
+        ef && requested && requested !== "auto" && ef !== requested && ef !== "procedural-fallback"
           ? `Requested ${requested}, got ${
               ef === "stockfish-fallback"
                 ? "Stockfish (engine unavailable)"
@@ -490,9 +491,17 @@ export default function Puzzles() {
               <div className="puzzle-generation-options">
                 <button
                   type="button"
+                  className={`puzzle-gen-option puzzle-gen-option--auto ${generationMethod === 'auto' ? 'active' : ''}`}
+                  onClick={() => setGenerationMethod('auto')}
+                  title="Choose the best available generator for the current puzzle state"
+                >
+                  <WandSparkles size={14} /> Auto
+                </button>
+                <button
+                  type="button"
                   className={`puzzle-gen-option ${generationMethod === 'rules' ? 'active' : ''}`}
                   onClick={() => setGenerationMethod('rules')}
-                  title="Hardcoded rules"
+                  title="Verified rules-based generation"
                 >
                   <Brain size={14} /> Rules
                 </button>
