@@ -176,16 +176,28 @@ function GlobalVerificationGuard() {
 function PollinationsCoachGate() {
   const { user, token, isLoggedIn, isLoading } = useUser();
   const [showPrompt, setShowPrompt] = useState(false);
+  const [mode, setMode] = useState('connect');
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    if (isLoading || !isLoggedIn || !user?.username || checked) return;
+    if (isLoading || checked) return;
     let cancelled = false;
     async function checkPrompt() {
       try {
-        const settings = await api.getUserSettings(user.username, token);
-        const seen = Boolean(settings?.settings?.pollinationsCoachPromptSeen);
-        if (!cancelled && !seen) setShowPrompt(true);
+        if (isLoggedIn && user?.username && token) {
+          const settings = await api.getUserSettings(user.username, token);
+          const seen = Boolean(settings?.settings?.pollinationsCoachPromptSeen);
+          if (!cancelled && !seen) {
+            setMode('connect');
+            setShowPrompt(true);
+          }
+        } else {
+          const seen = localStorage.getItem('pollinationsCoachPromptSeen');
+          if (!cancelled && !seen) {
+            setMode('login');
+            setShowPrompt(true);
+          }
+        }
       } catch (error) {
         console.error('[PollinationsCoachGate] Failed to load prompt state:', error);
       } finally {
@@ -198,11 +210,15 @@ function PollinationsCoachGate() {
 
   async function markPromptSeen() {
     try {
-      const current = await api.getUserSettings(user.username, token);
-      await api.updateUserSettings(user.username, {
-        ...(current?.settings || {}),
-        pollinationsCoachPromptSeen: true,
-      }, token);
+      if (isLoggedIn && user?.username && token) {
+        const current = await api.getUserSettings(user.username, token);
+        await api.updateUserSettings(user.username, {
+          ...(current?.settings || {}),
+          pollinationsCoachPromptSeen: true,
+        }, token);
+      } else {
+        localStorage.setItem('pollinationsCoachPromptSeen', 'true');
+      }
     } catch (error) {
       console.error('[PollinationsCoachGate] Failed to persist prompt state:', error);
       return;
@@ -222,7 +238,7 @@ function PollinationsCoachGate() {
   if (!showPrompt) return null;
 
   return (
-    <PollinationsCoachPrompt onConnected={markPromptSeen} />
+    <PollinationsCoachPrompt mode={mode} onConnected={markPromptSeen} />
   );
 }
 

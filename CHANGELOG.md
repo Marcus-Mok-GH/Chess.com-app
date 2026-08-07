@@ -1,3 +1,48 @@
+## [2026-08-07] - Pollinations AI coach account persistence and anonymous login prompt
+
+### Added
+- Added login prompt variant to `PollinationsCoachPrompt` for anonymous users.
+- Added regression tests for `PollinationsCoachPrompt` login mode and `BotSelector` login gating.
+
+### Changed
+- Tied Pollinations coach connection state to the signed-in chess account on both client and server.
+- Gated AI coach bot selection and coaching feedback to logged-in users only; anonymous users are now prompted to sign in before accessing coach features.
+- `BotSelector` now disables the coach bot card and shows a login hint for anonymous users.
+- `ChessGame` guards coaching feedback requests with login status.
+- `PollinationsCoachGate` now shows a login prompt for anonymous users and persists prompt state per account.
+
+## [2026-08-07] - NVIDIA API Server public requests
+
+### Changed
+- Removed client-key enforcement so `/v1/models` and `/v1/chat/completions` work without an API key.
+- Removed the playground client-key field and updated docs/examples accordingly.
+- Preserved forwarding of each caller-selected `model` value unchanged to NVIDIA.
+
+## [2026-08-07] - NVIDIA API Server
+
+### Added
+- Added `nvidia-api-server`, a Bun-based OpenAI-compatible proxy for NVIDIA NIM models.
+- Added health, model-list, and chat-completion endpoints with streaming passthrough.
+- Added optional client bearer authentication via `PROXY_API_KEY` while keeping `NVIDIA_API_KEY` server-side.
+- Added deployment and configuration documentation.
+
+### Changed
+- Added `NVIDIA_API_KEY_1` and `NVIDIA_API_KEY_2` rotation with per-key cooldown tracking from NVIDIA rate-limit headers.
+- Added bounded waiting for the next available key and structured HTTP 429 errors when the maximum wait window is exceeded.
+- Added live `/`, `/docs`, and `/playground` pages for API documentation and browser-based testing.
+
+## [2026-08-07] - NVIDIA API Server playground navigation
+
+### Fixed
+- Made playground navigation use the deployed absolute URL and accept `/playground/` as well as `/playground`.
+
+## [2026-08-07] - NVIDIA API Server follow-up
+
+### Changed
+- Fixed managed-service secret loading by starting the proxy through `start.sh`, which sources Zo's secret store before launching Bun.
+- Confirmed `NVIDIA_API_KEY_1` and `NVIDIA_API_KEY_2` are available to the deployed process without exposing their values.
+- Documented the deployment secret-loading behavior and dual-key rate-limit handling.
+
 ## [2026-08-05] - Desktop UI and Adaptive Puzzle Generation
 
 ### Added

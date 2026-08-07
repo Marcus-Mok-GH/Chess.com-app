@@ -47,6 +47,7 @@ function ChessGame(
     initialPlayerColor,
     onUiStateChange,
     initialGameId,
+    isLoggedIn,
   },
   ref,
 ) {

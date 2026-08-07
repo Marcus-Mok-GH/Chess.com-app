@@ -26,7 +26,7 @@ function BotCard({ bot, selected, onSelect, disabled, customElo }) {
   );
 }
 
-export default function BotSelector({ selectedBot, onSelectBot, disabled, customElo, onCustomEloChange }) {
+export default function BotSelector({ selectedBot, onSelectBot, disabled, customElo, onCustomEloChange, isLoggedIn }) {
   return (
     <div className="bot-selector">
       <label className="bot-selector-label">Choose your opponent:</label>
@@ -50,9 +50,12 @@ export default function BotSelector({ selectedBot, onSelectBot, disabled, custom
               bot={COACH_BOT}
               selected={selectedBot.id === COACH_BOT.id}
               onSelect={onSelectBot}
-              disabled={disabled}
+              disabled={disabled || !isLoggedIn}
               customElo={customElo}
             />
+            {!isLoggedIn && (
+              <div className="coach-login-hint">Sign in to unlock the AI Coach</div>
+            )}
           </div>
         </div>
       )}

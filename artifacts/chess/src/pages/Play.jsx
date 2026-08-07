@@ -234,6 +234,7 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
           playerColor={playerColor}
           onSelectColor={setPlayerColor}
           onStart={handleStart}
+          isLoggedIn={isLoggedIn}
         />
       ) : (
         <>
@@ -245,6 +246,7 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
             initialBoardOrientation={boardOrientation}
             initialPlayerColor={playerColor}
             onUiStateChange={setUiState}
+            isLoggedIn={isLoggedIn}
           />
           <GameBottomBar
             onNew={handleSetup}
