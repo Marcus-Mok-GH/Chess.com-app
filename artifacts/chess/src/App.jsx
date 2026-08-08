@@ -174,17 +174,31 @@ function GlobalVerificationGuard() {
   return null;
 }
 
+function safeLocalStorageGet(key) {
+  try { return localStorage.getItem(key); }
+  catch { return null; }
+}
+
+function safeLocalStorageSet(key, value) {
+  try { localStorage.setItem(key, value); }
+  catch { /* noop */ }
+}
+
 function PollinationsCoachGate() {
   const { user, token, isLoggedIn, isLoading } = useUser();
   const [showPrompt, setShowPrompt] = useState(false);
   const [mode, setMode] = useState('connect');
   const [checked, setChecked] = useState(false);
 
+  const localKey = isLoggedIn && user?.username ? `pollinationsCoachPromptSeen:${user.username}` : 'pollinationsCoachPromptSeen';
+
   useEffect(() => {
     if (isLoading || checked) return;
     let cancelled = false;
     async function checkPrompt() {
       try {
+        const localSeen = safeLocalStorageGet(localKey);
+        if (localSeen) { if (!cancelled) setChecked(true); return; }
         if (isLoggedIn && user?.username && token) {
           const settings = await api.getUserSettings(user.username, token);
           const seen = Boolean(settings?.settings?.pollinationsCoachPromptSeen);
@@ -193,8 +207,7 @@ function PollinationsCoachGate() {
             setShowPrompt(true);
           }
         } else {
-          const seen = localStorage.getItem('pollinationsCoachPromptSeen');
-          if (!cancelled && !seen) {
+          if (!cancelled) {
             setMode('login');
             setShowPrompt(true);
           }
@@ -207,9 +220,10 @@ function PollinationsCoachGate() {
     }
     checkPrompt();
     return () => { cancelled = true; };
-  }, [checked, isLoading, isLoggedIn, token, user?.username]);
+  }, [checked, isLoading, isLoggedIn, token, user?.username, localKey]);
 
   async function markPromptSeen() {
+    safeLocalStorageSet(localKey, 'true');
     try {
       if (isLoggedIn && user?.username && token) {
         const current = await api.getUserSettings(user.username, token);
@@ -217,12 +231,9 @@ function PollinationsCoachGate() {
           ...(current?.settings || {}),
           pollinationsCoachPromptSeen: true,
         }, token);
-      } else {
-        localStorage.setItem('pollinationsCoachPromptSeen', 'true');
       }
     } catch (error) {
-      console.error('[PollinationsCoachGate] Failed to persist prompt state:', error);
-      return;
+      console.error('[PollinationsCoachGate] Failed to persist prompt state to API:', error);
     }
     setShowPrompt(false);
   }
