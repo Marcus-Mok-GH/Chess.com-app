@@ -1,3 +1,8 @@
+[2026-08-08] - Fix Play mobile viewport overflow
+
+- Constrained the Play page, setup card, and bot selector grids to shrink within their flex parent and narrow mobile viewport.
+- Added root minimum-width safeguards so the Play setup remains fully visible without horizontal scrolling on small screens.
+
 [2026-08-08] - Fix ReferenceError in Play.jsx
 
 - Added missing `isLoggedIn` destructuring from `useUser()` in `src/pages/Play.jsx`.

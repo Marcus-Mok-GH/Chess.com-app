@@ -1,4 +1,5 @@
 .bot-selector {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -13,6 +14,7 @@
 }
 
 .bot-grid {
+  min-width: 0;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 0.875rem;
@@ -131,6 +133,7 @@
 }
 
 .bot-special-grid {
+  min-width: 0;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 0.875rem;

@@ -1,5 +1,7 @@
 /* ── Play page — opponent challenge room ── */
 .play-page {
+  width: 100%;
+  min-width: 0;
   min-height: 100svh;
   background: var(--bg-page);
   background-image:
