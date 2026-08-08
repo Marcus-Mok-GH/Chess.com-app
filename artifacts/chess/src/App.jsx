@@ -186,6 +186,9 @@ function PollinationsCoachGate() {
     async function checkPrompt() {
       try {
         if (isLoggedIn && user?.username && token) {
+          // Fast-path: if already dismissed locally, skip API call
+          const localSeen = localStorage.getItem('pollinationsCoachPromptSeen');
+          if (localSeen) { if (!cancelled) setChecked(true); return; }
           const settings = await api.getUserSettings(user.username, token);
           const seen = Boolean(settings?.settings?.pollinationsCoachPromptSeen);
           if (!cancelled && !seen) {
@@ -210,6 +213,8 @@ function PollinationsCoachGate() {
   }, [checked, isLoading, isLoggedIn, token, user?.username]);
 
   async function markPromptSeen() {
+    // Always persist to localStorage so refreshes don't re-show the prompt
+    localStorage.setItem('pollinationsCoachPromptSeen', 'true');
     try {
       if (isLoggedIn && user?.username && token) {
         const current = await api.getUserSettings(user.username, token);
@@ -217,12 +222,9 @@ function PollinationsCoachGate() {
           ...(current?.settings || {}),
           pollinationsCoachPromptSeen: true,
         }, token);
-      } else {
-        localStorage.setItem('pollinationsCoachPromptSeen', 'true');
       }
     } catch (error) {
-      console.error('[PollinationsCoachGate] Failed to persist prompt state:', error);
-      return;
+      console.error('[PollinationsCoachGate] Failed to persist prompt state to API:', error);
     }
     setShowPrompt(false);
   }
