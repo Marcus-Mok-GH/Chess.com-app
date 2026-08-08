@@ -121,8 +121,8 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
               </div>
             ) : (
               <div className="coach-error">
-                <p>⚠️ Connect the user-pays AI coach</p>
-                <p className="small">Pollinations will show the consent screen with your budget. You pay for your own approved coaching usage.</p>
+                <p>⚠️ Connect the Pollinations AI coach</p>
+                <p className="small">Your approved budget is used for the primary model first. If it is unavailable, the coach falls back to a free Pollinations model.</p>
                 <button type="button" onClick={handleConnect} className="btn btn-primary">
                   Connect Pollinations
                 </button>
@@ -136,7 +136,7 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
               <button type="button" onClick={handleDisconnect} className="btn btn-secondary">
                 Disconnect
               </button>
-              <p className="coach-note">Powered by Pollinations AI · user pays</p>
+              <p className="coach-note">Powered by Pollinations AI · free fallback available</p>
             </>
           )}
         </div>

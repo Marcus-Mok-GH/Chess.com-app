@@ -2,6 +2,7 @@
 
 - Added a configurable `COACH_FREE_MODEL` fallback for coach requests that receive an affordability or balance HTTP 402 from the primary Pollinations model.
 - Included the primary and fallback models in new Pollinations authorization requests and documented the behavior.
+- Updated the coach connection and status messaging to explain the free fallback.
 
 [2026-08-08] - Fix Play mobile viewport overflow
 
