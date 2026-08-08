@@ -103,7 +103,7 @@
   font-weight: 700;
 }
 
-/* ── Tablet Optimization ────────────── */
+/* ── Tablet Optimization ────────────────── */
 @media (min-width: 769px) and (max-width: 1200px) {
   .game-container {
     grid-template-columns: 1fr 320px;
@@ -120,7 +120,7 @@
   }
 }
 
-/* ── Mobile Optimization ────────────── */
+/* ── Mobile Optimization ────────────────── */
 @media (max-width: 1200px) {
   .game-container {
     grid-template-columns: 1fr;
@@ -311,7 +311,7 @@
   }
 }
 
-/* ── Large Desktop ──────────────── */
+/* ── Large Desktop ────────────────── */
 @media (min-width: 1440px) {
   .game-container {
     max-width: 1600px;
@@ -324,7 +324,7 @@
   }
 }
 
-/* ── Refined Components ────────────── */
+/* ── Refined Components ──────────────── */
 .move-history {
   flex: 1;
   display: flex;
@@ -391,8 +391,8 @@
   grid-column: span 2;
 }
 
-.btn-secondary { background: rgba(255, 255, 255, 0.03); color: var(--text-dim); }
-.btn-danger { background: rgba(239, 68, 68, 0.05); color: #ef4444; border-color: rgba(239, 68, 68, 0.1); }
+.btn-secondary { background: rgba(255, 255, 255, 0.08); color: var(--text-secondary); border: 1px solid var(--border); }
+.btn-danger { background: rgba(239, 68, 68, 0.18); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); }
 
 .btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); transform: translateY(-1px); }
 .btn-primary:hover:not(:disabled) { background: var(--accent); }
@@ -473,7 +473,7 @@
   cursor: pointer;
 }
 
-/* ── Victory effects ────────────── */
+/* ── Victory effects ──────────────── */
 .victory-burst {
   position: absolute;
   inset: 0;
