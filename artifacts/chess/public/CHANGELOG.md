@@ -1,6 +1,6 @@
 [2026-08-08] - Fix ReferenceError in Play.jsx
 
-- Added missing `isLoggedIn` destructuring from `useUser()` in `src/pages/Play.jsx`. The variable was used as a prop on `<PlaySetup>` and `<ChessGame>` but was never extracted from the context, causing a runtime ReferenceError.
+- Added missing `isLoggedIn` destructuring from `useUser()` in `src/pages/Play.jsx`.
 
 
 [2026-08-05] - Settings UI modernization and desktop nav fix
