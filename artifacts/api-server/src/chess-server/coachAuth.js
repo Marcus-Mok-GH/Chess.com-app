@@ -6,6 +6,16 @@ const POLLINATIONS_ISSUER = 'https://enter.pollinations.ai';
 const STATE_TTL_MS = 10 * 60 * 1000;
 const DEFAULT_BUDGET = process.env.POLLINATIONS_COACH_BUDGET || '5';
 const DEFAULT_EXPIRY_DAYS = process.env.POLLINATIONS_COACH_EXPIRY_DAYS || '7';
+const DEFAULT_COACH_MODEL = process.env.COACH_MODEL || 'openai-fast';
+const FREE_COACH_MODEL = process.env.COACH_FREE_MODEL || 'openai-fast';
+
+function getAuthorizedCoachModels() {
+  const configuredModels = (process.env.POLLINATIONS_COACH_MODELS || '')
+    .split(',')
+    .map((model) => model.trim())
+    .filter(Boolean);
+  return [...new Set([...(configuredModels.length ? configuredModels : [DEFAULT_COACH_MODEL]), FREE_COACH_MODEL])].join(',');
+}
 
 function getClientId() {
   return process.env.POLLINATIONS_CLIENT_ID || process.env.POLLINATIONS_APP_KEY || '';
@@ -93,7 +103,7 @@ export async function createAuthorizationUrl(req) {
   authorizationUrl.searchParams.set('state', state);
   authorizationUrl.searchParams.set('code_challenge', challenge);
   authorizationUrl.searchParams.set('code_challenge_method', 'S256');
-  authorizationUrl.searchParams.set('models', process.env.POLLINATIONS_COACH_MODELS || 'openai-fast');
+  authorizationUrl.searchParams.set('models', getAuthorizedCoachModels());
   authorizationUrl.searchParams.set('budget', DEFAULT_BUDGET);
   authorizationUrl.searchParams.set('expiry', DEFAULT_EXPIRY_DAYS);
   return { authorizationUrl: authorizationUrl.toString() };

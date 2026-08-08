@@ -14,6 +14,8 @@ import {
 const router = Router();
 const COACH_API_URL = process.env.COACH_API_URL || 'https://gen.pollinations.ai/v1/chat/completions';
 const COACH_MODEL = process.env.COACH_MODEL || 'openai-fast';
+const COACH_FREE_MODEL = process.env.COACH_FREE_MODEL || 'openai-fast';
+const COACH_MODELS = [...new Set([COACH_MODEL, COACH_FREE_MODEL])];
 const COACH_TIMEOUT_MS = parseInt(process.env.COACH_TIMEOUT_MS || '12000', 10);
 const COACH_MAX_RETRIES = parseInt(process.env.COACH_MAX_RETRIES || '2', 10);
 const SYSTEM_PROMPT = `You are an expert chess coach with deep strategic knowledge. Think carefully about each position before responding.
@@ -37,27 +39,31 @@ async function callCoach(messages, options = {}) {
   }
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
   let lastError;
-  for (let attempt = 1; attempt <= COACH_MAX_RETRIES; attempt += 1) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), COACH_TIMEOUT_MS);
-    try {
-      const response = await fetch(COACH_API_URL, {
-        method: 'POST', headers, signal: controller.signal,
-        body: JSON.stringify({ model: COACH_MODEL, messages, max_tokens: maxTokens, temperature }),
-      });
-      clearTimeout(timeout);
-      if (!response.ok) {
-        const error = new Error(`Coach API error: ${response.status} - ${await response.text()}`);
-        error.status = response.status === 402 ? 402 : 502;
-        throw error;
+  for (const model of COACH_MODELS) {
+    for (let attempt = 1; attempt <= COACH_MAX_RETRIES; attempt += 1) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), COACH_TIMEOUT_MS);
+      try {
+        const response = await fetch(COACH_API_URL, {
+          method: 'POST', headers, signal: controller.signal,
+          body: JSON.stringify({ model, messages, max_tokens: maxTokens, temperature }),
+        });
+        clearTimeout(timeout);
+        if (!response.ok) {
+          const upstreamStatus = response.status;
+          const error = new Error(`Coach API error: ${upstreamStatus} - ${await response.text()}`);
+          error.status = upstreamStatus === 402 ? 402 : 502;
+          throw error;
+        }
+        return response;
+      } catch (err) {
+        clearTimeout(timeout);
+        lastError = err;
+        if (err.status === 402 || attempt === COACH_MAX_RETRIES) break;
+        await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
       }
-      return response;
-    } catch (err) {
-      clearTimeout(timeout);
-      lastError = err;
-      if (err.status === 402 || attempt === COACH_MAX_RETRIES) break;
-      await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
     }
+    if (lastError?.status !== 402) break;
   }
   throw lastError;
 }
@@ -162,8 +168,9 @@ router.get('/status', async (req, res) => {
       available: coachConfigurationStatus(),
       connected: Boolean(token),
       model: COACH_MODEL,
+      fallbackModel: COACH_FREE_MODEL,
       provider: 'pollinations-ai',
-      billing: 'user-pays',
+      billing: 'user-pays-with-free-fallback',
     });
   } catch (error) {
     return handleRouteError(res, error, 'Failed to check AI coach status');

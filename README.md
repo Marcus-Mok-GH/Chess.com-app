@@ -119,8 +119,11 @@ Configure the API server with:
 - `POLLINATIONS_TOKEN_ENCRYPTION_KEY`: a long random server secret used to encrypt delegated `sk_...` keys at rest. `BETTER_AUTH_SECRET` is accepted as a fallback, but a separate secret is recommended.
 - `POLLINATIONS_COACH_BUDGET`: optional default budget shown in the consent screen; defaults to `5` Pollen.
 - `POLLINATIONS_COACH_EXPIRY_DAYS`: optional authorization lifetime; defaults to `7` days.
-- `POLLINATIONS_COACH_MODELS`: optional comma-separated model restriction; defaults to `openai-fast`.
-- `COACH_MODEL`: optional model sent to the Pollinations OpenAI-compatible endpoint; defaults to `openai-fast`.
+- `POLLINATIONS_COACH_MODELS`: optional comma-separated model restriction; defaults to the configured `COACH_MODEL` plus `COACH_FREE_MODEL`.
+- `COACH_MODEL`: optional primary model sent to the Pollinations OpenAI-compatible endpoint; defaults to `openai-fast`.
+- `COACH_FREE_MODEL`: optional free fallback model used when the primary model returns an affordability/balance error; defaults to `openai-fast`.
+
+If the primary coach model returns HTTP 402 because the user's approved Pollen budget is unavailable, the server retries the request with `COACH_FREE_MODEL`. Both models are requested during BYOP authorization so the fallback remains within the user's approved model scope.
 
 The callback must be registered exactly in the Pollinations App Key, including scheme, hostname, path, and any query string. The database migration creates short-lived PKCE state records and encrypted per-user coach tokens. Tokens are never sent to the frontend.
 

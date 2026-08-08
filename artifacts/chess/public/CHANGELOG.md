@@ -1,3 +1,8 @@
+[2026-08-08] - Add free Pollinations coach fallback
+
+- Added a configurable `COACH_FREE_MODEL` fallback for coach requests that receive an affordability or balance HTTP 402 from the primary Pollinations model.
+- Included the primary and fallback models in new Pollinations authorization requests and documented the behavior.
+
 [2026-08-08] - Fix Play mobile viewport overflow
 
 - Constrained the Play page, setup card, and bot selector grids to shrink within their flex parent and narrow mobile viewport.
