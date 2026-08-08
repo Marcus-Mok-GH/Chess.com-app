@@ -23,7 +23,7 @@ export default function PlaySetup({
         </div>
 
         <div className="play-setup-section">
-          <label className="play-setup-label">Choose your opponent:</label>
+          <h3 className="play-setup-label">Opponent</h3>
           <BotSelector
             selectedBot={selectedBot}
             onSelectBot={onSelectBot}
@@ -35,22 +35,24 @@ export default function PlaySetup({
         </div>
 
         <div className="play-setup-section">
-          <label className="play-setup-label">Choose your color:</label>
+          <h3 className="play-setup-label">Color</h3>
           <div className="color-choice">
             <button
               type="button"
               className={`color-btn ${playerColor === 'w' ? 'selected' : ''}`}
               onClick={() => onSelectColor('w')}
+              aria-pressed={playerColor === 'w'}
             >
-              <span className="color-btn-emoji">♔</span>
+              <span className="color-btn-emoji" aria-hidden="true">♔</span>
               White
             </button>
             <button
               type="button"
               className={`color-btn ${playerColor === 'b' ? 'selected' : ''}`}
               onClick={() => onSelectColor('b')}
+              aria-pressed={playerColor === 'b'}
             >
-              <span className="color-btn-emoji">♚</span>
+              <span className="color-btn-emoji" aria-hidden="true">♚</span>
               Black
             </button>
           </div>
