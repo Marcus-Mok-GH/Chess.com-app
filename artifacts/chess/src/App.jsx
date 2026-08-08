@@ -39,7 +39,7 @@ function getTitle(path) {
   return 'PlayChess'
 }
 
-function AppHeader() {
+function AppHeader({ isGameRoute = false }) {
   const location = useLocation()
   const { isOnline, isLoggedIn, user, logout } = useUser()
   const navigate = useNavigate()
@@ -48,6 +48,7 @@ function AppHeader() {
   const isLanding = location.pathname === '/'
 
   if (isLanding) return null
+  if (isGameRoute) return null
 
   return (
     <>
@@ -244,12 +245,13 @@ function PollinationsCoachGate() {
 
 function AppShell() {
   const location = useLocation();
-  const isGameRoute = location.pathname.startsWith('/game/') || 
+  const isGameRoute = location.pathname === '/play' ||
+                     location.pathname.startsWith('/game/') || 
                      (location.pathname.startsWith('/online/') && location.pathname.length > 8);
   
   return (
     <div className={`app ${isGameRoute ? 'hide-bottom-nav' : ''}`}>
-      <AppHeader />
+      <AppHeader isGameRoute={isGameRoute} />
       <main style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", minHeight: "100svh" }}>
         <Suspense fallback={<RouteFallback />}>
           <Outlet />
