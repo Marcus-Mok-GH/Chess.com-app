@@ -29,7 +29,7 @@ function botFromSetup(setup) {
 export default function Play({ initialGameId = null, initialSetup = null }) {
   const navigate = useNavigate();
   const { settings } = useSettings();
-  const { user, isOnline } = useUser();
+  const { user, isLoggedIn, isOnline } = useUser();
 
   // On direct /play visit, try to resume an active local game from localStorage
   const resumedFromStorage = useMemo(() => {

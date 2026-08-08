@@ -1,3 +1,8 @@
+[2026-08-08] - Fix ReferenceError in Play.jsx
+
+- Added missing `isLoggedIn` destructuring from `useUser()` in `src/pages/Play.jsx`. The variable was used as a prop on `<PlaySetup>` and `<ChessGame>` but was never extracted from the context, causing a runtime ReferenceError.
+
+
 [2026-08-05] - Settings UI modernization and desktop nav fix
 
 - Fixed the desktop on which both the left sidebar and the bottom navigation bar appeared at the same time. The mobile media query (`max-width: 768px`) was incorrectly forcing `.sidebar-nav` to `display: flex` and hiding `.bottom-nav`; corrected it so mobile shows the bottom nav only, and the desktop rule (`min-width: 769px`) keeps the sidebar and hides the bottom nav. Desktop now uses `flex-direction: row` so the sidebar sits beside main content, and the mobile header stays hidden on desktop.
