@@ -1,8 +1,9 @@
-[2026-08-09] - Keep Play on setup and surface incomplete bot games on Home
+[2026-08-09] - Secure incomplete bot-game resume flow
 
 - Direct visits to `/play` now always open the bot setup screen instead of automatically redirecting into the latest saved game.
 - Added a Home resume card labeled “Complete this game?” for the latest in-progress local bot game.
-- Added the API query and explicit local-game navigation needed to resume that game safely.
+- Secured latest-game and explicit game-state lookups with the authenticated user ID instead of mutable usernames.
+- Added player IDs to the resume response so Home identifies the opponent reliably.
 
 [2026-08-08] - Add free Pollinations coach fallback
 

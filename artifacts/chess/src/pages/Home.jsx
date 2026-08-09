@@ -200,7 +200,7 @@ export default function Home() {
               <div className="resume-game-copy">
                 <div className="resume-game-eyebrow"><Play size={14} /> In progress</div>
                 <h2>Complete this game?</h2>
-                <p>Resume your game against {incompleteGame.black_player_name === user.username ? incompleteGame.white_player_name : incompleteGame.black_player_name}.</p>
+                <p>Resume your game against {String(incompleteGame.white_player_id) === String(user.id) ? incompleteGame.black_player_name : incompleteGame.white_player_name}.</p>
               </div>
               <button
                 className="resume-game-button"

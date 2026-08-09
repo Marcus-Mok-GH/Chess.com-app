@@ -219,19 +219,22 @@ router.post('/local/create', async (req, res) => {
 
 router.get('/local/latest/:username', async (req, res) => {
   try {
-    const { username } = req.params;
-    if (!username) return errorResponse(res, 400, 'Username is required');
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) return errorResponse(res, 401, 'Authentication required');
+
+    const authUserId = await validateSession(authHeader.slice(7).trim());
+    if (!authUserId) return errorResponse(res, 401, 'Invalid or expired session');
 
     const result = await query(
       `SELECT game_code, result, fen, move_history, game_mode, created_at, updated_at,
-              white_player_name, black_player_name
+              white_player_id, black_player_id, white_player_name, black_player_name
        FROM games
        WHERE game_mode = 'local'
          AND result = 'in_progress'
-         AND (LOWER(white_player_name) = LOWER($1) OR LOWER(black_player_name) = LOWER($1))
+         AND (white_player_id = $1 OR black_player_id = $1)
        ORDER BY updated_at DESC, created_at DESC
        LIMIT 1`,
-      [username]
+      [authUserId]
     );
 
     res.json(result.rows[0] || null);
@@ -243,16 +246,23 @@ router.get('/local/latest/:username', async (req, res) => {
 // Get local game by code for a specific user
 router.get('/local/:username/:gameCode', async (req, res) => {
   try {
-    const { username, gameCode } = req.params;
-    if (!username || !gameCode) return errorResponse(res, 400, 'Username and game code are required');
+    const { gameCode } = req.params;
+    if (!gameCode) return errorResponse(res, 400, 'Game code is required');
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) return errorResponse(res, 401, 'Authentication required');
+
+    const authUserId = await validateSession(authHeader.slice(7).trim());
+    if (!authUserId) return errorResponse(res, 401, 'Invalid or expired session');
 
     const result = await query(
-      `SELECT game_code, result, fen, move_history, game_mode, created_at
+      `SELECT game_code, result, fen, move_history, game_mode, created_at,
+              white_player_id, black_player_id, white_player_name, black_player_name
        FROM games
        WHERE game_code = $1 AND game_mode = 'local'
-         AND (white_player_name = $2 OR black_player_name = $2)
+         AND (white_player_id = $2 OR black_player_id = $2)
        LIMIT 1`,
-      [gameCode.toUpperCase(), username]
+      [gameCode.toUpperCase(), authUserId]
     );
 
     if (result.rows.length === 0) return errorResponse(res, 404, 'Game not found');
