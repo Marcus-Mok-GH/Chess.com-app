@@ -11,7 +11,6 @@ import { generateGameId } from '../engine/game/gameId';
 import api from '../services/api';
 import {
   loadLocalGame,
-  getActiveLocalGameId,
   saveLocalGame,
   clearLocalGame,
 } from '../utils/gamePersistence';
@@ -31,21 +30,12 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
   const { settings } = useSettings();
   const { user, isLoggedIn, isOnline } = useUser();
 
-  // On direct /play visit, try to resume an active local game from localStorage
-  const resumedFromStorage = useMemo(() => {
-    if (initialGameId) {
-      const saved = loadLocalGame(initialGameId);
-      if (saved) return saved;
-      return null;
-    }
-    const activeId = getActiveLocalGameId();
-    if (!activeId) return null;
-    return loadLocalGame(activeId);
-  }, [initialGameId]);
+  const resumedFromStorage = useMemo(
+    () => (initialGameId ? loadLocalGame(initialGameId) : null),
+    [initialGameId],
+  );
 
-  const effectiveGameId = initialGameId
-    ? String(initialGameId).toUpperCase()
-    : resumedFromStorage?.gameId || null;
+  const effectiveGameId = initialGameId ? String(initialGameId).toUpperCase() : null;
 
   const mergedSetup = useMemo(() => {
     if (initialSetup?.selectedBot || initialSetup?.playerColor) {
@@ -77,21 +67,6 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
     () => (playerColor === 'w' ? 'white' : 'black'),
     [playerColor],
   );
-
-  // If we landed on /play without a game id but found a saved game, put it in the URL
-  useEffect(() => {
-    if (!initialGameId && resumedFromStorage?.gameId && phase === 'game') {
-      navigate(`/game/${resumedFromStorage.gameId}?mode=local`, {
-        replace: true,
-        state: {
-          selectedBot: botFromSetup(resumedFromStorage),
-          customElo: resumedFromStorage.customElo ?? 1000,
-          playerColor: resumedFromStorage.playerColor || 'w',
-        },
-      });
-      setActiveGameId(resumedFromStorage.gameId);
-    }
-  }, [initialGameId, resumedFromStorage, phase, navigate]);
 
   useEffect(() => {
     const shouldHideNav = phase === 'game';

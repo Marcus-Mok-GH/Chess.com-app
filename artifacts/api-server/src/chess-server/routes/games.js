@@ -217,6 +217,29 @@ router.post('/local/create', async (req, res) => {
   }
 });
 
+router.get('/local/latest/:username', async (req, res) => {
+  try {
+    const { username } = req.params;
+    if (!username) return errorResponse(res, 400, 'Username is required');
+
+    const result = await query(
+      `SELECT game_code, result, fen, move_history, game_mode, created_at, updated_at,
+              white_player_name, black_player_name
+       FROM games
+       WHERE game_mode = 'local'
+         AND result = 'in_progress'
+         AND (LOWER(white_player_name) = LOWER($1) OR LOWER(black_player_name) = LOWER($1))
+       ORDER BY updated_at DESC, created_at DESC
+       LIMIT 1`,
+      [username]
+    );
+
+    res.json(result.rows[0] || null);
+  } catch (error) {
+    return handleRouteError(res, error, 'Failed to get latest incomplete local game');
+  }
+});
+
 // Get local game by code for a specific user
 router.get('/local/:username/:gameCode', async (req, res) => {
   try {

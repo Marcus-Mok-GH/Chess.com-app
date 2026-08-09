@@ -100,6 +100,10 @@ class ApiService {
     return this.request(`/games/local/${encodeURIComponent(username)}/${encodeURIComponent(gameCode)}`);
   }
 
+  async getLatestIncompleteLocalGame(username) {
+    return this.request(`/games/local/latest/${encodeURIComponent(username)}`);
+  }
+
   // Create a friendly local game record
   async createLocalGame({ gameCode, userId, username, opponentName, opponentElo, playerColor }) {
     return this.request('/games/local/create', {

@@ -1,19 +1,40 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUser } from '../contexts/UserContext'
-import { Cpu, Globe, FileText, Star, Gamepad2, Trophy, ArrowUpRight, Wifi, WifiOff } from 'lucide-react'
+import { Cpu, Globe, FileText, Star, Gamepad2, Trophy, ArrowUpRight, Wifi, WifiOff, Play } from 'lucide-react'
+import api from '../services/api'
 import './Home.css'
 
 export default function Home() {
   const navigate = useNavigate()
   const { user, isLoggedIn, isLoading, isOnline } = useUser()
   const [greeting, setGreeting] = useState('')
+  const [incompleteGame, setIncompleteGame] = useState(null)
 
   useEffect(() => {
     if (!isLoading && !isLoggedIn) {
       navigate('/', { replace: true })
     }
   }, [isLoggedIn, isLoading, navigate])
+
+  useEffect(() => {
+    if (!user?.username || !isOnline) {
+      setIncompleteGame(null)
+      return undefined
+    }
+
+    let cancelled = false
+    api.getLatestIncompleteLocalGame(user.username)
+      .then((game) => {
+        if (!cancelled) setIncompleteGame(game)
+      })
+      .catch((error) => {
+        console.error('[Home] Failed to load incomplete local game:', error)
+        if (!cancelled) setIncompleteGame(null)
+      })
+
+    return () => { cancelled = true }
+  }, [user?.username, isOnline])
 
   useEffect(() => {
     const hour = new Date().getHours()
@@ -172,6 +193,25 @@ export default function Home() {
             </button>
           </div>
         </section>
+
+        {incompleteGame && (
+          <section className="resume-game-section">
+            <div className="resume-game-card card-surface">
+              <div className="resume-game-copy">
+                <div className="resume-game-eyebrow"><Play size={14} /> In progress</div>
+                <h2>Complete this game?</h2>
+                <p>Resume your game against {incompleteGame.black_player_name === user.username ? incompleteGame.white_player_name : incompleteGame.black_player_name}.</p>
+              </div>
+              <button
+                className="resume-game-button"
+                onClick={() => navigate(`/game/${incompleteGame.game_code}?mode=local`)}
+              >
+                Resume game
+                <ArrowUpRight size={18} />
+              </button>
+            </div>
+          </section>
+        )}
 
         {user.createdAt && (
           <section className="member-info">

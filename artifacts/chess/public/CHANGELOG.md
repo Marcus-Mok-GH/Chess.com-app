@@ -1,3 +1,9 @@
+[2026-08-09] - Keep Play on setup and surface incomplete bot games on Home
+
+- Direct visits to `/play` now always open the bot setup screen instead of automatically redirecting into the latest saved game.
+- Added a Home resume card labeled “Complete this game?” for the latest in-progress local bot game.
+- Added the API query and explicit local-game navigation needed to resume that game safely.
+
 [2026-08-08] - Add free Pollinations coach fallback
 
 - Added a configurable `COACH_FREE_MODEL` fallback for coach requests that receive an affordability or balance HTTP 402 from the primary Pollinations model.
