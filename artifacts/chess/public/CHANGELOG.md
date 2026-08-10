@@ -415,3 +415,8 @@
 - Corrected landing-page navigation links to use the live `/history` route instead of the missing `/game-history` path.
 - Preserved the sign-up intent when routing unauthenticated users through the shared login flow.
 - Replaced placeholder landing footer links with working support, jobs, developer, and about destinations.
+
+- Added social Chat UI styling and protected Friends/Chat routes.
+
+## [2026-08-10] - Social integration fixes
+- Removed duplicate Friends and Chat route declarations and added the Chat stylesheet.
