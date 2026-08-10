@@ -1,7 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import BotSelector from './BotSelector';
-import { COACH_BOT } from '../engine/bots/bots';
+import { BOTS } from '../engine/bots/bots';
+
+const COACH_BOT = BOTS.find((b) => b.id === 'coach');
 
 describe('BotSelector', () => {
   const defaultProps = {

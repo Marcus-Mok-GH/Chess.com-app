@@ -1,3 +1,11 @@
+[2026-08-10] - Codebase cleanup: remove dead code
+
+- Removed 55 unused shadcn/ui components plus orphaned helper hooks (`use-toast`, `use-mobile`) and `lib/utils.ts` that only served them.
+- Removed unreferenced components/pages (`EnhancedNavigation`, `GuestBlocked`, `NavigationHints`, `QuickNav`, `CloudFlare`) and unused hooks (`useSwipe`, `useKeyboardNavigation`).
+- Removed duplicate stale entrypoints (`App.tsx`, `main.tsx`) and dead server modules (`db/migrations.js`, `services/neonAuth.js`).
+- Fixed `BotSelector.test.jsx` importing a non-existent `COACH_BOT` export.
+- No functionality changed; verified via full test suite, typecheck, and production build.
+
 [2026-08-09] - Secure incomplete bot-game resume flow
 
 - Direct visits to `/play` now always open the bot setup screen instead of automatically redirecting into the latest saved game.
