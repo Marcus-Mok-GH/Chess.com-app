@@ -420,3 +420,7 @@
 
 ## [2026-08-10] - Social integration fixes
 - Removed duplicate Friends and Chat route declarations and added the Chat stylesheet.
+
+[2026-08-10] - Added social clubs UI
+
+- Added protected Clubs page with club discovery, creation, membership actions, and navigation links.

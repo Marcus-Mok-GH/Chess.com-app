@@ -177,63 +177,45 @@ class ApiService {
     });
   }
 
-  async getOpeningRoots() {
-    return this.request('/openings');
-  }
-
-  async getOpeningChildren(fen) {
-    return this.request(`/openings/children?fen=${encodeURIComponent(fen)}`);
-  }
-
-  async searchOpenings(query) {
-    return this.request(`/openings/search?q=${encodeURIComponent(query)}`);
-  }
-
-  async getLessons() {
-    return this.request('/lessons');
-  }
-
-  async getLesson(idOrSlug) {
-    return this.request(`/lessons/${encodeURIComponent(idOrSlug)}`);
-  }
-
-  async getLessonProgress() {
-    return this.request('/lessons/progress');
-  }
-
-  async saveLessonProgress(lessonId, { completed, score } = {}) {
-    return this.request(`/lessons/${encodeURIComponent(lessonId)}/progress`, {
-      method: 'POST',
-      body: JSON.stringify({ completed, score }),
-    });
-  }
-
+  // ── Social layer: friends ─────────────────────────────────────────────────
   async getFriends() {
     return this.request('/social/friends');
   }
 
   async addFriend(username) {
-    return this.request(`/social/friends/${encodeURIComponent(username)}`, { method: 'POST' });
+    return this.request(`/social/friends/${encodeURIComponent(username)}`, {
+      method: 'POST',
+    });
   }
 
   async removeFriend(username) {
-    return this.request(`/social/friends/${encodeURIComponent(username)}`, { method: 'DELETE' });
+    return this.request(`/social/friends/${encodeURIComponent(username)}`, {
+      method: 'DELETE',
+    });
   }
 
+  // ── Social layer: lobby / room chat ───────────────────────────────────────
   async getMessages(room, limit = 50) {
     return this.request(`/social/chat/${encodeURIComponent(room)}?limit=${limit}`);
   }
 
   async sendMessage(room, body) {
-    return this.request(`/social/chat/${encodeURIComponent(room)}`, { method: 'POST', body: JSON.stringify({ body }) });
+    return this.request(`/social/chat/${encodeURIComponent(room)}`, {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    });
   }
 
+  // ── Social layer: clubs ───────────────────────────────────────────────────
   async getClubs() {
     return this.request('/social/clubs');
   }
 
   async createClub({ name, description, slug }) {
-    return this.request('/social/clubs', { method: 'POST', body: JSON.stringify({ name, description, slug }) });
+    return this.request('/social/clubs', {
+      method: 'POST',
+      body: JSON.stringify({ name, description, slug }),
+    });
   }
 
   async getClub(slug) {
@@ -241,11 +223,15 @@ class ApiService {
   }
 
   async joinClub(slug) {
-    return this.request(`/social/clubs/${encodeURIComponent(slug)}/join`, { method: 'POST' });
+    return this.request(`/social/clubs/${encodeURIComponent(slug)}/join`, {
+      method: 'POST',
+    });
   }
 
   async leaveClub(slug) {
-    return this.request(`/social/clubs/${encodeURIComponent(slug)}/leave`, { method: 'POST' });
+    return this.request(`/social/clubs/${encodeURIComponent(slug)}/leave`, {
+      method: 'POST',
+    });
   }
 }
 

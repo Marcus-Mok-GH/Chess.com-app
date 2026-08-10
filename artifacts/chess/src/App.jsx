@@ -28,6 +28,7 @@ const Openings = lazy(() => import('./pages/Openings'))
 const Lessons = lazy(() => import('./pages/Lessons'))
 const Friends = lazy(() => import('./pages/Friends'))
 const Chat = lazy(() => import('./pages/Chat'))
+const Clubs = lazy(() => import('./pages/Clubs'))
 const NotFound = lazy(() => import('./pages/not-found'))
 
 function getTitle(path) {
@@ -42,6 +43,9 @@ function getTitle(path) {
   if (path === '/puzzles') return 'Puzzles'
   if (path === '/openings') return 'Openings'
   if (path === '/lessons') return 'Lessons'
+  if (path === '/friends') return 'Friends'
+  if (path === '/chat') return 'Chat'
+  if (path === '/clubs') return 'Clubs'
   return 'PlayChess'
 }
 
@@ -85,6 +89,18 @@ function AppHeader({ isGameRoute = false }) {
             <Link to="/lessons" className={`sidebar-item ${currentPath === '/lessons' ? 'active' : ''}`}>
               <span className="sidebar-icon">📖</span>
               <span className="sidebar-label">Lessons</span>
+            </Link>
+            <Link to="/friends" className={`sidebar-item ${currentPath === '/friends' ? 'active' : ''}`}>
+              <span className="sidebar-icon">👥</span>
+              <span className="sidebar-label">Friends</span>
+            </Link>
+            <Link to="/chat" className={`sidebar-item ${currentPath === '/chat' ? 'active' : ''}`}>
+              <span className="sidebar-icon">💬</span>
+              <span className="sidebar-label">Chat</span>
+            </Link>
+            <Link to="/clubs" className={`sidebar-item ${currentPath === '/clubs' ? 'active' : ''}`}>
+              <span className="sidebar-icon">🏛️</span>
+              <span className="sidebar-label">Clubs</span>
             </Link>
             <Link to="/history" className={`sidebar-item ${currentPath === '/history' ? 'active' : ''}`}>
               <span className="sidebar-icon">📚</span>
@@ -148,6 +164,18 @@ function AppHeader({ isGameRoute = false }) {
         <Link to="/lessons" className={`nav-item ${currentPath === '/lessons' ? 'active' : ''}`}>
           <div className="nav-icon">📖</div>
           <span>Lessons</span>
+        </Link>
+        <Link to="/friends" className={`nav-item ${currentPath === '/friends' ? 'active' : ''}`}>
+          <div className="nav-icon">👥</div>
+          <span>Friends</span>
+        </Link>
+        <Link to="/chat" className={`nav-item ${currentPath === '/chat' ? 'active' : ''}`}>
+          <div className="nav-icon">💬</div>
+          <span>Chat</span>
+        </Link>
+        <Link to="/clubs" className={`nav-item ${currentPath === '/clubs' ? 'active' : ''}`}>
+          <div className="nav-icon">🏛️</div>
+          <span>Clubs</span>
         </Link>
         <Link to="/history" className={`nav-item ${currentPath === '/history' ? 'active' : ''}`}>
           <div className="nav-icon">📚</div>
@@ -320,6 +348,7 @@ export default function App() {
                   <Route path="/lessons" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Lessons /></Suspense></ProtectedRoute>} />
                   <Route path="/friends" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Friends /></Suspense></ProtectedRoute>} />
                   <Route path="/chat" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Chat /></Suspense></ProtectedRoute>} />
+                  <Route path="/clubs" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Clubs /></Suspense></ProtectedRoute>} />
                 </Route>
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />
