@@ -206,11 +206,6 @@ function PollinationsCoachGate() {
             setMode('connect');
             setShowPrompt(true);
           }
-        } else {
-          if (!cancelled) {
-            setMode('login');
-            setShowPrompt(true);
-          }
         }
       } catch (error) {
         console.error('[PollinationsCoachGate] Failed to load prompt state:', error);

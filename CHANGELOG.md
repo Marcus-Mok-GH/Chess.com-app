@@ -1,3 +1,10 @@
+## [2026-08-10] - Pollinations coach prompt only for logged-in users
+
+### Changed
+- `PollinationsCoachGate` no longer shows the coach prompt to anonymous users; the prompt now activates only when the user is logged in and has not connected/dismissed it before.
+
+### Fixed
+- `PollinationsCoachPrompt` tests now render inside `MemoryRouter` (fixes `useNavigate` error) and assert current copy.
 ## [2026-08-07] - Pollinations AI coach account persistence and anonymous login prompt
 
 ### Added
