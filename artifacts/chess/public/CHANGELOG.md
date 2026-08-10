@@ -1,3 +1,19 @@
+[2026-08-10] - Opening explorer feature
+
+- Added a public Opening Explorer page (`/openings`) with an interactive SAN move tree: search box, opening roots list with ECO + name, live board from the current FEN, breadcrumb/move path navigation, a Back button, and per-move white/draw/black win-rate bars with game counts.
+- Added a chess.js-validated embedded opening book (`api-server/src/chess-server/openings/openingBook.js`) seeded with the major encyclopedic openings (King's Gambit, Queen's Gambit, Ruy Lopez, Italian Game, Sicilian Defence Open/Najdorf/Dragon/Scheveningen, French, Caro-Kann, Scandinavian, English, London System, Indian Defences). Every SAN is verified legal when the tree is built and re-validated before it is served.
+- Added API endpoints: `GET /api/openings` (roots), `GET /api/openings/children?fen=...` (legal continuations + named book position), and `GET /api/openings/search?q=...` (case-insensitive name/ECO search). All are public and unauthenticated.
+- Added an idempotent `openings` table (with `idx_openings_fen` unique index, `parent_fen` and `eco` indexes) to the self-healing DB schema init.
+- Added client API helpers `getOpeningRoots()`, `getOpeningChildren(fen)`, and `searchOpenings(q)` using the existing Bearer-token `request()` helper.
+- Registered the lazy-loaded `/openings` route in the app shell, added sidebar + mobile nav entries and a Home quick-action card.
+- Added unit, route, and page smoke tests covering book integrity, endpoint contracts, and the page render/navigation/search flows.
+[2026-08-10] - Lessons feature
+
+- Added a curated learning catalog of 8 beginner/intermediate lessons (piece development, center control, king safety & castling, pins, knight forks, skewers, back-rank threats, checkmate patterns), each with instructional prose, a rendered example board, and related puzzle themes.
+- Added a `/lessons` page listing lessons grouped by difficulty with per-lesson progress, a detail view with the example position and explanation, and a "Practice" action that jumps to the tactical trainer.
+- Added per-user lesson progress: `GET /api/lessons`, `GET /api/lessons/:id` (public), `GET /api/lessons/progress`, and `POST /api/lessons/:id/progress` (authenticated), backed by idempotently seeded `lessons` and `lesson_progress` tables.
+- Added a Lessons quick-action card on Home and desktop sidebar / mobile bottom-nav entries.
+
 [2026-08-10] - Codebase cleanup: remove dead code
 
 - Removed 55 unused shadcn/ui components plus orphaned helper hooks (`use-toast`, `use-mobile`) and `lib/utils.ts` that only served them.
@@ -399,3 +415,12 @@
 - Corrected landing-page navigation links to use the live `/history` route instead of the missing `/game-history` path.
 - Preserved the sign-up intent when routing unauthenticated users through the shared login flow.
 - Replaced placeholder landing footer links with working support, jobs, developer, and about destinations.
+
+- Added social Chat UI styling and protected Friends/Chat routes.
+
+## [2026-08-10] - Social integration fixes
+- Removed duplicate Friends and Chat route declarations and added the Chat stylesheet.
+
+[2026-08-10] - Added social clubs UI
+
+- Added protected Clubs page with club discovery, creation, membership actions, and navigation links.

@@ -1,4 +1,5 @@
 import { getDirectPool, getPool, shouldClosePool } from './pool.js';
+import { LESSON_CATALOG } from '../lessons/lessonCatalog.js';
 
 export async function initDatabase() {
   const pool = getDirectPool();
@@ -221,6 +222,41 @@ export async function initDatabase() {
         await client.query('ALTER TABLE match_moves ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
         await client.query('ALTER TABLE match_moves ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
 
+        // Opening explorer book positions
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS openings (
+            id VARCHAR(255) PRIMARY KEY,
+            eco VARCHAR(10),
+            name VARCHAR(255),
+            fen TEXT,
+            move_san VARCHAR(10),
+            parent_fen TEXT,
+            moves_count INTEGER DEFAULT 0,
+            white_wins INTEGER DEFAULT 0,
+            draws INTEGER DEFAULT 0,
+            black_wins INTEGER DEFAULT 0,
+            pgn TEXT,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+
+        // Self-heal columns for openings tables created by earlier deploys.
+        await client.query('ALTER TABLE openings ADD COLUMN IF NOT EXISTS id VARCHAR(255)');
+        await client.query('ALTER TABLE openings ADD COLUMN IF NOT EXISTS eco VARCHAR(10)');
+        await client.query('ALTER TABLE openings ADD COLUMN IF NOT EXISTS name VARCHAR(255)');
+        await client.query('ALTER TABLE openings ADD COLUMN IF NOT EXISTS fen TEXT');
+        await client.query('ALTER TABLE openings ADD COLUMN IF NOT EXISTS move_san VARCHAR(10)');
+        await client.query('ALTER TABLE openings ADD COLUMN IF NOT EXISTS parent_fen TEXT');
+        await client.query('ALTER TABLE openings ADD COLUMN IF NOT EXISTS moves_count INTEGER DEFAULT 0');
+        await client.query('ALTER TABLE openings ADD COLUMN IF NOT EXISTS white_wins INTEGER DEFAULT 0');
+        await client.query('ALTER TABLE openings ADD COLUMN IF NOT EXISTS draws INTEGER DEFAULT 0');
+        await client.query('ALTER TABLE openings ADD COLUMN IF NOT EXISTS black_wins INTEGER DEFAULT 0');
+        await client.query('ALTER TABLE openings ADD COLUMN IF NOT EXISTS pgn TEXT');
+        await client.query('ALTER TABLE openings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+        await client.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_openings_fen ON openings(fen)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_openings_parent_fen ON openings(parent_fen)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_openings_eco ON openings(eco)');
+
         await client.query(`
           CREATE TABLE IF NOT EXISTS elo_history (
             id SERIAL PRIMARY KEY,
@@ -257,6 +293,116 @@ export async function initDatabase() {
         `);
         await client.query('CREATE INDEX IF NOT EXISTS idx_pollinations_oauth_states_expires_at ON pollinations_oauth_states(expires_at)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_pollinations_coach_tokens_expires_at ON pollinations_coach_tokens(expires_at)');
+        // Social layer: friends
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS friends (
+            user_id VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            friend_id VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            status VARCHAR(20) DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (user_id, friend_id),
+            CONSTRAINT friends_not_self CHECK (user_id <> friend_id)
+          )
+        `);
+        await client.query("ALTER TABLE friends ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending'");
+
+        // Social layer: lobby/global chat
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS chat_messages (
+            id SERIAL PRIMARY KEY,
+            user_id VARCHAR(100) REFERENCES users(id) ON DELETE SET NULL,
+            username VARCHAR(50),
+            room VARCHAR(50) NOT NULL,
+            body TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        await client.query("ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS username VARCHAR(50)");
+
+        // Social layer: clubs
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS clubs (
+            id VARCHAR(100) PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
+            slug VARCHAR(50) UNIQUE NOT NULL,
+            name VARCHAR(80) NOT NULL,
+            description TEXT,
+            created_by VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+
+        // Social layer: club membership
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS club_members (
+            club_id VARCHAR(100) NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+            user_id VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            role VARCHAR(20) DEFAULT 'member',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (club_id, user_id)
+          )
+        `);
+        await client.query("ALTER TABLE club_members ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'member'");
+
+
+        // Lessons (curated learning content)
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS lessons (
+            id VARCHAR(100) PRIMARY KEY,
+            title VARCHAR(200) NOT NULL,
+            topic VARCHAR(100) NOT NULL,
+            difficulty VARCHAR(20) NOT NULL,
+            sort_order INTEGER NOT NULL,
+            content TEXT NOT NULL,
+            example_fen TEXT,
+            example_pgn TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        await client.query('ALTER TABLE lessons ADD COLUMN IF NOT EXISTS title VARCHAR(200)');
+        await client.query('ALTER TABLE lessons ADD COLUMN IF NOT EXISTS topic VARCHAR(100)');
+        await client.query("ALTER TABLE lessons ADD COLUMN IF NOT EXISTS difficulty VARCHAR(20)");
+        await client.query('ALTER TABLE lessons ADD COLUMN IF NOT EXISTS sort_order INTEGER');
+        await client.query('ALTER TABLE lessons ADD COLUMN IF NOT EXISTS content TEXT');
+        await client.query('ALTER TABLE lessons ADD COLUMN IF NOT EXISTS example_fen TEXT');
+        await client.query('ALTER TABLE lessons ADD COLUMN IF NOT EXISTS example_pgn TEXT');
+        await client.query('ALTER TABLE lessons ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+
+        // Lesson progress (per-user, one row per lesson)
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS lesson_progress (
+            user_id VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            lesson_id VARCHAR(100) NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+            completed BOOLEAN NOT NULL DEFAULT FALSE,
+            score INTEGER,
+            completed_at TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (user_id, lesson_id)
+          )
+        `);
+        await client.query('ALTER TABLE lesson_progress ADD COLUMN IF NOT EXISTS user_id VARCHAR(100)');
+        await client.query('ALTER TABLE lesson_progress ADD COLUMN IF NOT EXISTS lesson_id VARCHAR(100)');
+        await client.query('ALTER TABLE lesson_progress ADD COLUMN IF NOT EXISTS completed BOOLEAN NOT NULL DEFAULT FALSE');
+        await client.query('ALTER TABLE lesson_progress ADD COLUMN IF NOT EXISTS score INTEGER');
+        await client.query('ALTER TABLE lesson_progress ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP');
+        await client.query('ALTER TABLE lesson_progress ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+
+        // Seed the lessons catalog idempotently so progress rows can be tied to
+        // known lesson ids even on existing installations.
+        for (const lesson of LESSON_CATALOG) {
+          await client.query(
+            `INSERT INTO lessons (id, title, topic, difficulty, sort_order, content, example_fen, example_pgn)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             ON CONFLICT (id) DO UPDATE SET
+               title = EXCLUDED.title,
+               topic = EXCLUDED.topic,
+               difficulty = EXCLUDED.difficulty,
+               sort_order = EXCLUDED.sort_order,
+               content = EXCLUDED.content,
+               example_fen = EXCLUDED.example_fen,
+               example_pgn = EXCLUDED.example_pgn`,
+            [lesson.id, lesson.title, lesson.topic, lesson.difficulty, lesson.order, lesson.content, lesson.exampleFen ?? null, lesson.examplePgn ?? null]
+          );
+        }
 
         // Indexes
         await client.query('CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)');
@@ -265,6 +411,13 @@ export async function initDatabase() {
         await client.query('CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_matchmaking_player_id ON matchmaking_queue(player_id)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_matchmaking_elo ON matchmaking_queue(elo)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_friends_user_id ON friends(user_id)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_friends_friend_id ON friends(friend_id)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_chat_messages_room_created ON chat_messages(room, created_at)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_clubs_slug ON clubs(slug)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_club_members_club_id ON club_members(club_id)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_club_members_user_id ON club_members(user_id)');
+
         await client.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_active_games_game_id_unique ON active_games(game_id)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_active_games_game_id ON active_games(game_id)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_active_games_status ON active_games(status)');
@@ -274,6 +427,8 @@ export async function initDatabase() {
         await client.query('CREATE INDEX IF NOT EXISTS idx_elo_history_user_id ON elo_history(user_id)');
         await client.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_elo_history_user_game ON elo_history(user_id, game_code)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_lessons_order ON lessons(sort_order)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_lesson_progress_user ON lesson_progress(user_id)');
 
         await client.query('COMMIT');
       } catch (error) {
