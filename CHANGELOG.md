@@ -1,3 +1,17 @@
+## [2026-08-10] - Codebase cleanup: remove dead code
+
+### Removed
+- 55 unused shadcn/ui components under `artifacts/chess/src/components/ui/` (never imported by app code) along with the orphaned `lib/utils.ts`, `hooks/use-toast.ts`, and `hooks/use-mobile.tsx` that only served them.
+- Unused components and pages never referenced by any route or import: `EnhancedNavigation`, `GuestBlocked`, `NavigationHints`, `QuickNav`, `CloudFlare` (each with its CSS), plus unused hooks `useSwipe` and `useKeyboardNavigation`.
+- Duplicate stale entrypoints `src/App.tsx` and `src/main.tsx` (the app boots via `index.html` → `src/index.jsx` → `src/App.jsx`).
+- Server-side dead modules: `db/migrations.js` (`ensureAuthTables` never called) and the no-op `services/neonAuth.js` stub.
+
+### Fixed
+- `BotSelector.test.jsx` imported a non-existent `COACH_BOT` export; now derives it from `BOTS`.
+
+### Notes
+- Behavior-preserving: no functional code paths changed. Verified with full test suite (173/173 passing), workspace typecheck, and a production Vite build before and after.
+
 ## [2026-08-10] - Pollinations coach prompt only for logged-in users
 
 ### Changed
