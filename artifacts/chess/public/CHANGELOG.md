@@ -1,3 +1,13 @@
+[2026-08-10] - Opening explorer feature
+
+- Added a public Opening Explorer page (`/openings`) with an interactive SAN move tree: search box, opening roots list with ECO + name, live board from the current FEN, breadcrumb/move path navigation, a Back button, and per-move white/draw/black win-rate bars with game counts.
+- Added a chess.js-validated embedded opening book (`api-server/src/chess-server/openings/openingBook.js`) seeded with the major encyclopedic openings (King's Gambit, Queen's Gambit, Ruy Lopez, Italian Game, Sicilian Defence Open/Najdorf/Dragon/Scheveningen, French, Caro-Kann, Scandinavian, English, London System, Indian Defences). Every SAN is verified legal when the tree is built and re-validated before it is served.
+- Added API endpoints: `GET /api/openings` (roots), `GET /api/openings/children?fen=...` (legal continuations + named book position), and `GET /api/openings/search?q=...` (case-insensitive name/ECO search). All are public and unauthenticated.
+- Added an idempotent `openings` table (with `idx_openings_fen` unique index, `parent_fen` and `eco` indexes) to the self-healing DB schema init.
+- Added client API helpers `getOpeningRoots()`, `getOpeningChildren(fen)`, and `searchOpenings(q)` using the existing Bearer-token `request()` helper.
+- Registered the lazy-loaded `/openings` route in the app shell, added sidebar + mobile nav entries and a Home quick-action card.
+- Added unit, route, and page smoke tests covering book integrity, endpoint contracts, and the page render/navigation/search flows.
+
 [2026-08-10] - Codebase cleanup: remove dead code
 
 - Removed 55 unused shadcn/ui components plus orphaned helper hooks (`use-toast`, `use-mobile`) and `lib/utils.ts` that only served them.

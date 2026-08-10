@@ -176,6 +176,18 @@ class ApiService {
       body: JSON.stringify({ fen, bot }),
     });
   }
+
+  async getOpeningRoots() {
+    return this.request('/openings');
+  }
+
+  async getOpeningChildren(fen) {
+    return this.request(`/openings/children?fen=${encodeURIComponent(fen)}`);
+  }
+
+  async searchOpenings(query) {
+    return this.request(`/openings/search?q=${encodeURIComponent(query)}`);
+  }
 }
 
 export const api = new ApiService();

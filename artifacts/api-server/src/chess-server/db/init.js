@@ -221,6 +221,41 @@ export async function initDatabase() {
         await client.query('ALTER TABLE match_moves ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
         await client.query('ALTER TABLE match_moves ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
 
+        // Opening explorer book positions
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS openings (
+            id VARCHAR(255) PRIMARY KEY,
+            eco VARCHAR(10),
+            name VARCHAR(255),
+            fen TEXT,
+            move_san VARCHAR(10),
+            parent_fen TEXT,
+            moves_count INTEGER DEFAULT 0,
+            white_wins INTEGER DEFAULT 0,
+            draws INTEGER DEFAULT 0,
+            black_wins INTEGER DEFAULT 0,
+            pgn TEXT,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+
+        // Self-heal columns for openings tables created by earlier deploys.
+        await client.query('ALTER TABLE openings ADD COLUMN IF NOT EXISTS id VARCHAR(255)');
+        await client.query('ALTER TABLE openings ADD COLUMN IF NOT EXISTS eco VARCHAR(10)');
+        await client.query('ALTER TABLE openings ADD COLUMN IF NOT EXISTS name VARCHAR(255)');
+        await client.query('ALTER TABLE openings ADD COLUMN IF NOT EXISTS fen TEXT');
+        await client.query('ALTER TABLE openings ADD COLUMN IF NOT EXISTS move_san VARCHAR(10)');
+        await client.query('ALTER TABLE openings ADD COLUMN IF NOT EXISTS parent_fen TEXT');
+        await client.query('ALTER TABLE openings ADD COLUMN IF NOT EXISTS moves_count INTEGER DEFAULT 0');
+        await client.query('ALTER TABLE openings ADD COLUMN IF NOT EXISTS white_wins INTEGER DEFAULT 0');
+        await client.query('ALTER TABLE openings ADD COLUMN IF NOT EXISTS draws INTEGER DEFAULT 0');
+        await client.query('ALTER TABLE openings ADD COLUMN IF NOT EXISTS black_wins INTEGER DEFAULT 0');
+        await client.query('ALTER TABLE openings ADD COLUMN IF NOT EXISTS pgn TEXT');
+        await client.query('ALTER TABLE openings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+        await client.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_openings_fen ON openings(fen)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_openings_parent_fen ON openings(parent_fen)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_openings_eco ON openings(eco)');
+
         await client.query(`
           CREATE TABLE IF NOT EXISTS elo_history (
             id SERIAL PRIMARY KEY,
