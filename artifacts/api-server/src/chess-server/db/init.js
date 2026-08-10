@@ -293,6 +293,56 @@ export async function initDatabase() {
         `);
         await client.query('CREATE INDEX IF NOT EXISTS idx_pollinations_oauth_states_expires_at ON pollinations_oauth_states(expires_at)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_pollinations_coach_tokens_expires_at ON pollinations_coach_tokens(expires_at)');
+        // Social layer: friends
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS friends (
+            user_id VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            friend_id VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            status VARCHAR(20) DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (user_id, friend_id),
+            CONSTRAINT friends_not_self CHECK (user_id <> friend_id)
+          )
+        `);
+        await client.query("ALTER TABLE friends ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending'");
+
+        // Social layer: lobby/global chat
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS chat_messages (
+            id SERIAL PRIMARY KEY,
+            user_id VARCHAR(100) REFERENCES users(id) ON DELETE SET NULL,
+            username VARCHAR(50),
+            room VARCHAR(50) NOT NULL,
+            body TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        await client.query("ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS username VARCHAR(50)");
+
+        // Social layer: clubs
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS clubs (
+            id VARCHAR(100) PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
+            slug VARCHAR(50) UNIQUE NOT NULL,
+            name VARCHAR(80) NOT NULL,
+            description TEXT,
+            created_by VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+
+        // Social layer: club membership
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS club_members (
+            club_id VARCHAR(100) NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+            user_id VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            role VARCHAR(20) DEFAULT 'member',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (club_id, user_id)
+          )
+        `);
+        await client.query("ALTER TABLE club_members ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'member'");
+
 
         // Lessons (curated learning content)
         await client.query(`
@@ -361,6 +411,13 @@ export async function initDatabase() {
         await client.query('CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_matchmaking_player_id ON matchmaking_queue(player_id)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_matchmaking_elo ON matchmaking_queue(elo)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_friends_user_id ON friends(user_id)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_friends_friend_id ON friends(friend_id)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_chat_messages_room_created ON chat_messages(room, created_at)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_clubs_slug ON clubs(slug)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_club_members_club_id ON club_members(club_id)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_club_members_user_id ON club_members(user_id)');
+
         await client.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_active_games_game_id_unique ON active_games(game_id)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_active_games_game_id ON active_games(game_id)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_active_games_status ON active_games(status)');

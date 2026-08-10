@@ -207,6 +207,46 @@ class ApiService {
       body: JSON.stringify({ completed, score }),
     });
   }
+
+  async getFriends() {
+    return this.request('/social/friends');
+  }
+
+  async addFriend(username) {
+    return this.request(`/social/friends/${encodeURIComponent(username)}`, { method: 'POST' });
+  }
+
+  async removeFriend(username) {
+    return this.request(`/social/friends/${encodeURIComponent(username)}`, { method: 'DELETE' });
+  }
+
+  async getMessages(room, limit = 50) {
+    return this.request(`/social/chat/${encodeURIComponent(room)}?limit=${limit}`);
+  }
+
+  async sendMessage(room, body) {
+    return this.request(`/social/chat/${encodeURIComponent(room)}`, { method: 'POST', body: JSON.stringify({ body }) });
+  }
+
+  async getClubs() {
+    return this.request('/social/clubs');
+  }
+
+  async createClub({ name, description, slug }) {
+    return this.request('/social/clubs', { method: 'POST', body: JSON.stringify({ name, description, slug }) });
+  }
+
+  async getClub(slug) {
+    return this.request(`/social/clubs/${encodeURIComponent(slug)}`);
+  }
+
+  async joinClub(slug) {
+    return this.request(`/social/clubs/${encodeURIComponent(slug)}/join`, { method: 'POST' });
+  }
+
+  async leaveClub(slug) {
+    return this.request(`/social/clubs/${encodeURIComponent(slug)}/leave`, { method: 'POST' });
+  }
 }
 
 export const api = new ApiService();

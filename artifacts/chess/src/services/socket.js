@@ -209,6 +209,29 @@ class SocketService {
       this.emit('chat_message', data);
     });
 
+    // Social layer chat (persisted lobby/room messages)
+    this.socket.on('chat:message', (data) => {
+      this.emit('chat:message', data);
+    });
+
+    this.socket.on('chat:ack', (data) => {
+      this.emit('chat:ack', data);
+    });
+
+    this.socket.on('chat:error', (data) => {
+      console.error('[Socket] Chat error:', data);
+      this.emit('chat:error', data);
+    });
+
+    // Social layer presence broadcasts
+    this.socket.on('user:online', (data) => {
+      this.emit('user:online', data);
+    });
+
+    this.socket.on('user:offline', (data) => {
+      this.emit('user:offline', data);
+    });
+
     this.socket.on('remote_login_success', (data) => {
       console.log('[Socket] Remote login success:', data);
       this.emit('remote_login_success', data);
@@ -382,6 +405,50 @@ class SocketService {
     }
     if (this.socket?.connected) {
       this.socket.emit('complete_remote_login', { requestId, session, userData });
+      return true;
+    }
+    return false;
+  }
+
+  // ── Social layer: presence ────────────────────────────────────────────────
+  async joinPresence(user) {
+    if (!user?.id) return false;
+    if (!this.socket?.connected) {
+      await this.connect();
+    }
+    if (this.socket?.connected) {
+      this.socket.emit('presence:join', { userId: String(user.id), username: user.username });
+      return true;
+    }
+    return false;
+  }
+
+  leavePresence() {
+    if (!this.socket?.connected) return false;
+    this.socket.emit('presence:leave');
+    return true;
+  }
+
+  // ── Social layer: lobby / room chat ──────────────────────────────────────
+  joinChat(room) {
+    if (!this.socket?.connected) return false;
+    this.socket.emit('chat:join', { room });
+    return true;
+  }
+
+  leaveChat(room) {
+    if (!this.socket?.connected) return false;
+    this.socket.emit('chat:leave', { room });
+    return true;
+  }
+
+  async sendChat(room, body, user) {
+    if (!room || !body) return false;
+    if (!this.socket?.connected) {
+      await this.connect();
+    }
+    if (this.socket?.connected) {
+      this.socket.emit('chat:send', { room, body, user });
       return true;
     }
     return false;
