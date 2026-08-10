@@ -184,7 +184,7 @@ function safeLocalStorageSet(key, value) {
   catch { /* noop */ }
 }
 
-function PollinationsCoachGate() {
+export function PollinationsCoachGate() {
   const { user, token, isLoggedIn, isLoading } = useUser();
   const [showPrompt, setShowPrompt] = useState(false);
   const [mode, setMode] = useState('connect');
