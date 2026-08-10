@@ -184,7 +184,7 @@ function safeLocalStorageSet(key, value) {
   catch { /* noop */ }
 }
 
-function PollinationsCoachGate() {
+export function PollinationsCoachGate() {
   const { user, token, isLoggedIn, isLoading } = useUser();
   const [showPrompt, setShowPrompt] = useState(false);
   const [mode, setMode] = useState('connect');
@@ -204,11 +204,6 @@ function PollinationsCoachGate() {
           const seen = Boolean(settings?.settings?.pollinationsCoachPromptSeen);
           if (!cancelled && !seen) {
             setMode('connect');
-            setShowPrompt(true);
-          }
-        } else {
-          if (!cancelled) {
-            setMode('login');
             setShowPrompt(true);
           }
         }
