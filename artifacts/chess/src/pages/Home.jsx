@@ -157,6 +157,20 @@ export default function Home() {
 
             <button
               className="action-card card-surface"
+              onClick={() => navigate('/lessons')}
+            >
+              <div className="action-icon">
+                <BookOpen size={22} />
+              </div>
+              <div className="action-content">
+                <h3>Lessons</h3>
+                <p>Structured topics with examples to build your fundamentals</p>
+              </div>
+              <ArrowUpRight className="action-arrow" size={18} />
+            </button>
+
+            <button
+              className="action-card card-surface"
               onClick={() => navigate('/changelog')}
             >
               <div className="action-icon">

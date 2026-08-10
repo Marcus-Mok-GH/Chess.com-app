@@ -16,6 +16,7 @@ import authRoutes from './routes/auth.js';
 import statsRoutes from './routes/stats.js';
 import puzzleRoutes from './routes/puzzles.js';
 import openingRoutes from './routes/openings.js';
+import lessonRoutes from './routes/lessons.js';
 import { registerSocketHandlers } from './socket/index.js';
 import { query } from './db.js';
 import { initDatabase } from './db/init.js';
@@ -67,6 +68,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/puzzles', puzzleRoutes);
 app.use('/api/openings', openingRoutes);
+app.use('/api/lessons', lessonRoutes);
 
 // Health check
 app.get('/health', (req, res) => res.status(200).json({ status: 'ok' }));

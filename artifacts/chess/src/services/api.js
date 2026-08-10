@@ -188,6 +188,25 @@ class ApiService {
   async searchOpenings(query) {
     return this.request(`/openings/search?q=${encodeURIComponent(query)}`);
   }
+
+  async getLessons() {
+    return this.request('/lessons');
+  }
+
+  async getLesson(idOrSlug) {
+    return this.request(`/lessons/${encodeURIComponent(idOrSlug)}`);
+  }
+
+  async getLessonProgress() {
+    return this.request('/lessons/progress');
+  }
+
+  async saveLessonProgress(lessonId, { completed, score } = {}) {
+    return this.request(`/lessons/${encodeURIComponent(lessonId)}/progress`, {
+      method: 'POST',
+      body: JSON.stringify({ completed, score }),
+    });
+  }
 }
 
 export const api = new ApiService();

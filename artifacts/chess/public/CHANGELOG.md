@@ -7,6 +7,12 @@
 - Added client API helpers `getOpeningRoots()`, `getOpeningChildren(fen)`, and `searchOpenings(q)` using the existing Bearer-token `request()` helper.
 - Registered the lazy-loaded `/openings` route in the app shell, added sidebar + mobile nav entries and a Home quick-action card.
 - Added unit, route, and page smoke tests covering book integrity, endpoint contracts, and the page render/navigation/search flows.
+[2026-08-10] - Lessons feature
+
+- Added a curated learning catalog of 8 beginner/intermediate lessons (piece development, center control, king safety & castling, pins, knight forks, skewers, back-rank threats, checkmate patterns), each with instructional prose, a rendered example board, and related puzzle themes.
+- Added a `/lessons` page listing lessons grouped by difficulty with per-lesson progress, a detail view with the example position and explanation, and a "Practice" action that jumps to the tactical trainer.
+- Added per-user lesson progress: `GET /api/lessons`, `GET /api/lessons/:id` (public), `GET /api/lessons/progress`, and `POST /api/lessons/:id/progress` (authenticated), backed by idempotently seeded `lessons` and `lesson_progress` tables.
+- Added a Lessons quick-action card on Home and desktop sidebar / mobile bottom-nav entries.
 
 [2026-08-10] - Codebase cleanup: remove dead code
 

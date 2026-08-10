@@ -25,6 +25,7 @@ const Terms = lazy(() => import('./pages/Terms'))
 const Privacy = lazy(() => import('./pages/Privacy'))
 const Puzzles = lazy(() => import('./pages/Puzzles'))
 const Openings = lazy(() => import('./pages/Openings'))
+const Lessons = lazy(() => import('./pages/Lessons'))
 const NotFound = lazy(() => import('./pages/not-found'))
 
 function getTitle(path) {
@@ -38,6 +39,7 @@ function getTitle(path) {
   if (path === '/changelog') return 'Changelog'
   if (path === '/puzzles') return 'Puzzles'
   if (path === '/openings') return 'Openings'
+  if (path === '/lessons') return 'Lessons'
   return 'PlayChess'
 }
 
@@ -77,6 +79,10 @@ function AppHeader({ isGameRoute = false }) {
             <Link to="/openings" className={`sidebar-item ${currentPath === '/openings' ? 'active' : ''}`}>
               <span className="sidebar-icon">📖</span>
               <span className="sidebar-label">Openings</span>
+            </Link>
+            <Link to="/lessons" className={`sidebar-item ${currentPath === '/lessons' ? 'active' : ''}`}>
+              <span className="sidebar-icon">📖</span>
+              <span className="sidebar-label">Lessons</span>
             </Link>
             <Link to="/history" className={`sidebar-item ${currentPath === '/history' ? 'active' : ''}`}>
               <span className="sidebar-icon">📚</span>
@@ -136,6 +142,10 @@ function AppHeader({ isGameRoute = false }) {
         <Link to="/openings" className={`nav-item ${currentPath === '/openings' ? 'active' : ''}`}>
           <div className="nav-icon">📖</div>
           <span>Openings</span>
+        </Link>
+        <Link to="/lessons" className={`nav-item ${currentPath === '/lessons' ? 'active' : ''}`}>
+          <div className="nav-icon">📖</div>
+          <span>Lessons</span>
         </Link>
         <Link to="/history" className={`nav-item ${currentPath === '/history' ? 'active' : ''}`}>
           <div className="nav-icon">📚</div>
@@ -305,6 +315,7 @@ export default function App() {
                   <Route path="/changelog" element={<Changelog />} />
                   <Route path="/puzzles" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Puzzles /></Suspense></ProtectedRoute>} />
                   <Route path="/openings" element={<Suspense fallback={<RouteFallback />}><Openings /></Suspense>} />
+                  <Route path="/lessons" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Lessons /></Suspense></ProtectedRoute>} />
                 </Route>
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />

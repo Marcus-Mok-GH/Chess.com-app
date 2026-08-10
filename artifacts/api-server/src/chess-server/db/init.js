@@ -1,4 +1,5 @@
 import { getDirectPool, getPool, shouldClosePool } from './pool.js';
+import { LESSON_CATALOG } from '../lessons/lessonCatalog.js';
 
 export async function initDatabase() {
   const pool = getDirectPool();
@@ -293,6 +294,66 @@ export async function initDatabase() {
         await client.query('CREATE INDEX IF NOT EXISTS idx_pollinations_oauth_states_expires_at ON pollinations_oauth_states(expires_at)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_pollinations_coach_tokens_expires_at ON pollinations_coach_tokens(expires_at)');
 
+        // Lessons (curated learning content)
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS lessons (
+            id VARCHAR(100) PRIMARY KEY,
+            title VARCHAR(200) NOT NULL,
+            topic VARCHAR(100) NOT NULL,
+            difficulty VARCHAR(20) NOT NULL,
+            sort_order INTEGER NOT NULL,
+            content TEXT NOT NULL,
+            example_fen TEXT,
+            example_pgn TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        await client.query('ALTER TABLE lessons ADD COLUMN IF NOT EXISTS title VARCHAR(200)');
+        await client.query('ALTER TABLE lessons ADD COLUMN IF NOT EXISTS topic VARCHAR(100)');
+        await client.query("ALTER TABLE lessons ADD COLUMN IF NOT EXISTS difficulty VARCHAR(20)");
+        await client.query('ALTER TABLE lessons ADD COLUMN IF NOT EXISTS sort_order INTEGER');
+        await client.query('ALTER TABLE lessons ADD COLUMN IF NOT EXISTS content TEXT');
+        await client.query('ALTER TABLE lessons ADD COLUMN IF NOT EXISTS example_fen TEXT');
+        await client.query('ALTER TABLE lessons ADD COLUMN IF NOT EXISTS example_pgn TEXT');
+        await client.query('ALTER TABLE lessons ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+
+        // Lesson progress (per-user, one row per lesson)
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS lesson_progress (
+            user_id VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            lesson_id VARCHAR(100) NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+            completed BOOLEAN NOT NULL DEFAULT FALSE,
+            score INTEGER,
+            completed_at TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (user_id, lesson_id)
+          )
+        `);
+        await client.query('ALTER TABLE lesson_progress ADD COLUMN IF NOT EXISTS user_id VARCHAR(100)');
+        await client.query('ALTER TABLE lesson_progress ADD COLUMN IF NOT EXISTS lesson_id VARCHAR(100)');
+        await client.query('ALTER TABLE lesson_progress ADD COLUMN IF NOT EXISTS completed BOOLEAN NOT NULL DEFAULT FALSE');
+        await client.query('ALTER TABLE lesson_progress ADD COLUMN IF NOT EXISTS score INTEGER');
+        await client.query('ALTER TABLE lesson_progress ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP');
+        await client.query('ALTER TABLE lesson_progress ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+
+        // Seed the lessons catalog idempotently so progress rows can be tied to
+        // known lesson ids even on existing installations.
+        for (const lesson of LESSON_CATALOG) {
+          await client.query(
+            `INSERT INTO lessons (id, title, topic, difficulty, sort_order, content, example_fen, example_pgn)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             ON CONFLICT (id) DO UPDATE SET
+               title = EXCLUDED.title,
+               topic = EXCLUDED.topic,
+               difficulty = EXCLUDED.difficulty,
+               sort_order = EXCLUDED.sort_order,
+               content = EXCLUDED.content,
+               example_fen = EXCLUDED.example_fen,
+               example_pgn = EXCLUDED.example_pgn`,
+            [lesson.id, lesson.title, lesson.topic, lesson.difficulty, lesson.order, lesson.content, lesson.exampleFen ?? null, lesson.examplePgn ?? null]
+          );
+        }
+
         // Indexes
         await client.query('CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)');
         await client.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_games_code_unique ON games(game_code)');
@@ -309,6 +370,8 @@ export async function initDatabase() {
         await client.query('CREATE INDEX IF NOT EXISTS idx_elo_history_user_id ON elo_history(user_id)');
         await client.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_elo_history_user_game ON elo_history(user_id, game_code)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_lessons_order ON lessons(sort_order)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_lesson_progress_user ON lesson_progress(user_id)');
 
         await client.query('COMMIT');
       } catch (error) {
