@@ -1,3 +1,21 @@
+[2026-08-12] - Unexpected error reporting
+
+- Improved the unexpected-error screen with readable error and component-stack details.
+- Added a Copy error report action that includes the URL, timestamp, error message, and component stack, with copied/failed feedback.
+- Added an ErrorBoundary regression test covering displayed details and clipboard copying.
+
+[2026-08-12] - Landing page layout alignment
+
+- Fixed feature-board labels being stretched to full-board size by restricting board sizing to the actual ChessBoard wrapper.
+- Positioned feature labels as compact bottom-left overlays and kept the hero live indicator in a dedicated row below the board.
+- Verified desktop and mobile layouts have no horizontal overflow; the chess frontend production build passes.
+
+[2026-08-12] - Landing page layout cleanup
+
+- Fixed the root landing page feature-board labels so they render as compact overlays instead of being stretched across the full chessboard.
+- Corrected the hero live-preview layout, stats-bar alignment, centered desktop promo cards, and mobile navigation selectors.
+- Verified with a clean chess frontend production build and desktop/mobile layout measurements with no horizontal overflow.
+
 [2026-08-12] - Conservative refactor: remove dead API methods
 
 - Removed four unreferenced methods from `services/api.js`: `login`, `getUser`, `getClub`, `leaveClub`. Verified via repo-wide usage analysis (no `api.<method>()` callers and no destructured imports) that they had zero consumers across the app.
