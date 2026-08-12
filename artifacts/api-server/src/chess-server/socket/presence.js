@@ -14,12 +14,9 @@ export function markOnline(userId, socketId, username = '') {
 
 export function isOnline(userId) {
   if (!userId) return false;
+
   const sockets = byUser.get(userId);
   return !!sockets && sockets.size > 0;
-}
-
-export function getOnlineUserIds() {
-  return new Set(byUser.keys());
 }
 
 // Returns the user id that was removed, or null.

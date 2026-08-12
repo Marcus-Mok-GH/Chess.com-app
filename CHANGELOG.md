@@ -1,3 +1,16 @@
+## [2026-08-12] - Conservative refactor & simplification (API server + frontend)
+
+### Changed
+- `chess-server/socket/utils.js`: removed stray double semicolons (`};;`, `;;`) left by an earlier edit — pure style, behavior-identical.
+- `chess-server/services/lessonService.js`: `listLessons()` now delegates to the canonical `listLessons()` already exported by `lessons/lessonCatalog.js` instead of reimplementing the same slice/sort inline. Removed the now-unused direct `LESSON_CATALOG` import.
+
+### Removed
+- `chess-server/socket/presence.js`: removed `getOnlineUserIds()` — dead export, unreferenced across the entire repo and absent from the production bundle.
+- `chess/src/services/api.js`: removed four dead methods (`login`, `getUser`, `getClub`, `leaveClub`) with zero consumers (no `api.<method>()` callers and no destructured imports) anywhere in the app.
+
+### Notes
+- Scope deliberately limited to provably-safe, behavior-preserving cleanups. All authentication, DB, matchmaking, game logic, engine, puzzle, coach, social, and socket-critical paths were left untouched. Verified with the full workspace test suite (231/231 passing across 27 files) and clean production builds for both the chess frontend and the API server.
+
 ## [2026-08-10] - Codebase cleanup: remove dead code
 
 ### Removed
