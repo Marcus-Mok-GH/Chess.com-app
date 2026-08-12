@@ -454,8 +454,10 @@
 
 .hero-board {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
+  gap: 10px;
 }
 
 .hero-board-frame {
@@ -475,29 +477,21 @@
 }
 
 .hero-board-live {
-  position: relative;
-}
-
-.hero-board-live::after {
-  content: 'Live now';
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  background: rgba(26, 26, 26, 0.85);
-  color: var(--land-text);
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--land-text-dim);
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.4px;
-  padding: 4px 10px;
-  border-radius: 9999px;
 }
 
 /* ---------- Stats bar ---------- */
 
 .stats-bar {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
   padding: 28px 56px;
   max-width: 1240px;
   margin: 0 auto;
@@ -505,44 +499,42 @@
 }
 
 .stat-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 20px 24px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  align-items: center;
+  padding: 18px 20px;
   background: var(--land-surface);
   border: 1px solid var(--land-border-soft);
   border-radius: var(--land-radius);
 }
 
-.stat-item .stat-number,
-.stat-item .stat-label {
-  all: unset;
-  display: block;
+.stat-item > svg {
+  grid-row: 1 / -1;
+  color: var(--land-green);
 }
 
-.stat-item .stat-number {
-  font-size: 28px;
+.stat-item > strong {
+  font-size: 24px;
+  line-height: 1;
   font-weight: 800;
   color: var(--land-text);
 }
 
-.stat-item .stat-label {
-  font-size: 13px;
+.stat-item > span {
+  font-size: 12px;
+  line-height: 1.2;
   font-weight: 600;
   color: var(--land-text-dim);
 }
 
 .stat-divider {
-  height: 1px;
+  width: 1px;
+  height: 44px;
   background: var(--land-border-soft);
-  margin: 0 auto;
-  width: calc(100% - 112px);
-  max-width: 1128px;
+  margin: auto;
 }
-
-/* Also provide the named grid fallback used by JSX with explicit children */
-.stat-item > *:nth-child(1) { color: var(--land-text); font-weight: 800; font-size: 28px; }
-.stat-item > *:nth-child(2) { color: var(--land-text-dim); font-weight: 600; font-size: 13px; }
 
 /* ---------- Compact feature cards ---------- */
 
@@ -709,17 +701,22 @@
   margin: 0 auto;
 }
 
-.feature-block-board > * {
+.feature-block-board > .chess-board-wrapper {
   width: 100%;
   height: 100%;
 }
 
 .feature-block-board-tag {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 2;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  align-self: flex-start;
-  margin-top: 4px;
+  margin: 0;
+  width: auto;
+  height: auto;
   font-size: 12px;
   font-weight: 700;
   color: var(--land-text-dim);
@@ -733,8 +730,8 @@
 
 .app-promo,
 .final-cta {
-  margin: 40px 56px 0;
-  max-width: 1240px;
+  width: min(calc(100% - 112px), 1240px);
+  margin: 40px auto 0;
   padding: 28px 36px;
   background: var(--land-surface);
   border: 1px solid var(--land-border-soft);
@@ -990,7 +987,7 @@
     box-shadow: 14px 0 32px rgba(0, 0, 0, 0.35);
   }
 
-  .landing-sidebar.open {
+  .landing.nav-open .landing-sidebar {
     transform: translateX(0);
   }
 
@@ -1001,7 +998,7 @@
     transition: opacity 0.2s ease;
   }
 
-  .landing-nav-backdrop.open {
+  .landing.nav-open .landing-nav-backdrop {
     opacity: 1;
     pointer-events: auto;
   }
@@ -1048,6 +1045,7 @@
 
   .app-promo,
   .final-cta {
+    width: auto;
     margin-inline: 20px;
   }
 
@@ -1112,6 +1110,7 @@
 
   .app-promo,
   .final-cta {
+    width: auto;
     margin-left: 16px;
     margin-right: 16px;
   }
