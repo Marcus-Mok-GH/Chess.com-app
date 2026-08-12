@@ -6,10 +6,10 @@
  */
 
 import { query } from '../db.js';
-import { LESSON_CATALOG, getLessonById } from '../lessons/lessonCatalog.js';
+import { listLessons as listCatalogLessons, getLessonById } from '../lessons/lessonCatalog.js';
 
 export function listLessons() {
-  return LESSON_CATALOG.slice().sort((a, b) => a.order - b.order);
+  return listCatalogLessons();
 }
 
 export function getLesson(idOrSlug) {

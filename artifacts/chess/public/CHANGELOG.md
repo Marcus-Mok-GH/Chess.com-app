@@ -1,3 +1,8 @@
+[2026-08-12] - Conservative refactor: remove dead API methods
+
+- Removed four unreferenced methods from `services/api.js`: `login`, `getUser`, `getClub`, `leaveClub`. Verified via repo-wide usage analysis (no `api.<method>()` callers and no destructured imports) that they had zero consumers across the app.
+- Behavior-preserving: the default `api` export still handles every endpoint the UI actually calls. Verified with the full Vitest suite (231/231 passing) and a clean Vite production build.
+
 [2026-08-10] - Opening explorer feature
 
 - Added a public Opening Explorer page (`/openings`) with an interactive SAN move tree: search box, opening roots list with ECO + name, live board from the current FEN, breadcrumb/move path navigation, a Back button, and per-move white/draw/black win-rate bars with game counts.

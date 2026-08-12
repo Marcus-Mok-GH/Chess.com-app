@@ -33,13 +33,6 @@ class ApiService {
     }
   }
 
-  async login(username) {
-    return this.request('/users/login', {
-      method: 'POST',
-      body: JSON.stringify({ username }),
-    });
-  }
-
   async updateUsername(username, token) {
     return this.request('/auth/update-username', {
       method: 'POST',
@@ -62,10 +55,6 @@ class ApiService {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: JSON.stringify({ settings }),
     });
-  }
-
-  async getUser(username) {
-    return this.request(`/users/${encodeURIComponent(username)}`);
   }
 
   async getLeaderboard(limit = 10) {
@@ -218,21 +207,12 @@ class ApiService {
     });
   }
 
-  async getClub(slug) {
-    return this.request(`/social/clubs/${encodeURIComponent(slug)}`);
-  }
-
   async joinClub(slug) {
     return this.request(`/social/clubs/${encodeURIComponent(slug)}/join`, {
       method: 'POST',
     });
   }
 
-  async leaveClub(slug) {
-    return this.request(`/social/clubs/${encodeURIComponent(slug)}/leave`, {
-      method: 'POST',
-    });
-  }
 }
 
 export const api = new ApiService();
