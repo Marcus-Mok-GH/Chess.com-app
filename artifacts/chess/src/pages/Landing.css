@@ -933,11 +933,17 @@
     padding: 24px;
   }
 
+  .stat-divider {
+    display: none;
+  }
+
   .features-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .feature-block {
+    width: auto;
+    margin-inline: 16px;
     grid-template-columns: 1fr !important;
     gap: 24px;
     padding: 32px 24px;

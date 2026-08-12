@@ -11,6 +11,7 @@ function BrokenChild() {
 
 describe('ErrorBoundary', () => {
   let consoleError;
+  let clipboardDescriptor;
 
   beforeEach(() => {
     consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -18,10 +19,16 @@ describe('ErrorBoundary', () => {
 
   afterEach(() => {
     consoleError.mockRestore();
+    if (clipboardDescriptor) {
+      Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
+    } else {
+      delete navigator.clipboard;
+    }
   });
 
   it('shows error details and copies the report to the clipboard', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
+    clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
       value: { writeText },
@@ -36,6 +43,7 @@ describe('ErrorBoundary', () => {
     expect(screen.getByRole('heading', { name: /something went wrong/i })).toBeTruthy();
     expect(screen.getByText(/Test failure details/)).toBeTruthy();
     expect(screen.getByText(/component stack/i)).toBeTruthy();
+    expect(screen.getByText(/BrokenChild/)).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: /copy error report/i }));
 

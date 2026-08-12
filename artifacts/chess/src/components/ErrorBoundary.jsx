@@ -9,7 +9,7 @@ function getErrorMessage(error) {
 function getErrorReport(error, errorInfo) {
   return [
     'PlayChess unexpected error',
-    `URL: ${window.location.href}`,
+    `URL: ${window.location.origin}${window.location.pathname}`,
     `Time: ${new Date().toISOString()}`,
     '',
     'Error:',
