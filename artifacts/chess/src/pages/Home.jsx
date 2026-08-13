@@ -102,7 +102,7 @@ export default function Home() {
               <Gamepad2 size={20} />
             </div>
             <div className="stat-content">
-              <div className="stat-label">Games Played</div>
+              <div className="stat-label">Rated Games</div>
               <div className="stat-value">{user.gamesPlayed || 0}</div>
             </div>
           </div>
@@ -112,7 +112,7 @@ export default function Home() {
               <Trophy size={20} />
             </div>
             <div className="stat-content">
-              <div className="stat-label">Win Rate</div>
+              <div className="stat-label">Rated Win Rate</div>
               <div className="stat-value">{winRate}%</div>
             </div>
           </div>

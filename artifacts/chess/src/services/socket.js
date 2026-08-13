@@ -29,6 +29,7 @@ class SocketService {
   constructor() {
     this.socket = null;
     this.listeners = new Map();
+    this.chatRooms = new Set();
     this.isRealtimeAvailable = Boolean(SOCKET_CONFIG.url);
     this.isConnected = false;
     this.isConnecting = false;
@@ -87,6 +88,7 @@ class SocketService {
         this.isConnected = true;
         this.isConnecting = false;
         this.connectionPromise = null;
+        this.restoreChatRooms();
         this.emit('connection_status', { connected: true });
         resolve();
       });
@@ -431,13 +433,23 @@ class SocketService {
   }
 
   // ── Social layer: lobby / room chat ──────────────────────────────────────
+  restoreChatRooms() {
+    if (!this.socket?.connected) return;
+    for (const room of this.chatRooms) {
+      this.socket.emit('chat:join', { room });
+    }
+  }
+
   joinChat(room) {
+    if (!room) return false;
+    this.chatRooms.add(room);
     if (!this.socket?.connected) return false;
     this.socket.emit('chat:join', { room });
     return true;
   }
 
   leaveChat(room) {
+    this.chatRooms.delete(room);
     if (!this.socket?.connected) return false;
     this.socket.emit('chat:leave', { room });
     return true;

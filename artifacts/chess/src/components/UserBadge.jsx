@@ -50,18 +50,18 @@ export default function UserBadge() {
             <div className="dropdown-header">
               <span className="dropdown-username">{user.username}</span>
               <span className="dropdown-elo">
-                <span className="elo-label">Rating:</span>
+                <span className="elo-label">Rated:</span>
                 <span className="elo-value">{user.elo}</span>
               </span>
             </div>
             <div className="dropdown-divider" />
             <div className="dropdown-stats">
               <div className="stat-row">
-                <span className="stat-label">Games</span>
+                <span className="stat-label">Rated Games</span>
                 <span className="stat-value">{user.gamesPlayed || 0}</span>
               </div>
               <div className="stat-row">
-                <span className="stat-label">W / L / D</span>
+                <span className="stat-label">Rated W / L / D</span>
                 <span className="stat-value">
                   <span className="win">{user.wins || 0}</span>
                   {' / '}
@@ -71,7 +71,7 @@ export default function UserBadge() {
                 </span>
               </div>
               <div className="stat-row">
-                <span className="stat-label">Win Rate</span>
+                <span className="stat-label">Rated Win Rate</span>
                 <span className="stat-value">{winRate}%</span>
               </div>
             </div>

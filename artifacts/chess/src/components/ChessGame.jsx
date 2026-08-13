@@ -51,7 +51,7 @@ function ChessGame(
   },
   ref,
 ) {
-  const { user, isOnline, applyUserStats } = useUser();
+  const { user, isOnline } = useUser();
   const { settings } = useSettings();
 
   const resolvedGameId = useMemo(
@@ -256,24 +256,22 @@ function ChessGame(
 
       const storedHistory = toStoredMoveHistory(currentHistory);
 
-      const response = await api.saveGame({
+      await api.saveGame({
         gameCode: gameId,
         moveHistory: storedHistory,
         result: gameResult,
         gameMode: 'local',
         userId: user.id,
-        username: user.username,
         opponentName: botName,
         opponentElo: botElo,
         playerColor: playerColor === 'w' ? 'white' : 'black',
         finalFen: currentGame.fen(),
       });
-      if (response?.userStats) applyUserStats(response.userStats);
       console.log('[ChessGame] Persisted game state to DB');
     } catch (error) {
       console.error('[ChessGame] Failed to persist game state:', error);
     }
-  }, [gameId, hasLoadedPersistedState, isOnline, playerColor, user, persistLocalSnapshot, applyUserStats]);
+  }, [gameId, hasLoadedPersistedState, isOnline, playerColor, user, persistLocalSnapshot]);
 
   useEffect(() => {
     if (hasLoadedPersistedState) return;
@@ -488,25 +486,23 @@ function ChessGame(
 
       const storedHistory = toStoredMoveHistory(moveHistory);
 
-      const response = await api.saveGame({
+      await api.saveGame({
         gameCode: gameId,
         moveHistory: storedHistory,
         result,
         gameMode: 'local',
         userId: user.id,
-        username: user.username,
         opponentName: botName,
         opponentElo: botElo,
         playerColor: playerColor === 'w' ? 'white' : 'black',
         finalFen: game.fen(),
       });
-      if (response?.userStats) applyUserStats(response.userStats);
 
       console.log('✅ Game saved to database');
     } catch (error) {
       console.error('🔸 Failed to save game:', error);
     }
-  }, [game, gameId, moveHistory, isOnline, user, playerColor, persistLocalSnapshot, applyUserStats]);
+  }, [game, gameId, moveHistory, isOnline, user, playerColor, persistLocalSnapshot]);
 
   useEffect(() => {
     if (getGameStatus !== 'playing' && !hasResigned && moveHistory.length > 0) {

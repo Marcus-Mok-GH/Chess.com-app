@@ -262,15 +262,15 @@ export default function Settings() {
                 <span className="account-value">{user.username}</span>
               </div>
               <div className="account-row">
-                <span className="account-label">Rating</span>
+                <span className="account-label">Rated Rating</span>
                 <span className="account-value account-value-elo">{user.elo}</span>
               </div>
               <div className="account-row">
-                <span className="account-label">Games Played</span>
+                <span className="account-label">Rated Games</span>
                 <span className="account-value">{user.gamesPlayed || 0}</span>
               </div>
               <div className="account-row">
-                <span className="account-label">Record</span>
+                <span className="account-label">Rated Record</span>
                 <span className="account-value record">
                   <span className="rec-w">{user.wins || 0}W</span>
                   <span className="rec-d">{user.draws || 0}D</span>

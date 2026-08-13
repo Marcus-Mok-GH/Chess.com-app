@@ -48,24 +48,6 @@ export function UserProvider({ children }) {
     }
   }, []);
 
-  const applyUserStats = useCallback((stats) => {
-    const currentUser = userRef.current;
-    if (!currentUser || !stats || typeof stats !== 'object') return;
-
-    const nextUser = {
-      ...currentUser,
-      ...(Number.isFinite(Number(stats.elo)) ? { elo: Number(stats.elo) } : {}),
-      ...(Number.isFinite(Number(stats.gamesPlayed)) ? { gamesPlayed: Number(stats.gamesPlayed) } : {}),
-      ...(Number.isFinite(Number(stats.wins)) ? { wins: Number(stats.wins) } : {}),
-      ...(Number.isFinite(Number(stats.losses)) ? { losses: Number(stats.losses) } : {}),
-      ...(Number.isFinite(Number(stats.draws)) ? { draws: Number(stats.draws) } : {}),
-    };
-
-    userRef.current = nextUser;
-    setUser(nextUser);
-    persistUser(nextUser, token);
-  }, [persistUser, token]);
-
   useEffect(() => {
     const requestId = localStorage.getItem(AUTH_REQUEST_ID_KEY);
     if (requestId) socket.joinAuthRoom(requestId);
@@ -311,7 +293,7 @@ export function UserProvider({ children }) {
   const value = {
     user, token, isLoggedIn: !!user, isLoading, isOnline,
     isAwaitingVerification, pendingOtpEmail,
-    requestOtp, verifyEmailOtp, updateUsername, applyUserStats, logout,
+    requestOtp, verifyEmailOtp, updateUsername, logout,
   };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
