@@ -51,7 +51,7 @@ function generateGameCode() {
  * ON CONFLICT DO NOTHING make the insert atomic, preventing race conditions.
  */
 async function computeAndApplyElo(userId, gameCode, gameResult, opponentElo, gameMode) {
-  if (!['win', 'loss', 'draw'].includes(gameResult)) return;
+  if (!['win', 'loss', 'draw'].includes(gameResult)) return null;
 
   const pool = getPool();
   const client = await pool.connect();
@@ -64,7 +64,7 @@ async function computeAndApplyElo(userId, gameCode, gameResult, opponentElo, gam
     );
     if (userResult.rows.length === 0) {
       await client.query('ROLLBACK');
-      return;
+      return null;
     }
 
     const user = userResult.rows[0];
@@ -89,7 +89,7 @@ async function computeAndApplyElo(userId, gameCode, gameResult, opponentElo, gam
 
     if (historyInsert.rows.length === 0) {
       await client.query('ROLLBACK');
-      return;
+      return null;
     }
 
     await client.query(
@@ -102,12 +102,25 @@ async function computeAndApplyElo(userId, gameCode, gameResult, opponentElo, gam
 
     await client.query('COMMIT');
     console.log(`[ELO] ${user.id} ${user.elo} → ${newElo} (${gameResult}, game ${gameCode})`);
+    return {
+      elo: newElo,
+      gamesPlayed: played,
+      wins,
+      losses,
+      draws,
+    };
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
   } finally {
     client.release();
   }
+}
+
+function playerResultFromGameResult(result, playerColor) {
+  if (['win', 'loss', 'draw'].includes(result)) return result;
+  if (!['white', 'black'].includes(result) || !['white', 'black'].includes(playerColor)) return null;
+  return result === playerColor ? 'win' : 'loss';
 }
 
 // Save game result
@@ -159,9 +172,11 @@ router.post('/save', async (req, res) => {
 
     console.log(`[Games] saved – code: ${gameCode}, mode: ${gameMode}, result: ${result}`);
 
-    if (status === 'completed' && userId && ['win', 'loss', 'draw'].includes(result)) {
+    const playerResult = playerResultFromGameResult(result, playerColor);
+    let userStats = null;
+    if (status === 'completed' && userId && playerResult) {
       try {
-        await computeAndApplyElo(userId, gameCode, result, opponentElo ?? null, gameMode);
+        userStats = await computeAndApplyElo(userId, gameCode, playerResult, opponentElo ?? null, gameMode);
       } catch (eloErr) {
         console.error('[ELO] Update failed (non-fatal):', eloErr?.message);
       }
@@ -172,6 +187,7 @@ router.post('/save', async (req, res) => {
       message: 'Game saved successfully',
       gameId: insertResult.rows[0].id,
       gameCode: insertResult.rows[0].game_code,
+      userStats,
     });
   } catch (error) {
     console.error('Save game error:', error);

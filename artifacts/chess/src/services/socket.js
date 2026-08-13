@@ -29,6 +29,7 @@ class SocketService {
   constructor() {
     this.socket = null;
     this.listeners = new Map();
+    this.isRealtimeAvailable = Boolean(SOCKET_CONFIG.url);
     this.isConnected = false;
     this.isConnecting = false;
     this.connectionPromise = null;

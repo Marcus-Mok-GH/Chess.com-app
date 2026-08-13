@@ -51,7 +51,7 @@ function ChessGame(
   },
   ref,
 ) {
-  const { user, isOnline } = useUser();
+  const { user, isOnline, applyUserStats } = useUser();
   const { settings } = useSettings();
 
   const resolvedGameId = useMemo(
@@ -256,7 +256,7 @@ function ChessGame(
 
       const storedHistory = toStoredMoveHistory(currentHistory);
 
-      await api.saveGame({
+      const response = await api.saveGame({
         gameCode: gameId,
         moveHistory: storedHistory,
         result: gameResult,
@@ -268,11 +268,12 @@ function ChessGame(
         playerColor: playerColor === 'w' ? 'white' : 'black',
         finalFen: currentGame.fen(),
       });
+      if (response?.userStats) applyUserStats(response.userStats);
       console.log('[ChessGame] Persisted game state to DB');
     } catch (error) {
       console.error('[ChessGame] Failed to persist game state:', error);
     }
-  }, [gameId, hasLoadedPersistedState, isOnline, playerColor, user, persistLocalSnapshot]);
+  }, [gameId, hasLoadedPersistedState, isOnline, playerColor, user, persistLocalSnapshot, applyUserStats]);
 
   useEffect(() => {
     if (hasLoadedPersistedState) return;
@@ -487,7 +488,7 @@ function ChessGame(
 
       const storedHistory = toStoredMoveHistory(moveHistory);
 
-      await api.saveGame({
+      const response = await api.saveGame({
         gameCode: gameId,
         moveHistory: storedHistory,
         result,
@@ -499,12 +500,13 @@ function ChessGame(
         playerColor: playerColor === 'w' ? 'white' : 'black',
         finalFen: game.fen(),
       });
+      if (response?.userStats) applyUserStats(response.userStats);
 
       console.log('✅ Game saved to database');
     } catch (error) {
       console.error('🔸 Failed to save game:', error);
     }
-  }, [game, gameId, moveHistory, isOnline, user, playerColor, persistLocalSnapshot]);
+  }, [game, gameId, moveHistory, isOnline, user, playerColor, persistLocalSnapshot, applyUserStats]);
 
   useEffect(() => {
     if (getGameStatus !== 'playing' && !hasResigned && moveHistory.length > 0) {
@@ -719,11 +721,10 @@ function ChessGame(
 
   const handleFlipBoard = useCallback(() => {
     const newOrientation = boardOrientation === 'white' ? 'black' : 'white';
-    const newColor = newOrientation === 'white' ? 'w' : 'b';
     setBoardOrientation(newOrientation);
-    setPlayerColor(newColor);
     boardOrientationRef.current = newOrientation;
-    playerColorRef.current = newColor;
+    // Flipping the board changes only the viewer's perspective. The player's
+    // assigned color and turn ownership must remain fixed for the game.
     if (game) {
       persistLocalSnapshot(game, moveHistory);
     }
