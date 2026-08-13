@@ -137,6 +137,25 @@ export default function Home() {
           </div>
         </section>
 
+        {incompleteGame && (
+          <section className="resume-game-section">
+            <div className="resume-game-card card-surface">
+              <div className="resume-game-copy">
+                <div className="resume-game-eyebrow"><Play size={14} /> In progress</div>
+                <h2>Complete this game?</h2>
+                <p>Resume your game against {String(incompleteGame.white_player_id) === String(user.id) ? incompleteGame.black_player_name : incompleteGame.white_player_name}.</p>
+              </div>
+              <button
+                className="resume-game-button"
+                onClick={() => navigate(`/game/${incompleteGame.game_code}?mode=local`)}
+              >
+                Resume game
+                <ArrowUpRight size={18} />
+              </button>
+            </div>
+          </section>
+        )}
+
         {/* Quick Actions */}
         <section className="quick-actions">
           <h2 className="section-title">Quick Play</h2>
@@ -221,25 +240,6 @@ export default function Home() {
             </button>
           </div>
         </section>
-
-        {incompleteGame && (
-          <section className="resume-game-section">
-            <div className="resume-game-card card-surface">
-              <div className="resume-game-copy">
-                <div className="resume-game-eyebrow"><Play size={14} /> In progress</div>
-                <h2>Complete this game?</h2>
-                <p>Resume your game against {String(incompleteGame.white_player_id) === String(user.id) ? incompleteGame.black_player_name : incompleteGame.white_player_name}.</p>
-              </div>
-              <button
-                className="resume-game-button"
-                onClick={() => navigate(`/game/${incompleteGame.game_code}?mode=local`)}
-              >
-                Resume game
-                <ArrowUpRight size={18} />
-              </button>
-            </div>
-          </section>
-        )}
 
         {user.createdAt && (
           <section className="member-info">
