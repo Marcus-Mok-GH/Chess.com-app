@@ -48,3 +48,48 @@ describe('ApiService.request header precedence', () => {
     });
   });
 });
+
+describe('ApiService learning and opening explorer contracts', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true }),
+    });
+  });
+
+  it('requests the Lessons catalog and authenticated progress endpoints', async () => {
+    const { api } = await import('./api');
+
+    await api.getLessons();
+    await api.getLessonProgress();
+    await api.saveLessonProgress('forks', { completed: true });
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(expect.arrayContaining([
+      expect.stringContaining('/lessons'),
+      expect.stringContaining('/lessons/progress'),
+      expect.stringContaining('/lessons/forks/progress'),
+    ]));
+    expect(fetchMock.mock.calls[2][1]).toMatchObject({
+      method: 'POST',
+      body: JSON.stringify({ completed: true }),
+    });
+  });
+
+  it('requests opening roots, children, and search results with encoded parameters', async () => {
+    const { api } = await import('./api');
+    const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
+    await api.getOpeningRoots();
+    await api.getOpeningChildren(fen);
+    await api.searchOpenings('queen’s gambit');
+
+    const calledUrls = fetchMock.mock.calls.map(([url]) => url);
+    expect(calledUrls).toEqual(expect.arrayContaining([
+      expect.stringContaining('/openings'),
+      expect.stringContaining(`/openings/children?fen=${encodeURIComponent(fen)}`),
+      expect.stringContaining(`/openings/search?q=${encodeURIComponent('queen’s gambit')}`),
+    ]));
+  });
+});

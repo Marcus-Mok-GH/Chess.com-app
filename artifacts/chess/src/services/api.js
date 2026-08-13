@@ -166,6 +166,39 @@ class ApiService {
     });
   }
 
+  // ── Learning ─────────────────────────────────────────────────────────────
+  async getLessons() {
+    return this.request('/lessons');
+  }
+
+  async getLesson(lessonId) {
+    return this.request(`/lessons/${encodeURIComponent(lessonId)}`);
+  }
+
+  async getLessonProgress() {
+    return this.request('/lessons/progress');
+  }
+
+  async saveLessonProgress(lessonId, progress) {
+    return this.request(`/lessons/${encodeURIComponent(lessonId)}/progress`, {
+      method: 'POST',
+      body: JSON.stringify(progress),
+    });
+  }
+
+  // ── Opening explorer ─────────────────────────────────────────────────────
+  async getOpeningRoots() {
+    return this.request('/openings');
+  }
+
+  async getOpeningChildren(fen) {
+    return this.request(`/openings/children?fen=${encodeURIComponent(fen)}`);
+  }
+
+  async searchOpenings(query) {
+    return this.request(`/openings/search?q=${encodeURIComponent(query)}`);
+  }
+
   // ── Social layer: friends ─────────────────────────────────────────────────
   async getFriends() {
     return this.request('/social/friends');

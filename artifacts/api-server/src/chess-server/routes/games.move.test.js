@@ -561,3 +561,125 @@ describe('GET /api/games/by-code/:gameCode — KV comparison', () => {
     expect(mockKv.set).toHaveBeenCalledWith('GAME1', dbRow);
   });
 });
+
+
+describe('authenticated local game persistence', () => {
+  function localSavePayload(overrides = {}) {
+    return {
+      gameCode: 'LOCAL1',
+      gameMode: 'local',
+      userId: 2,
+      username: 'Untrusted Client Name',
+      result: 'black',
+      moveHistory: [],
+      opponentName: 'Nelson',
+      opponentElo: 1300,
+      playerColor: 'white',
+      finalFen: START_FEN,
+      ...overrides,
+    };
+  }
+
+  it('requires a valid session before saving a local game', async () => {
+    const app = buildApp();
+    app.use('/api/games', gameRoutes);
+
+    const res = await loopback(app, 'POST', '/api/games/save', localSavePayload(), {});
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toMatch(/authentication/i);
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  it('rejects a local-game save when the requested user differs from the session user', async () => {
+    const app = buildApp();
+    app.use('/api/games', gameRoutes);
+
+    const res = await loopback(app, 'POST', '/api/games/save', localSavePayload({ userId: 99 }));
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/identity/i);
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  it('uses the authenticated account identity and does not rate a local result', async () => {
+    const app = buildApp();
+    app.use('/api/games', gameRoutes);
+    query
+      .mockResolvedValueOnce({ rows: [{ username: 'AuthenticatedPlayer' }] })
+      .mockResolvedValueOnce({ rows: [{ id: 17, game_code: 'LOCAL1' }] });
+
+    const res = await loopback(app, 'POST', '/api/games/save', localSavePayload());
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ success: true, gameId: 17, gameCode: 'LOCAL1' });
+    expect(query.mock.calls[1][1]).toEqual(expect.arrayContaining([
+      'LOCAL1', 2, null, 'AuthenticatedPlayer', 'Nelson', 'black', 'local', START_FEN,
+    ]));
+    expect(query.mock.calls.some(([sql]) => /elo_history|UPDATE users\s+SET elo/i.test(sql))).toBe(false);
+  });
+
+  it('does not overwrite an existing game that belongs to another account', async () => {
+    const app = buildApp();
+    app.use('/api/games', gameRoutes);
+    query
+      .mockResolvedValueOnce({ rows: [{ username: 'AuthenticatedPlayer' }] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const res = await loopback(app, 'POST', '/api/games/save', localSavePayload());
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/another player/i);
+  });
+
+  it('rejects non-local game modes from the local archive endpoint', async () => {
+    const app = buildApp();
+    app.use('/api/games', gameRoutes);
+
+    const res = await loopback(app, 'POST', '/api/games/save', localSavePayload({ gameMode: 'ranked' }));
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/local games/i);
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  it('binds local game creation to the authenticated account identity', async () => {
+    const app = buildApp();
+    app.use('/api/games', gameRoutes);
+    query
+      .mockResolvedValueOnce({ rows: [{ username: 'AuthenticatedPlayer' }] })
+      .mockResolvedValueOnce({ rows: [{ game_code: 'LOCAL2' }] });
+
+    const res = await loopback(app, 'POST', '/api/games/local/create', {
+      gameCode: 'LOCAL2',
+      userId: 2,
+      username: 'Untrusted Client Name',
+      opponentName: 'Nelson',
+      playerColor: 'black',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ success: true, gameCode: 'LOCAL2' });
+    expect(query.mock.calls[1][1]).toEqual(expect.arrayContaining([
+      'LOCAL2', null, 2, 'Nelson', 'AuthenticatedPlayer', 'in_progress', 'local',
+    ]));
+  });
+
+  it('does not overwrite another account when creating a local game with a reused code', async () => {
+    const app = buildApp();
+    app.use('/api/games', gameRoutes);
+    query
+      .mockResolvedValueOnce({ rows: [{ username: 'AuthenticatedPlayer' }] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const res = await loopback(app, 'POST', '/api/games/local/create', {
+      gameCode: 'LOCAL2',
+      userId: 2,
+      opponentName: 'Nelson',
+      playerColor: 'black',
+    });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/another player/i);
+  });
+});

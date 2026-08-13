@@ -1,6 +1,5 @@
 import express from 'express';
 import { query } from '../db.js';
-import { getPool } from '../db/pool.js';
 import crypto from 'crypto';
 import { Chess } from 'chess.js';
 import { errorResponse, handleRouteError } from '../middleware/errors.js';
@@ -39,84 +38,12 @@ function generateGameCode() {
   return crypto.randomBytes(4).toString('hex').toUpperCase();
 }
 
-/**
- * Compute and apply ELO rating changes for a completed game.
- *
- * This is the ONLY place ELO is mutated. The standalone
- * POST /api/users/:username/elo endpoint has been removed to prevent
- * unauthenticated rating manipulation.
- *
- * An idempotency guard on elo_history(user_id, game_code) ensures autosave retries
- * and duplicate requests don't double-count a game. The unique constraint and
- * ON CONFLICT DO NOTHING make the insert atomic, preventing race conditions.
- */
-async function computeAndApplyElo(userId, gameCode, gameResult, opponentElo, gameMode) {
-  if (!['win', 'loss', 'draw'].includes(gameResult)) return;
-
-  const pool = getPool();
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-
-    const userResult = await client.query(
-      'SELECT id, elo, games_played, wins, losses, draws FROM users WHERE id = $1',
-      [userId]
-    );
-    if (userResult.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return;
-    }
-
-    const user = userResult.rows[0];
-    const K = 32;
-    const oppElo = typeof opponentElo === 'number' ? opponentElo : 1200;
-    const expected = 1 / (1 + Math.pow(10, (oppElo - user.elo) / 400));
-    const actual = gameResult === 'win' ? 1 : gameResult === 'draw' ? 0.5 : 0;
-    const newElo = Math.round(user.elo + K * (actual - expected));
-
-    const wins   = user.wins   + (gameResult === 'win'  ? 1 : 0);
-    const losses = user.losses + (gameResult === 'loss' ? 1 : 0);
-    const draws  = user.draws  + (gameResult === 'draw' ? 1 : 0);
-    const played = user.games_played + 1;
-
-    const historyInsert = await client.query(
-      `INSERT INTO elo_history (user_id, elo, change, game_code, game_mode, opponent_elo, result)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       ON CONFLICT (user_id, game_code) DO NOTHING
-       RETURNING id`,
-      [user.id, newElo, newElo - user.elo, gameCode, gameMode, oppElo, gameResult]
-    );
-
-    if (historyInsert.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return;
-    }
-
-    await client.query(
-      `UPDATE users
-       SET elo = $1, games_played = $2, wins = $3, losses = $4, draws = $5,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $6`,
-      [newElo, played, wins, losses, draws, user.id]
-    );
-
-    await client.query('COMMIT');
-    console.log(`[ELO] ${user.id} ${user.elo} → ${newElo} (${gameResult}, game ${gameCode})`);
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
-}
-
 // Save game result
 router.post('/save', async (req, res) => {
   try {
     const {
       gameMode = 'local',
-      userId,
-      username,
+      userId: requestedUserId,
       result,
       moveHistory = [],
       opponentName = 'Bot',
@@ -128,12 +55,26 @@ router.post('/save', async (req, res) => {
 
     if (!result) return errorResponse(res, 400, 'Result is required');
     if (!Array.isArray(moveHistory)) return errorResponse(res, 400, 'Move history must be an array');
+    if (gameMode !== 'local') return errorResponse(res, 400, 'Only local games can be saved through this endpoint');
+    if (!['white', 'black'].includes(playerColor)) return errorResponse(res, 400, 'Invalid player color');
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) return errorResponse(res, 401, 'Authentication required');
+    const authUserId = await validateSession(authHeader.slice(7).trim());
+    if (!authUserId) return errorResponse(res, 401, 'Invalid or expired session');
+    if (requestedUserId != null && String(requestedUserId) !== String(authUserId)) {
+      return errorResponse(res, 403, 'Session identity does not match player');
+    }
+
+    const accountResult = await query('SELECT username FROM users WHERE id = $1', [authUserId]);
+    if (accountResult.rows.length === 0) return errorResponse(res, 401, 'Authenticated user not found');
 
     const gameCode = (requestedGameCode || generateGameCode()).toString().toUpperCase();
+    const username = accountResult.rows[0].username;
     const whiteName = playerColor === 'white' ? username : opponentName;
     const blackName = playerColor === 'black' ? username : opponentName;
-    const whiteId = playerColor === 'white' ? userId : null;
-    const blackId = playerColor === 'black' ? userId : null;
+    const whiteId = playerColor === 'white' ? authUserId : null;
+    const blackId = playerColor === 'black' ? authUserId : null;
     const status = result === 'in_progress' ? 'in_progress' : 'completed';
 
     const insertResult = await query(
@@ -152,21 +93,20 @@ router.post('/save', async (req, res) => {
         move_history = EXCLUDED.move_history,
         status = EXCLUDED.status,
         updated_at = CURRENT_TIMESTAMP
+      WHERE games.white_player_id = $11 OR games.black_player_id = $11
       RETURNING id, game_code, created_at`,
       [gameCode, whiteId, blackId, whiteName || 'Unknown', blackName || 'Bot',
-       result, gameMode, finalFen || null, moveHistory, status]
+       result, gameMode, finalFen || null, moveHistory, status, authUserId]
     );
+    if (insertResult.rows.length === 0) {
+      return errorResponse(res, 409, 'Game code belongs to another player');
+    }
 
     console.log(`[Games] saved – code: ${gameCode}, mode: ${gameMode}, result: ${result}`);
 
-    if (status === 'completed' && userId && ['win', 'loss', 'draw'].includes(result)) {
-      try {
-        await computeAndApplyElo(userId, gameCode, result, opponentElo ?? null, gameMode);
-      } catch (eloErr) {
-        console.error('[ELO] Update failed (non-fatal):', eloErr?.message);
-      }
-    }
-
+    // Local results are archived but never rated: a local board runs in the
+    // browser, so its result and move history are not authoritative enough to
+    // mutate server-side ELO or aggregate rated statistics.
     res.json({
       success: true,
       message: 'Game saved successfully',
@@ -182,18 +122,30 @@ router.post('/save', async (req, res) => {
 // Create a local game placeholder
 router.post('/local/create', async (req, res) => {
   try {
-    const { gameCode: requestedGameCode, userId, username, opponentName = 'Bot',
+    const { gameCode: requestedGameCode, userId: requestedUserId, opponentName = 'Bot',
             opponentElo, playerColor = 'white' } = req.body;
 
-    if (!username) return errorResponse(res, 400, 'Username is required');
+    if (!['white', 'black'].includes(playerColor)) return errorResponse(res, 400, 'Invalid player color');
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) return errorResponse(res, 401, 'Authentication required');
+    const authUserId = await validateSession(authHeader.slice(7).trim());
+    if (!authUserId) return errorResponse(res, 401, 'Invalid or expired session');
+    if (requestedUserId != null && String(requestedUserId) !== String(authUserId)) {
+      return errorResponse(res, 403, 'Session identity does not match player');
+    }
+
+    const accountResult = await query('SELECT username FROM users WHERE id = $1', [authUserId]);
+    if (accountResult.rows.length === 0) return errorResponse(res, 401, 'Authenticated user not found');
 
     const gameCode = (requestedGameCode || generateGameCode()).toString().toUpperCase();
+    const username = accountResult.rows[0].username;
     const whiteName = playerColor === 'white' ? username : opponentName;
     const blackName = playerColor === 'black' ? username : opponentName;
-    const whiteId = playerColor === 'white' ? userId : null;
-    const blackId = playerColor === 'black' ? userId : null;
+    const whiteId = playerColor === 'white' ? authUserId : null;
+    const blackId = playerColor === 'black' ? authUserId : null;
 
-    await query(
+    const createResult = await query(
       `INSERT INTO games (
         game_code, white_player_id, black_player_id, white_player_name,
         black_player_name, result, game_mode, fen, move_history, status
@@ -205,10 +157,15 @@ router.post('/local/create', async (req, res) => {
         black_player_name = EXCLUDED.black_player_name,
         result = EXCLUDED.result, game_mode = EXCLUDED.game_mode,
         fen = EXCLUDED.fen, move_history = EXCLUDED.move_history,
-        status = EXCLUDED.status, updated_at = CURRENT_TIMESTAMP`,
+        status = EXCLUDED.status, updated_at = CURRENT_TIMESTAMP
+      WHERE games.white_player_id = $11 OR games.black_player_id = $11
+      RETURNING game_code`,
       [gameCode, whiteId, blackId, whiteName || 'Unknown', blackName || 'Bot',
-       'in_progress', 'local', null, [], 'in_progress']
+       'in_progress', 'local', null, [], 'in_progress', authUserId]
     );
+    if (createResult.rows.length === 0) {
+      return errorResponse(res, 409, 'Game code belongs to another player');
+    }
 
     res.json({ success: true, gameCode });
   } catch (error) {

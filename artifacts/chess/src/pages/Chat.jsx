@@ -71,15 +71,19 @@ export default function Chat() {
     loadMessages()
   }, [isLoggedIn, room, loadMessages])
 
-  // Live socket chat: join the room, subscribe to broadcasts, poll as a
-  // fallback for missed messages.
+  // Live socket chat: join only after the connection is established, then
+  // continue polling as a fallback when real-time delivery is unavailable.
   useEffect(() => {
     if (!isLoggedIn || !user?.id) return
     let mounted = true
-    socket.connect()
-      .then(() => { if (mounted) setConnected(Boolean(socket.isConnected)) })
-      .catch(() => {})
-    socket.joinChat(room)
+
+    const connectAndJoin = async () => {
+      await socket.connect().catch(() => {})
+      if (!mounted) return
+      setConnected(Boolean(socket.isConnected))
+      if (socket.isConnected) socket.joinChat(room)
+    }
+    connectAndJoin()
 
     const handleMessage = (data) => { if (data?.room === room) appendMessages(data) }
     const handleAck = (data) => { if (data?.room === room) appendMessages(data) }
@@ -154,6 +158,12 @@ export default function Chat() {
   }
 
   const roomLabel = ROOMS.find((r) => r.key === room)?.label || room
+  const connectionLabel = connected ? 'Live' : socket.isRealtimeAvailable ? 'Reconnecting' : 'Polling'
+  const connectionTitle = connected
+    ? 'Live delivery is active'
+    : socket.isRealtimeAvailable
+      ? 'Reconnecting to live delivery'
+      : 'Live delivery is unavailable; messages refresh automatically'
 
   return (
     <div className="chat-page">
@@ -183,9 +193,9 @@ export default function Chat() {
                 </button>
               ))}
             </div>
-            <span className={`chat-live ${connected ? 'is-online' : ''}`} title={connected ? 'Live' : 'Reconnecting'}>
+            <span className={`chat-live ${connected ? 'is-online' : ''}`} title={connectionTitle}>
               <span className="chat-live-dot" />
-              {connected ? 'Live' : 'Reconnecting'}
+              {connectionLabel}
             </span>
           </div>
 

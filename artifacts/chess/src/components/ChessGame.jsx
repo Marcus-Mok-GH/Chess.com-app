@@ -262,7 +262,6 @@ function ChessGame(
         result: gameResult,
         gameMode: 'local',
         userId: user.id,
-        username: user.username,
         opponentName: botName,
         opponentElo: botElo,
         playerColor: playerColor === 'w' ? 'white' : 'black',
@@ -493,7 +492,6 @@ function ChessGame(
         result,
         gameMode: 'local',
         userId: user.id,
-        username: user.username,
         opponentName: botName,
         opponentElo: botElo,
         playerColor: playerColor === 'w' ? 'white' : 'black',
@@ -719,11 +717,10 @@ function ChessGame(
 
   const handleFlipBoard = useCallback(() => {
     const newOrientation = boardOrientation === 'white' ? 'black' : 'white';
-    const newColor = newOrientation === 'white' ? 'w' : 'b';
     setBoardOrientation(newOrientation);
-    setPlayerColor(newColor);
     boardOrientationRef.current = newOrientation;
-    playerColorRef.current = newColor;
+    // Flipping the board changes only the viewer's perspective. The player's
+    // assigned color and turn ownership must remain fixed for the game.
     if (game) {
       persistLocalSnapshot(game, moveHistory);
     }
