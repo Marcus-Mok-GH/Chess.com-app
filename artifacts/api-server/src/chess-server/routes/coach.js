@@ -63,7 +63,7 @@ async function callCoach(messages, options = {}) {
         await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
       }
     }
-    if (lastError?.status !== 402) break;
+    if (lastError?.status === 402) break;
   }
   throw lastError;
 }
