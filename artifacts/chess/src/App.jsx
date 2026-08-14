@@ -346,7 +346,7 @@ export default function App() {
                   <Route path="/puzzles" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Puzzles /></Suspense></ProtectedRoute>} />
                   <Route path="/openings" element={<Suspense fallback={<RouteFallback />}><Openings /></Suspense>} />
                   <Route path="/lessons" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Lessons /></Suspense></ProtectedRoute>} />
-                  <Route path="/friends" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Friends /></Suspense></ProtectedRoute>} />
+                  <Route path="/friends" element={<Suspense fallback={<RouteFallback />}><Friends /></Suspense>} />
                   <Route path="/chat" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Chat /></Suspense></ProtectedRoute>} />
                   <Route path="/clubs" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Clubs /></Suspense></ProtectedRoute>} />
                 </Route>
