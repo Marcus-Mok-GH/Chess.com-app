@@ -1,3 +1,9 @@
+[2026-08-14] - Mobile layout optimisation
+
+- Restored the mobile header display in the app shell, added safer bottom navigation spacing for touch and safe-area devices, and removed the reserved bottom-nav gap on game routes that hide it.
+- Tightened the in-game mobile layout so the board scales against small viewport height, player bars and move history use less vertical space, and the sidebar remains within the phone viewport width.
+- Refined Home mobile spacing and touch card sizing so stats and quick actions feel denser without clipping behind the bottom navigation.
+
 [2026-08-12] - Unexpected error reporting
 
 - Improved the unexpected-error screen with readable error and component-stack details.
