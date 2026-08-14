@@ -195,7 +195,8 @@ router.get('/status', async (req, res) => {
     const userId = await authenticatedUserId(req);
     const token = userId ? await getCoachToken(userId) : null;
     return res.json({
-      available: coachConfigurationStatus(),
+      available: true,
+      configured: coachConfigurationStatus(),
       connected: Boolean(token),
       model: COACH_MODEL,
       fallbackModel: COACH_FREE_MODEL,
