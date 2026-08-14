@@ -134,8 +134,13 @@ export default function Friends() {
         <div className="friends-container">
           <div className="friends-empty-card card-surface">
             <Users size={40} />
-            <h2>Log in to see your friends</h2>
-            <button className="friends-primary-btn" onClick={() => navigate('/login')}>Log In</button>
+            <h2>Access Restricted</h2>
+            <p style={{ color: 'var(--text-dim)', marginBottom: '1.5rem', textAlign: 'center' }}>
+              You need to be logged in to access account specific privileges.
+            </p>
+            <button className="friends-primary-btn" onClick={() => navigate('/login')}>
+              Go to Login
+            </button>
           </div>
         </div>
       </div>
