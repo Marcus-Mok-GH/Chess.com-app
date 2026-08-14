@@ -14,7 +14,7 @@ import {
 const router = Router();
 const COACH_API_URL = process.env.COACH_API_URL || 'https://gen.pollinations.ai/v1/chat/completions';
 const COACH_MODEL = process.env.COACH_MODEL || 'openai-fast';
-const COACH_FREE_MODEL = process.env.COACH_FREE_MODEL || 'openai-fast';
+const COACH_FREE_MODEL = process.env.COACH_FREE_MODEL || 'YoannDev90/laguna-s-2.1:free';
 const COACH_MODELS = [...new Set([COACH_MODEL, COACH_FREE_MODEL])];
 const COACH_TIMEOUT_MS = parseInt(process.env.COACH_TIMEOUT_MS || '12000', 10);
 const COACH_MAX_RETRIES = parseInt(process.env.COACH_MAX_RETRIES || '2', 10);
@@ -64,6 +64,36 @@ async function callCoach(messages, options = {}) {
       }
     }
     if (lastError?.status !== 402) break;
+  }
+  throw lastError;
+}
+
+async function callCoachFree(messages, options = {}) {
+  const { maxTokens = 500, temperature = 0.7 } = options;
+  const headers = { 'Content-Type': 'application/json' };
+  let lastError;
+  for (let attempt = 1; attempt <= COACH_MAX_RETRIES; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), COACH_TIMEOUT_MS);
+    try {
+      const response = await fetch(COACH_API_URL, {
+        method: 'POST', headers, signal: controller.signal,
+        body: JSON.stringify({ model: COACH_FREE_MODEL, messages, max_tokens: maxTokens, temperature }),
+      });
+      clearTimeout(timeout);
+      if (!response.ok) {
+        const upstreamStatus = response.status;
+        const error = new Error(`Coach API error (free fallback): ${upstreamStatus} - ${await response.text()}`);
+        error.status = upstreamStatus === 402 ? 402 : 502;
+        throw error;
+      }
+      return response;
+    } catch (err) {
+      clearTimeout(timeout);
+      lastError = err;
+      if (err.status === 402 || attempt === COACH_MAX_RETRIES) break;
+      await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+    }
   }
   throw lastError;
 }
@@ -195,10 +225,16 @@ router.post('/feedback', async (req, res) => {
     const { fen, playerMove, moveHistory } = req.body;
     if (!fen || !playerMove) return errorResponse(res, 400, 'Missing required fields: fen, playerMove');
     const moves = Array.isArray(moveHistory) ? moveHistory.join(' ') : '';
-    const response = await callCoach([
+    const feedbackMessages = [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: `A student just played ${playerMove} in this position.\n\nPosition (FEN before move): ${fen}\nMove history: ${moves}\nLast move: ${playerMove}\n\nGive short, encouraging feedback (1-2 sentences, max 30 words). Explain why the move is good, or gently suggest a better move, and mention one tactical or positional concept. No greetings or sign-offs.` },
-    ], { userId });
+    ];
+    let response;
+    try {
+      response = await callCoach(feedbackMessages, { userId });
+    } catch (coachErr) {
+      response = await callCoachFree(feedbackMessages, {});
+    }
     const data = await response.json();
     return res.json({ feedback: data.choices?.[0]?.message?.content || '' });
   } catch (error) {
@@ -213,10 +249,16 @@ router.post('/explain', async (req, res) => {
     if (!userId) return;
     const { fenBefore, move, fenAfter } = req.body;
     if (!fenBefore || !move) return errorResponse(res, 400, 'Missing required fields: fenBefore, move');
-    const response = await callCoach([
+    const explainMessages = [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: `Explain this move to a student in 1-2 very short sentences (max 25 words).\nPosition before: ${fenBefore}\nMove played: ${move}\nPosition after: ${fenAfter || 'N/A'}\nFocus on the main chess idea. Be educational but concise.` },
-    ], { userId });
+    ];
+    let response;
+    try {
+      response = await callCoach(explainMessages, { userId });
+    } catch (coachErr) {
+      response = await callCoachFree(explainMessages, {});
+    }
     const data = await response.json();
     return res.json({ explanation: data.choices?.[0]?.message?.content || '' });
   } catch (error) {
@@ -248,10 +290,17 @@ router.post('/analyze', async (req, res) => {
       return entry?.san || '';
     }).filter(Boolean);
     const moves = sanMoves.map((san, index) => `${index % 2 === 0 ? `${Math.floor(index / 2) + 1}. ` : ''}${san}`).join(' ');
-    const response = await callCoach([
+    const analyzeMessages = [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: `Review every move in this game.\n\nMoves: ${moves}\nResult: ${result || 'Unknown'}\n\nReturn ONLY valid JSON: an array with one object per move containing ply, moveNumber, color, san, and review. Keep each review under 30 words. No markdown.` },
-    ], { userId, maxTokens: Math.min(2000, Math.max(600, 120 + sanMoves.length * 30)) });
+    ];
+    const analyzeOptions = { maxTokens: Math.min(2000, Math.max(600, 120 + sanMoves.length * 30)) };
+    let response;
+    try {
+      response = await callCoach(analyzeMessages, { userId, ...analyzeOptions });
+    } catch (coachErr) {
+      response = await callCoachFree(analyzeMessages, analyzeOptions);
+    }
     const data = await response.json();
     const parsed = extractJson(data.choices?.[0]?.message?.content || '');
     const rawMoves = Array.isArray(parsed?.moves) ? parsed.moves : Array.isArray(parsed) ? parsed : null;
