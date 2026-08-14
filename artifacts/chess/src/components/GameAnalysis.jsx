@@ -19,7 +19,7 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
       try {
         const status = await getCoachStatus(true);
         setCoachStatus(status);
-        setIsReady(Boolean(status.available && status.connected));
+        setIsReady(Boolean(status.available && user));
 
       } catch (error) {
         console.error('[GameAnalysis] Failed to check coach availability:', error);
@@ -54,11 +54,7 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
   };
 
   const runAnalysis = async () => {
-    if (!isReady) {
-      if (!user) { navigate('/login'); return; }
-      setAnalysis('Connect the Pollinations AI coach first.');
-      return;
-    }
+    if (!user) { navigate('/login'); return; }
 
     setIsAnalyzing(true);
     setAnalysis(null);
@@ -107,7 +103,7 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
               <div className="spinner"></div>
               <p>Connecting to AI coach...</p>
             </div>
-          ) : !coachStatus?.available ? (
+          ) : coachStatus?.configured === false && !coachStatus?.connected ? (
             <div className="coach-error">
               <p>⚠️ AI coach is not configured</p>
               <p className="small">The server needs a Pollinations App Key and token encryption secret.</p>
