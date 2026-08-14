@@ -14,7 +14,7 @@ import {
 const router = Router();
 const COACH_API_URL = process.env.COACH_API_URL || 'https://gen.pollinations.ai/v1/chat/completions';
 const COACH_MODEL = process.env.COACH_MODEL || 'openai-fast';
-const COACH_FREE_MODEL = process.env.COACH_FREE_MODEL || 'openai-fast';
+const COACH_FREE_MODEL = process.env.COACH_FREE_MODEL || 'YoannDev90/laguna-s-2.1:free';
 const COACH_MODELS = [...new Set([COACH_MODEL, COACH_FREE_MODEL])];
 const COACH_TIMEOUT_MS = parseInt(process.env.COACH_TIMEOUT_MS || '12000', 10);
 const COACH_MAX_RETRIES = parseInt(process.env.COACH_MAX_RETRIES || '2', 10);
