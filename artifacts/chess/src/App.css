@@ -297,6 +297,7 @@
   .offline-badge { display: none; }
 
   .mobile-header {
+    display: flex;
     height: calc(56px + env(safe-area-inset-top, 0px));
     align-items: center;
     justify-content: space-between;
@@ -341,6 +342,7 @@
     left: 0;
     right: 0;
     min-height: calc(64px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
     z-index: 100;
   }
 
@@ -355,7 +357,8 @@
     font-weight: 600;
     flex: 1;
     padding: 0.5rem 0.25rem;
-    min-height: 48px;
+    min-height: 52px;
+    justify-content: center;
     border-radius: var(--radius-sm);
     transition: color 0.15s, background 0.15s;
     min-width: 0;
@@ -388,7 +391,13 @@ main {
    space at the bottom of scrolling content so it can't be obscured. */
 @media (max-width: 768px) {
   main {
-    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    scroll-padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .app.hide-bottom-nav main {
+    padding-bottom: 0;
+    scroll-padding-bottom: 0;
   }
 }
 
