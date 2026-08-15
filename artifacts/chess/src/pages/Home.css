@@ -416,3 +416,8 @@
   .action-content h3 { font-size: 0.9375rem; }
   .action-content p { font-size: 0.75rem; }
 }
+
+/* ── Daily Streak Section ── */
+.daily-streak-section {
+  margin-bottom: 2.5rem;
+}

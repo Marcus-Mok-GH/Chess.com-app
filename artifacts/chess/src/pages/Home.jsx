@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useUser } from '../contexts/UserContext'
 import { Cpu, Globe, FileText, Star, Gamepad2, Trophy, ArrowUpRight, Wifi, WifiOff, Play, BookOpen } from 'lucide-react'
 import api from '../services/api'
+import DailyPuzzleStreak from '../components/DailyPuzzleStreak'
 import './Home.css'
 
 export default function Home() {
@@ -83,6 +84,11 @@ export default function Home() {
             {greeting}, <span className="username-highlight text-gradient-brand">{user.username}</span>
           </h1>
           <p className="welcome-subtitle">Ready for your next game?</p>
+        </section>
+
+        {/* Daily Puzzle Streak */}
+        <section className="daily-streak-section">
+          <DailyPuzzleStreak />
         </section>
 
         {/* Stats Overview */}
