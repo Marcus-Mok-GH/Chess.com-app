@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Chess } from "chess.js";
 import ChessBoard from "../components/ChessBoard";
+import DailyPuzzleStreak from "../components/DailyPuzzleStreak";
 import {
   Puzzle,
   Check,
@@ -395,6 +396,7 @@ export default function Puzzles() {
               <Puzzle className="puzzles-eyebrow-icon" size={13} />
               <span>Tactical Trainer</span>
             </div>
+            <DailyPuzzleStreak compact />
             <span className="puzzles-meta">
               Puzzle {puzzleNumber} · {puzzle.theme}
             </span>
