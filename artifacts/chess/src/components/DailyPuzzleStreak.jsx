@@ -102,8 +102,23 @@ function getStreakState(userId) {
 
 function mergeStreakData(local, remote) {
   if (!remote) return local;
-  // Take whichever has the higher streak count as source of truth
-  if (remote.count > local.count) {
+
+  // Normalize remote count for date staleness (getStreakState-style)
+  // If remote lastDate is older than yesterday, treat remote count as 0 for comparison
+  let effectiveRemoteCount = remote.count || 0;
+  if (remote.lastDate) {
+    const today = getTodayDateString();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, "0")}-${String(yesterday.getDate()).padStart(2, "0")}`;
+    if (remote.lastDate !== today && remote.lastDate !== yesterdayStr) {
+      // Remote streak is stale — treat count as 0 for comparison purposes
+      effectiveRemoteCount = 0;
+    }
+  }
+
+  // Take whichever has the higher effective streak count as source of truth
+  if (effectiveRemoteCount > local.count) {
     return {
       lastDate: remote.lastDate || local.lastDate,
       count: remote.count,
@@ -213,16 +228,20 @@ export default function DailyPuzzleStreak({ compact = false }) {
     // Always write to localStorage
     saveStreakData(data, userId);
 
-    // If logged in, also persist to backend
+    // If logged in, also persist to backend (fetch existing settings first to avoid full-replace wipe)
     if (isLoggedIn && username && token) {
-      api.updateUserSettings(username, {
-        puzzleStreak: {
-          count: data.count,
-          bestStreak: data.bestStreak,
-          lastDate: data.lastDate,
-          completedToday: data.completedToday,
-        },
-      }, token).catch(() => {
+      api.getUserSettings(username, token).then((response) => {
+        const currentSettings = response?.settings || {};
+        return api.updateUserSettings(username, {
+          ...currentSettings,
+          puzzleStreak: {
+            count: data.count,
+            bestStreak: data.bestStreak,
+            lastDate: data.lastDate,
+            completedToday: data.completedToday,
+          },
+        }, token);
+      }).catch(() => {
         // Silently fail — localStorage is the fallback
       });
     }
