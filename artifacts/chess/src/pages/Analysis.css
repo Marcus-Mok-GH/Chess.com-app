@@ -78,6 +78,7 @@
 }
 
 .analysis-board-wrap {
+  position: relative;
   width: 100%;
   max-width: min(640px, 72svh);
   aspect-ratio: 1 / 1;
