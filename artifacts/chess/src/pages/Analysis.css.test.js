@@ -1,72 +1,117 @@
-import { describe, expect, it, beforeAll } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
+import { describe, it, expect, beforeAll } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const CSS_PATH = path.join(__dirname, 'Analysis.css');
+// This suite verifies the styling contract of `.analysis-board-wrap` in
+// Analysis.css, in particular the `position: relative` declaration that was
+// added so that absolutely-positioned children (e.g. move/annotation
+// overlays) can be contained within the board wrapper instead of escaping
+// into the surrounding layout.
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const CSS_PATH = join(__dirname, 'Analysis.css');
 
 /**
- * Extracts the declaration block(s) for a given selector from raw CSS text.
- * Returns an array of blocks in the order they appear in the file (this
- * naturally captures both the base rule and any rule with the same selector
- * nested inside @media blocks, since this is a naive brace-based match).
+ * Extracts every top-level `{ ... }` block that immediately follows the
+ * given selector anywhere in the stylesheet (including inside @media
+ * blocks). Returns the raw declaration text for each match, in source
+ * order.
  */
 function extractRuleBlocks(css, selector) {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const pattern = new RegExp(`${escaped}\\s*\\{([^}]*)\\}`, 'g');
-  return [...css.matchAll(pattern)].map((match) => match[1]);
+  const regex = new RegExp(`${escaped}\\s*\\{([^}]*)\\}`, 'g');
+  const blocks = [];
+  let match;
+  while ((match = regex.exec(css)) !== null) {
+    blocks.push(match[1]);
+  }
+  return blocks;
+}
+
+/** Parses a raw CSS declaration block into an ordered list of [prop, value] pairs. */
+function parseDeclarations(block) {
+  return block
+    .split(';')
+    .map((decl) => decl.trim())
+    .filter(Boolean)
+    .map((decl) => {
+      const idx = decl.indexOf(':');
+      return [decl.slice(0, idx).trim(), decl.slice(idx + 1).trim()];
+    });
 }
 
 describe('Analysis.css - .analysis-board-wrap', () => {
   let css;
-  let blocks;
-  let baseRule;
+  let ruleBlocks;
+  let baseDeclarations;
 
   beforeAll(() => {
-    css = fs.readFileSync(CSS_PATH, 'utf-8');
-    blocks = extractRuleBlocks(css, '.analysis-board-wrap');
-    // The first occurrence in the file is the base (non-media-query) rule.
-    baseRule = blocks[0];
+    css = readFileSync(CSS_PATH, 'utf-8');
+    ruleBlocks = extractRuleBlocks(css, '.analysis-board-wrap');
+    // The first match in source order is the base (non-media-query) rule.
+    baseDeclarations = parseDeclarations(ruleBlocks[0]);
   });
 
   it('defines a base rule for .analysis-board-wrap', () => {
-    expect(baseRule).toBeDefined();
-    expect(baseRule.trim().length).toBeGreaterThan(0);
+    expect(ruleBlocks.length).toBeGreaterThan(0);
+    expect(baseDeclarations.length).toBeGreaterThan(0);
   });
 
-  it('sets position: relative on the base rule', () => {
-    expect(baseRule).toMatch(/position:\s*relative;/);
+  it('sets position: relative so the wrapper can act as a containing block', () => {
+    const positionDecl = baseDeclarations.find(([prop]) => prop === 'position');
+    expect(positionDecl).toBeDefined();
+    expect(positionDecl[1]).toBe('relative');
   });
 
-  it('declares position exactly once in the base rule', () => {
-    const occurrences = baseRule.match(/position:/g) || [];
-    expect(occurrences.length).toBe(1);
+  it('declares position exactly once in the base rule (no duplicates)', () => {
+    const positionDecls = baseDeclarations.filter(([prop]) => prop === 'position');
+    expect(positionDecls).toHaveLength(1);
   });
 
-  it('does not use a conflicting position value', () => {
-    expect(baseRule).not.toMatch(/position:\s*(absolute|fixed|static|sticky)\s*;/);
+  it('places position as the first declaration in the base rule', () => {
+    expect(baseDeclarations[0][0]).toBe('position');
   });
 
-  it('preserves the pre-existing layout and visual declarations alongside the new position rule', () => {
-    expect(baseRule).toMatch(/width:\s*100%;/);
-    expect(baseRule).toMatch(/max-width:\s*min\(640px,\s*72svh\);/);
-    expect(baseRule).toMatch(/aspect-ratio:\s*1\s*\/\s*1;/);
-    expect(baseRule).toMatch(/background-color:\s*#2a2a2a;/);
-    expect(baseRule).toMatch(/border-radius:\s*var\(--radius-md\);/);
-    expect(baseRule).toMatch(/overflow:\s*hidden;/);
-    expect(baseRule).toMatch(/box-shadow:\s*var\(--shadow-lg\), 0 0 0 1px rgba\(255,255,255,0\.04\);/);
-    expect(baseRule).toMatch(/border:\s*1px solid var\(--border\);/);
+  it('preserves the pre-existing layout declarations alongside the new position rule', () => {
+    const declMap = Object.fromEntries(baseDeclarations);
+    expect(declMap.width).toBe('100%');
+    expect(declMap['max-width']).toBe('min(640px, 72svh)');
+    expect(declMap['aspect-ratio']).toBe('1 / 1');
+    expect(declMap['background-color']).toBe('#2a2a2a');
+    expect(declMap['border-radius']).toBe('var(--radius-md)');
+    expect(declMap.overflow).toBe('hidden');
+    expect(declMap['box-shadow']).toBe('var(--shadow-lg), 0 0 0 1px rgba(255,255,255,0.04)');
+    expect(declMap.border).toBe('1px solid var(--border)');
   });
 
-  it('does not introduce a position declaration in the responsive max-width overrides', () => {
-    // Every block after the first one is a media-query override; these only
-    // ever adjust max-width and must not redeclare/override position.
-    const overrideBlocks = blocks.slice(1);
+  it('contains exactly the expected set of declarations, in order, for the base rule', () => {
+    const props = baseDeclarations.map(([prop]) => prop);
+    expect(props).toEqual([
+      'position',
+      'width',
+      'max-width',
+      'aspect-ratio',
+      'background-color',
+      'border-radius',
+      'overflow',
+      'box-shadow',
+      'border',
+    ]);
+  });
+
+  it('does not redeclare position inside the responsive @media overrides', () => {
+    // Every subsequent match beyond the base rule comes from a @media block
+    // that only overrides max-width for smaller/larger viewports. None of
+    // them should reintroduce or override the `position` declaration, since
+    // that would be a regression against the single source of truth added
+    // in the base rule.
+    const overrideBlocks = ruleBlocks.slice(1);
     expect(overrideBlocks.length).toBeGreaterThan(0);
     for (const block of overrideBlocks) {
-      expect(block).not.toMatch(/position:/);
-      expect(block).toMatch(/max-width:/);
+      const decls = parseDeclarations(block);
+      const props = decls.map(([prop]) => prop);
+      expect(props).not.toContain('position');
     }
   });
 });
