@@ -16,6 +16,7 @@ import {
   Crosshair,
   Crown,
   CheckCircle2,
+  ShieldCheck,
 } from 'lucide-react';
 import './Settings.css';
 
@@ -24,6 +25,30 @@ const BOARD_THEMES = [
   { id: 'brown', name: 'Brown', light: '#f0d9b5', dark: '#b58863' },
   { id: 'blue', name: 'Blue', light: '#dee3e6', dark: '#8ca2ad' },
   { id: 'purple', name: 'Purple', light: '#e8e0f0', dark: '#9070a0' },
+];
+
+const TERMS_SECTIONS = [
+  ['Acceptance of Terms', 'By accessing and using this Chess application, you accept and agree to be bound by the terms and provisions of this agreement.'],
+  ['Description of Service', 'This application provides a chess playing platform with features including online play, game analysis, and user accounts.'],
+  ['User Accounts', 'You are responsible for maintaining the confidentiality of your account credentials and for all activities under your account.'],
+  ['Acceptable Use', 'You agree not to use the service for any unlawful purpose or in any way that could damage, disable, or impair the service.'],
+  ['Intellectual Property', 'The application and its original content are the exclusive property of the application providers.'],
+  ['Disclaimer', 'The service is provided "as is" without warranties of any kind, either express or implied.'],
+  ['Limitation of Liability', 'We shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use of the service.'],
+  ['Changes to Terms', 'We reserve the right to modify these terms at any time. Continued use after changes constitutes acceptance of modified terms.'],
+  ['Contact', 'If you have any questions about these Terms, please contact us.'],
+];
+
+const PRIVACY_SECTIONS = [
+  ['Information We Collect', 'We collect information you provide directly, such as email address for account creation and gameplay data.'],
+  ['How We Use Your Information', 'We use the information to provide, maintain, and improve our services, communicate with you, and ensure security.'],
+  ['Data Storage and Security', 'We implement appropriate technical and organizational measures to protect your personal information against unauthorized access, alteration, or destruction.'],
+  ['Sharing of Information', 'We do not sell or share your personal information with third parties except as described in this policy or with your consent.'],
+  ['Cookies and Tracking', 'We may use cookies and similar tracking technologies to track activity on our service and hold certain information.'],
+  ['Your Rights', 'You have the right to access, correct, or delete your personal data. Contact us to exercise these rights.'],
+  ["Children's Privacy", 'Our service is not directed at children under 13. We do not knowingly collect personal information from children.'],
+  ['Changes to Privacy Policy', 'We may update our Privacy Policy from time to time. We will notify users of any changes by posting the new policy on this page.'],
+  ['Contact', 'For questions about this Privacy Policy, please contact us.'],
 ];
 
 function Toggle({ checked, onChange, label }) {
@@ -251,6 +276,34 @@ export default function Settings() {
             <button className="link-button" type="button" onClick={() => navigate('/changelog')}>
               View
             </button>
+          </div>
+        </Section>
+
+        <Section icon={ShieldCheck} title="Terms & Privacy">
+          <div className="legal-settings-block" id="terms">
+            <div className="legal-settings-heading">
+              <h3>Terms of Service</h3>
+              <span>Last updated: July 2026</span>
+            </div>
+            {TERMS_SECTIONS.map(([title, text], index) => (
+              <article className="legal-settings-section" key={title}>
+                <h4>{index + 1}. {title}</h4>
+                <p>{text}</p>
+              </article>
+            ))}
+          </div>
+
+          <div className="legal-settings-block" id="privacy">
+            <div className="legal-settings-heading">
+              <h3>Privacy Policy</h3>
+              <span>Last updated: July 2026</span>
+            </div>
+            {PRIVACY_SECTIONS.map(([title, text], index) => (
+              <article className="legal-settings-section" key={title}>
+                <h4>{index + 1}. {title}</h4>
+                <p>{text}</p>
+              </article>
+            ))}
           </div>
         </Section>
 

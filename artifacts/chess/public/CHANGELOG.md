@@ -1,3 +1,9 @@
+[2026-08-20] - Terms and privacy in Settings
+
+- Moved the Terms of Service and Privacy Policy content into the Settings page under a dedicated Terms & Privacy section.
+- Removed separate sidebar legal links and redirected legacy `/terms` and `/privacy` URLs to the corresponding Settings sections.
+- Made Settings available to guests so legal content remains accessible from login and landing page links.
+
 [2026-08-20] - Coach feedback dismiss accessibility
 
 - Added an explicit accessible name and non-submit type to the coach feedback dismiss control so screen reader and keyboard users can identify it reliably.
