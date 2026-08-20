@@ -20,6 +20,7 @@ async function coachRequest(path, options = {}) {
   if (!response.ok) {
     const error = new Error(data.error?.message || data.error || `Coach request failed (${response.status})`);
     error.status = response.status;
+    error.code = data.code || data.error?.code;
     throw error;
   }
   return data;

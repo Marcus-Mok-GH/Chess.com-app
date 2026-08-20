@@ -12,6 +12,7 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
   const [isReady, setIsReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [coachStatus, setCoachStatus] = useState(null);
+  const [authPrompt, setAuthPrompt] = useState(false);
   const isInline = variant === 'inline';
 
   useEffect(() => {
@@ -58,6 +59,7 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
 
     setIsAnalyzing(true);
     setAnalysis(null);
+    setAuthPrompt(false);
 
     try {
       const result = await analyzeGame(moveHistory, null, gameId);
@@ -71,7 +73,12 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
       console.error('Analysis error:', error);
       let errorMessage = 'Error: ';
 
-      if (error.message?.includes('network')) {
+      if (error.code === 'POLLINATIONS_AUTH_REQUIRED' || error.status === 402) {
+        errorMessage += 'Pollinations AI login is required for successful analysis. Please log in with Pollinations AI and try again.';
+        setAuthPrompt(true);
+        setIsReady(false);
+        setCoachStatus((status) => status ? { ...status, connected: false } : status);
+      } else if (error.message?.includes('network')) {
         errorMessage += 'Network error. Please check your connection and try again.';
       } else if (error.message?.includes('API')) {
         errorMessage += 'AI service error. Please try again later.';
@@ -175,6 +182,11 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
             </div>
           ) : (
             <div className="analysis-text">{analysis}</div>
+          )}
+          {authPrompt && (
+            <button type="button" onClick={handleConnect} className="btn btn-primary">
+              Log in with Pollinations AI
+            </button>
           )}
           {!isAnalyzing && (
             <button onClick={runAnalysis} className="btn btn-secondary">

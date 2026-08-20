@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../contexts/SettingsContext';
 import { useUser } from '../contexts/UserContext';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Palette,
   Volume2,
@@ -18,7 +18,9 @@ import {
   Crown,
   CheckCircle2,
   ShieldCheck,
+  BrainCircuit,
 } from 'lucide-react';
+import { connectCoach, disconnectCoach, getCoachStatus } from '../engine/coach/coachAI';
 import './Settings.css';
 
 const BOARD_THEMES = [
@@ -103,6 +105,57 @@ export default function Settings() {
   const { settings, updateSettings, resetSettings } = useSettings();
   const { user, logout } = useUser();
   const navigate = useNavigate();
+  const [coachStatus, setCoachStatus] = useState(null);
+  const [coachLoading, setCoachLoading] = useState(true);
+  const [coachBusy, setCoachBusy] = useState(false);
+  const [coachError, setCoachError] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadCoachStatus() {
+      setCoachLoading(true);
+      try {
+        const status = await getCoachStatus(true);
+        if (isMounted) setCoachStatus(status);
+      } catch (error) {
+        if (isMounted) setCoachError(error.message || 'Unable to check Pollinations AI status.');
+      } finally {
+        if (isMounted) setCoachLoading(false);
+      }
+    }
+    loadCoachStatus();
+    return () => { isMounted = false; };
+  }, [user]);
+
+  async function handleCoachConnect() {
+    if (!user) { navigate('/login'); return; }
+    setCoachBusy(true);
+    setCoachError(null);
+    try {
+      await connectCoach();
+    } catch (error) {
+      if (error.status === 401 || error.status === 403 || error.message?.toLowerCase().includes('log in')) {
+        navigate('/login');
+        return;
+      }
+      setCoachError(error.message || 'Unable to open Pollinations AI login.');
+    } finally {
+      setCoachBusy(false);
+    }
+  }
+
+  async function handleCoachDisconnect() {
+    setCoachBusy(true);
+    setCoachError(null);
+    try {
+      await disconnectCoach();
+      setCoachStatus((status) => status ? { ...status, connected: false } : status);
+    } catch (error) {
+      setCoachError(error.message || 'Unable to disconnect Pollinations AI.');
+    } finally {
+      setCoachBusy(false);
+    }
+  }
 
   useEffect(() => {
     const hash = window.location.hash.slice(1);
@@ -271,6 +324,43 @@ export default function Settings() {
               onChange={(v) => updateSettings({ hapticEnabled: v })}
             />
           </SettingRow>
+        </Section>
+
+
+        <Section icon={BrainCircuit} title="Pollinations AI">
+          <div className="setting-item pollinations-auth-item">
+            <div className="setting-info">
+              <div className="setting-title">
+                <BrainCircuit className="setting-icon" size={16} />
+                <span>Analysis Authenticator</span>
+                {coachStatus?.connected && <span className="pollinations-status connected">Connected</span>}
+                {!coachStatus?.connected && !coachLoading && <span className="pollinations-status">Not connected</span>}
+              </div>
+              <span className="setting-desc">
+                Log in with Pollinations AI so game review can use your authorized analysis provider.
+              </span>
+              {coachStatus?.configured === false && (
+                <span className="setting-desc pollinations-warning">
+                  Server-side Pollinations OAuth is not configured yet.
+                </span>
+              )}
+              {coachError && <span className="setting-desc pollinations-warning">{coachError}</span>}
+            </div>
+            <button
+              className={coachStatus?.connected ? 'link-button pollinations-disconnect' : 'link-button'}
+              type="button"
+              onClick={coachStatus?.connected ? handleCoachDisconnect : handleCoachConnect}
+              disabled={coachLoading || coachBusy || coachStatus?.configured === false}
+            >
+              {coachLoading || coachBusy
+                ? 'Checking...'
+                : coachStatus?.connected
+                  ? 'Disconnect'
+                  : user
+                    ? 'Log in with Pollinations AI'
+                    : 'Sign in first'}
+            </button>
+          </div>
         </Section>
 
         <Section icon={Bug} title="Advanced">
