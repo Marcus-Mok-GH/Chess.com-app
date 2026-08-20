@@ -798,3 +798,50 @@
   font-size: 0.85rem;
   line-height: 1.65;
 }
+
+/* ── Pollinations AI authenticator ───────────────── */
+.pollinations-auth-item {
+  align-items: flex-start;
+}
+
+.pollinations-status {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.25rem;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.pollinations-status.connected {
+  border-color: rgba(129, 182, 76, 0.32);
+  background: rgba(129, 182, 76, 0.12);
+  color: var(--primary);
+}
+
+.pollinations-warning {
+  margin-top: 0.35rem;
+  color: #f0b35a;
+}
+
+.pollinations-disconnect {
+  color: #e06c6c;
+}
+
+.pollinations-disconnect:hover {
+  border-color: #e06c6c;
+  background: rgba(224, 108, 108, 0.1);
+  box-shadow: 0 0 16px rgba(224, 108, 108, 0.16);
+}
+
+.link-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+  box-shadow: none;
+}
