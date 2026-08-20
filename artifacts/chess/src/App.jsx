@@ -65,11 +65,16 @@ function AppHeader({ isGameRoute = false }) {
       {/* Sidebar for Desktop */}
       <aside className="sidebar-nav">
         <div className="sidebar-content">
-          <Link to="/home" className="sidebar-logo">
+          <Link to="/home" className="sidebar-logo" aria-label="PlayChess home">
+            <span className="logo-mark">♟️</span>
             <span className="logo-text">PlayChess</span>
           </Link>
 
-          <div className="sidebar-links">
+          <div className="sidebar-links" aria-label="Desktop navigation">
+            <Link to="/home" className={`sidebar-item ${currentPath === '/home' ? 'active' : ''}`}>
+              <span className="sidebar-icon">🏠</span>
+              <span className="sidebar-label">Home</span>
+            </Link>
             <Link to="/play" className={`sidebar-item ${currentPath === '/play' ? 'active' : ''}`}>
               <span className="sidebar-icon">♟️</span>
               <span className="sidebar-label">Play</span>
@@ -124,8 +129,10 @@ function AppHeader({ isGameRoute = false }) {
             ) : (
               <button onClick={() => navigate('/login')} className="sidebar-login">Log In</button>
             )}
+            {!isOnline && <span className="offline-badge">Offline</span>}
             <Link to="/settings" className={`sidebar-item ${currentPath === '/settings' ? 'active' : ''}`} title="Settings">
               <span className="sidebar-icon">⚙️</span>
+              <span className="sidebar-label">Settings</span>
             </Link>
           </div>
         </div>
