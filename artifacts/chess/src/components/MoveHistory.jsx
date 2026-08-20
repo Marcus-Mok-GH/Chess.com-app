@@ -1,25 +1,37 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo, memo } from 'react';
 import { toSanHistory } from '../engine/game/moveHistory';
 
-export default function MoveHistory({ history }) {
+function MoveHistory({ history }) {
   const scrollRef = useRef(null);
 
-  const sanHistory = toSanHistory(history);
+  // Performance Optimization (Bolt ⚡):
+  // Memoize SAN history conversion to avoid re-instantiating Chess() and replaying
+  // move history on every parent component re-render when history has not changed.
+  const sanHistory = useMemo(() => toSanHistory(history), [history]);
 
+  // Performance Optimization (Bolt ⚡):
+  // Depend effect on sanHistory.length so DOM scroll writes and layout reads only trigger
+  // when new moves are added, instead of firing on every re-render.
+  const movesCount = sanHistory.length;
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [sanHistory]);
+  }, [movesCount]);
 
-  const movePairs = [];
-  for (let i = 0; i < sanHistory.length; i += 2) {
-    movePairs.push({
-      number: Math.floor(i / 2) + 1,
-      white: sanHistory[i],
-      black: sanHistory[i + 1] || '',
-    });
-  }
+  // Performance Optimization (Bolt ⚡):
+  // Memoize move pairs grouping to prevent re-allocating array/objects when moves haven't changed.
+  const movePairs = useMemo(() => {
+    const pairs = [];
+    for (let i = 0; i < sanHistory.length; i += 2) {
+      pairs.push({
+        number: Math.floor(i / 2) + 1,
+        white: sanHistory[i],
+        black: sanHistory[i + 1] || '',
+      });
+    }
+    return pairs;
+  }, [sanHistory]);
 
   return (
     <div className="move-history">
@@ -42,3 +54,7 @@ export default function MoveHistory({ history }) {
     </div>
   );
 }
+
+// Performance Optimization (Bolt ⚡):
+// Memoize component to skip re-rendering when parent state changes but history prop is identical.
+export default memo(MoveHistory);
