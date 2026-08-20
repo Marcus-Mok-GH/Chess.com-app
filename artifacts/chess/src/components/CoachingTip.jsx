@@ -1,4 +1,4 @@
-import './CoachingTip.css';
+import "./CoachingTip.css";
 
 export default function CoachingTip({ tip, isLoading, onDismiss }) {
   if (!tip && !isLoading) return null;
@@ -9,7 +9,13 @@ export default function CoachingTip({ tip, isLoading, onDismiss }) {
         <span className="coaching-tip-icon">🎓</span>
         <span className="coaching-tip-title">Coach's Feedback</span>
         {tip && (
-          <button className="coaching-tip-dismiss" onClick={onDismiss}>
+          <button
+            type="button"
+            className="coaching-tip-dismiss"
+            onClick={onDismiss}
+            aria-label="Dismiss coach feedback"
+            title="Dismiss coach feedback"
+          >
             ×
           </button>
         )}
