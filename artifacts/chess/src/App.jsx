@@ -29,6 +29,7 @@ const Lessons = lazy(() => import('./pages/Lessons'))
 const Friends = lazy(() => import('./pages/Friends'))
 const Chat = lazy(() => import('./pages/Chat'))
 const Clubs = lazy(() => import('./pages/Clubs'))
+const More = lazy(() => import('./pages/More'))
 const NotFound = lazy(() => import('./pages/not-found'))
 
 function getTitle(path) {
@@ -46,6 +47,7 @@ function getTitle(path) {
   if (path === '/friends') return 'Friends'
   if (path === '/chat') return 'Chat'
   if (path === '/clubs') return 'Clubs'
+  if (path === '/more') return 'More'
   return 'PlayChess'
 }
 
@@ -153,37 +155,9 @@ function AppHeader({ isGameRoute = false }) {
           <div className="nav-icon">🌐</div>
           <span>Online</span>
         </Link>
-        <Link to="/puzzles" className={`nav-item ${currentPath === '/puzzles' ? 'active' : ''}`}>
-          <div className="nav-icon">🧩</div>
-          <span>Puzzles</span>
-        </Link>
-        <Link to="/openings" className={`nav-item ${currentPath === '/openings' ? 'active' : ''}`}>
-          <div className="nav-icon">📖</div>
-          <span>Openings</span>
-        </Link>
-        <Link to="/lessons" className={`nav-item ${currentPath === '/lessons' ? 'active' : ''}`}>
-          <div className="nav-icon">📖</div>
-          <span>Lessons</span>
-        </Link>
-        <Link to="/friends" className={`nav-item ${currentPath === '/friends' ? 'active' : ''}`}>
-          <div className="nav-icon">👥</div>
-          <span>Friends</span>
-        </Link>
-        <Link to="/chat" className={`nav-item ${currentPath === '/chat' ? 'active' : ''}`}>
-          <div className="nav-icon">💬</div>
-          <span>Chat</span>
-        </Link>
-        <Link to="/clubs" className={`nav-item ${currentPath === '/clubs' ? 'active' : ''}`}>
-          <div className="nav-icon">🏛️</div>
-          <span>Clubs</span>
-        </Link>
-        <Link to="/history" className={`nav-item ${currentPath === '/history' ? 'active' : ''}`}>
-          <div className="nav-icon">📚</div>
-          <span>History</span>
-        </Link>
-        <Link to="/settings" className={`nav-item ${currentPath === '/settings' ? 'active' : ''}`}>
-          <div className="nav-icon">⚙️</div>
-          <span>Settings</span>
+        <Link to="/more" className={`nav-item ${currentPath === '/more' ? 'active' : ''}`}>
+          <div className="nav-icon">•••</div>
+          <span>More...</span>
         </Link>
       </nav>
     </>
@@ -348,6 +322,7 @@ export default function App() {
                   <Route path="/friends" element={<Suspense fallback={<RouteFallback />}><Friends /></Suspense>} />
                   <Route path="/chat" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Chat /></Suspense></ProtectedRoute>} />
                   <Route path="/clubs" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Clubs /></Suspense></ProtectedRoute>} />
+                  <Route path="/more" element={<More />} />
                 </Route>
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />
