@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../contexts/SettingsContext';
 import { useUser } from '../contexts/UserContext';
+import { useEffect } from 'react';
 import {
   Palette,
   Volume2,
@@ -36,7 +37,7 @@ const TERMS_SECTIONS = [
   ['Disclaimer', 'The service is provided "as is" without warranties of any kind, either express or implied.'],
   ['Limitation of Liability', 'We shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use of the service.'],
   ['Changes to Terms', 'We reserve the right to modify these terms at any time. Continued use after changes constitutes acceptance of modified terms.'],
-  ['Contact', 'If you have any questions about these Terms, please contact us.'],
+  ['Contact', 'If you have any questions about these Terms, please contact us at support@playchess.app.'],
 ];
 
 const PRIVACY_SECTIONS = [
@@ -45,10 +46,10 @@ const PRIVACY_SECTIONS = [
   ['Data Storage and Security', 'We implement appropriate technical and organizational measures to protect your personal information against unauthorized access, alteration, or destruction.'],
   ['Sharing of Information', 'We do not sell or share your personal information with third parties except as described in this policy or with your consent.'],
   ['Cookies and Tracking', 'We may use cookies and similar tracking technologies to track activity on our service and hold certain information.'],
-  ['Your Rights', 'You have the right to access, correct, or delete your personal data. Contact us to exercise these rights.'],
+  ['Your Rights', 'You have the right to access, correct, or delete your personal data. Contact us at support@playchess.app to exercise these rights.'],
   ["Children's Privacy", 'Our service is not directed at children under 13. We do not knowingly collect personal information from children.'],
   ['Changes to Privacy Policy', 'We may update our Privacy Policy from time to time. We will notify users of any changes by posting the new policy on this page.'],
-  ['Contact', 'For questions about this Privacy Policy, please contact us.'],
+  ['Contact', 'For questions about this Privacy Policy, please contact us at support@playchess.app.'],
 ];
 
 function Toggle({ checked, onChange, label }) {
@@ -102,6 +103,20 @@ export default function Settings() {
   const { settings, updateSettings, resetSettings } = useSettings();
   const { user, logout } = useUser();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const hash = window.location.hash.slice(1);
+    if (hash) {
+      // Wait for lazy-loaded content to mount
+      const timer = setTimeout(() => {
+        const element = document.getElementById(hash);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   return (
     <div className="settings-page">
