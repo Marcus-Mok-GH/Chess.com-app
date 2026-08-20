@@ -1,3 +1,7 @@
+[2026-08-20] - Coach feedback dismiss accessibility
+
+- Added an explicit accessible name and non-submit type to the coach feedback dismiss control so screen reader and keyboard users can identify it reliably.
+
 [2026-08-14] - Mobile layout optimisation
 
 - Restored the mobile header display in the app shell, added safer bottom navigation spacing for touch and safe-area devices, and removed the reserved bottom-nav gap on game routes that hide it.
