@@ -104,7 +104,7 @@ describe('Lessons page', () => {
     expect(screen.getByRole('button', { name: /mark complete/i })).toBeTruthy();
   });
 
-  it('practice action navigates to /puzzles', async () => {
+  it('practice action navigates to a fresh puzzle for the selected lesson', async () => {
     renderPage();
 
     await waitFor(() => {
@@ -117,7 +117,15 @@ describe('Lessons page', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: /practice/i }));
-    expect(mockNavigate).toHaveBeenCalledWith('/puzzles');
+
+    const destination = mockNavigate.mock.calls[0][0];
+    const [, search = ''] = destination.split('?');
+    const params = new URLSearchParams(search);
+    expect(destination).toMatch(/^\/puzzles\?/);
+    expect(params.get('lesson')).toBe('forks');
+    expect(params.get('title')).toBe('Knight Forks');
+    expect(params.get('themes')).toContain('Knight Ambush');
+    expect(Number.isFinite(Number(params.get('seed')))).toBe(true);
   });
 
   it('mark complete calls saveLessonProgress and updates the button', async () => {

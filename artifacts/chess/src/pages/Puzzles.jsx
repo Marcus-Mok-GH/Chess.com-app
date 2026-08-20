@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Chess } from "chess.js";
 import ChessBoard from "../components/ChessBoard";
 import DailyPuzzleStreak from "../components/DailyPuzzleStreak";
+import { generatePuzzleForThemes } from "../engine/puzzles/puzzleGenerator";
 import {
   Puzzle,
   Check,
@@ -21,6 +23,27 @@ function loadFen(fen) {
   } catch {
     return new Chess();
   }
+}
+
+function randomPuzzleSeed() {
+  return Date.now() ^ Math.floor(Math.random() * 0xffffffff);
+}
+
+function getLessonPracticeContext(search) {
+  const params = new URLSearchParams(search);
+  const themes = (params.get("themes") || "")
+    .split(",")
+    .map((theme) => theme.trim())
+    .filter(Boolean);
+  const seedParam = params.get("seed");
+  const requestedSeed = seedParam === null ? Number.NaN : Number(seedParam);
+
+  return {
+    lessonId: params.get("lesson") || null,
+    lessonTitle: params.get("title") || null,
+    themes,
+    seed: Number.isFinite(requestedSeed) ? requestedSeed : randomPuzzleSeed(),
+  };
 }
 
 async function fetchStockfishPuzzle() {
@@ -46,6 +69,12 @@ async function fetchStockfishPuzzle() {
 }
 
 export default function Puzzles() {
+  const location = useLocation();
+  const lessonPractice = useMemo(
+    () => getLessonPracticeContext(location.search),
+    [location.search],
+  );
+  const isLessonPractice = lessonPractice.themes.length > 0;
   const [puzzleNumber, setPuzzleNumber] = useState(1);
   const [puzzle, setPuzzle] = useState(null);
   const [position, setPosition] = useState("");
@@ -81,7 +110,10 @@ export default function Puzzles() {
     timerIds.current.push(timerId);
   }
 
-  async function loadStockfishPuzzle({ incrementNumber = false } = {}) {
+  async function loadPuzzle({
+    incrementNumber = false,
+    seed = randomPuzzleSeed(),
+  } = {}) {
     const requestId = ++generationRequestRef.current;
     clearTimers();
     setInitializing(true);
@@ -89,7 +121,9 @@ export default function Puzzles() {
     setSelectedSquare(null);
 
     try {
-      const freshPuzzle = await fetchStockfishPuzzle();
+      const freshPuzzle = isLessonPractice
+        ? generatePuzzleForThemes(lessonPractice.themes, seed)
+        : await fetchStockfishPuzzle();
       if (generationRequestRef.current !== requestId) return false;
 
       setPuzzle(freshPuzzle);
@@ -117,12 +151,13 @@ export default function Puzzles() {
   }
 
   useEffect(() => {
-    loadStockfishPuzzle();
+    setPuzzleNumber(1);
+    loadPuzzle({ seed: lessonPractice.seed });
     return () => {
       generationRequestRef.current += 1;
       clearTimers();
     };
-  }, []);
+  }, [location.search]);
 
   useEffect(() => {
     if (!puzzle) return;
@@ -149,7 +184,7 @@ export default function Puzzles() {
       setStreak(0);
     }
 
-    await loadStockfishPuzzle({ incrementNumber: true });
+    await loadPuzzle({ incrementNumber: true });
   }
 
   function moveSquaresMatch(coordinateMove, solution) {
@@ -278,7 +313,7 @@ export default function Puzzles() {
           <div className="puzzles-header-top">
             <div className="puzzles-eyebrow">
               <Puzzle className="puzzles-eyebrow-icon" size={13} />
-              <span>Tactical Trainer</span>
+              <span>{isLessonPractice ? "Lesson Practice" : "Tactical Trainer"}</span>
             </div>
             <DailyPuzzleStreak compact />
             <span className="puzzles-meta">
@@ -290,7 +325,13 @@ export default function Puzzles() {
           </h1>
           <p className="puzzles-subtitle">
             {puzzle ? (
-              <>Find the tactic. <strong>{ratingLabel(puzzle.rating)}</strong></>
+              isLessonPractice ? (
+                <>Practicing <strong>{lessonPractice.lessonTitle || puzzle.theme}</strong>: find the tactic.</>
+              ) : (
+                <>Find the tactic. <strong>{ratingLabel(puzzle.rating)}</strong></>
+              )
+            ) : isLessonPractice ? (
+              "Preparing a lesson-specific tactic."
             ) : (
               "Stockfish is preparing your next tactic."
             )}
@@ -379,12 +420,16 @@ export default function Puzzles() {
 
             {generationError && (
               <div className="puzzle-side-card puzzle-engine-error" role="alert">
-                <strong>Unable to load a Stockfish puzzle.</strong>
+                <strong>
+                  {isLessonPractice
+                    ? "Unable to create a lesson-specific puzzle."
+                    : "Unable to load a Stockfish puzzle."}
+                </strong>
                 <span>{generationError}</span>
                 <button
                   type="button"
                   className="puzzle-action puzzle-action--retry"
-                  onClick={() => loadStockfishPuzzle()}
+                  onClick={() => loadPuzzle()}
                   disabled={initializing}
                 >
                   Try again

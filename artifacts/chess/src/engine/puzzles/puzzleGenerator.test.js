@@ -1,6 +1,10 @@
 import { Chess } from "chess.js";
 import { describe, expect, it } from "vitest";
-import { generatePuzzle, validateGeneratedPuzzle } from "./puzzleGenerator.js";
+import {
+  generatePuzzle,
+  generatePuzzleForThemes,
+  validateGeneratedPuzzle,
+} from "./puzzleGenerator.js";
 
 describe("procedural puzzle generator", () => {
   it.each([1, 42, 20260727])(
@@ -14,6 +18,16 @@ describe("procedural puzzle generator", () => {
 
   it("is reproducible for a given seed", () => {
     expect(generatePuzzle(12345)).toEqual(generatePuzzle(12345));
+  });
+
+  it("creates a legal puzzle from the requested lesson themes", () => {
+    const themes = ["Knight Ambush", "Knight-Supported Queen"];
+    const puzzle = generatePuzzleForThemes(themes, 20260820);
+
+    expect(validateGeneratedPuzzle(puzzle)).toBe(true);
+    expect(themes).toContain(puzzle.theme);
+    expect(puzzle.generationMethod).toBe("lesson-theme");
+    expect(puzzle.lessonThemes).toEqual(themes);
   });
 
   it("creates materially different positions across a session", () => {

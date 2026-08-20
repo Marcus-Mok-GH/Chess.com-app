@@ -139,7 +139,15 @@ export default function Lessons() {
         saving={saving}
         onBack={() => setSelectedLesson(null)}
         onToggleComplete={() => handleMarkComplete(selectedLesson)}
-        onPractice={() => navigate("/puzzles")}
+        onPractice={() => {
+          const search = new URLSearchParams({
+            lesson: selectedLesson.id,
+            title: selectedLesson.title,
+            themes: (selectedLesson.puzzleThemes || []).join(","),
+            seed: String(Date.now() ^ Math.floor(Math.random() * 0xffffffff)),
+          });
+          navigate(`/puzzles?${search.toString()}`);
+        }}
       />
     );
   }

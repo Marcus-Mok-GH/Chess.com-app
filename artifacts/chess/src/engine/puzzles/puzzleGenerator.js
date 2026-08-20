@@ -457,6 +457,72 @@ export async function generatePuzzleAsync(
   return generatePuzzle(seed);
 }
 
+function normalizedThemeList(themes) {
+  const rawThemes = Array.isArray(themes) ? themes : [themes];
+  return [...new Set(
+    rawThemes
+      .map((theme) => String(theme ?? "").trim())
+      .filter(Boolean),
+  )];
+}
+
+function hasRequestedTheme(candidate, themes) {
+  const candidateTheme = String(candidate?.theme ?? "").trim().toLowerCase();
+  return candidateTheme && themes.some((theme) => candidateTheme === theme.toLowerCase());
+}
+
+/**
+ * Create a fresh, verified mate-in-one puzzle from one of the requested lesson themes.
+ * The same seed always creates the same puzzle, while a new seed rotates through
+ * matching positions and board transformations.
+ */
+export function generatePuzzleForThemes(
+  themes,
+  seed = Date.now() ^ Math.floor(Math.random() * 0xffffffff),
+) {
+  const requestedThemes = normalizedThemeList(themes);
+  if (requestedThemes.length === 0) return generatePuzzle(seed);
+
+  const normalizedSeed = normalizeSeed(seed);
+  const matchingPuzzles = BASE_PUZZLES.filter((candidate) =>
+    hasRequestedTheme(candidate, requestedThemes),
+  );
+  if (matchingPuzzles.length === 0) return generatePuzzle(normalizedSeed);
+
+  const sequence = Math.floor((normalizedSeed - 1) / 4);
+  const base = matchingPuzzles[sequence % matchingPuzzles.length];
+  const transformIndex = Math.floor(sequence / matchingPuzzles.length) % 4;
+  const fen = transformedFen(
+    base.fen,
+    transformIndex % 2 === 1,
+    transformIndex >= 2,
+  );
+  const chess = new Chess(fen);
+  const mate = findUniqueMate(chess);
+
+  if (!mate) throw new Error("Unable to generate a verified lesson puzzle.");
+
+  const puzzle = {
+    id: `lesson-${normalizedSeed}`,
+    fen,
+    sideToMove: chess.turn() === "w" ? "white" : "black",
+    rating: base.rating ?? ratePuzzle(chess),
+    theme: base.theme ?? themeForMove(mate),
+    hint: base.hint ?? hintForMove(mate),
+    solution: mate.san,
+    followup: null,
+    generated: true,
+    generationMethod: "lesson-theme",
+    lessonThemes: requestedThemes,
+  };
+
+  if (!validateGeneratedPuzzle(puzzle)) {
+    throw new Error("Generated lesson puzzle did not pass legality checks.");
+  }
+
+  return puzzle;
+}
+
 export function generatePuzzle(
   seed = Date.now() ^ Math.floor(Math.random() * 0xffffffff),
 ) {
@@ -617,6 +683,7 @@ export const PUZZLE_METHODS = {
 export default {
   generatePuzzle,
   generatePuzzleAsync,
+  generatePuzzleForThemes,
   generatePuzzleByMethod,
   generatePuzzleWithStockfish,
   generatePuzzleWithAI,
