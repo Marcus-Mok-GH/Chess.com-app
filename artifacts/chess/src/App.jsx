@@ -21,8 +21,6 @@ const Settings = lazy(() => import('./pages/Settings'))
 const Changelog = lazy(() => import('./pages/Changelog'))
 const Landing = lazy(() => import('./pages/Landing'))
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail'))
-const Terms = lazy(() => import('./pages/Terms'))
-const Privacy = lazy(() => import('./pages/Privacy'))
 const Puzzles = lazy(() => import('./pages/Puzzles'))
 const Openings = lazy(() => import('./pages/Openings'))
 const Lessons = lazy(() => import('./pages/Lessons'))
@@ -129,8 +127,6 @@ function AppHeader({ isGameRoute = false }) {
             <Link to="/settings" className={`sidebar-item ${currentPath === '/settings' ? 'active' : ''}`} title="Settings">
               <span className="sidebar-icon">⚙️</span>
             </Link>
-            <Link to="/terms" className="sidebar-item">Terms</Link>
-            <Link to="/privacy" className="sidebar-item">Privacy</Link>
           </div>
         </div>
       </aside>
@@ -314,7 +310,7 @@ export default function App() {
                   <Route path="/game/:gameId" element={<Game />} />
                   <Route path="/analysis/:gameId?" element={<ProtectedRoute><Analysis /></ProtectedRoute>} />
                   <Route path="/history" element={<ProtectedRoute><GameHistory /></ProtectedRoute>} />
-                  <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                  <Route path="/settings" element={<Settings />} />
                   <Route path="/changelog" element={<Changelog />} />
                   <Route path="/puzzles" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Puzzles /></Suspense></ProtectedRoute>} />
                   <Route path="/openings" element={<Suspense fallback={<RouteFallback />}><Openings /></Suspense>} />
@@ -324,8 +320,8 @@ export default function App() {
                   <Route path="/clubs" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Clubs /></Suspense></ProtectedRoute>} />
                   <Route path="/more" element={<More />} />
                 </Route>
-                <Route path="/terms" element={<Terms />} />
-                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/terms" element={<Navigate to="/settings#terms" replace />} />
+                <Route path="/privacy" element={<Navigate to="/settings#privacy" replace />} />
                 <Route path="*" element={<Suspense fallback={<RouteFallback />}><NotFound /></Suspense>} />
               </Routes>
               <FeedbackPanel />
