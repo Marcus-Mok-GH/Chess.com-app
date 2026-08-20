@@ -301,14 +301,13 @@ export function PollinationsCoachGate() {
 
 function AppShell() {
   const location = useLocation();
-  const isGameRoute = location.pathname === '/play' ||
-                     location.pathname.startsWith('/game/') || 
+  const isGameRoute = location.pathname.startsWith('/game/') ||
                      (location.pathname.startsWith('/online/') && location.pathname.length > 8);
   
   return (
     <div className={`app ${isGameRoute ? 'hide-bottom-nav' : ''}`}>
       <AppHeader isGameRoute={isGameRoute} />
-      <main style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", minHeight: "100svh" }}>
+      <main>
         <Suspense fallback={<RouteFallback />}>
           <Outlet />
         </Suspense>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import ChessGame from '../components/ChessGame';
@@ -67,18 +67,6 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
     () => (playerColor === 'w' ? 'white' : 'black'),
     [playerColor],
   );
-
-  useEffect(() => {
-    const shouldHideNav = phase === 'game';
-
-    document.documentElement.classList.toggle('hide-bottom-nav', shouldHideNav);
-    document.body.classList.toggle('hide-bottom-nav', shouldHideNav);
-
-    return () => {
-      document.documentElement.classList.remove('hide-bottom-nav');
-      document.body.classList.remove('hide-bottom-nav');
-    };
-  }, [phase]);
 
   async function handleStart() {
     if (!user) {
