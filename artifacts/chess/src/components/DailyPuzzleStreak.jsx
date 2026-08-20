@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Chess } from "chess.js";
 import ChessBoard from "./ChessBoard";
 import { Check, Trophy, Flame } from "lucide-react";
-import { BASE_PUZZLES } from "../engine/puzzles/puzzleGenerator";
+import { generatePuzzle } from "../engine/puzzles/puzzleGenerator";
 import { useUser } from "../contexts/UserContext";
 import api from "../services/api";
 import "./DailyPuzzleStreak.css";
@@ -12,38 +12,20 @@ function getTodayDateString() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
-function getDailyPuzzleIndex(dateStr) {
-  let hash = 0;
-  for (let i = 0; i < dateStr.length; i++) {
-    hash = (hash * 31 + dateStr.charCodeAt(i)) >>> 0;
+function getDailyPuzzleSeed(dateStr) {
+  let hash = 2166136261;
+  for (let index = 0; index < dateStr.length; index += 1) {
+    hash ^= dateStr.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
   }
-  return hash % BASE_PUZZLES.length;
+  return hash >>> 0;
 }
 
 function getDailyPuzzle(dateStr) {
-  const index = getDailyPuzzleIndex(dateStr);
-  const base = BASE_PUZZLES[index];
-  const chess = new Chess(base.fen);
-  const moves = chess.moves({ verbose: true });
-  let matingMove = null;
-  for (const move of moves) {
-    chess.move(move);
-    if (chess.isCheckmate()) {
-      if (matingMove) {
-        chess.undo();
-        matingMove = null;
-        break;
-      }
-      matingMove = move;
-    }
-    chess.undo();
-  }
-  return {
-    ...base,
-    id: `daily-${dateStr}`,
-    sideToMove: chess.turn() === "w" ? "white" : "black",
-    solution: matingMove ? matingMove.san : null,
-  };
+  // Date-derived seeding keeps the puzzle consistent for the entire day while
+  // generating a real tactical position rather than rotating a fixed diagram.
+  const puzzle = generatePuzzle(getDailyPuzzleSeed(dateStr), { type: "tactics" });
+  return { ...puzzle, id: `daily-${dateStr}`, generationMethod: "daily-tactical-position" };
 }
 
 function getStoragePrefix(userId) {

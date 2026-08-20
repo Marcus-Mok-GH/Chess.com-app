@@ -3,23 +3,22 @@ import { describe, expect, it } from "vitest";
 import { generatePuzzle, validateGeneratedPuzzle } from "./puzzleGenerator.js";
 
 describe("API procedural puzzle generator", () => {
-  it("generates 40 unique legal positions with eight solutions per mating piece", () => {
-    const puzzles = Array.from({ length: 40 }, (_, index) =>
-      generatePuzzle(index + 1),
-    );
+  it("generates unique legal material tactics instead of cycling mate-in-one templates", () => {
+    const puzzles = Array.from({ length: 40 }, (_, index) => generatePuzzle(index + 1));
     const positions = new Set(puzzles.map((puzzle) => puzzle.fen.split(" ")[0]));
-    const matingPieceCounts = Object.fromEntries(
-      ["q", "r", "b", "n", "p"].map((piece) => [piece, 0]),
-    );
+    const themes = new Set(puzzles.map((puzzle) => puzzle.theme));
 
     for (const puzzle of puzzles) {
       expect(validateGeneratedPuzzle(puzzle)).toBe(true);
+      expect(puzzle.type).toBe("tactics");
       const chess = new Chess(puzzle.fen);
-      const piece = chess.move(puzzle.solution).piece;
-      matingPieceCounts[piece] += 1;
+      const move = chess.move(puzzle.solution);
+      expect(move).toBeTruthy();
+      expect(chess.isCheckmate()).toBe(false);
+      expect(Boolean(move.captured || move.promotion || move.san.includes("+"))).toBe(true);
     }
 
     expect(positions.size).toBe(40);
-    expect(matingPieceCounts).toEqual({ q: 8, r: 8, b: 8, n: 8, p: 8 });
+    expect(themes.size).toBeGreaterThan(1);
   }, 30000);
 });

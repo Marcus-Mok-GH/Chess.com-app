@@ -1,14 +1,12 @@
 import { Chess } from "chess.js";
 
 /**
- * Dynamic Chess Puzzle Generator
- *
- * Supports three generation methods:
- * 1. Hardcoded Rules - Procedural generation with chess.js
- * 2. Stockfish - Engine-assisted puzzle creation and validation
- * 3. AI - AI-generated puzzles from text descriptions
+ * Puzzle generation deliberately starts from legal, seed-deterministic game
+ * positions. The generator searches those positions for a forcing material
+ * gain, so regular play is no longer a rotation of hand-authored mate-in-one
+ * diagrams. The small legacy collection remains only for explicit lessons and
+ * as a safety fallback when a sampled position offers no clear tactic.
  */
-
 export const BASE_PUZZLES = [
   {
     fen: "6k1/5ppp/8/8/8/8/8/R3K3 w Q - 0 1",
@@ -58,89 +56,22 @@ export const BASE_PUZZLES = [
     theme: "Pawn Breakthrough",
     hint: "Promote the pawn with checkmate.",
   },
-  {
-    fen: "7B/8/3R4/kb6/4K3/1Bp5/8/8 w - - 0 1",
-    rating: 1250,
-    theme: "Diagonal Strike",
-    hint: "Find the bishop move that closes the mating net.",
-  },
-  {
-    fen: "1K6/2Q5/k7/8/6p1/8/B7/8 w - - 0 1",
-    rating: 1250,
-    theme: "Diagonal Strike",
-    hint: "Find the bishop move that closes the mating net.",
-  },
-  {
-    fen: "8/8/2B5/8/K7/8/kp5p/2R2N2 w - - 0 1",
-    rating: 1300,
-    theme: "Diagonal Strike",
-    hint: "Find the bishop move that closes the mating net.",
-  },
-  {
-    fen: "8/7B/8/1K6/8/7k/5Q2/8 w - - 0 1",
-    rating: 1200,
-    theme: "Diagonal Strike",
-    hint: "Find the bishop move that closes the mating net.",
-  },
-  {
-    fen: "8/6R1/K2Q4/2p2k2/8/8/4r3/5N2 w - - 0 1",
-    rating: 1300,
-    theme: "Knight Ambush",
-    hint: "Find the knight jump that seals every escape square.",
-  },
-  {
-    fen: "8/6b1/7p/K7/8/k7/n2N4/2N5 w - - 0 1",
-    rating: 1350,
-    theme: "Knight Ambush",
-    hint: "Find the knight jump that seals every escape square.",
-  },
-  {
-    fen: "8/b3N3/8/7Q/1q3k2/5P2/6K1/8 w - - 0 1",
-    rating: 1350,
-    theme: "Knight Ambush",
-    hint: "Find the knight jump that seals every escape square.",
-  },
-  {
-    fen: "2k5/8/P2Q4/8/2N5/1K6/8/8 w - - 0 1",
-    rating: 1250,
-    theme: "Knight Ambush",
-    hint: "Find the knight jump that seals every escape square.",
-  },
-  {
-    fen: "8/2PPk3/4p1B1/8/8/8/8/4B2K w - - 0 1",
-    rating: 1300,
-    theme: "Pawn Breakthrough",
-    hint: "Promote the pawn with checkmate.",
-  },
-  {
-    fen: "8/2k2P1R/8/1K4P1/8/8/6P1/8 w - - 0 1",
-    rating: 1250,
-    theme: "Pawn Breakthrough",
-    hint: "Promote the pawn with checkmate.",
-  },
-  {
-    fen: "B1k5/4P2K/3P4/4P3/8/8/8/8 w - - 0 1",
-    rating: 1200,
-    theme: "Pawn Breakthrough",
-    hint: "Promote the pawn with checkmate.",
-  },
-  {
-    fen: "8/1P6/1k6/1B6/1P1K2B1/8/3p4/8 w - - 0 1",
-    rating: 1300,
-    theme: "Pawn Breakthrough",
-    hint: "Promote the pawn with checkmate.",
-  },
 ];
 
-// ============================================================================
-// Utility Functions
-// ============================================================================
+const PIECE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+const MAX_POSITION_ATTEMPTS = 72;
+const MIN_RANDOM_PLIES = 16;
+const RANDOM_PLY_SPREAD = 42;
 
 function normalizeSeed(seed) {
-  const value = Number.isFinite(Number(seed))
-    ? Number(seed)
-    : Date.now() ^ Math.floor(Math.random() * 0xffffffff);
-  return value >>> 0 || 1;
+  if (Number.isFinite(Number(seed))) return Number(seed) >>> 0 || 1;
+  const text = String(seed ?? "");
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0 || 1;
 }
 
 function randomSource(seed) {
@@ -152,6 +83,10 @@ function randomSource(seed) {
     value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
     return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
   };
+}
+
+function pick(random, values) {
+  return values[Math.floor(random() * values.length)];
 }
 
 function transformedFen(fen, mirrorFiles, flipColors) {
@@ -194,276 +129,178 @@ function findUniqueMate(chess) {
   return matingMove;
 }
 
+function weightedRandomMove(chess, random) {
+  const moves = chess.moves({ verbose: true });
+  if (moves.length === 0) return null;
+  const weighted = moves.map((move) => ({
+    move,
+    weight:
+      1 +
+      (move.captured ? 2.5 : 0) +
+      (move.san.includes("+") ? 1.5 : 0) +
+      (move.promotion ? 3 : 0),
+  }));
+  const total = weighted.reduce((sum, entry) => sum + entry.weight, 0);
+  let threshold = random() * total;
+  for (const entry of weighted) {
+    threshold -= entry.weight;
+    if (threshold <= 0) return entry.move;
+  }
+  return weighted[weighted.length - 1].move;
+}
+
+function sampleLegalPosition(random) {
+  const chess = new Chess();
+  const plies = MIN_RANDOM_PLIES + Math.floor(random() * RANDOM_PLY_SPREAD);
+
+  for (let ply = 0; ply < plies; ply += 1) {
+    if (chess.isGameOver()) return null;
+    const move = weightedRandomMove(chess, random);
+    if (!move) return null;
+    chess.move(move);
+  }
+
+  if (chess.isGameOver() || chess.moves().length < 4) return null;
+  return chess;
+}
+
+function findMaterialTactic(chess) {
+  const candidates = [];
+  for (const move of chess.moves({ verbose: true })) {
+    const capturedValue = PIECE_VALUES[move.captured] ?? 0;
+    const promotionValue = move.promotion ? (PIECE_VALUES[move.promotion] ?? 0) - 1 : 0;
+    const gain = capturedValue + promotionValue;
+    if (gain < 3) continue;
+
+    chess.move(move);
+    const checkmate = chess.isCheckmate();
+    const givesCheck = chess.isCheck();
+    const legalReplies = chess.moves().length;
+    chess.undo();
+
+    // The normal tactical stream deliberately excludes mate-in-one. Mates are
+    // still available through explicitly requested mate lessons.
+    if (checkmate) continue;
+
+    candidates.push({
+      move,
+      gain,
+      givesCheck,
+      legalReplies,
+      score: gain * 100 + (givesCheck ? 35 : 0) + Math.max(0, 12 - legalReplies),
+    });
+  }
+
+  candidates.sort((left, right) => right.score - left.score);
+  return candidates[0] ?? null;
+}
+
+function themeForTactic(candidate) {
+  if (candidate.move.captured === "q") return "Winning the Queen";
+  if (candidate.move.captured === "r") return "Winning the Exchange";
+  if (candidate.move.promotion) return "Promotion Tactic";
+  if (candidate.givesCheck) return "Forcing Capture";
+  return "Material Tactic";
+}
+
+function hintForTactic(candidate) {
+  if (candidate.givesCheck) {
+    return "Start with forcing checks, then look for the capture that wins material.";
+  }
+  if (candidate.move.captured === "q") {
+    return "A valuable piece is vulnerable. Look for the move that wins the queen.";
+  }
+  return "Compare every forcing capture and identify the move that wins material.";
+}
+
+function ratePuzzle(chess, gain = 0) {
+  const pieceCount = chess.board().flat().filter(Boolean).length;
+  return Math.min(2200, 850 + pieceCount * 28 + gain * 110);
+}
+
+function createNaturalTactic(random) {
+  for (let attempt = 0; attempt < MAX_POSITION_ATTEMPTS; attempt += 1) {
+    const chess = sampleLegalPosition(random);
+    if (!chess) continue;
+    const candidate = findMaterialTactic(chess);
+    if (!candidate) continue;
+
+    return {
+      fen: chess.fen(),
+      sideToMove: chess.turn() === "w" ? "white" : "black",
+      rating: ratePuzzle(chess, candidate.gain),
+      theme: themeForTactic(candidate),
+      hint: hintForTactic(candidate),
+      solution: candidate.move.san,
+      followup: null,
+      type: "tactics",
+      tags: ["tactics", candidate.givesCheck ? "forcing" : "material"],
+      generated: true,
+      generationMethod: "natural-tactical-position",
+    };
+  }
+  return null;
+}
+
+function createLegacyMate(seed, random) {
+  const base = BASE_PUZZLES[normalizeSeed(seed) % BASE_PUZZLES.length];
+  const fen = transformedFen(base.fen, random() >= 0.5, random() >= 0.5);
+  const chess = new Chess(fen);
+  const mate = findUniqueMate(chess);
+  if (!mate) return null;
+
+  return {
+    id: `fallback-mate-${normalizeSeed(seed)}`,
+    fen,
+    sideToMove: chess.turn() === "w" ? "white" : "black",
+    rating: base.rating,
+    theme: base.theme,
+    hint: base.hint,
+    solution: mate.san,
+    followup: null,
+    type: "mate-in-1",
+    generated: true,
+    generationMethod: "legacy-fallback",
+  };
+}
+
 export function validateGeneratedPuzzle(puzzle) {
   try {
     const chess = new Chess(puzzle.fen);
-    const matingMove = findUniqueMate(chess);
-    if (!matingMove || chess.turn() !== puzzle.sideToMove[0]) return false;
+    if (chess.isCheckmate() || chess.isStalemate() || chess.isDraw() || chess.isInsufficientMaterial()) {
+      return false;
+    }
+    if (chess.turn() !== puzzle.sideToMove?.[0]) return false;
+
+    const movesBefore = chess.moves().length;
+    if (movesBefore < 2) return false;
     const solution = chess.move(puzzle.solution);
-    return solution.san === matingMove.san && chess.isCheckmate();
+    if (!solution) return false;
+
+    if (puzzle.type === "mate-in-1") {
+      const mateFinder = new Chess(puzzle.fen);
+      const uniqueMate = findUniqueMate(mateFinder);
+      return Boolean(uniqueMate && uniqueMate.san === solution.san && chess.isCheckmate());
+    }
+
+    if (puzzle.type === "tactics") {
+      return Boolean(solution.captured || solution.promotion || solution.san.includes("+"));
+    }
+
+    return true;
   } catch {
     return false;
   }
 }
 
-function pick(random, values) {
-  return values[Math.floor(random() * values.length)];
-}
-
-function randomSquare(random, used, pieceType) {
-  for (let attempt = 0; attempt < 64; attempt += 1) {
-    const minimumRank = pieceType === "p" ? 2 : 1;
-    const rankCount = pieceType === "p" ? 6 : 8;
-    const square = `${String.fromCharCode(97 + Math.floor(random() * 8))}${minimumRank + Math.floor(random() * rankCount)}`;
-    if (!used.has(square)) {
-      used.add(square);
-      return square;
-    }
-  }
-  return null;
-}
-
-const MAX_GENERATION_ATTEMPTS = 80;
-const KING_ADJACENCY_LIMIT = 6;
-const TARGET_MATING_PIECES = ["q", "r", "b", "n", "p"];
-
-function kingDistance(a, b) {
-  const fileA = a.charCodeAt(0);
-  const rankA = Number(a[1]);
-  const fileB = b.charCodeAt(0);
-  const rankB = Number(b[1]);
-  return Math.max(Math.abs(fileA - fileB), Math.abs(rankA - rankB));
-}
-
-// ============================================================================
-// Method 1: Hardcoded Rules (Procedural Generation)
-// ============================================================================
-
-function composePuzzle(random, targetMatingPiece) {
-  const majorPieces = ["q", "r", "b", "n"];
-  const supportPieces = ["q", "r", "b", "n", "p"];
-  for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt += 1) {
-    const chess = new Chess();
-    chess.clear();
-    const used = new Set();
-    const pieces = [
-      { type: "k", color: "w" },
-      { type: "k", color: "b" },
-      { type: targetMatingPiece ?? pick(random, majorPieces), color: "w" },
-      { type: pick(random, supportPieces), color: "w" },
-    ];
-    const extraPieces = Math.floor(random() * 4);
-    for (let index = 0; index < extraPieces; index += 1) {
-      pieces.push({
-        type: random() < 0.6 ? "p" : pick(random, majorPieces),
-        color: random() < 0.72 ? "b" : "w",
-      });
-    }
-
-    let placed = true;
-    let whiteKingSquare = null;
-    let blackKingSquare = null;
-    for (const piece of pieces) {
-      const square = randomSquare(random, used, piece.type);
-      if (!square || !chess.put(piece, square)) {
-        placed = false;
-        break;
-      }
-      if (piece.type === "k") {
-        if (piece.color === "w") whiteKingSquare = square;
-        else blackKingSquare = square;
-      }
-    }
-    if (!placed) continue;
-
-    // Cheap early-rejection: a mate-in-one needs the attacking king close
-    // enough to constrain the defender's escape squares. Skip the expensive
-    // full mate search when the kings are too far apart.
-    if (
-      whiteKingSquare &&
-      blackKingSquare &&
-      kingDistance(whiteKingSquare, blackKingSquare) > KING_ADJACENCY_LIMIT
-    ) {
-      continue;
-    }
-
-    try {
-      const parts = chess.fen().split(" ");
-      parts[1] = "w";
-      parts[2] = "-";
-      parts[3] = "-";
-      parts[4] = "0";
-      parts[5] = "1";
-      chess.load(parts.join(" "));
-      const blackKing = chess
-        .board()
-        .flat()
-        .find((piece) => piece?.type === "k" && piece.color === "b");
-      if (
-        chess.isCheck() ||
-        !blackKing ||
-        chess.isAttacked(blackKing.square, "w") ||
-        chess.isGameOver()
-      ) {
-        continue;
-      }
-      const mate = findUniqueMate(chess);
-      if (!mate || (targetMatingPiece && mate.piece !== targetMatingPiece)) continue;
-      return { fen: chess.fen() };
-    } catch {
-      continue;
-    }
-  }
-  return null;
-}
-
-function themeForMove(move) {
-  return (
-    {
-      q: "Queen Net",
-      r: "Rook Finish",
-      b: "Diagonal Strike",
-      n: "Knight Ambush",
-      p: "Pawn Breakthrough",
-    }[move.piece] ?? "Mate in One"
-  );
-}
-
-function hintForMove(move) {
-  return (
-    {
-      q: "Use the queen's reach to cover every escape square.",
-      r: "Find the rook line that leaves the king nowhere to run.",
-      b: "Look along the diagonals for a decisive finish.",
-      n: "A knight jump can cover the king's remaining escape squares.",
-      p: "A pawn move can deliver the final check.",
-    }[move.piece] ?? "Find the only move that delivers checkmate."
-  );
-}
-
-function ratePuzzle(chess) {
-  const pieceCount = chess.board().flat().filter(Boolean).length;
-  return Math.min(1500, 700 + pieceCount * 75);
-}
-
-// ============================================================================
-// Method 2: Stockfish-Assisted Generation
-// ============================================================================
-
-/**
- * Generate a puzzle using Stockfish engine
- * @param {Object} options - Generation options
- * @param {string} options.difficulty - Difficulty level (easy, medium, hard)
- * @param {string} options.puzzleType - Type of puzzle (mate-in-1, mate-in-2, mate-in-3, tactics)
- * @param {number} options.seed - Random seed for reproducibility
- * @returns {Promise<Puzzle>}
- */
-export async function generatePuzzleWithStockfish(options = {}) {
-  const { difficulty = 'medium', puzzleType = 'mate-in-1', seed = Date.now() } = options;
-
-  // For now, fall back to procedural generation
-  // Stockfish integration requires WASM module which needs async loading
-  console.warn('Stockfish generation: falling back to procedural (WASM not preloaded)');
-
-  return generatePuzzle(seed);
-}
-
-/**
- * Validate a puzzle solution using Stockfish
- * @param {string} fen - Position FEN
- * @param {string} solution - Expected solution move
- * @returns {Promise<boolean>}
- */
-export async function validateWithStockfish(fen, solution) {
-  // Placeholder for Stockfish validation
-  // In production, this would use the stockfish.js WASM module
-  console.warn('Stockfish validation: not implemented (WASM module required)');
-  return true;
-}
-
-// ============================================================================
-// Method 3: AI-Based Generation
-// ============================================================================
-
-/**
- * Generate a puzzle using AI from a text description
- * @param {string} description - Text description of the puzzle
- * @param {Object} options - Generation options
- * @param {string} options.difficulty - Difficulty level
- * @param {string} options.provider - AI provider to use
- * @param {number} options.seed - Random seed
- * @returns {Promise<Puzzle>}
- */
-export async function generatePuzzleWithAI(description, options = {}) {
-  const { difficulty = 'medium', provider = 'default', seed = Date.now() } = options;
-
-  // For now, generate a puzzle based on the description keywords
-  // In production, this would call your AI provider API
-
-  console.log(`Generating AI puzzle from description: "${description}"`);
-
-  // Parse description for keywords
-  const lowerDesc = description.toLowerCase();
-  let theme = 'Tactics';
-  let rating = 1200;
-
-  if (lowerDesc.includes('mate in 1') || lowerDesc.includes('mate-in-1')) {
-    theme = 'Mate in One';
-    rating = 800 + Math.floor(Math.random() * 400);
-  } else if (lowerDesc.includes('mate in 2') || lowerDesc.includes('mate-in-2')) {
-    theme = 'Mate in Two';
-    rating = 1200 + Math.floor(Math.random() * 600);
-  } else if (lowerDesc.includes('mate in 3') || lowerDesc.includes('mate-in-3')) {
-    theme = 'Mate in Three';
-    rating = 1500 + Math.floor(Math.random() * 500);
-  } else if (lowerDesc.includes('fork')) {
-    theme = 'Fork';
-    rating = 1000 + Math.floor(Math.random() * 500);
-  } else if (lowerDesc.includes('pin')) {
-    theme = 'Pin';
-    rating = 1100 + Math.floor(Math.random() * 500);
-  } else if (lowerDesc.includes('skewer')) {
-    theme = 'Skewer';
-    rating = 1200 + Math.floor(Math.random() * 500);
-  } else if (lowerDesc.includes('back rank') || lowerDesc.includes('back-rank')) {
-    theme = 'Back Rank Mate';
-    rating = 900 + Math.floor(Math.random() * 400);
-  }
-
-  // Generate a puzzle using the procedural method with the theme
-  const puzzle = generatePuzzle(seed);
-
-  return {
-    ...puzzle,
-    id: `ai-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
-    theme,
-    rating,
-    hint: `AI-generated puzzle: ${description}`,
-    aiGenerated: true,
-    provider,
-    description
-  };
-}
-
-// ============================================================================
-// Main Generation Functions
-// ============================================================================
-
-export async function generatePuzzleAsync(
-  seed = Date.now() ^ Math.floor(Math.random() * 0xffffffff),
-) {
-  // Yield to the event loop so puzzle generation never blocks the render path.
+export async function generatePuzzleAsync(seed = Date.now() ^ Math.floor(Math.random() * 0xffffffff)) {
   await new Promise((resolve) => setTimeout(resolve, 0));
   return generatePuzzle(seed);
 }
 
 function normalizedThemeList(themes) {
   const rawThemes = Array.isArray(themes) ? themes : [themes];
-  return [...new Set(
-    rawThemes
-      .map((theme) => String(theme ?? "").trim())
-      .filter(Boolean),
-  )];
+  return [...new Set(rawThemes.map((theme) => String(theme ?? "").trim()).filter(Boolean))];
 }
 
 function hasRequestedTheme(candidate, themes) {
@@ -472,213 +309,119 @@ function hasRequestedTheme(candidate, themes) {
 }
 
 /**
- * Create a fresh, verified mate-in-one puzzle from one of the requested lesson themes.
- * The same seed always creates the same puzzle, while a new seed rotates through
- * matching positions and board transformations.
+ * Lesson links request a named theme, so this path uses the matching verified
+ * teaching position rather than overriding the lesson with a random tactic.
  */
-export function generatePuzzleForThemes(
-  themes,
-  seed = Date.now() ^ Math.floor(Math.random() * 0xffffffff),
-) {
+export function generatePuzzleForThemes(themes, seed = Date.now() ^ Math.floor(Math.random() * 0xffffffff)) {
   const requestedThemes = normalizedThemeList(themes);
   if (requestedThemes.length === 0) return generatePuzzle(seed);
 
-  const normalizedSeed = normalizeSeed(seed);
-  const matchingPuzzles = BASE_PUZZLES.filter((candidate) =>
-    hasRequestedTheme(candidate, requestedThemes),
-  );
-  if (matchingPuzzles.length === 0) return generatePuzzle(normalizedSeed);
+  const matchingPuzzles = BASE_PUZZLES.filter((candidate) => hasRequestedTheme(candidate, requestedThemes));
+  if (matchingPuzzles.length === 0) return generatePuzzle(seed);
 
-  const sequence = Math.floor((normalizedSeed - 1) / 4);
-  const base = matchingPuzzles[sequence % matchingPuzzles.length];
-  const transformIndex = Math.floor(sequence / matchingPuzzles.length) % 4;
-  const fen = transformedFen(
-    base.fen,
-    transformIndex % 2 === 1,
-    transformIndex >= 2,
-  );
+  const random = randomSource(seed);
+  const base = matchingPuzzles[normalizeSeed(seed) % matchingPuzzles.length];
+  const fen = transformedFen(base.fen, random() >= 0.5, random() >= 0.5);
   const chess = new Chess(fen);
   const mate = findUniqueMate(chess);
-
   if (!mate) throw new Error("Unable to generate a verified lesson puzzle.");
 
   const puzzle = {
-    id: `lesson-${normalizedSeed}`,
+    id: `lesson-${normalizeSeed(seed)}`,
     fen,
     sideToMove: chess.turn() === "w" ? "white" : "black",
-    rating: base.rating ?? ratePuzzle(chess),
-    theme: base.theme ?? themeForMove(mate),
-    hint: base.hint ?? hintForMove(mate),
+    rating: base.rating,
+    theme: base.theme,
+    hint: base.hint,
     solution: mate.san,
     followup: null,
+    type: "mate-in-1",
     generated: true,
     generationMethod: "lesson-theme",
     lessonThemes: requestedThemes,
   };
 
-  if (!validateGeneratedPuzzle(puzzle)) {
-    throw new Error("Generated lesson puzzle did not pass legality checks.");
-  }
-
+  if (!validateGeneratedPuzzle(puzzle)) throw new Error("Generated lesson puzzle did not pass legality checks.");
   return puzzle;
 }
 
-export function generatePuzzle(
-  seed = Date.now() ^ Math.floor(Math.random() * 0xffffffff),
-) {
+export function generatePuzzle(seed = Date.now() ^ Math.floor(Math.random() * 0xffffffff), options = {}) {
   const normalizedSeed = normalizeSeed(seed);
   const random = randomSource(normalizedSeed);
-  const targetMatingPiece = TARGET_MATING_PIECES[normalizedSeed % TARGET_MATING_PIECES.length];
-  const matchingBasePuzzles = BASE_PUZZLES.filter((candidate) => {
-    const chess = new Chess(candidate.fen);
-    return findUniqueMate(chess)?.piece === targetMatingPiece;
-  });
-  const fallbackPuzzles = matchingBasePuzzles.length > 0
-    ? matchingBasePuzzles
-    : BASE_PUZZLES;
-  const usesTemplate = targetMatingPiece === "b" || targetMatingPiece === "n" || targetMatingPiece === "p";
-  const composed = usesTemplate ? null : composePuzzle(random, targetMatingPiece);
-  const sequence = Math.floor((normalizedSeed - 1) / TARGET_MATING_PIECES.length);
-  const fallbackIndex = sequence % fallbackPuzzles.length;
-  const transformIndex = Math.floor(sequence / fallbackPuzzles.length) % 4;
-  const base = composed ?? fallbackPuzzles[fallbackIndex];
-  const mirrorFiles = composed ? random() >= 0.5 : transformIndex % 2 === 1;
-  const flipColors = composed ? random() >= 0.5 : transformIndex >= 2;
-  const fen = transformedFen(base.fen, mirrorFiles, flipColors);
+  const requestedType = String(options.type ?? "tactics").toLowerCase();
+  const wantsMate = requestedType === "mate-in-1";
+  const puzzle = wantsMate ? createLegacyMate(normalizedSeed, random) : createNaturalTactic(random) ?? createLegacyMate(normalizedSeed, random);
+
+  if (!puzzle || !validateGeneratedPuzzle(puzzle)) {
+    throw new Error("Unable to generate a verified chess puzzle.");
+  }
+
+  return { ...puzzle, id: puzzle.id ?? `generated-${normalizedSeed}` };
+}
+
+export async function generatePuzzleWithStockfish(options = {}) {
+  const { seed = Date.now(), puzzleType = "tactics" } = options;
+  console.warn("Stockfish generation is delegated to the server; using a local verified tactical position.");
+  return generatePuzzle(seed, { type: puzzleType });
+}
+
+export async function validateWithStockfish(fen, solution) {
   const chess = new Chess(fen);
-  const mate = findUniqueMate(chess);
+  try {
+    return Boolean(chess.move(solution));
+  } catch {
+    return false;
+  }
+}
 
-  if (!mate) throw new Error("Unable to generate a verified chess puzzle.");
-
-  const puzzle = {
-    id: `generated-${normalizedSeed}`,
-    fen,
-    sideToMove: chess.turn() === "w" ? "white" : "black",
-    rating: base.rating ?? ratePuzzle(chess),
-    theme: base.theme ?? themeForMove(mate),
-    hint: base.hint ?? hintForMove(mate),
-    solution: mate.san,
-    followup: null,
-    generated: true,
-    generationMethod: 'hardcoded-rules'
+export async function generatePuzzleWithAI(description, options = {}) {
+  const { provider = "default", seed = Date.now() } = options;
+  const puzzle = generatePuzzle(seed, { type: "tactics" });
+  return {
+    ...puzzle,
+    id: `ai-${normalizeSeed(seed)}`,
+    hint: description ? `AI prompt: ${description}` : puzzle.hint,
+    aiGenerated: true,
+    provider,
+    description,
   };
-
-  if (!validateGeneratedPuzzle(puzzle)) {
-    throw new Error("Generated puzzle did not pass legality checks.");
-  }
-
-  return puzzle;
 }
 
-/**
- * Generate a puzzle using a specific method
- * @param {string} method - Generation method ('hardcoded', 'stockfish', 'ai')
- * @param {Object} options - Method-specific options
- * @returns {Promise<Puzzle>}
- */
 export async function generatePuzzleByMethod(method, options = {}) {
-  switch (method) {
-    case 'stockfish':
-      return generatePuzzleWithStockfish(options);
-    case 'ai':
-      return generatePuzzleWithAI(options.description, options);
-    case 'hardcoded':
-    default:
-      return generatePuzzle(options.seed);
-  }
+  if (method === "stockfish") return generatePuzzleWithStockfish(options);
+  if (method === "ai") return generatePuzzleWithAI(options.description, options);
+  return generatePuzzle(options.seed, { type: options.type });
 }
 
-/**
- * Generate multiple puzzles at once
- * @param {number} count - Number of puzzles to generate
- * @param {Object} options - Generation options
- * @returns {Promise<Puzzle[]>}
- */
 export async function generateMultiplePuzzles(count = 5, options = {}) {
-  const puzzles = [];
-
-  for (let i = 0; i < count; i++) {
-    try {
-      const puzzle = await generatePuzzle(options.seed ? options.seed + i : undefined);
-      puzzles.push(puzzle);
-    } catch (error) {
-      console.warn(`Failed to generate puzzle ${i + 1}:`, error.message);
-    }
-  }
-
-  return puzzles;
+  return Array.from({ length: count }, (_, index) =>
+    generatePuzzle(options.seed === undefined ? undefined : Number(options.seed) + index, { type: options.type }),
+  );
 }
 
-// ============================================================================
-// Puzzle Filtering and Selection
-// ============================================================================
-
-/**
- * Filter puzzles by difficulty
- * @param {Puzzle[]} puzzles - Array of puzzles
- * @param {string} difficulty - Difficulty level (easy, medium, hard)
- * @returns {Puzzle[]}
- */
 export function filterByDifficulty(puzzles, difficulty) {
   const ranges = {
     easy: { min: 0, max: 1000 },
     medium: { min: 1000, max: 1600 },
-    hard: { min: 1600, max: 3000 }
+    hard: { min: 1600, max: 3000 },
   };
-
-  const range = ranges[difficulty] || ranges.medium;
-  return puzzles.filter(p => p.rating >= range.min && p.rating <= range.max);
+  const range = ranges[difficulty] ?? ranges.medium;
+  return puzzles.filter((puzzle) => puzzle.rating >= range.min && puzzle.rating <= range.max);
 }
 
-/**
- * Filter puzzles by theme
- * @param {Puzzle[]} puzzles - Array of puzzles
- * @param {string} theme - Theme to filter by
- * @returns {Puzzle[]}
- */
 export function filterByTheme(puzzles, theme) {
   if (!theme) return puzzles;
-  return puzzles.filter(p =>
-    p.theme && p.theme.toLowerCase().includes(theme.toLowerCase())
-  );
+  return puzzles.filter((puzzle) => puzzle.theme?.toLowerCase().includes(theme.toLowerCase()));
 }
 
-/**
- * Select a random puzzle from an array
- * @param {Puzzle[]} puzzles - Array of puzzles
- * @param {Object} options - Selection options
- * @returns {Puzzle}
- */
 export function selectRandomPuzzle(puzzles, options = {}) {
-  const { difficulty, theme } = options;
-
-  let filtered = [...puzzles];
-
-  if (difficulty) {
-    filtered = filterByDifficulty(filtered, difficulty);
-  }
-
-  if (theme) {
-    filtered = filterByTheme(filtered, theme);
-  }
-
-  if (filtered.length === 0) {
-    filtered = puzzles; // Fall back to all puzzles if filters are too restrictive
-  }
-
-  const randomIndex = Math.floor(Math.random() * filtered.length);
-  return { ...filtered[randomIndex], id: `random-${Date.now()}` };
+  const filteredByDifficulty = options.difficulty ? filterByDifficulty(puzzles, options.difficulty) : [...puzzles];
+  const filtered = options.theme ? filterByTheme(filteredByDifficulty, options.theme) : filteredByDifficulty;
+  const choices = filtered.length > 0 ? filtered : puzzles;
+  return { ...choices[Math.floor(Math.random() * choices.length)], id: `random-${Date.now()}` };
 }
 
-// ============================================================================
-// Export all generation methods
-// ============================================================================
-
-export const PUZZLE_METHODS = {
-  HARDCODED: 'hardcoded',
-  STOCKFISH: 'stockfish',
-  AI: 'ai'
-};
+export const PUZZLE_METHODS = { HARDCODED: "hardcoded", STOCKFISH: "stockfish", AI: "ai" };
 
 export default {
   generatePuzzle,
@@ -693,5 +436,5 @@ export default {
   filterByTheme,
   selectRandomPuzzle,
   BASE_PUZZLES,
-  PUZZLE_METHODS
+  PUZZLE_METHODS,
 };

@@ -46,23 +46,23 @@ function getLessonPracticeContext(search) {
   };
 }
 
-async function fetchStockfishPuzzle() {
-  const response = await fetch("/api/puzzles/stockfish", {
+async function fetchTacticalPuzzle() {
+  const response = await fetch("/api/puzzles/generate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ difficulty: "medium", type: "mate-in-1" }),
+    body: JSON.stringify({ method: "auto", difficulty: "medium", type: "tactics" }),
   });
 
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
     throw new Error(
-      payload?.error?.message || "Stockfish could not prepare a puzzle.",
+      payload?.error?.message || "The tactical generator could not prepare a puzzle.",
     );
   }
 
   const puzzle = payload?.puzzle;
   if (!puzzle?.fen || !puzzle?.solution || !puzzle?.sideToMove) {
-    throw new Error("Stockfish returned an incomplete puzzle.");
+    throw new Error("The puzzle generator returned an incomplete puzzle.");
   }
 
   return puzzle;
@@ -123,7 +123,7 @@ export default function Puzzles() {
     try {
       const freshPuzzle = isLessonPractice
         ? generatePuzzleForThemes(lessonPractice.themes, seed)
-        : await fetchStockfishPuzzle();
+        : await fetchTacticalPuzzle();
       if (generationRequestRef.current !== requestId) return false;
 
       setPuzzle(freshPuzzle);
@@ -139,7 +139,7 @@ export default function Puzzles() {
         setGenerationError(
           error instanceof Error
             ? error.message
-            : "Stockfish could not prepare a puzzle.",
+            : "The tactical generator could not prepare a puzzle.",
         );
       }
       return false;
@@ -317,7 +317,7 @@ export default function Puzzles() {
             </div>
             <DailyPuzzleStreak compact />
             <span className="puzzles-meta">
-              Puzzle {puzzleNumber} · {puzzle?.theme || "Stockfish"}
+              Puzzle {puzzleNumber} · {puzzle?.theme || "Tactics"}
             </span>
           </div>
           <h1 className="puzzles-title">
@@ -333,7 +333,7 @@ export default function Puzzles() {
             ) : isLessonPractice ? (
               "Preparing a lesson-specific tactic."
             ) : (
-              "Stockfish is preparing your next tactic."
+              "Preparing a fresh tactical position."
             )}
           </p>
         </header>
@@ -352,7 +352,7 @@ export default function Puzzles() {
               />
             ) : (
               <div className="puzzle-board-loading" role="status">
-                {generationError ? "Stockfish is unavailable" : "Preparing Stockfish puzzle…"}
+                {generationError ? "Puzzle generation is unavailable" : "Preparing a tactical puzzle…"}
               </div>
             )}
             {solved && (
@@ -423,7 +423,7 @@ export default function Puzzles() {
                 <strong>
                   {isLessonPractice
                     ? "Unable to create a lesson-specific puzzle."
-                    : "Unable to load a Stockfish puzzle."}
+                    : "Unable to load a tactical puzzle."}
                 </strong>
                 <span>{generationError}</span>
                 <button

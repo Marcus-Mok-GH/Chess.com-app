@@ -6,13 +6,20 @@ import {
   validateGeneratedPuzzle,
 } from "./puzzleGenerator.js";
 
-describe("procedural puzzle generator", () => {
+describe("procedural tactical puzzle generator", () => {
   it.each([1, 42, 20260727])(
-    "creates a legal, unique mate-in-one for seed %s",
+    "creates a legal material tactic for seed %s",
     (seed) => {
       const puzzle = generatePuzzle(seed);
+      const chess = new Chess(puzzle.fen);
+      const solution = chess.move(puzzle.solution);
+
       expect(puzzle.generated).toBe(true);
+      expect(puzzle.type).toBe("tactics");
       expect(validateGeneratedPuzzle(puzzle)).toBe(true);
+      expect(solution).toBeTruthy();
+      expect(chess.isCheckmate()).toBe(false);
+      expect(Boolean(solution.captured || solution.promotion || solution.san.includes("+"))).toBe(true);
     },
   );
 
@@ -20,39 +27,26 @@ describe("procedural puzzle generator", () => {
     expect(generatePuzzle(12345)).toEqual(generatePuzzle(12345));
   });
 
-  it("creates a legal puzzle from the requested lesson themes", () => {
+  it("preserves explicit mate-in-one lesson themes", () => {
     const themes = ["Knight Ambush", "Knight-Supported Queen"];
     const puzzle = generatePuzzleForThemes(themes, 20260820);
 
     expect(validateGeneratedPuzzle(puzzle)).toBe(true);
     expect(themes).toContain(puzzle.theme);
+    expect(puzzle.type).toBe("mate-in-1");
     expect(puzzle.generationMethod).toBe("lesson-theme");
     expect(puzzle.lessonThemes).toEqual(themes);
   });
 
-  it("creates materially different positions across a session", () => {
-    const puzzles = Array.from({ length: 40 }, (_, index) =>
-      generatePuzzle(index + 1),
-    );
-    const positions = new Set(
-      puzzles.map((puzzle) => puzzle.fen.split(" ")[0]),
-    );
-    const pieceLayouts = new Set(
-      puzzles.map((puzzle) => puzzle.fen.split(" ")[0].replace(/[1-8/]/g, "")),
-    );
+  it("creates materially different natural positions across a session", () => {
+    const puzzles = Array.from({ length: 40 }, (_, index) => generatePuzzle(index + 1));
+    const positions = new Set(puzzles.map((puzzle) => puzzle.fen.split(" ")[0]));
     const themes = new Set(puzzles.map((puzzle) => puzzle.theme));
-    const matingPieceCounts = Object.fromEntries(
-      ["q", "r", "b", "n", "p"].map((piece) => [piece, 0]),
-    );
-    for (const puzzle of puzzles) {
-      const chess = new Chess(puzzle.fen);
-      const piece = chess.move(puzzle.solution).piece;
-      matingPieceCounts[piece] += 1;
-    }
+    const sideToMove = new Set(puzzles.map((puzzle) => puzzle.sideToMove));
 
     expect(positions.size).toBe(40);
-    expect(pieceLayouts.size).toBeGreaterThan(20);
-    expect(themes.size).toBeGreaterThan(2);
-    expect(matingPieceCounts).toEqual({ q: 8, r: 8, b: 8, n: 8, p: 8 });
+    expect(themes.size).toBeGreaterThan(1);
+    expect(sideToMove.size).toBe(2);
+    expect(puzzles.every((puzzle) => puzzle.type === "tactics")).toBe(true);
   }, 30000);
 });

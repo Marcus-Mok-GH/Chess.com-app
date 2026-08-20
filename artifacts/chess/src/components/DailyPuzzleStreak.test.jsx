@@ -24,13 +24,15 @@ vi.mock('./ChessBoard', () => ({
 }));
 
 vi.mock('../engine/puzzles/puzzleGenerator', () => ({
-  BASE_PUZZLES: [
-    {
-      fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-      theme: 'Opening',
-      hint: 'Test hint',
-    },
-  ],
+  generatePuzzle: vi.fn(() => ({
+    id: 'test-tactic',
+    fen: '3q3k/8/8/4N3/8/8/8/6K1 w - - 0 1',
+    sideToMove: 'white',
+    solution: 'Nf7+',
+    theme: 'Forcing Capture',
+    hint: 'Test hint',
+    type: 'tactics',
+  })),
 }));
 
 import { useUser } from '../contexts/UserContext';

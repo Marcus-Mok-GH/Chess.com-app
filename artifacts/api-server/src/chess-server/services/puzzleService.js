@@ -2,8 +2,9 @@
  * Puzzle Service
  * Central service for managing and generating chess puzzles
  * 
- * Supports multiple generation methods for legacy API consumers. The Puzzles
- * screen requests the Stockfish path directly and does not accept a fallback.
+ * Supports multiple generation methods for API consumers. General tactical
+ * requests use the varied rules-based generator; the engine path remains
+ * available for explicitly requested mating lines.
  */
 
 import { Chess } from 'chess.js';
@@ -14,6 +15,7 @@ import stockfishService from './stockfishService.js';
 
 // In-memory storage for generated puzzles (persist to DB in production)
 const generatedPuzzles = new Map();
+let randomGenerationCounter = 0;
 
 const SUPPORTED_METHODS = new Set(['rules', 'stockfish', 'ai', 'auto']);
 
@@ -30,14 +32,16 @@ export function selectPuzzleMethod(options = {}) {
     return { method: 'ai', reason: 'AI is best suited to the requested description.' };
   }
 
-  const stockfishPreferred =
-    ['hard', 'expert'].includes(String(difficulty).toLowerCase()) ||
-    ['tactics', 'endgame', 'middlegame', 'mate-in-1'].includes(String(type).toLowerCase());
+  const requestedType = String(type).toLowerCase();
+  const stockfishPreferred = requestedType.startsWith('mate-in-');
   if (stockfishPreferred && stockfishService.isStockfishAvailable()) {
-    return { method: 'stockfish', reason: 'Stockfish is available for this tactical position and difficulty.' };
+    return { method: 'stockfish', reason: 'Stockfish is available to verify the requested mating line.' };
   }
 
-  return { method: 'rules', reason: 'Verified rules-based generation is fastest for this state.' };
+  return {
+    method: 'rules',
+    reason: 'The rules-based generator samples a fresh legal position and selects a verified material tactic.',
+  };
 }
 
 // Statistics tracking
@@ -59,48 +63,31 @@ const stats = {
 };
 
 /**
- * Get a random puzzle from the base set
+ * Get one freshly generated puzzle. This legacy synchronous endpoint now uses
+ * the same seed-based tactical generator as the main generation endpoint,
+ * rather than selecting from the old fixed base list.
+ *
  * @param {Object} options - Filter options
  * @returns {Puzzle}
  */
 export function getRandomPuzzle(options = {}) {
-  const { difficulty, type, userId, method = 'base' } = options;
-  
-  let puzzles = [...BASE_PUZZLES];
-  
-  // Filter by difficulty
-  if (difficulty) {
-    puzzles = puzzles.filter(p => 
-      p.difficulty === difficulty || 
-      (p.rating >= getDifficultyRange(difficulty).min && p.rating <= getDifficultyRange(difficulty).max)
-    );
-  }
-  
-  // Filter by type
-  if (type) {
-    puzzles = puzzles.filter(p => p.type === type);
-  }
-  
-  // Filter by method
-  if (method !== 'base') {
-    puzzles = puzzles.filter(p => p.method === method);
-  }
-  
-  if (puzzles.length === 0) {
-    // Fallback to any puzzle
-    puzzles = [...BASE_PUZZLES];
-  }
-  
-  // Select a random puzzle
-  const randomIndex = Math.floor(Math.random() * puzzles.length);
-  const puzzle = { ...puzzles[randomIndex] };
-  
-  // Add metadata
-  puzzle.id = puzzle.id || `base-${randomIndex}`;
-  puzzle.method = puzzle.method || 'base';
-  puzzle.generatedAt = puzzle.generatedAt || new Date().toISOString();
-  
-  return puzzle;
+  const {
+    difficulty = 'medium',
+    type = 'tactics',
+    userId = null,
+  } = options;
+  const seed = `${Date.now()}-${++randomGenerationCounter}-${Math.random()}`;
+  const puzzle = generatePuzzleFromGenerator(seed, { difficulty, type });
+
+  return {
+    ...puzzle,
+    id: `random-${Date.now()}-${randomGenerationCounter}`,
+    method: 'rules',
+    generatedAt: new Date().toISOString(),
+    difficulty,
+    type: puzzle.type || type,
+    ...(userId ? { userId } : {}),
+  };
 }
 
 /**
