@@ -122,7 +122,7 @@ export default function LoginModal({ onClose, onContinueAsGuest, mode = 'ranked'
         {step === 'verify' && (
           <>
             <div className="login-header">
-              <h2>Check your email</h2>
+              <h2 id="login-modal-title">Check your email</h2>
               <p>
                 We sent a 6-digit code to <strong>{email}</strong>.
                 Enter it below to sign in.
@@ -143,10 +143,13 @@ export default function LoginModal({ onClose, onContinueAsGuest, mode = 'ranked'
                   autoFocus
                   autoComplete="one-time-code"
                   maxLength={6}
+                  aria-invalid={Boolean(error)}
+                  aria-describedby={error ? 'login-error' : 'otp-progress'}
                   onKeyDown={(e) => e.key === 'Enter' && handleVerifyCode()}
                 />
-                {error && <span className="error-text">{error}</span>}
-                {!error && successMsg && <span className="success-text">✅ {successMsg}</span>}
+                <small id="otp-progress">{otpCode.length}/6 digits</small>
+                {error && <span id="login-error" className="error-text" role="alert">{error}</span>}
+                {!error && successMsg && <span className="success-text" role="status">✅ {successMsg}</span>}
               </div>
 
               <button

@@ -88,6 +88,13 @@ describe('LoginModal OTP – 6-digit code', () => {
     expect(screen.getByLabelText(/verification code/i).placeholder).toBe('000000');
   });
 
+  it('shows digit progress as the OTP is typed', async () => {
+    await renderAtVerifyStep();
+
+    fireEvent.change(screen.getByLabelText(/verification code/i), { target: { value: '123' } });
+    expect(screen.getByText('3/6 digits')).toBeTruthy();
+  });
+
   it('OTP input strips non-digit characters', async () => {
     await renderAtVerifyStep();
 
