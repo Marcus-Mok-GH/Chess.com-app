@@ -66,19 +66,20 @@ export default function ChessBoard({
     darkSquareStyle: { backgroundColor: colors.dark },
     lightSquareStyle: { backgroundColor: colors.light },
     allowDragging: true,
-    onSquareClick: (args) => {
+    onSquareClick: (args = {}) => {
       // args: { square: string, piece: PieceDataType | null }
-      onSquareClick?.(args.square);
+      if (args.square) onSquareClick?.(args.square);
     },
-    onPieceDrop: (args) => {
+    onPieceDrop: (args = {}) => {
       // args: { sourceSquare: string, targetSquare: string | null, piece: DraggingPieceDataType }
-      if (!args.targetSquare) return false;
+      if (!args.sourceSquare || !args.targetSquare) return false;
       return onPieceDrop?.(args.sourceSquare, args.targetSquare) ?? false;
     },
-    canDragPiece: (args) => {
-      // args: { piece: PieceDataType, square: string | null, isSparePiece: boolean }
-      // The parent expects (pieceType, square)
-      return canDragPiece?.(args.piece.pieceType, args.square) ?? true;
+    canDragPiece: (args = {}) => {
+      // The library supplies `piece.pieceType`; normalize defensively so a
+      // malformed callback can never disable all pieces on the board.
+      const pieceType = args.piece?.pieceType || args.pieceType;
+      return canDragPiece?.(pieceType, args.square) ?? true;
     }
   }), [
     currentFen,

@@ -1,26 +1,29 @@
 /**
  * Stockfish Service for puzzle generation and validation.
  *
- * This is the real implementation: it spawns the Stockfish WASM worker
- * (via `engineWorker.js`) to analyse positions and either:
- *   - verify a procedurally generated position contains a forced tactic
- *     ("assisted" generation), or
- *   - find a tactic with a single best move inside a self-play game tree
- *     ("engine-discovery" generation).
- *
- * If Stockfish cannot be reached, every call degrades gracefully to the
- * procedural generator so the API never hard-fails when the engine is
- * unavailable.
+ * This service exclusively uses the Stockfish WASM worker (via
+ * `engineWorker.js`) to identify and verify puzzle solutions. It never
+ * substitutes a procedural or AI-generated position when Stockfish is
+ * unavailable; callers receive an explicit failure instead.
  */
 
 import { Chess } from "chess.js";
 import { runEngine, isStockfishConfigured } from "./engineWorker.js";
-import {
-  generatePuzzle as generateProceduralPuzzle,
-  validateGeneratedPuzzle,
-} from "../puzzles/puzzleGenerator.js";
 
 const DEFAULT_TIMEOUT_MS = 6000;
+
+// Curated legal positions provide varied starting material; Stockfish alone
+// chooses and verifies the forcing move that becomes the puzzle solution.
+const STOCKFISH_SEED_POSITIONS = [
+  "6k1/5ppp/8/8/8/8/8/R3K3 w - - 0 1",
+  "6rk/6pp/8/6N1/8/8/8/6K1 w - - 0 1",
+  "6k1/6pp/8/8/2B5/8/8/3R2K1 w - - 0 1",
+  "6k1/5ppp/8/8/4B3/8/8/3Q2K1 w - - 0 1",
+  "7k/5ppp/8/8/8/5N2/8/3Q2K1 w - - 0 1",
+  "8/8/1BK5/4k3/6Q1/8/8/8 w - - 0 1",
+  "8/8/1NK5/4k3/6Q1/8/8/8 w - - 0 1",
+  "7k/5P2/8/8/3KB3/8/8/8 w - - 0 1",
+];
 
 /**
  * Diagnose a position with Stockfish and report whether there's a clearly
@@ -69,60 +72,30 @@ export async function analyzePosition(fen, opts = {}) {
 }
 
 /**
- * Generate a puzzle by self-playing a short game of semi-random moves and
- * stopping at the first position Stockfish judges to have a single
- * clearly-best move (a tactic). The side to move at that position becomes
- * the puzzle's solving side.
+ * Generate a mate-in-one puzzle that Stockfish both finds and verifies. The
+ * engine analyses a rotating selection of legal seed positions; a position is
+ * accepted only when Stockfish's best move produces checkmate on the board.
  *
- * @param {{difficulty?: string, type?: string, seed?: number, timeoutMs?: number}} [opts]
- * @returns {Promise<object|null>} A puzzle object compatible with the procedural generator's shape.
+ * @param {{difficulty?: string, seed?: number, timeoutMs?: number}} [opts]
+ * @returns {Promise<object|null>} A Stockfish-authored puzzle, or null when the engine cannot find one.
  */
 export async function generateMateInNPuzzle(opts = {}) {
-  const { difficulty = "medium", type = "tactics", seed, timeoutMs = DEFAULT_TIMEOUT_MS } = opts;
+  const { difficulty = "medium", seed = Date.now(), timeoutMs = DEFAULT_TIMEOUT_MS } = opts;
   if (!isStockfishConfigured()) return null;
 
-  const rng = seededRandom(seed ?? Date.now());
   const analysisDepth = difficultyDepth(difficulty);
+  const offset = Math.abs(Number(seed) || Date.now()) % STOCKFISH_SEED_POSITIONS.length;
 
-  // Walk through up to 40 plies of plausible play, analysing the resulting
-  // positions. Plausibility: 70% the engine's top move, 30% a random legal
-  // move, to reach varied middlegame positions where tactics commonly occur.
-  const game = new Chess();
-  const played = [];
-  for (let ply = 0; ply < 60; ply++) {
-    const fen = game.fen();
-    const moves = game.moves({ verbose: true });
-    if (moves.length === 0) break;
+  for (let index = 0; index < STOCKFISH_SEED_POSITIONS.length; index += 1) {
+    const fen = STOCKFISH_SEED_POSITIONS[(offset + index) % STOCKFISH_SEED_POSITIONS.length];
+    const analysis = await analyzePosition(fen, {
+      depth: analysisDepth,
+      timeoutMs,
+    });
+    if (!analysis?.bestMove) continue;
 
-    // Analyse the current position; look for a single dominant move.
-    if (ply >= 6) {
-      const analysis = await analyzePosition(fen, { depth: analysisDepth, timeoutMs });
-      if (analysis && isPuzzleWorthy(analysis)) {
-        const puzzle = materialisePuzzle(game, analysis, type, difficulty, played);
-        if (puzzle && validateGeneratedPuzzle(puzzle)) return puzzle;
-      }
-    }
-
-    // Otherwise play one move forward.
-    let chosen;
-    if (rng() < 0.7) {
-      try {
-        const { bestMove } = await runEngine(fen, { depth: Math.max(4, analysisDepth - 2), timeoutMs });
-        chosen = bestMove ? uciToVerbose(moves, bestMove) : null;
-      } catch {
-        chosen = null;
-      }
-    }
-    if (!chosen) chosen = moves[Math.floor(rng() * moves.length)];
-    played.push(chosen.san);
-    game.move(chosen);
-  }
-
-  // As a last resort, look for a forced mate in the final position.
-  const final = await analyzePosition(game.fen(), { depth: analysisDepth, timeoutMs });
-  if (final && final.isMate && final.bestMove) {
-    const puzzle = materialisePuzzle(game, final, type, difficulty, played);
-    if (puzzle && validateGeneratedPuzzle(puzzle)) return puzzle;
+    const puzzle = materialiseMateInOnePuzzle(fen, analysis, difficulty);
+    if (puzzle) return puzzle;
   }
 
   return null;
@@ -172,41 +145,34 @@ function difficultyDepth(difficulty) {
   return { easy: 6, medium: 9, hard: 12, expert: 14 }[difficulty] ?? 9;
 }
 
-// Score gap (in centipawns) required to call a move "clearly best". The
-// engine reports mate scores as ±100000, so any mate gap clears the bar.
-function isPuzzleWorthy(analysis) {
-  const gap = analysis.score - analysis.secondScore;
-  if (analysis.isMate) return true;
-  // Avoid dead-drawn positions (small advantage, no gap) and positions with
-  // no standout move (gap too small). ~1.5 pawns worth of margin works well.
-  return gap >= 150 && Math.abs(analysis.score) >= 100;
-}
-
-function materialisePuzzle(game, analysis, type, difficulty, playedMoves) {
-  const fen = game.fen();
-  const sideToMove = game.turn() === "w" ? "white" : "black";
-  let solutionSan;
+function materialiseMateInOnePuzzle(fen, analysis, difficulty) {
   try {
     const chess = new Chess(fen);
+    const sideToMove = chess.turn() === "w" ? "white" : "black";
     const move = uciToVerbose(chess.moves({ verbose: true }), analysis.bestMove);
     if (!move) return null;
-    solutionSan = move.san;
+
+    const appliedMove = chess.move(move);
+    if (!appliedMove || !chess.isCheckmate()) return null;
+
+    return {
+      id: `stockfish-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
+      fen,
+      sideToMove,
+      rating: ratingForDifficulty(difficulty),
+      theme: "Stockfish Mate in One",
+      hint: `Stockfish found a forcing move for ${sideToMove}. Look for the checkmate.`,
+      solution: appliedMove.san,
+      followup: null,
+      generated: true,
+      method: "stockfish",
+      effectiveMethod: "stockfish",
+      type: "mate-in-1",
+      engineScore: analysis.score,
+    };
   } catch {
     return null;
   }
-  return {
-    id: `stockfish-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
-    fen,
-    sideToMove,
-    rating: ratingForDifficulty(difficulty),
-    theme: themeForType(type),
-    hint: `Engine analysis: a clearly best move exists for ${sideToMove}.`,
-    solution: solutionSan,
-    followup: null,
-    generated: true,
-    method: "stockfish",
-    moves: playedMoves,
-  };
 }
 
 function ratingForDifficulty(difficulty) {
@@ -242,18 +208,6 @@ function uciToSan(fen, uci) {
   return chess.move(match).san;
 }
 
-function seededRandom(seed) {
-  let state = (Number(seed) || Date.now()) >>> 0 || 1;
-  return () => {
-    state += 0x6d2b79f5;
-    let value = state;
-    value = Math.imul(value ^ (value >>> 15), value | 1);
-    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
-    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-export { generateProceduralPuzzle };
 export default {
   isStockfishAvailable,
   analyzePosition,

@@ -309,68 +309,40 @@
   }
 }
 
-/* ── Generation Method Selector ─────────────────────────── */
-.puzzle-generation-card {
-  background: var(--bg-elevated);
-  border-color: var(--border);
-}
-
-.puzzle-generation-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-weight: 700;
-  color: var(--text-secondary);
-  margin-bottom: 0.5rem;
-}
-
-.puzzle-generation-options {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.puzzle-gen-option {
-  flex: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 0.45rem 0.375rem;
-  border-radius: var(--radius-sm);
+/* ── Stockfish loading and error states ─────────────────── */
+.puzzle-board-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
   border: 1px solid var(--border);
-  background: var(--bg-page);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(129, 182, 76, 0.16), transparent 46%),
+    var(--card);
   color: var(--text-secondary);
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition-fast);
+  font-weight: 700;
+  text-align: center;
 }
 
-.puzzle-generation-fallback {
-  margin: 0.55rem 0 0;
+.puzzle-engine-error {
+  display: grid;
+  gap: 0.6rem;
+  border-color: rgba(220, 53, 69, 0.42);
+  background: rgba(220, 53, 69, 0.08);
   color: var(--text-secondary);
-  font-size: 0.72rem;
-  line-height: 1.35;
+  font-size: 0.84rem;
+  line-height: 1.45;
 }
 
-.puzzle-gen-option:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: var(--primary, #81b64c);
-  color: var(--text-primary);
+.puzzle-engine-error strong {
+  color: #ff9898;
 }
 
-.puzzle-gen-option.active {
-  background: rgba(129, 182, 76, 0.15);
-  border-color: var(--primary, #81b64c);
+.puzzle-action--retry {
+  width: 100%;
   color: var(--primary, #81b64c);
-}
-
-.puzzle-gen-option:disabled {
-  opacity: 0.45;
-  cursor: default;
 }
 
 @media (min-width: 769px) {

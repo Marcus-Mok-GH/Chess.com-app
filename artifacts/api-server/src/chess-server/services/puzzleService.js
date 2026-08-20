@@ -2,10 +2,8 @@
  * Puzzle Service
  * Central service for managing and generating chess puzzles
  * 
- * Supports three generation methods:
- * 1. Hardcoded rules (procedural generation)
- * 2. Stockfish engine (for mate-in-N puzzles)
- * 3. AI providers (for natural language descriptions)
+ * Supports multiple generation methods for legacy API consumers. The Puzzles
+ * screen requests the Stockfish path directly and does not accept a fallback.
  */
 
 import { Chess } from 'chess.js';
@@ -183,9 +181,7 @@ export async function generatePuzzle(options = {}) {
     case 'stockfish':
       puzzle = await stockfishService.generateMateInNPuzzle({ difficulty, type });
       if (!puzzle) {
-        puzzle = generatePuzzleFromGenerator(Date.now());
-        puzzle.method = 'stockfish-fallback';
-        puzzle.requestedMethod = 'stockfish';
+        throw new Error('Stockfish could not generate a verified puzzle. Please try again.');
       }
       stats.byMethod.stockfish++;
       break;
