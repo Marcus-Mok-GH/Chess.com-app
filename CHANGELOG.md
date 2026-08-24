@@ -681,19 +681,6 @@ d36abb2 (fix: update api-server build, health route, and dependencies)
 - **Improved Error Diagnostics**: Enhanced server-side logging and error message relaying to provide more clarity on bridge failures.
 
 
-## [2026-08-11] - Dynamic NVIDIA Model List
-
-### Added
-- Added a live, refreshable model list to the NVIDIA API server documentation page, populated from the proxied NVIDIA `/v1/models` endpoint.
-- Added responsive model-list styling and clear loading, empty, and error states.
-
-### Changed
-- Updated the `/v1/models` documentation to describe it as a dynamic NVIDIA model fetch.
-
-
-## [2026-07-06] - Auth Hardening & Error Reporting
-
-### Fixed
 - **OTP Send Failure**: Refined the auth proxy to be more robust by safely forwarding only existing headers (Cookie, Origin) and adding detailed error messages to the response. This helps diagnose network issues or header mismatches during the sign-in flow.
 
 
@@ -751,4 +738,9 @@ d36abb2 (fix: update api-server build, health route, and dependencies)
 - **Vercel preview build failed with `ERR_PNPM_OUTDATED_LOCKFILE`**: removed the lingering `nodemailer` entry from the root `package.json` so the lockfile matches; `pnpm install` is now consistent and the build runs through.
 - Expanded API puzzle templates and added exact frontend/API regression coverage for unique, balanced queen, rook, bishop, knight, and pawn mate-in-one puzzles.
 
-- 2026-08-12 Added fully automated video generation runner (`src/auto-run.ts`) with retry logic, demo/fixture mode, and structured completion reporting for `youtube-video-generator`.
+
+
+## [2026-08-12] - YouTube Video Generation Runner
+
+### Added
+- Added fully automated video generation runner (`src/auto-run.ts`) with retry logic, demo/fixture mode, and structured completion reporting for `youtube-video-generator`.
