@@ -80,6 +80,46 @@
 - Confirmed `NVIDIA_API_KEY_1` and `NVIDIA_API_KEY_2` are available to the deployed process without exposing their values.
 - Documented the deployment secret-loading behavior and dual-key rate-limit handling.
 
+## [2026-08-11] - Dynamic NVIDIA Model List
+
+### Added
+- Added a live, refreshable model list to the NVIDIA API server documentation page, populated from the proxied NVIDIA `/v1/models` endpoint.
+- Added responsive model-list styling and clear loading, empty, and error states.
+
+### Changed
+- Updated the `/v1/models` documentation to describe it as a dynamic NVIDIA model fetch.
+- Removed internal mechanics (Zo hosting, key rotation, server-side credential handling) from the public docs and playground copy so the pages read as a plain consumer-facing service.
+
+
+## [2026-08-09] - API server landing page
+
+### Added
+- Added a public HTML landing page at the API server root with service status, endpoint documentation, and a link to the health check.
+- Configured Vercel to serve the generated `public` page while preserving API function rewrites.
+
+### Verified
+- `GET https://api-server-pluh.vercel.app/` returns HTML instead of bundled JavaScript source.
+- `GET /api/healthz` continues to return HTTP 200.
+
+## [2026-08-09] - Standalone API server Vercel deployment packaging
+
+### Fixed
+- Removed the standalone API server's monorepo-only `@workspace/api-zod` health-route dependency.
+- Added a self-contained Vercel function wrapper and project configuration for deploying `/home/workspace/artifacts/api-server` to the `api-server` Vercel project.
+- Added a separate serverless bundle entrypoint so importing the Vercel function does not start the standalone HTTP listener.
+- Configured Vercel to install the standalone lockfile, build the generated `dist` output, and run the server in production mode.
+
+### Deployed
+- Production API URL: `https://api-server-pluh.vercel.app`
+- Production environment now includes encrypted `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `NEON_AUTH_BASE_URL`, existing `BETTER_AUTH_SECRET`, `NVIDIA_API_KEY_1`, and `NVIDIA_API_KEY_2` values.
+
+### Verified
+- API server typecheck and production build pass from the monorepo root.
+- `GET /api/healthz` returns HTTP 200 with `{\"status\":\"ok\"}`.
+- `GET /api/auth/session` returns HTTP 200 for an unauthenticated request.
+
+d36abb2 (fix: update api-server build, health route, and dependencies)
+
 ## [2026-08-05] - Desktop UI and Adaptive Puzzle Generation
 
 ### Added
@@ -641,9 +681,6 @@
 - **Improved Error Diagnostics**: Enhanced server-side logging and error message relaying to provide more clarity on bridge failures.
 
 
-## [2026-07-06] - Auth Hardening & Error Reporting
-
-### Fixed
 - **OTP Send Failure**: Refined the auth proxy to be more robust by safely forwarding only existing headers (Cookie, Origin) and adding detailed error messages to the response. This helps diagnose network issues or header mismatches during the sign-in flow.
 
 
@@ -700,3 +737,10 @@
 ### Fixed (deploy)
 - **Vercel preview build failed with `ERR_PNPM_OUTDATED_LOCKFILE`**: removed the lingering `nodemailer` entry from the root `package.json` so the lockfile matches; `pnpm install` is now consistent and the build runs through.
 - Expanded API puzzle templates and added exact frontend/API regression coverage for unique, balanced queen, rook, bishop, knight, and pawn mate-in-one puzzles.
+
+
+
+## [2026-08-12] - YouTube Video Generation Runner
+
+### Added
+- Added fully automated video generation runner (`src/auto-run.ts`) with retry logic, demo/fixture mode, and structured completion reporting for `youtube-video-generator`.
