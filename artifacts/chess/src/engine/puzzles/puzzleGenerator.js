@@ -7,56 +7,7 @@ import { Chess } from "chess.js";
  * diagrams. The small legacy collection remains only for explicit lessons and
  * as a safety fallback when a sampled position offers no clear tactic.
  */
-export const BASE_PUZZLES = [
-  {
-    fen: "6k1/5ppp/8/8/8/8/8/R3K3 w Q - 0 1",
-    rating: 800,
-    theme: "Back-rank Radar",
-    hint: "The king has no escape square. Find the rook move that ends the game.",
-  },
-  {
-    fen: "6rk/6pp/8/6N1/8/8/8/6K1 w - - 0 1",
-    rating: 1200,
-    theme: "Smothered Finish",
-    hint: "The king is boxed in by its own pieces. Find the knight mate.",
-  },
-  {
-    fen: "6k1/6pp/8/8/2B5/8/8/3R2K1 w - - 0 1",
-    rating: 1000,
-    theme: "Rook and Bishop Net",
-    hint: "The bishop seals one diagonal. Find the rook's finishing square.",
-  },
-  {
-    fen: "6k1/5ppp/8/8/4B3/8/8/3Q2K1 w - - 0 1",
-    rating: 900,
-    theme: "Diagonal Lock",
-    hint: "Use the bishop's control to deliver mate with the queen.",
-  },
-  {
-    fen: "7k/5ppp/8/8/8/5N2/8/3Q2K1 w - - 0 1",
-    rating: 1100,
-    theme: "Knight-Supported Queen",
-    hint: "The knight guards the key square. Find the queen mate.",
-  },
-  {
-    fen: "8/8/1BK5/4k3/6Q1/8/8/8 w - - 0 1",
-    rating: 1200,
-    theme: "Diagonal Strike",
-    hint: "Find the bishop move that closes the mating net.",
-  },
-  {
-    fen: "8/8/1NK5/4k3/6Q1/8/8/8 w - - 0 1",
-    rating: 1250,
-    theme: "Knight Ambush",
-    hint: "Find the knight jump that seals every escape square.",
-  },
-  {
-    fen: "7k/5P2/8/8/3KB3/8/8/8 w - - 0 1",
-    rating: 1150,
-    theme: "Pawn Breakthrough",
-    hint: "Promote the pawn with checkmate.",
-  },
-];
+export const BASE_PUZZLES = [];
 
 const PIECE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
 const MAX_POSITION_ATTEMPTS = 72;
@@ -164,13 +115,13 @@ function sampleLegalPosition(random) {
   return chess;
 }
 
-function findMaterialTactic(chess) {
+function findMaterialTactic(chess, options = {}) {
   const candidates = [];
+  const allowMate = options.allowMate ?? true;
+
   for (const move of chess.moves({ verbose: true })) {
     const capturedValue = PIECE_VALUES[move.captured] ?? 0;
     const promotionValue = move.promotion ? (PIECE_VALUES[move.promotion] ?? 0) - 1 : 0;
-    const gain = capturedValue + promotionValue;
-    if (gain < 3) continue;
 
     chess.move(move);
     const checkmate = chess.isCheckmate();
@@ -178,13 +129,26 @@ function findMaterialTactic(chess) {
     const legalReplies = chess.moves().length;
     chess.undo();
 
-    // The normal tactical stream deliberately excludes mate-in-one. Mates are
-    // still available through explicitly requested mate lessons.
-    if (checkmate) continue;
+    if (checkmate) {
+      if (!allowMate) continue;
+      candidates.push({
+        move,
+        gain: 10,
+        isMate: true,
+        givesCheck: true,
+        legalReplies: 0,
+        score: 1000,
+      });
+      continue;
+    }
+
+    const gain = capturedValue + promotionValue;
+    if (gain < 2 && !givesCheck) continue;
 
     candidates.push({
       move,
       gain,
+      isMate: false,
       givesCheck,
       legalReplies,
       score: gain * 100 + (givesCheck ? 35 : 0) + Math.max(0, 12 - legalReplies),
@@ -218,50 +182,29 @@ function ratePuzzle(chess, gain = 0) {
   return Math.min(2200, 850 + pieceCount * 28 + gain * 110);
 }
 
-function createNaturalTactic(random) {
+function createNaturalTactic(random, options = {}) {
+  const allowMate = options.allowMate ?? true;
   for (let attempt = 0; attempt < MAX_POSITION_ATTEMPTS; attempt += 1) {
     const chess = sampleLegalPosition(random);
     if (!chess) continue;
-    const candidate = findMaterialTactic(chess);
+    const candidate = findMaterialTactic(chess, { allowMate });
     if (!candidate) continue;
 
     return {
       fen: chess.fen(),
       sideToMove: chess.turn() === "w" ? "white" : "black",
       rating: ratePuzzle(chess, candidate.gain),
-      theme: themeForTactic(candidate),
-      hint: hintForTactic(candidate),
+      theme: candidate.isMate ? "Checkmate Tactic" : themeForTactic(candidate),
+      hint: candidate.isMate ? "Find the forcing move that ends the game in checkmate." : hintForTactic(candidate),
       solution: candidate.move.san,
       followup: null,
-      type: "tactics",
+      type: candidate.isMate ? "mate-in-1" : "tactics",
       tags: ["tactics", candidate.givesCheck ? "forcing" : "material"],
       generated: true,
       generationMethod: "natural-tactical-position",
     };
   }
   return null;
-}
-
-function createLegacyMate(seed, random) {
-  const base = BASE_PUZZLES[normalizeSeed(seed) % BASE_PUZZLES.length];
-  const fen = transformedFen(base.fen, random() >= 0.5, random() >= 0.5);
-  const chess = new Chess(fen);
-  const mate = findUniqueMate(chess);
-  if (!mate) return null;
-
-  return {
-    id: `fallback-mate-${normalizeSeed(seed)}`,
-    fen,
-    sideToMove: chess.turn() === "w" ? "white" : "black",
-    rating: base.rating,
-    theme: base.theme,
-    hint: base.hint,
-    solution: mate.san,
-    followup: null,
-    type: "mate-in-1",
-    generated: true,
-    generationMethod: "legacy-fallback",
-  };
 }
 
 export function validateGeneratedPuzzle(puzzle) {
@@ -309,40 +252,17 @@ function hasRequestedTheme(candidate, themes) {
 }
 
 /**
- * Lesson links request a named theme, so this path uses the matching verified
- * teaching position rather than overriding the lesson with a random tactic.
+ * Generate a puzzle matching requested lesson themes.
+ * Dynamically creates a procedural tactical/mate position.
  */
 export function generatePuzzleForThemes(themes, seed = Date.now() ^ Math.floor(Math.random() * 0xffffffff)) {
   const requestedThemes = normalizedThemeList(themes);
-  if (requestedThemes.length === 0) return generatePuzzle(seed);
-
-  const matchingPuzzles = BASE_PUZZLES.filter((candidate) => hasRequestedTheme(candidate, requestedThemes));
-  if (matchingPuzzles.length === 0) return generatePuzzle(seed);
-
-  const random = randomSource(seed);
-  const base = matchingPuzzles[normalizeSeed(seed) % matchingPuzzles.length];
-  const fen = transformedFen(base.fen, random() >= 0.5, random() >= 0.5);
-  const chess = new Chess(fen);
-  const mate = findUniqueMate(chess);
-  if (!mate) throw new Error("Unable to generate a verified lesson puzzle.");
-
-  const puzzle = {
+  const puzzle = generatePuzzle(seed, { themes: requestedThemes });
+  return {
+    ...puzzle,
     id: `lesson-${normalizeSeed(seed)}`,
-    fen,
-    sideToMove: chess.turn() === "w" ? "white" : "black",
-    rating: base.rating,
-    theme: base.theme,
-    hint: base.hint,
-    solution: mate.san,
-    followup: null,
-    type: "mate-in-1",
-    generated: true,
-    generationMethod: "lesson-theme",
     lessonThemes: requestedThemes,
   };
-
-  if (!validateGeneratedPuzzle(puzzle)) throw new Error("Generated lesson puzzle did not pass legality checks.");
-  return puzzle;
 }
 
 export function generatePuzzle(seed = Date.now() ^ Math.floor(Math.random() * 0xffffffff), options = {}) {
@@ -350,7 +270,8 @@ export function generatePuzzle(seed = Date.now() ^ Math.floor(Math.random() * 0x
   const random = randomSource(normalizedSeed);
   const requestedType = String(options.type ?? "tactics").toLowerCase();
   const wantsMate = requestedType === "mate-in-1";
-  const puzzle = wantsMate ? createLegacyMate(normalizedSeed, random) : createNaturalTactic(random) ?? createLegacyMate(normalizedSeed, random);
+
+  const puzzle = createNaturalTactic(random, { allowMate: wantsMate });
 
   if (!puzzle || !validateGeneratedPuzzle(puzzle)) {
     throw new Error("Unable to generate a verified chess puzzle.");

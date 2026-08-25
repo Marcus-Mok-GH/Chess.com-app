@@ -8,7 +8,7 @@
  */
 
 import { Chess } from 'chess.js';
-import { BASE_PUZZLES, generatePuzzle as generatePuzzleFromGenerator, validateGeneratedPuzzle } from '../puzzles/puzzleGenerator.js';
+import { generatePuzzle as generatePuzzleFromGenerator, validateGeneratedPuzzle } from '../puzzles/puzzleGenerator.js';
 import aiPuzzleService from './aiPuzzleService.js';
 import { isAIAvailable } from './aiPuzzleService.js';
 import stockfishService from './stockfishService.js';
@@ -32,10 +32,8 @@ export function selectPuzzleMethod(options = {}) {
     return { method: 'ai', reason: 'AI is best suited to the requested description.' };
   }
 
-  const requestedType = String(type).toLowerCase();
-  const stockfishPreferred = requestedType.startsWith('mate-in-');
-  if (stockfishPreferred && stockfishService.isStockfishAvailable()) {
-    return { method: 'stockfish', reason: 'Stockfish is available to verify the requested mating line.' };
+  if (stockfishService.isStockfishAvailable()) {
+    return { method: 'stockfish', reason: 'Stockfish engine is available for puzzle analysis and generation.' };
   }
 
   return {
@@ -121,21 +119,6 @@ export function getPuzzleById(id) {
     return generatedPuzzles.get(id);
   }
 
-  // Check base puzzles. Base puzzles have no stable `id` field; the service
-  // fabricates `base-<index>` ids (see getRandomPuzzle). Decode those indices
-  // so follow-up lookups by GET /api/puzzles/:id actually resolve.
-  if (typeof id === 'string' && id.startsWith('base-')) {
-    const index = Number(id.slice(5));
-    if (Number.isInteger(index) && index >= 0 && index < BASE_PUZZLES.length) {
-      return { ...BASE_PUZZLES[index], id };
-    }
-  }
-
-  // Allow base puzzles that DO carry a real id, if any are added later.
-  const basePuzzle = BASE_PUZZLES.find(p => p.id === id);
-  if (basePuzzle) {
-    return { ...basePuzzle };
-  }
 
   return null;
 }
@@ -314,13 +297,6 @@ export function deletePuzzle(id) {
     generatedPuzzles.delete(id);
     return true;
   }
-  
-  // Check if it's a base puzzle (can't delete)
-  const basePuzzle = BASE_PUZZLES.find(p => p.id === id);
-  if (basePuzzle) {
-    return false; // Can't delete base puzzles
-  }
-  
   return false;
 }
 
@@ -332,7 +308,7 @@ export function getPuzzleStats() {
   return {
     ...stats,
     generatedPuzzlesCount: generatedPuzzles.size,
-    basePuzzlesCount: BASE_PUZZLES.length
+    basePuzzlesCount: 0
   };
 }
 

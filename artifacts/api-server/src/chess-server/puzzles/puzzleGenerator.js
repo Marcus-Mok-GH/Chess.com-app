@@ -3,7 +3,6 @@
 // tactics; it only uses the lesson fallback for explicitly requested mates or
 // when local sampling cannot produce a legal tactical opportunity.
 export {
-  BASE_PUZZLES,
   generatePuzzle,
   generatePuzzleAsync,
   validateGeneratedPuzzle,
