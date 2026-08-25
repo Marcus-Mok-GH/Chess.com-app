@@ -12,18 +12,17 @@ import { runEngine, isStockfishConfigured } from "./engineWorker.js";
 
 const DEFAULT_TIMEOUT_MS = 6000;
 
-// Curated legal positions provide varied starting material; Stockfish alone
-// chooses and verifies the forcing move that becomes the puzzle solution.
-const STOCKFISH_SEED_POSITIONS = [
-  "6k1/5ppp/8/8/8/8/8/R3K3 w - - 0 1",
-  "6rk/6pp/8/6N1/8/8/8/6K1 w - - 0 1",
-  "6k1/6pp/8/8/2B5/8/8/3R2K1 w - - 0 1",
-  "6k1/5ppp/8/8/4B3/8/8/3Q2K1 w - - 0 1",
-  "7k/5ppp/8/8/8/5N2/8/3Q2K1 w - - 0 1",
-  "8/8/1BK5/4k3/6Q1/8/8/8 w - - 0 1",
-  "8/8/1NK5/4k3/6Q1/8/8/8 w - - 0 1",
-  "7k/5P2/8/8/3KB3/8/8/8 w - - 0 1",
-];
+function sampleRandomPosition(seed) {
+  const chess = new Chess();
+  const plies = 12 + Math.floor(Math.abs(Number(seed) || Date.now()) % 30);
+  for (let i = 0; i < plies; i++) {
+    if (chess.isGameOver()) break;
+    const moves = chess.moves();
+    if (moves.length === 0) break;
+    chess.move(moves[Math.floor(Math.random() * moves.length)]);
+  }
+  return chess.isGameOver() ? new Chess().fen() : chess.fen();
+}
 
 /**
  * Diagnose a position with Stockfish and report whether there's a clearly
@@ -80,25 +79,72 @@ export async function analyzePosition(fen, opts = {}) {
  * @returns {Promise<object|null>} A Stockfish-authored puzzle, or null when the engine cannot find one.
  */
 export async function generateMateInNPuzzle(opts = {}) {
-  const { difficulty = "medium", seed = Date.now(), timeoutMs = DEFAULT_TIMEOUT_MS } = opts;
+  const { difficulty = "medium", seed = Date.now(), type = "tactics", timeoutMs = DEFAULT_TIMEOUT_MS } = opts;
   if (!isStockfishConfigured()) return null;
 
   const analysisDepth = difficultyDepth(difficulty);
-  const offset = Math.abs(Number(seed) || Date.now()) % STOCKFISH_SEED_POSITIONS.length;
 
-  for (let index = 0; index < STOCKFISH_SEED_POSITIONS.length; index += 1) {
-    const fen = STOCKFISH_SEED_POSITIONS[(offset + index) % STOCKFISH_SEED_POSITIONS.length];
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const fen = sampleRandomPosition(Number(seed) + attempt * 100);
     const analysis = await analyzePosition(fen, {
       depth: analysisDepth,
       timeoutMs,
     });
     if (!analysis?.bestMove) continue;
 
-    const puzzle = materialiseMateInOnePuzzle(fen, analysis, difficulty);
-    if (puzzle) return puzzle;
+    const chess = new Chess(fen);
+    const sideToMove = chess.turn() === "w" ? "white" : "black";
+    const move = uciToVerbose(chess.moves({ verbose: true }), analysis.bestMove);
+    if (!move) continue;
+
+    const appliedMove = chess.move(move);
+    if (!appliedMove) continue;
+
+    const isMate = chess.isCheckmate();
+    const isTactic = Boolean(appliedMove.captured || appliedMove.promotion || appliedMove.san.includes("+") || isMate);
+
+    if (type === "mate-in-1") {
+      if (!isMate) continue;
+      // Verify exactly one mating move exists
+      const checkChess = new Chess(fen);
+      let matingMoveCount = 0;
+      for (const testMove of checkChess.moves({ verbose: true })) {
+        checkChess.move(testMove);
+        if (checkChess.isCheckmate()) matingMoveCount++;
+        checkChess.undo();
+      }
+      if (matingMoveCount !== 1) continue;
+    }
+    if (type !== "mate-in-1" && !isTactic) continue;
+
+    return {
+      id: `stockfish-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
+      fen,
+      sideToMove,
+      rating: ratingForDifficulty(difficulty),
+      theme: isMate ? "Stockfish Checkmate" : themeForTacticMove(appliedMove),
+      hint: isMate
+        ? `Stockfish found a checkmate line for ${sideToMove}.`
+        : `Stockfish found a forcing line for ${sideToMove}. Look for the tactic.`,
+      solution: appliedMove.san,
+      followup: null,
+      generated: true,
+      method: "stockfish",
+      effectiveMethod: "stockfish",
+      type: isMate ? "mate-in-1" : "tactics",
+      engineScore: analysis.score,
+    };
   }
 
   return null;
+}
+
+function themeForTacticMove(move) {
+  if (move.captured === "q") return "Winning the Queen";
+  if (move.captured === "r") return "Winning the Exchange";
+  if (move.promotion) return "Pawn Promotion";
+  if (move.san.includes("+")) return "Forcing Check";
+  return "Tactical Advantage";
 }
 
 /**

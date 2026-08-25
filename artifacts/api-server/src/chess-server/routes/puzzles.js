@@ -6,7 +6,6 @@
 import { Router } from 'express';
 import { Chess } from 'chess.js';
 import puzzleService from '../services/puzzleService.js';
-import { BASE_PUZZLES } from '../puzzles/puzzleGenerator.js';
 
 const router = Router();
 
@@ -233,12 +232,17 @@ router.get('/stats', async (req, res) => {
  */
 router.get('/base', async (req, res) => {
   try {
+    const puzzle = await puzzleService.generatePuzzle({
+      method: 'rules',
+      difficulty: 'medium',
+      type: 'tactics'
+    });
     res.json({
       success: true,
-      puzzles: BASE_PUZZLES,
-      count: BASE_PUZZLES.length
+      puzzles: [puzzle],
+      count: 1
     });
-    
+
   } catch (error) {
     console.error('Get base puzzles error:', error);
     res.status(500).json({
