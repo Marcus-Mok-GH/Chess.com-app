@@ -184,11 +184,16 @@ function ratePuzzle(chess, gain = 0) {
 
 function createNaturalTactic(random, options = {}) {
   const allowMate = options.allowMate ?? true;
+  const requireMate = options.requireMate ?? false;
+
   for (let attempt = 0; attempt < MAX_POSITION_ATTEMPTS; attempt += 1) {
     const chess = sampleLegalPosition(random);
     if (!chess) continue;
     const candidate = findMaterialTactic(chess, { allowMate });
     if (!candidate) continue;
+
+    // If requireMate is true, skip non-mate candidates
+    if (requireMate && !candidate.isMate) continue;
 
     return {
       fen: chess.fen(),
@@ -257,6 +262,22 @@ function hasRequestedTheme(candidate, themes) {
  */
 export function generatePuzzleForThemes(themes, seed = Date.now() ^ Math.floor(Math.random() * 0xffffffff)) {
   const requestedThemes = normalizedThemeList(themes);
+  const maxAttempts = 50;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const attemptSeed = normalizeSeed(seed) + attempt * 1000;
+    const puzzle = generatePuzzle(attemptSeed, { themes: requestedThemes });
+
+    if (hasRequestedTheme(puzzle, requestedThemes)) {
+      return {
+        ...puzzle,
+        id: `lesson-${normalizeSeed(seed)}`,
+        lessonThemes: requestedThemes,
+      };
+    }
+  }
+
+  // Fallback: return a puzzle even if theme doesn't match exactly
   const puzzle = generatePuzzle(seed, { themes: requestedThemes });
   return {
     ...puzzle,
@@ -271,7 +292,7 @@ export function generatePuzzle(seed = Date.now() ^ Math.floor(Math.random() * 0x
   const requestedType = String(options.type ?? "tactics").toLowerCase();
   const wantsMate = requestedType === "mate-in-1";
 
-  const puzzle = createNaturalTactic(random, { allowMate: wantsMate });
+  const puzzle = createNaturalTactic(random, { allowMate: true, requireMate: wantsMate });
 
   if (!puzzle || !validateGeneratedPuzzle(puzzle)) {
     throw new Error("Unable to generate a verified chess puzzle.");

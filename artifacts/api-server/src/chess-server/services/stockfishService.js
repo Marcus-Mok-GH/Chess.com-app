@@ -103,7 +103,18 @@ export async function generateMateInNPuzzle(opts = {}) {
     const isMate = chess.isCheckmate();
     const isTactic = Boolean(appliedMove.captured || appliedMove.promotion || appliedMove.san.includes("+") || isMate);
 
-    if (type === "mate-in-1" && !isMate) continue;
+    if (type === "mate-in-1") {
+      if (!isMate) continue;
+      // Verify exactly one mating move exists
+      const checkChess = new Chess(fen);
+      let matingMoveCount = 0;
+      for (const testMove of checkChess.moves({ verbose: true })) {
+        checkChess.move(testMove);
+        if (checkChess.isCheckmate()) matingMoveCount++;
+        checkChess.undo();
+      }
+      if (matingMoveCount !== 1) continue;
+    }
     if (type !== "mate-in-1" && !isTactic) continue;
 
     return {

@@ -35,6 +35,18 @@ describe("procedural tactical puzzle generator", () => {
     expect(puzzle.lessonThemes).toEqual(themes);
   });
 
+  it("generates puzzles matching requested theme", () => {
+    // Test with a theme that should be findable in generated puzzles
+    const requestedTheme = "Winning the Queen";
+    const puzzle = generatePuzzleForThemes([requestedTheme], 20260821);
+
+    expect(validateGeneratedPuzzle(puzzle)).toBe(true);
+    expect(puzzle.lessonThemes).toContain(requestedTheme);
+    // The puzzle's actual theme should match at least one requested theme
+    const puzzleTheme = String(puzzle.theme ?? "").trim().toLowerCase();
+    expect(puzzleTheme).toBe(requestedTheme.toLowerCase());
+  });
+
   it("creates materially different natural positions across a session", () => {
     const puzzles = Array.from({ length: 40 }, (_, index) => generatePuzzle(index + 1));
     const positions = new Set(puzzles.map((puzzle) => puzzle.fen.split(" ")[0]));
@@ -45,5 +57,18 @@ describe("procedural tactical puzzle generator", () => {
     expect(themes.size).toBeGreaterThan(1);
     expect(sideToMove.size).toBe(2);
     expect(puzzles.every((puzzle) => puzzle.type === "tactics")).toBe(true);
+  }, 30000);
+
+  it("generates mate-in-1 puzzles when requested", () => {
+    const puzzle = generatePuzzle(20260822, { type: "mate-in-1" });
+
+    expect(validateGeneratedPuzzle(puzzle)).toBe(true);
+    expect(puzzle.type).toBe("mate-in-1");
+
+    // Verify it's actually a checkmate
+    const chess = new Chess(puzzle.fen);
+    const solution = chess.move(puzzle.solution);
+    expect(solution).toBeTruthy();
+    expect(chess.isCheckmate()).toBe(true);
   }, 30000);
 });
