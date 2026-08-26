@@ -64,32 +64,46 @@ export default function GameControls({
 
   return (
     <div className="game-controls">
-      <div className="bot-display-wrapper">
-        <div className="bot-display" style={{ '--bot-color': selectedBot.color }}>
-          <div className="bot-avatar-large">{selectedBot.avatar}</div>
-          <div className="bot-details">
-            <span className="bot-name-large">{selectedBot.name}</span>
-            <span className="bot-rating-badge">Rating: {selectedBot.rating}</span>
+      {selectedBot ? (
+        <div className="bot-display-wrapper">
+          <div className="bot-display" style={{ '--bot-color': selectedBot.color || 'var(--primary)' }}>
+            <div className="bot-avatar-large">{selectedBot.avatar}</div>
+            <div className="bot-details">
+              <span className="bot-name-large">{selectedBot.name}</span>
+              <span className="bot-rating-badge">Rating: {selectedBot.rating}</span>
+            </div>
+          </div>
+
+          {botMessage && (
+            <div className="bot-message">
+              <span className="bot-quote">"{botMessage}"</span>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="bot-display-wrapper">
+          <div className="bot-display" style={{ '--bot-color': 'var(--primary)' }}>
+            <div className="bot-avatar-large">📱</div>
+            <div className="bot-details">
+              <span className="bot-name-large">Pass & Play</span>
+              <span className="bot-rating-badge">Local 2-Player</span>
+            </div>
           </div>
         </div>
-
-        {botMessage && (
-          <div className="bot-message">
-            <span className="bot-quote">"{botMessage}"</span>
-          </div>
-        )}
-      </div>
+      )}
 
       <div className={`game-status ${getStatusClass()}`}>
         {getStatusMessage()}
-        {isThinking && <span className="thinking">{selectedBot.name} is thinking...</span>}
+        {isThinking && <span className="thinking">{selectedBot?.name || 'Engine'} is thinking...</span>}
       </div>
 
-      <div className="player-info">
-        <span className="player-badge">
-          You play as: <ChessPieceIcon piece="K" color={playerColor} size={18} /> {playerColor === 'w' ? 'White' : 'Black'}
-        </span>
-      </div>
+      {selectedBot && (
+        <div className="player-info">
+          <span className="player-badge">
+            You play as: <ChessPieceIcon piece="K" color={playerColor} size={18} /> {playerColor === 'w' ? 'White' : 'Black'}
+          </span>
+        </div>
+      )}
 
       <div className="control-buttons">
         <button onClick={onNewGame} className="btn btn-primary">

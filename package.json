@@ -1,13 +1,13 @@
 {
   "name": "workspace",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "license": "MIT",
   "packageManager": "pnpm@9.15.4",
   "scripts": {
     "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
-    "test": "vitest run artifacts/api-server/src/chess-server/socket/game.test.js artifacts/api-server/src/chess-server/socket/utils.test.js artifacts/api-server/src/chess-server/socket/handlers/gameHandlers.test.js artifacts/api-server/src/chess-server/routes/games.move.test.js artifacts/api-server/src/chess-server/routes/auth.proxy.test.js artifacts/api-server/src/chess-server/kv/onlineGameKv.test.js artifacts/api-server/src/chess-server/puzzles/puzzleGenerator.test.js artifacts/api-server/src/chess-server/index.vercel.test.js artifacts/chess/src/engine/game/moveHistory.test.js artifacts/chess/src/engine/puzzles/puzzleGenerator.test.js artifacts/chess/src/services/api.test.js artifacts/chess/src/services/apiBase.test.js artifacts/chess/src/services/matchmakingPolling.test.js artifacts/chess/src/components/LoginModal.test.jsx artifacts/chess/src/contexts/UserContext.test.jsx artifacts/chess/src/pages/Changelog.test.jsx artifacts/chess/src/pages/Login.test.jsx",
+    "test": "vitest run artifacts/api-server/src/chess-server/socket/game.test.js artifacts/api-server/src/chess-server/socket/utils.test.js artifacts/api-server/src/chess-server/socket/handlers/gameHandlers.test.js artifacts/api-server/src/chess-server/routes/games.move.test.js artifacts/api-server/src/chess-server/routes/auth.proxy.test.js artifacts/api-server/src/chess-server/kv/onlineGameKv.test.js artifacts/api-server/src/chess-server/puzzles/puzzleGenerator.test.js artifacts/api-server/src/chess-server/index.vercel.test.js artifacts/chess/src/engine/game/moveHistory.test.js artifacts/chess/src/engine/puzzles/puzzleGenerator.test.js artifacts/chess/src/services/api.test.js artifacts/chess/src/services/apiBase.test.js artifacts/chess/src/services/matchmakingPolling.test.js artifacts/chess/src/components/LoginModal.test.jsx artifacts/chess/src/components/PlaySetup.test.jsx artifacts/chess/src/utils/gamePersistence.test.js artifacts/chess/src/contexts/UserContext.test.jsx artifacts/chess/src/pages/Changelog.test.jsx artifacts/chess/src/pages/Login.test.jsx",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
   },

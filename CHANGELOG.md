@@ -1,3 +1,16 @@
+## [2026-08-20] - Pass & Play mode
+
+### Added
+- Added local 2-player Pass & Play mode allowing two players to play on the same device.
+- Added game mode selection ("Vs Computer" vs "Pass & Play") on the Play setup screen.
+- Added custom White and Black player name inputs and an auto-rotate board toggle in setup.
+- Added Pass & Play Quick Action card on the Home dashboard (`/play?mode=pass_and_play`).
+- Added automated unit tests for Pass & Play setup and game persistence.
+
+### Changed
+- `ChessGame.jsx`: Disabled AI engine moves in Pass & Play mode, allowed turn-based piece moves for both colors, enabled auto-board rotation on turn changes, adjusted undo to step back 1 move, and displayed player names on player bars.
+- `gamePersistence.js`: Stored and restored `gameMode`, `whiteName`, `blackName`, and `autoRotate` fields.
+
 ## [2026-08-12] - Conservative refactor & simplification (API server + frontend)
 
 ### Changed

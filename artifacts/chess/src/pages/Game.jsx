@@ -10,7 +10,7 @@ export default function Game() {
 
   const mode = (searchParams.get('mode') || '').toLowerCase();
 
-  if (mode === 'local') {
+  if (mode === 'local' || mode === 'pass_and_play') {
     return (
       <Play
         initialGameId={gameId}

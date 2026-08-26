@@ -1,3 +1,11 @@
+[2026-08-20] - Pass & Play mode
+
+- Added a local 2-player Pass & Play mode allowing two players to play on the same device.
+- Added a game mode toggle ("Vs Computer" | "Pass & Play") on the Play setup screen.
+- Added customizable player names for White and Black and an optional auto-rotate setting that flips the board after each move.
+- Added a Pass & Play Quick Action card on the Home page.
+- Supported local game persistence and single-move undo in Pass & Play mode.
+
 [2026-08-20] - Terms and privacy in Settings
 
 - Moved the Terms of Service and Privacy Policy content into the Settings page under a dedicated Terms & Privacy section.

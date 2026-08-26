@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUser } from '../contexts/UserContext'
-import { Cpu, Globe, FileText, Star, Gamepad2, Trophy, ArrowUpRight, Wifi, WifiOff, Play, BookOpen } from 'lucide-react'
+import { Cpu, Globe, FileText, Star, Gamepad2, Trophy, ArrowUpRight, Wifi, WifiOff, Play, BookOpen, Users } from 'lucide-react'
 import api from '../services/api'
 import DailyPuzzleStreak from '../components/DailyPuzzleStreak'
 import './Home.css'
@@ -176,6 +176,20 @@ export default function Home() {
               <div className="action-content">
                 <h3>Play vs AI</h3>
                 <p>Challenge our chess bots at different skill levels</p>
+              </div>
+              <ArrowUpRight className="action-arrow" size={18} />
+            </button>
+
+            <button
+              className="action-card card-surface pass-play-card"
+              onClick={() => navigate('/play?mode=pass_and_play')}
+            >
+              <div className="action-icon">
+                <Users size={22} />
+              </div>
+              <div className="action-content">
+                <h3>Pass & Play</h3>
+                <p>Play locally with a friend on the same device</p>
               </div>
               <ArrowUpRight className="action-arrow" size={18} />
             </button>

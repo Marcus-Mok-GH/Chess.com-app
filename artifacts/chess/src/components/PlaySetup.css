@@ -64,6 +64,135 @@
   color: var(--text-secondary);
 }
 
+/* Mode Toggle */
+.mode-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  background: var(--bg-surface-2);
+  padding: 0.375rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
+.mode-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  padding: 0.875rem 1rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.mode-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.mode-btn.active {
+  background: var(--bg-surface-3);
+  color: var(--primary);
+  border-color: var(--border-hover);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.mode-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+/* Player Inputs Grid */
+.players-inputs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.player-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.player-input-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.color-dot {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.player-name-input {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 600;
+  outline: none;
+  transition: var(--transition-smooth);
+}
+
+.player-name-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(129, 182, 76, 0.15);
+}
+
+/* Auto-rotate Toggle */
+.autorotate-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  padding: 1rem 1.25rem;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.autorotate-toggle:hover {
+  border-color: var(--border-hover);
+  background: var(--bg-surface-3);
+}
+
+.autorotate-toggle input[type="checkbox"] {
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--primary);
+  cursor: pointer;
+  margin-top: 0.125rem;
+}
+
+.autorotate-label-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.autorotate-help {
+  font-size: 0.825rem;
+  color: var(--text-dim);
+  font-weight: 400;
+}
+
 .color-choice {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -151,6 +280,7 @@
   .play-setup-subtitle { font-size: 0.95rem; }
   .color-choice { grid-template-columns: 1fr; }
   .color-btn { min-height: 80px; padding: 1rem; }
+  .players-inputs-grid { grid-template-columns: 1fr; }
   .start-btn { width: 100%; padding: 1rem; font-size: 1rem; }
   .play-setup-actions { flex-direction: column-reverse; }
 }
