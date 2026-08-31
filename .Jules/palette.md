@@ -1,0 +1,3 @@
+## 2026-08-31 - Header Brand Logo Accessibility & Navigation Active State
+**Learning:** Brand logos inside navigation bars that trigger page routing are often rendered as non-semantic `<div>` or `<span>` tags with `onClick` handlers. This prevents screen readers and keyboard users from discovering and navigating using the home brand button, and lacks proper focus states or `aria-current="page"` indication for active links.
+**Action:** Always render interactive navigation logos using semantic `<button>` elements with `type="button"`, explicit `aria-label`, and `focus-visible` styling, while providing `aria-current="page"` on current route links.
