@@ -39,9 +39,9 @@ export default function SetUsernameModal() {
 
   return (
     <div className="username-overlay">
-        <div className="username-modal">
+        <div className="username-modal" role="dialog" aria-modal="true" aria-labelledby="username-modal-title">
           <div className="username-header">
-            <h2>👟 One last step!</h2>
+            <h2 id="username-modal-title">👟 One last step!</h2>
             <p>Please choose a username for your account.</p>
           </div>
 
@@ -58,8 +58,10 @@ export default function SetUsernameModal() {
                 autoComplete="off"
                 maxLength={20}
                 disabled={isLoading}
+                aria-describedby={error ? 'username-error' : undefined}
+                aria-invalid={!!error}
               />
-              {error && <span className="error-text">{error}</span>}
+              {error && <span id="username-error" className="error-text" role="alert">{error}</span>}
             </div>
 
             <button
