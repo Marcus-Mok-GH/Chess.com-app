@@ -14,6 +14,7 @@ export default function UserBadge() {
         <button 
           className="login-btn"
           onClick={() => setShowLoginModal(true)}
+          aria-label="Sign in to your account"
         >
           Sign In
         </button>
@@ -28,16 +29,22 @@ export default function UserBadge() {
     ? Math.round((user.wins / user.gamesPlayed) * 100) 
     : 0;
 
+  const connectionStatusText = isOnline ? "Online" : "Offline";
+  const badgeAriaLabel = `User menu for ${user.username}, Rating ${user.elo}, Status ${connectionStatusText}`;
+
   return (
     <div className="user-badge-container">
       <button 
         className="user-badge"
         onClick={() => setShowDropdown(!showDropdown)}
+        aria-expanded={showDropdown}
+        aria-haspopup="true"
+        aria-label={badgeAriaLabel}
       >
-        <span className="user-avatar">👤</span>
+        <span className="user-avatar" aria-hidden="true">👤</span>
         <span className="user-name">{user.username}</span>
         <span className="user-elo">{user.elo}</span>
-        <span className="db-indicator" title={isOnline ? "Online" : "Offline"}>{isOnline ? '☁️' : '📴'}</span>
+        <span className="db-indicator" title={connectionStatusText} aria-hidden="true">{isOnline ? '☁️' : '📴'}</span>
       </button>
 
       {showDropdown && (

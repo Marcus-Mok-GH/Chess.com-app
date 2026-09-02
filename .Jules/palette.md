@@ -1,0 +1,3 @@
+## 2026-03-30 - Accessible User Profile Badge & Dropdown Triggers
+**Learning:** Profile triggers containing multiple inline data points (username, Elo rating, status indicators) and decorative emojis can cause confused screen reader output if relying on raw DOM text. Adding explicit `aria-label` describing the full context (e.g., user name, rating, status), `aria-expanded`, `aria-haspopup="true"`, and setting `aria-hidden="true"` on decorative emojis provides clean, intelligible assistive technology navigation.
+**Action:** When designing header user profile triggers or badge controls that open popup menus/dropdowns, combine `aria-expanded` and `aria-haspopup="true"` with a concise composite `aria-label` while masking decorative child emojis with `aria-hidden="true"`.
