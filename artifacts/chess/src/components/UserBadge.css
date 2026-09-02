@@ -15,6 +15,13 @@
   transform: translateY(-1px);
 }
 
+.login-btn:focus-visible,
+.user-badge:focus-visible,
+.dropdown-item:focus-visible {
+  outline: 2px solid #81b64c;
+  outline-offset: 2px;
+}
+
 .user-badge-container {
   position: relative;
 }

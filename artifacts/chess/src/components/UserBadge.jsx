@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useUser } from '../contexts/UserContext';
 import LoginModal from './LoginModal';
 import './UserBadge.css';
@@ -8,11 +8,23 @@ export default function UserBadge() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
+  useEffect(() => {
+    if (!showDropdown) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setShowDropdown(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showDropdown]);
+
   if (!isLoggedIn) {
     return (
       <>
         <button 
           className="login-btn"
+          aria-label="Sign in to your account"
           onClick={() => setShowLoginModal(true)}
         >
           Sign In
@@ -32,9 +44,12 @@ export default function UserBadge() {
     <div className="user-badge-container">
       <button 
         className="user-badge"
+        aria-expanded={showDropdown}
+        aria-haspopup="true"
+        aria-label="User profile and menu"
         onClick={() => setShowDropdown(!showDropdown)}
       >
-        <span className="user-avatar">👤</span>
+        <span className="user-avatar" aria-hidden="true">👤</span>
         <span className="user-name">{user.username}</span>
         <span className="user-elo">{user.elo}</span>
         <span className="db-indicator" title={isOnline ? "Online" : "Offline"}>{isOnline ? '☁️' : '📴'}</span>
@@ -46,7 +61,7 @@ export default function UserBadge() {
             className="dropdown-backdrop" 
             onClick={() => setShowDropdown(false)}
           />
-          <div className="user-dropdown">
+          <div className="user-dropdown" role="menu" aria-label="User menu">
             <div className="dropdown-header">
               <span className="dropdown-username">{user.username}</span>
               <span className="dropdown-elo">
@@ -54,7 +69,7 @@ export default function UserBadge() {
                 <span className="elo-value">{user.elo}</span>
               </span>
             </div>
-            <div className="dropdown-divider" />
+            <div className="dropdown-divider" role="separator" />
             <div className="dropdown-stats">
               <div className="stat-row">
                 <span className="stat-label">Rated Games</span>
@@ -75,9 +90,10 @@ export default function UserBadge() {
                 <span className="stat-value">{winRate}%</span>
               </div>
             </div>
-            <div className="dropdown-divider" />
+            <div className="dropdown-divider" role="separator" />
             <button 
               className="dropdown-item"
+              role="menuitem"
               onClick={() => {
                 setShowDropdown(false);
                 window.location.href = '/history';
@@ -85,15 +101,16 @@ export default function UserBadge() {
             >
               📊 View Stats & Charts
             </button>
-            <div className="dropdown-divider" />
+            <div className="dropdown-divider" role="separator" />
             <div className="dropdown-sync-status">
               <span className={isOnline ? "sync-online" : "sync-offline"}>
                 {isOnline ? '☁️ Connected' : '📴 Offline'}
               </span>
             </div>
-            <div className="dropdown-divider" />
+            <div className="dropdown-divider" role="separator" />
             <button 
               className="dropdown-item logout"
+              role="menuitem"
               onClick={() => {
                 logout();
                 setShowDropdown(false);
