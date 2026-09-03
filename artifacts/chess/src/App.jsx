@@ -124,7 +124,7 @@ function AppHeader({ isGameRoute = false }) {
                    <span className="username">{user.username}</span>
                    <span className="elo">{user.elo}</span>
                 </div>
-                <button onClick={logout} className="sidebar-logout" title="Logout">🚪</button>
+                <button onClick={logout} className="sidebar-logout" title="Logout" aria-label="Log out">🚪</button>
               </div>
             ) : (
               <button onClick={() => navigate('/login')} className="sidebar-login">Log In</button>
