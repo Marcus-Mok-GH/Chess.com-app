@@ -23,7 +23,6 @@ const Landing = lazy(() => import('./pages/Landing'))
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail'))
 const Puzzles = lazy(() => import('./pages/Puzzles'))
 const Openings = lazy(() => import('./pages/Openings'))
-const Lessons = lazy(() => import('./pages/Lessons'))
 const Friends = lazy(() => import('./pages/Friends'))
 const Chat = lazy(() => import('./pages/Chat'))
 const Clubs = lazy(() => import('./pages/Clubs'))
@@ -39,9 +38,8 @@ function getTitle(path) {
   if (path === '/history') return 'Game History'
   if (path === '/settings') return 'Settings'
   if (path === '/changelog') return 'Changelog'
-  if (path === '/puzzles') return 'Puzzles'
+  if (path === '/puzzles' || path === '/lessons') return 'Puzzles'
   if (path === '/openings') return 'Openings'
-  if (path === '/lessons') return 'Lessons'
   if (path === '/friends') return 'Friends'
   if (path === '/chat') return 'Chat'
   if (path === '/clubs') return 'Clubs'
@@ -83,17 +81,13 @@ function AppHeader({ isGameRoute = false }) {
               <span className="sidebar-icon">🌐</span>
               <span className="sidebar-label">Online Play</span>
             </Link>
-            <Link to="/puzzles" className={`sidebar-item ${currentPath === '/puzzles' ? 'active' : ''}`}>
+            <Link to="/puzzles" className={`sidebar-item ${currentPath === '/puzzles' || currentPath === '/lessons' ? 'active' : ''}`}>
               <span className="sidebar-icon">🧩</span>
               <span className="sidebar-label">Puzzles</span>
             </Link>
             <Link to="/openings" className={`sidebar-item ${currentPath === '/openings' ? 'active' : ''}`}>
               <span className="sidebar-icon">📖</span>
               <span className="sidebar-label">Openings</span>
-            </Link>
-            <Link to="/lessons" className={`sidebar-item ${currentPath === '/lessons' ? 'active' : ''}`}>
-              <span className="sidebar-icon">📖</span>
-              <span className="sidebar-label">Lessons</span>
             </Link>
             <Link to="/friends" className={`sidebar-item ${currentPath === '/friends' ? 'active' : ''}`}>
               <span className="sidebar-icon">👥</span>
@@ -321,7 +315,7 @@ export default function App() {
                   <Route path="/changelog" element={<Changelog />} />
                   <Route path="/puzzles" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Puzzles /></Suspense></ProtectedRoute>} />
                   <Route path="/openings" element={<Suspense fallback={<RouteFallback />}><Openings /></Suspense>} />
-                  <Route path="/lessons" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Lessons /></Suspense></ProtectedRoute>} />
+                  <Route path="/lessons" element={<Navigate to="/puzzles" replace />} />
                   <Route path="/friends" element={<Suspense fallback={<RouteFallback />}><Friends /></Suspense>} />
                   <Route path="/chat" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Chat /></Suspense></ProtectedRoute>} />
                   <Route path="/clubs" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Clubs /></Suspense></ProtectedRoute>} />

@@ -5,9 +5,8 @@ const optionGroups = [
   {
     title: 'Learn & improve',
     options: [
-      { to: '/puzzles', icon: '🧩', title: 'Puzzles', description: 'Train your tactical vision' },
+      { to: '/puzzles', icon: '🧩', title: 'Puzzles', description: 'Train with the structured lesson scheme' },
       { to: '/openings', icon: '📖', title: 'Openings', description: 'Explore opening ideas' },
-      { to: '/lessons', icon: '🎓', title: 'Lessons', description: 'Build your chess skills' },
     ],
   },
   {

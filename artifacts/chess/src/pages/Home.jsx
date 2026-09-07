@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUser } from '../contexts/UserContext'
-import { Cpu, Globe, FileText, Star, Gamepad2, Trophy, ArrowUpRight, Wifi, WifiOff, Play, BookOpen } from 'lucide-react'
+import { Cpu, Globe, FileText, Star, Gamepad2, Trophy, ArrowUpRight, Wifi, WifiOff, Play, BookOpen, Puzzle } from 'lucide-react'
 import api from '../services/api'
 import DailyPuzzleStreak from '../components/DailyPuzzleStreak'
 import './Home.css'
@@ -182,14 +182,14 @@ export default function Home() {
 
             <button
               className="action-card card-surface"
-              onClick={() => navigate('/lessons')}
+              onClick={() => navigate('/puzzles')}
             >
               <div className="action-icon">
-                <BookOpen size={22} />
+                <Puzzle size={22} />
               </div>
               <div className="action-content">
-                <h3>Lessons</h3>
-                <p>Structured topics with examples to build your fundamentals</p>
+                <h3>Puzzles</h3>
+                <p>Structured lesson scheme & tactical trainer</p>
               </div>
               <ArrowUpRight className="action-arrow" size={18} />
             </button>

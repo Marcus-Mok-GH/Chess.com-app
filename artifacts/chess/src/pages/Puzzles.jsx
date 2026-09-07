@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Chess } from "chess.js";
 import ChessBoard from "../components/ChessBoard";
 import DailyPuzzleStreak from "../components/DailyPuzzleStreak";
 import { generatePuzzleForThemes } from "../engine/puzzles/puzzleGenerator";
+import { LESSON_CATALOG } from "../engine/lessons/lessonCatalog";
+import { explainCoachMove } from "../engine/coach/coachAI";
 import {
   Puzzle,
   Check,
@@ -14,6 +16,11 @@ import {
   Trophy,
   Target,
   Zap,
+  ChevronLeft,
+  ChevronRight,
+  Bot,
+  GraduationCap,
+  AlertTriangle,
 } from "lucide-react";
 import "./Puzzles.css";
 
@@ -29,53 +36,22 @@ function randomPuzzleSeed() {
   return Date.now() ^ Math.floor(Math.random() * 0xffffffff);
 }
 
-function getLessonPracticeContext(search) {
-  const params = new URLSearchParams(search);
-  const themes = (params.get("themes") || "")
-    .split(",")
-    .map((theme) => theme.trim())
-    .filter(Boolean);
-  const seedParam = params.get("seed");
-  const requestedSeed = seedParam === null ? Number.NaN : Number(seedParam);
-
-  return {
-    lessonId: params.get("lesson") || null,
-    lessonTitle: params.get("title") || null,
-    themes,
-    seed: Number.isFinite(requestedSeed) ? requestedSeed : randomPuzzleSeed(),
-  };
-}
-
-async function fetchTacticalPuzzle() {
-  const response = await fetch("/api/puzzles/generate", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ method: "auto", difficulty: "medium", type: "tactics" }),
-  });
-
-  const payload = await response.json().catch(() => null);
-  if (!response.ok) {
-    throw new Error(
-      payload?.error?.message || "The tactical generator could not prepare a puzzle.",
-    );
-  }
-
-  const puzzle = payload?.puzzle;
-  if (!puzzle?.fen || !puzzle?.solution || !puzzle?.sideToMove) {
-    throw new Error("The puzzle generator returned an incomplete puzzle.");
-  }
-
-  return puzzle;
-}
-
 export default function Puzzles() {
   const location = useLocation();
-  const lessonPractice = useMemo(
-    () => getLessonPracticeContext(location.search),
-    [location.search],
-  );
-  const isLessonPractice = lessonPractice.themes.length > 0;
-  const [puzzleNumber, setPuzzleNumber] = useState(1);
+  const navigate = useNavigate();
+
+  // Determine starting index in the lesson scheme
+  const searchParams = new URLSearchParams(location.search);
+  const requestedLessonId = searchParams.get("lesson");
+  const initialIndex = useMemo(() => {
+    if (!requestedLessonId) return 0;
+    const found = LESSON_CATALOG.findIndex((l) => l.id === requestedLessonId);
+    return found !== -1 ? found : 0;
+  }, [requestedLessonId]);
+
+  const [currentLessonIndex, setCurrentLessonIndex] = useState(initialIndex);
+  const currentLesson = LESSON_CATALOG[currentLessonIndex] || LESSON_CATALOG[0];
+
   const [puzzle, setPuzzle] = useState(null);
   const [position, setPosition] = useState("");
   const [initializing, setInitializing] = useState(true);
@@ -85,6 +61,12 @@ export default function Puzzles() {
   const [failed, setFailed] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [selectedSquare, setSelectedSquare] = useState(null);
+
+  // LLM Description state
+  const [llmDescription, setLlmDescription] = useState(null);
+  const [llmLoading, setLlmLoading] = useState(false);
+  const [llmError, setLlmError] = useState(null);
+
   const generationRequestRef = useRef(0);
   const timerIds = useRef([]);
 
@@ -110,36 +92,41 @@ export default function Puzzles() {
     timerIds.current.push(timerId);
   }
 
-  async function loadPuzzle({
-    incrementNumber = false,
-    seed = randomPuzzleSeed(),
-  } = {}) {
+  async function loadPuzzleForLesson(lessonIndex, seed = randomPuzzleSeed()) {
     const requestId = ++generationRequestRef.current;
     clearTimers();
     setInitializing(true);
     setGenerationError(null);
     setSelectedSquare(null);
 
+    const lesson = LESSON_CATALOG[lessonIndex] || LESSON_CATALOG[0];
+
     try {
-      const freshPuzzle = isLessonPractice
-        ? generatePuzzleForThemes(lessonPractice.themes, seed)
-        : await fetchTacticalPuzzle();
+      const freshPuzzle = generatePuzzleForThemes(
+        lesson.puzzleThemes || [],
+        seed,
+      );
+
       if (generationRequestRef.current !== requestId) return false;
 
-      setPuzzle(freshPuzzle);
+      setPuzzle({
+        ...freshPuzzle,
+        lessonTitle: lesson.title,
+        lessonTopic: lesson.topic,
+        lessonOrder: lesson.order,
+      });
       setPosition(freshPuzzle.fen);
       setSolved(false);
       setFailed(false);
       setShowHint(false);
       setWillPlayFollowup(false);
-      if (incrementNumber) setPuzzleNumber((number) => number + 1);
       return true;
     } catch (error) {
       if (generationRequestRef.current === requestId) {
         setGenerationError(
           error instanceof Error
             ? error.message
-            : "The tactical generator could not prepare a puzzle.",
+            : "The puzzle generator could not prepare a puzzle for this lesson.",
         );
       }
       return false;
@@ -150,14 +137,44 @@ export default function Puzzles() {
     }
   }
 
+  // Sync puzzle loading when currentLessonIndex changes
   useEffect(() => {
-    setPuzzleNumber(1);
-    loadPuzzle({ seed: lessonPractice.seed });
+    loadPuzzleForLesson(currentLessonIndex);
     return () => {
       generationRequestRef.current += 1;
       clearTimers();
     };
-  }, [location.search]);
+  }, [currentLessonIndex]);
+
+  // Fetch LLM description whenever puzzle position/solution changes
+  useEffect(() => {
+    if (!puzzle?.fen || !puzzle?.solution) return;
+    let cancelled = false;
+    setLlmLoading(true);
+    setLlmError(null);
+    setLlmDescription(null);
+
+    explainCoachMove(puzzle.fen, puzzle.solution, null)
+      .then((explanation) => {
+        if (cancelled) return;
+        if (explanation) {
+          setLlmDescription(explanation);
+        } else {
+          setLlmError("No explanation returned from AI coach.");
+        }
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setLlmError(err instanceof Error ? err.message : String(err));
+      })
+      .finally(() => {
+        if (!cancelled) setLlmLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [puzzle?.fen, puzzle?.solution]);
 
   useEffect(() => {
     if (!puzzle) return;
@@ -184,7 +201,15 @@ export default function Puzzles() {
       setStreak(0);
     }
 
-    await loadPuzzle({ incrementNumber: true });
+    const nextIndex = (currentLessonIndex + 1) % LESSON_CATALOG.length;
+    setCurrentLessonIndex(nextIndex);
+  }
+
+  function goToPrevPuzzle() {
+    if (initializing) return;
+    const prevIndex =
+      (currentLessonIndex - 1 + LESSON_CATALOG.length) % LESSON_CATALOG.length;
+    setCurrentLessonIndex(prevIndex);
   }
 
   function moveSquaresMatch(coordinateMove, solution) {
@@ -245,13 +270,13 @@ export default function Puzzles() {
       if (reply) {
         schedule(() => {
           setPosition(replyChess.fen());
-          schedule(() => goToNextPuzzle(true), 750);
+          schedule(() => goToNextPuzzle(true), 1200);
         }, 450);
         return true;
       }
     }
 
-    schedule(() => goToNextPuzzle(true), 900);
+    schedule(() => goToNextPuzzle(true), 1200);
     return true;
   }
 
@@ -304,40 +329,101 @@ export default function Puzzles() {
     };
   }
 
-  const boardStyles = solved || failed ? lastMoveSquares(game) : selectedSquareStyles();
+  const boardStyles =
+    solved || failed ? lastMoveSquares(game) : selectedSquareStyles();
 
   return (
     <div className="puzzles-page">
       <div className="puzzles-container">
+        {/* 🤖 LLM Description Section at the Top */}
+        <div className="puzzles-llm-top-section">
+          {llmLoading && (
+            <div className="puzzles-llm-card puzzles-llm-card--loading" role="status">
+              <div className="puzzles-llm-header">
+                <Bot className="puzzles-llm-icon" size={18} />
+                <span>AI Coach Analysis</span>
+              </div>
+              <p className="puzzles-llm-text">
+                <span className="puzzles-llm-spinner" /> Analyzing position...
+              </p>
+            </div>
+          )}
+
+          {llmError && (
+            <div className="puzzles-llm-card puzzles-llm-card--error" role="alert">
+              <div className="puzzles-llm-header">
+                <AlertTriangle className="puzzles-llm-icon" size={18} />
+                <span>AI Coach Analysis Error</span>
+              </div>
+              <p className="puzzles-llm-error-text">{llmError}</p>
+            </div>
+          )}
+
+          {llmDescription && !llmLoading && (
+            <div className="puzzles-llm-card">
+              <div className="puzzles-llm-header">
+                <Bot className="puzzles-llm-icon" size={18} />
+                <span>AI Coach Position Description</span>
+              </div>
+              <p className="puzzles-llm-text">{llmDescription}</p>
+            </div>
+          )}
+        </div>
+
+        {/* ── Lesson Scheme Header ─────────────────────────── */}
         <header className="puzzles-header">
           <div className="puzzles-header-top">
             <div className="puzzles-eyebrow">
-              <Puzzle className="puzzles-eyebrow-icon" size={13} />
-              <span>{isLessonPractice ? "Lesson Practice" : "Tactical Trainer"}</span>
+              <GraduationCap className="puzzles-eyebrow-icon" size={13} />
+              <span>
+                Lesson Scheme · {currentLesson.order} of {LESSON_CATALOG.length}
+              </span>
             </div>
             <DailyPuzzleStreak compact />
             <span className="puzzles-meta">
-              Puzzle {puzzleNumber} · {puzzle?.theme || "Tactics"}
+              Topic: {currentLesson.topic} ({currentLesson.difficulty})
             </span>
           </div>
-          <h1 className="puzzles-title">
-            {displaySide === "white" ? "White" : "Black"} to move
-          </h1>
+
+          <div className="puzzles-scheme-nav">
+            <button
+              type="button"
+              className="puzzles-scheme-btn"
+              onClick={goToPrevPuzzle}
+              title="Previous lesson puzzle"
+            >
+              <ChevronLeft size={16} /> Prev
+            </button>
+            <select
+              className="puzzles-scheme-select"
+              value={currentLessonIndex}
+              onChange={(e) => setCurrentLessonIndex(Number(e.target.value))}
+              aria-label="Select puzzle in lesson scheme"
+            >
+              {LESSON_CATALOG.map((lesson, idx) => (
+                <option key={lesson.id} value={idx}>
+                  {lesson.order}. {lesson.title} ({lesson.topic})
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="puzzles-scheme-btn"
+              onClick={() => goToNextPuzzle(false)}
+              title="Next lesson puzzle"
+            >
+              Next <ChevronRight size={16} />
+            </button>
+          </div>
+
+          <h1 className="puzzles-title">{currentLesson.title}</h1>
           <p className="puzzles-subtitle">
-            {puzzle ? (
-              isLessonPractice ? (
-                <>Practicing <strong>{lessonPractice.lessonTitle || puzzle.theme}</strong>: find the tactic.</>
-              ) : (
-                <>Find the tactic. <strong>{ratingLabel(puzzle.rating)}</strong></>
-              )
-            ) : isLessonPractice ? (
-              "Preparing a lesson-specific tactic."
-            ) : (
-              "Preparing a fresh tactical position."
-            )}
+            {displaySide === "white" ? "White" : "Black"} to move. Find the
+            best tactic for this lesson.
           </p>
         </header>
 
+        {/* ── Main Puzzle Layout ─────────────────────────── */}
         <div className="puzzles-layout">
           <div className="puzzles-board-wrap">
             {puzzle ? (
@@ -352,7 +438,9 @@ export default function Puzzles() {
               />
             ) : (
               <div className="puzzle-board-loading" role="status">
-                {generationError ? "Puzzle generation is unavailable" : "Preparing a tactical puzzle…"}
+                {generationError
+                  ? "Puzzle generation is unavailable"
+                  : "Preparing lesson puzzle…"}
               </div>
             )}
             {solved && (
@@ -372,15 +460,21 @@ export default function Puzzles() {
             <div className="puzzle-side-card puzzle-status-card">
               <div className="status-row">
                 <div className="status-stat">
-                  <span className="status-label"><Target size={12} /> Solved</span>
+                  <span className="status-label">
+                    <Target size={12} /> Solved
+                  </span>
                   <span className="status-value">{solvedCount}</span>
                 </div>
                 <div className="status-stat">
-                  <span className="status-label"><Zap size={12} /> Streak</span>
+                  <span className="status-label">
+                    <Zap size={12} /> Streak
+                  </span>
                   <span className="status-value">{streak}</span>
                 </div>
                 <div className="status-stat">
-                  <span className="status-label"><Trophy size={12} /> Best</span>
+                  <span className="status-label">
+                    <Trophy size={12} /> Best
+                  </span>
                   <span className="status-value">{bestStreak}</span>
                 </div>
               </div>
@@ -420,16 +514,12 @@ export default function Puzzles() {
 
             {generationError && (
               <div className="puzzle-side-card puzzle-engine-error" role="alert">
-                <strong>
-                  {isLessonPractice
-                    ? "Unable to create a lesson-specific puzzle."
-                    : "Unable to load a tactical puzzle."}
-                </strong>
+                <strong>Unable to create lesson puzzle.</strong>
                 <span>{generationError}</span>
                 <button
                   type="button"
                   className="puzzle-action puzzle-action--retry"
-                  onClick={() => loadPuzzle()}
+                  onClick={() => loadPuzzleForLesson(currentLessonIndex)}
                   disabled={initializing}
                 >
                   Try again
@@ -446,12 +536,27 @@ export default function Puzzles() {
               </div>
             )}
 
+            <div className="puzzle-side-card puzzle-lesson-summary">
+              <div className="puzzle-lesson-summary-header">
+                <GraduationCap size={14} /> Lesson Concept
+              </div>
+              {Array.isArray(currentLesson.description) ? (
+                currentLesson.description.map((para, i) => (
+                  <p key={i} className="puzzle-lesson-para">
+                    {para}
+                  </p>
+                ))
+              ) : (
+                <p className="puzzle-lesson-para">{currentLesson.description}</p>
+              )}
+            </div>
+
             <div className="puzzle-side-card puzzle-to-move-hint">
               <span className="dot" data-color={displaySide} />
               <span>
                 {displaySide === "white"
-                  ? "White to move. You can drag a piece or tap a piece, then tap its destination."
-                  : "Black to move. You can drag a piece or tap a piece, then tap its destination."}
+                  ? "White to move. Drag or tap a piece, then tap destination."
+                  : "Black to move. Drag or tap a piece, then tap destination."}
               </span>
             </div>
           </aside>
@@ -459,13 +564,6 @@ export default function Puzzles() {
       </div>
     </div>
   );
-}
-
-function ratingLabel(rating) {
-  if (rating < 900) return "Beginner";
-  if (rating < 1100) return "Easy";
-  if (rating < 1300) return "Intermediate";
-  return "Advanced";
 }
 
 function lastMoveSquares(chessInstance) {
