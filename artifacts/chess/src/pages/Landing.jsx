@@ -176,30 +176,30 @@ export default function Landing() {
           <span className="sidebar-logo-text">PlayChess</span>
         </Link>
 
-        <nav className="sidebar-nav" aria-label="Main">
+        <nav className="landing-sidebar-nav" aria-label="Main">
           {NAV_LINKS.map(({ icon: Icon, label, to }) => (
             <button
               key={label}
-              className="sidebar-nav-link"
+              className="landing-sidebar-nav-link"
               onClick={() => goTo(to)}
               type="button"
             >
-              <Icon size={22} className="sidebar-nav-icon" />
+              <Icon size={22} className="landing-sidebar-nav-icon" />
               <span>{label}</span>
             </button>
           ))}
         </nav>
 
         {/* "Other" collapsible group — mirrors chess.com's overflow rail */}
-        <nav className="sidebar-nav sidebar-nav-other" aria-label="More">
+        <nav className="landing-sidebar-nav landing-sidebar-nav-other" aria-label="More">
           {OTHER_LINKS.map((l) => (
             <button
               key={l.label}
-              className="sidebar-nav-link sidebar-nav-link-sub"
+              className="landing-sidebar-nav-link landing-sidebar-nav-link-sub"
               onClick={() => goTo(l.to)}
               type="button"
             >
-              <span className="sidebar-nav-bullet" />
+              <span className="landing-sidebar-nav-bullet" />
               <span>{l.label}</span>
             </button>
           ))}

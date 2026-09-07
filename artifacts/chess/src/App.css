@@ -260,7 +260,7 @@ main {
     overscroll-behavior-y: contain;
     -webkit-overflow-scrolling: touch;
   }
-  .sidebar-nav { display: none; }
+  aside.sidebar-nav, .sidebar-nav { display: none !important; }
   .bottom-nav { display: flex; }
   .offline-badge { display: none; }
 
