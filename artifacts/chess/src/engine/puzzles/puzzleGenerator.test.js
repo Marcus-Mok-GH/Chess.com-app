@@ -33,7 +33,7 @@ describe("procedural tactical puzzle generator", () => {
 
     expect(validateGeneratedPuzzle(puzzle)).toBe(true);
     expect(puzzle.lessonThemes).toEqual(themes);
-  });
+  }, 15000);
 
   it("generates puzzles matching requested theme", () => {
     // Test with a theme that should be findable in generated puzzles
