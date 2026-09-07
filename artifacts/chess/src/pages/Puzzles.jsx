@@ -205,6 +205,12 @@ export default function Puzzles() {
     setCurrentLessonIndex(nextIndex);
   }
 
+  function goToNextLesson() {
+    if (initializing) return;
+    const nextIndex = (currentLessonIndex + 1) % LESSON_CATALOG.length;
+    setCurrentLessonIndex(nextIndex);
+  }
+
   function goToPrevPuzzle() {
     if (initializing) return;
     const prevIndex =
@@ -409,7 +415,7 @@ export default function Puzzles() {
             <button
               type="button"
               className="puzzles-scheme-btn"
-              onClick={() => goToNextPuzzle(false)}
+              onClick={goToNextLesson}
               title="Next lesson puzzle"
             >
               Next <ChevronRight size={16} />

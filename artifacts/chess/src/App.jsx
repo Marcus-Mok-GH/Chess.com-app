@@ -47,6 +47,11 @@ function getTitle(path) {
   return 'PlayChess'
 }
 
+function LessonsRedirect() {
+  const location = useLocation()
+  return <Navigate to={`/puzzles${location.search}`} replace />
+}
+
 function AppHeader({ isGameRoute = false }) {
   const location = useLocation()
   const { isOnline, isLoggedIn, user, logout } = useUser()
@@ -315,7 +320,7 @@ export default function App() {
                   <Route path="/changelog" element={<Changelog />} />
                   <Route path="/puzzles" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Puzzles /></Suspense></ProtectedRoute>} />
                   <Route path="/openings" element={<Suspense fallback={<RouteFallback />}><Openings /></Suspense>} />
-                  <Route path="/lessons" element={<Navigate to="/puzzles" replace />} />
+                  <Route path="/lessons" element={<LessonsRedirect />} />
                   <Route path="/friends" element={<Suspense fallback={<RouteFallback />}><Friends /></Suspense>} />
                   <Route path="/chat" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Chat /></Suspense></ProtectedRoute>} />
                   <Route path="/clubs" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Clubs /></Suspense></ProtectedRoute>} />
