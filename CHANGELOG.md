@@ -1,3 +1,8 @@
+## [2026-09-08] - Fix puzzle AI provider model
+
+### Fixed
+- `chess-server/services/aiPuzzleService.js`: default puzzle AI model was `kimi-k3`, which is no longer available on Pollinations' legacy keyless endpoint (returns 404 "Model not found"). Fallback default now `openai-fast` (the only model currently served there), matching the coach route and restoring AI puzzle generation.
+
 ## [2026-08-12] - Conservative refactor & simplification (API server + frontend)
 
 ### Changed
