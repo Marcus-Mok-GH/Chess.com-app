@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { Chess } from "chess.js";
-import ChessBoard from "./ChessBoard";
+import { useNavigate } from "react-router-dom";
 import { Check, Trophy, Flame } from "lucide-react";
 import { generatePuzzle } from "../engine/puzzles/puzzleGenerator";
 import { useUser } from "../contexts/UserContext";
@@ -127,19 +126,14 @@ export function useStreakData() {
 }
 
 export default function DailyPuzzleStreak({ compact = false }) {
+  const navigate = useNavigate();
   const { user, token, isLoggedIn } = useUser();
   const userId = user?.id || null;
   const username = user?.username || null;
 
-  const today = getTodayDateString();
-  const puzzle = useMemo(() => getDailyPuzzle(today), [today]);
   const [streakData, setStreakData] = useState(() => getStreakState(userId));
-  const [showBoard, setShowBoard] = useState(false);
-  const [position, setPosition] = useState(puzzle.fen);
   const [solved, setSolved] = useState(streakData.completedToday);
-  const [failed, setFailed] = useState(false);
   const [syncLoading, setSyncLoading] = useState(false);
-  const timerRef = useRef(null);
   const prevUserIdRef = useRef(userId);
 
   // Reload streak data when user logs in/out
@@ -200,99 +194,6 @@ export default function DailyPuzzleStreak({ compact = false }) {
     return () => { cancelled = true; };
   }, [isLoggedIn, username, token, userId]);
 
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
-
-  const persistStreak = useCallback((data) => {
-    // Always write to localStorage
-    saveStreakData(data, userId);
-
-    // If logged in, also persist to backend (fetch existing settings first to avoid full-replace wipe)
-    if (isLoggedIn && username && token) {
-      api.getUserSettings(username, token).then((response) => {
-        const currentSettings = response?.settings || {};
-        return api.updateUserSettings(username, {
-          ...currentSettings,
-          puzzleStreak: {
-            count: data.count,
-            bestStreak: data.bestStreak,
-            lastDate: data.lastDate,
-            completedToday: data.completedToday,
-          },
-        }, token);
-      }).catch(() => {
-        // Silently fail — localStorage is the fallback
-      });
-    }
-  }, [userId, isLoggedIn, username, token]);
-
-  const handleSolve = useCallback(() => {
-    const todayStr = getTodayDateString();
-    const current = getStreakState(userId);
-    if (current.completedToday) return;
-
-    const newCount = current.count + 1;
-    const newBest = Math.max(current.bestStreak, newCount);
-    const updated = {
-      lastDate: todayStr,
-      count: newCount,
-      bestStreak: newBest,
-      completedToday: true,
-    };
-    persistStreak(updated);
-    setStreakData(updated);
-    setSolved(true);
-  }, [userId, persistStreak]);
-
-  function handlePieceDrop(sourceSquare, targetSquare) {
-    if (solved || streakData.completedToday) return false;
-
-    const chess = new Chess(position);
-    let move = null;
-    try {
-      move = chess.move({
-        from: sourceSquare,
-        to: targetSquare,
-        promotion: "q",
-      });
-    } catch {
-      move = null;
-    }
-    if (!move) return false;
-
-    const moveStr = `${sourceSquare}${targetSquare}`;
-    const isSolution = move.san === puzzle.solution || matchesCoordinate(moveStr);
-
-    if (!isSolution) {
-      setFailed(true);
-      timerRef.current = setTimeout(() => setFailed(false), 1200);
-      return false;
-    }
-
-    setPosition(chess.fen());
-    handleSolve();
-    return true;
-  }
-
-  function matchesCoordinate(coordStr) {
-    try {
-      const probe = new Chess(position);
-      const probeMove = probe.move(puzzle.solution);
-      return probeMove && probeMove.from + probeMove.to === coordStr;
-    } catch {
-      return false;
-    }
-  }
-
-  function canDragPiece(pieceType) {
-    if (solved || streakData.completedToday) return false;
-    const sideChar = puzzle.sideToMove === "white" ? "w" : "b";
-    return pieceType[0] === sideChar;
-  }
-
   if (compact) {
     return (
       <div className="daily-streak-badge">
@@ -337,43 +238,13 @@ export default function DailyPuzzleStreak({ compact = false }) {
           <p className="daily-puzzle-completed-sub">Come back tomorrow to keep your streak!</p>
         </div>
       ) : (
-        <>
-          {!showBoard ? (
-            <button
-              className="daily-puzzle-solve-btn"
-              onClick={() => setShowBoard(true)}
-            >
-              <Flame size={18} />
-              Solve Today's Puzzle
-            </button>
-          ) : (
-            <div className="daily-puzzle-board-area">
-              <div className="daily-puzzle-board-info">
-                <span className="daily-puzzle-theme">{puzzle.theme}</span>
-                <span className="daily-puzzle-side">
-                  {puzzle.sideToMove === "white" ? "White" : "Black"} to move
-                </span>
-              </div>
-              <div className="daily-puzzle-board-wrap">
-                <ChessBoard
-                  position={position}
-                  onPieceDrop={handlePieceDrop}
-                  canDragPiece={canDragPiece}
-                  boardOrientation={puzzle.sideToMove}
-                  boardTheme="green"
-                />
-                {failed && (
-                  <div className="daily-puzzle-result daily-puzzle-result--failed">
-                    Not quite — try again!
-                  </div>
-                )}
-              </div>
-              {puzzle.hint && (
-                <p className="daily-puzzle-hint">💡 {puzzle.hint}</p>
-              )}
-            </div>
-          )}
-        </>
+        <button
+          className="daily-puzzle-solve-btn"
+          onClick={() => navigate('/puzzles')}
+        >
+          <Flame size={18} />
+          Solve Today's Puzzle
+        </button>
       )}
     </div>
   );
