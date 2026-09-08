@@ -1,8 +1,13 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, act, waitFor } from '@testing-library/react';
+import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';
 
 // ── Module-level mocks (factories must not reference outer variables) ──────────
+
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => mockNavigate,
+}));
 
 vi.mock('../services/api', () => ({
   default: {
@@ -217,6 +222,20 @@ describe('DailyPuzzleStreak persistence', () => {
       });
 
       expect(api.getUserSettings).not.toHaveBeenCalled();
+    });
+
+    it('redirects to /puzzles when Solve Today\'s Puzzle button is clicked', async () => {
+      mockUserGuest();
+
+      const { default: DailyPuzzleStreak } = await import('./DailyPuzzleStreak');
+      await act(async () => {
+        render(<DailyPuzzleStreak />);
+      });
+
+      const solveBtn = screen.getByRole('button', { name: /solve today's puzzle/i });
+      fireEvent.click(solveBtn);
+
+      expect(mockNavigate).toHaveBeenCalledWith('/puzzles');
     });
   });
 
