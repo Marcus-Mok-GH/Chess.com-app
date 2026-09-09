@@ -76,16 +76,18 @@ class MatchmakingPollingService {
         this.currentPlayerId = playerId;
         this.startPolling(playerId);
         this.startHeartbeat(playerId);
-        return true;
+        return { success: true };
       } else {
-        console.error('[MatchmakingPolling] Failed to join queue:', data.message);
-        this.emit('matchmaking_error', { message: data.message || 'Failed to join matchmaking queue' });
-        return false;
+        const message = data.message || data.error?.message || 'Failed to join matchmaking queue';
+        console.error('[MatchmakingPolling] Failed to join queue:', message);
+        this.emit('matchmaking_error', { message });
+        return { success: false, message };
       }
     } catch (error) {
+      const message = 'Failed to connect to matchmaking server';
       console.error('[MatchmakingPolling] Error joining queue:', error);
-      this.emit('matchmaking_error', { message: 'Failed to connect to matchmaking server' });
-      return false;
+      this.emit('matchmaking_error', { message });
+      return { success: false, message };
     }
   }
 
