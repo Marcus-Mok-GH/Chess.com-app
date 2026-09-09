@@ -25,7 +25,7 @@
 }
 
 /* Hide on desktop — ChessGame has its own sidebar for controls */
-@media (min-width: 1201px) {
+@media (min-width: 769px) {
   .game-bottom-bar {
     display: none !important;
   }
