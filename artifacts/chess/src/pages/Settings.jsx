@@ -18,9 +18,12 @@ import {
   Crown,
   CheckCircle2,
   ShieldCheck,
+  Flag,
   BrainCircuit,
 } from 'lucide-react';
 import { connectCoach, disconnectCoach, getCoachStatus } from '../engine/coach/coachAI';
+import api from '../services/api';
+import { clearOnlineSession } from '../utils/gamePersistence';
 import './Settings.css';
 
 const BOARD_THEMES = [
@@ -109,6 +112,8 @@ export default function Settings() {
   const [coachLoading, setCoachLoading] = useState(true);
   const [coachBusy, setCoachBusy] = useState(false);
   const [coachError, setCoachError] = useState(null);
+  const [resigningGames, setResigningGames] = useState(false);
+  const [resignMessage, setResignMessage] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -157,7 +162,7 @@ export default function Settings() {
     }
   }
 
-  useEffect(() => {
+  async function handleResignAllLiveGames() {\n    if (!user || resigningGames) return;\n\n    const confirmed = window.confirm(\n      'Resign all ongoing online matchmaking games? This will immediately forfeit every active game and cannot be undone.'\n    );\n    if (!confirmed) return;\n\n    setResigningGames(true);\n    setResignMessage(null);\n    try {\n      const result = await api.resignAllLiveGames();\n      clearOnlineSession();\n      const count = Number(result?.resignedCount) || 0;\n      setResignMessage({\n        type: 'success',\n        text: count === 0\n          ? 'No ongoing online matchmaking games found.'\n          : `Resigned ${count} live game${count === 1 ? '' : 's'}.`,\n      });\n    } catch (error) {\n      setResignMessage({ type: 'error', text: error.message || 'Unable to resign live games.' });\n    } finally {\n      setResigningGames(false);\n    }\n  }\n  useEffect(() => {
     const hash = window.location.hash.slice(1);
     if (hash) {
       // Wait for lazy-loaded content to mount
@@ -435,9 +440,7 @@ export default function Settings() {
                   <span className="rec-l">{user.losses || 0}L</span>
                 </span>
               </div>
-            </div>
-            <button className="logout-btn" onClick={logout} type="button">
-              <LogOut size={16} />
+            </div>\n            <div className="setting-item danger-setting-item">\n              <div className="setting-info">\n                <div className="setting-title">\n                  <Flag className="setting-icon" size={16} />\n                  <span>Live games</span>\n                </div>\n                <span className="setting-desc">Resign every ongoing game started through online matchmaking.</span>\n                {resignMessage && (\n                  <span className={`setting-feedback ${resignMessage.type}`}>{resignMessage.text}</span>\n                )}\n              </div>\n              <button className="danger-btn" onClick={handleResignAllLiveGames} type="button" disabled={resigningGames}>\n                <Flag size={16} />\n                <span>{resigningGames ? 'Resigning...' : 'Resign all live games'}</span>\n              </button>\n            </div>\n            <button className="logout-btn" onClick={logout} type="button">              <LogOut size={16} />
               <span>Log Out</span>
             </button>
           </Section>
