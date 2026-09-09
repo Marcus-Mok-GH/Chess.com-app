@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './PollinationsCoachPrompt.css';
 
@@ -6,12 +6,10 @@ export default function PollinationsCoachPrompt({ mode = 'connect', onConnected 
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  const seenRef = useRef(false);
 
   useEffect(() => {
     function onMessage(event) {
       if (event?.data?.type === 'coach_connected') {
-        seenRef.current = true;
         onConnected?.();
       }
     }
@@ -33,7 +31,6 @@ export default function PollinationsCoachPrompt({ mode = 'connect', onConnected 
   }
 
   function handleLogin() {
-    seenRef.current = true;
     onConnected?.();
     navigate('/login');
   }
