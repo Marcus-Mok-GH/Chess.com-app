@@ -19,12 +19,7 @@ import { useMatchmaking } from './OnlinePlay/hooks/useMatchmaking';
 import LobbyUI from './OnlinePlay/subcomponents/LobbyUI';
 import './OnlinePlay.css';
 
-function playerIdsMatch(left, right) {
-  if (left == null || right == null) return false;
-  const normalize = (value) => String(value).replace(/^user_/i, '');
-  return normalize(left) === normalize(right);
-}
-
+import { resolveOnlinePlayerSeat } from './OnlinePlay/seatResolution';
 export default function OnlinePlay() {
   const [searchParams] = useSearchParams();
   const { gameId: routeGameId } = useParams();
@@ -167,28 +162,26 @@ export default function OnlinePlay() {
 
       // Never trust a cached color on refresh. Resolve the current seat from
       // the server using the authenticated user or this match's saved player id.
+      // Prefer the match-specific ID saved when the game was created. The
+      // account ID is only a fallback for legacy games; using it first can
+      // match both seats when the same account has two matchmaking sessions.
       const candidatePlayerIds = [
-        user ? `user_${user.id}` : null,
         sessionMatches ? session.playerId : null,
+        user ? `user_${user.id}` : null,
       ].filter(Boolean);
       let cancelled = false;
 
       api.getGameByCode(code)
         .then((data) => {
           if (cancelled || !data) return;
-          const whitePlayerId = candidatePlayerIds.find((id) =>
-            playerIdsMatch(data.white_player_id, id),
-          );
-          const blackPlayerId = candidatePlayerIds.find((id) =>
-            playerIdsMatch(data.black_player_id, id),
-          );
-          const resolvedPlayerId = whitePlayerId || blackPlayerId;
-          const resolvedColor = whitePlayerId ? 'white' : blackPlayerId ? 'black' : null;
+          const resolvedSeat = resolveOnlinePlayerSeat(data, candidatePlayerIds);
 
-          if (!resolvedPlayerId || !resolvedColor) {
+          if (!resolvedSeat) {
             setError('Could not restore your seat in this match.');
             return;
           }
+
+          const { playerId: resolvedPlayerId, color: resolvedColor } = resolvedSeat;
 
           const opponentName = resolvedColor === 'white'
             ? data.black_player_name
