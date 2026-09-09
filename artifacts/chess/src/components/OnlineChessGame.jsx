@@ -43,7 +43,8 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
   const lastVictoryKeyRef = useRef(null);
   const victoryTimeoutRef = useRef(null);
   const hasHydratedFromDb = useRef(false);
-
+  // Tracks the newest server snapshot applied locally so delayed socket
+  // snapshots cannot roll the board back to an earlier turn.
   const animationIdRef = useRef(0);
   const boardOrientation = playerColor || 'white';
 
@@ -65,7 +66,8 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
       .then((data) => {
         if (cancelled || !data) return;
         const history = normalizeMoveHistory(data.move_history);
-        if (history.length >= moveHistory.length) {
+        if (history.length >= appliedMoveCountRef.current) {
+          appliedMoveCountRef.current = history.length;
           setGame(buildGameFromHistory(history, data.fen));
           setMoveHistory(history);
           if (data.status === 'ended' || data.status === 'completed') {
