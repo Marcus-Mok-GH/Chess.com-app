@@ -601,3 +601,9 @@
     font-size: 0.78rem;
   }
 }
+/* The fixed mobile bar is the single source of game actions on small screens. */
+@media (max-width: 768px) {
+  .sidebar .game-controls {
+    display: none;
+  }
+}
