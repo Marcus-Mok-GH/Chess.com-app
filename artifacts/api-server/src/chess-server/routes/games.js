@@ -553,8 +553,17 @@ router.post('/:gameId/move', async (req, res) => {
 
     const whiteUid = userIdFromPlayerId(game.white_player_id);
     const blackUid = userIdFromPlayerId(game.black_player_id);
-    const isWhite = requestUid != null && whiteUid != null && requestUid === whiteUid;
-    const isBlack = requestUid != null && blackUid != null && requestUid === blackUid;
+
+    // Matchmaking player IDs include a session suffix. Prefer the exact seat
+    // so two sessions from the same account do not both resolve as White.
+    let isWhite = String(game.white_player_id) === playerId;
+    let isBlack = String(game.black_player_id) === playerId;
+
+    // Keep normalized-ID fallback for legacy games without session-specific IDs.
+    if (!isWhite && !isBlack) {
+      isWhite = requestUid != null && whiteUid != null && requestUid === whiteUid;
+      isBlack = requestUid != null && blackUid != null && requestUid === blackUid;
+    }
     if (!isWhite && !isBlack) {
       return errorResponse(res, 403, 'Unauthorized — not your game');
     }
