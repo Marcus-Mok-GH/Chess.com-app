@@ -151,6 +151,12 @@ export default function Analysis() {
 
   const handleSquareClick = useCallback(() => {}, []);
 
+  const handleSelectReviewMove = useCallback((ply) => {
+    const nextIndex = Number(ply);
+    if (!Number.isFinite(nextIndex)) return;
+    setMoveIndex(Math.max(0, Math.min(sanMoves.length, nextIndex)));
+  }, [sanMoves.length]);
+
   const normalizedMoveHistory = useMemo(
     () => toDetailedMoveHistory(moveHistory),
     [moveHistory]
@@ -254,7 +260,7 @@ export default function Analysis() {
                 className={`analysis-tab ${activeTab === 'report' ? 'active' : ''}`}
                 onClick={() => setActiveTab('report')}
               >
-                Report
+                Highlights
               </button>
               <button
                 type="button"
@@ -273,6 +279,7 @@ export default function Analysis() {
                     gameId={gameId}
                     variant="inline"
                     onClose={handleBack}
+                    onSelectMove={handleSelectReviewMove}
                   />
                 </div>
               )}
