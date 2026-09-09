@@ -118,12 +118,12 @@ export default function GameUI({
         <div className="controls">
           {gameStatus === 'playing' && (
             <>
-              <button onClick={handleOfferDraw}>Offer Draw</button>
-              <button onClick={handleResign}>Resign</button>
+              <button className="online-action-btn online-action-btn--draw" onClick={handleOfferDraw}>Offer Draw</button>
+              <button className="online-action-btn online-action-btn--resign" onClick={handleResign}>Resign</button>
             </>
           )}
-          <button onClick={() => navigate(`/analysis/${gameId}`, { state: { moveHistory } })} disabled={!canReview}>Review</button>
-          <button onClick={onLeave}>Leave</button>
+          <button className="online-action-btn online-action-btn--review" onClick={() => navigate(`/analysis/${gameId}`, { state: { moveHistory } })} disabled={!canReview}>Review</button>
+          <button className="online-action-btn online-action-btn--leave" onClick={onLeave}>Leave</button>
         </div>
       </div>
     </div>
