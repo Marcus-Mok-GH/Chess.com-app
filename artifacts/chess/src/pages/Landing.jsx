@@ -50,6 +50,8 @@ const OTHER_LINKS = [
   { label: 'Privacy', to: '/privacy' },
 ]
 
+const DEMO_FEN = 'r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3'
+
 // Alternating image/text feature blocks (chess.com style)
 const FEATURE_BLOCKS = [
   {
@@ -137,9 +139,52 @@ export default function Landing() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   // Hero position — a sharp middlegame snapshot
-  const demoPosition = useMemo(
-    () => new Chess('r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3'),
-    [],
+  const [demoFen, setDemoFen] = useState(DEMO_FEN)
+  const [selectedDemoSquare, setSelectedDemoSquare] = useState(null)
+
+  const handleDemoPieceDrop = (sourceSquare, targetSquare) => {
+    const game = new Chess(demoFen)
+
+    try {
+      game.move({ from: sourceSquare, to: targetSquare, promotion: 'q' })
+    } catch {
+      return false
+    }
+
+    setDemoFen(game.fen())
+    setSelectedDemoSquare(null)
+    return true
+  }
+
+  const handleDemoSquareClick = (square) => {
+    const game = new Chess(demoFen)
+    const piece = game.get(square)
+
+    if (!selectedDemoSquare) {
+      if (piece && piece.color === game.turn()) setSelectedDemoSquare(square)
+      return
+    }
+
+    if (square === selectedDemoSquare) {
+      setSelectedDemoSquare(null)
+      return
+    }
+
+    if (handleDemoPieceDrop(selectedDemoSquare, square)) return
+
+    setSelectedDemoSquare(piece && piece.color === game.turn() ? square : null)
+  }
+
+  const demoSquareStyles = useMemo(
+    () =>
+      selectedDemoSquare
+        ? {
+            [selectedDemoSquare]: {
+              boxShadow: 'inset 0 0 0 4px rgba(255, 214, 77, 0.9)',
+            },
+          }
+        : {},
+    [selectedDemoSquare],
   )
 
   useEffect(() => {
@@ -272,7 +317,14 @@ export default function Landing() {
         <section className="hero">
           <div className="hero-board">
             <div className="hero-board-frame">
-              <ChessBoard position={demoPosition} showCoordinates={false} boardTheme="green" />
+              <ChessBoard
+                position={demoFen}
+                onSquareClick={handleDemoSquareClick}
+                onPieceDrop={handleDemoPieceDrop}
+                customSquareStyles={demoSquareStyles}
+                showCoordinates={false}
+                boardTheme="green"
+              />
             </div>
             <div className="hero-board-live">
               <span className="dot" /> Live preview
