@@ -159,7 +159,7 @@ class ApiService {
     }).finally(() => clearTimeout(timeoutId));
   }
 
-  async getEngineMove({ fen, bot }) {
+  async resignAllLiveGames(token = null) {\n    const headers = {};\n    if (token) headers['Authorization'] = `Bearer ${token}`;\n    return this.request('/games/resign-all-live', {\n      method: 'POST',\n      headers,\n    });\n  }\n  async getEngineMove({ fen, bot }) {
     return this.request('/engine/move', {
       method: 'POST',
       body: JSON.stringify({ fen, bot }),
