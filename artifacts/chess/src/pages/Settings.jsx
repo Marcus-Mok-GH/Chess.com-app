@@ -162,7 +162,33 @@ export default function Settings() {
     }
   }
 
-  async function handleResignAllLiveGames() {\n    if (!user || resigningGames) return;\n\n    const confirmed = window.confirm(\n      'Resign all ongoing online matchmaking games? This will immediately forfeit every active game and cannot be undone.'\n    );\n    if (!confirmed) return;\n\n    setResigningGames(true);\n    setResignMessage(null);\n    try {\n      const result = await api.resignAllLiveGames();\n      clearOnlineSession();\n      const count = Number(result?.resignedCount) || 0;\n      setResignMessage({\n        type: 'success',\n        text: count === 0\n          ? 'No ongoing online matchmaking games found.'\n          : `Resigned ${count} live game${count === 1 ? '' : 's'}.`,\n      });\n    } catch (error) {\n      setResignMessage({ type: 'error', text: error.message || 'Unable to resign live games.' });\n    } finally {\n      setResigningGames(false);\n    }\n  }\n  useEffect(() => {
+  async function handleResignAllLiveGames() {
+    if (!user || resigningGames) return;
+
+    const confirmed = window.confirm(
+      'Resign all ongoing online matchmaking games? This will immediately forfeit every active game and cannot be undone.'
+    );
+    if (!confirmed) return;
+
+    setResigningGames(true);
+    setResignMessage(null);
+    try {
+      const result = await api.resignAllLiveGames();
+      clearOnlineSession();
+      const count = Number(result?.resignedCount) || 0;
+      setResignMessage({
+        type: 'success',
+        text: count === 0
+          ? 'No ongoing online matchmaking games found.'
+          : `Resigned ${count} live game${count === 1 ? '' : 's'}.`,
+      });
+    } catch (error) {
+      setResignMessage({ type: 'error', text: error.message || 'Unable to resign live games.' });
+    } finally {
+      setResigningGames(false);
+    }
+  }
+  useEffect(() => {
     const hash = window.location.hash.slice(1);
     if (hash) {
       // Wait for lazy-loaded content to mount
@@ -440,7 +466,24 @@ export default function Settings() {
                   <span className="rec-l">{user.losses || 0}L</span>
                 </span>
               </div>
-            </div>\n            <div className="setting-item danger-setting-item">\n              <div className="setting-info">\n                <div className="setting-title">\n                  <Flag className="setting-icon" size={16} />\n                  <span>Live games</span>\n                </div>\n                <span className="setting-desc">Resign every ongoing game started through online matchmaking.</span>\n                {resignMessage && (\n                  <span className={`setting-feedback ${resignMessage.type}`}>{resignMessage.text}</span>\n                )}\n              </div>\n              <button className="danger-btn" onClick={handleResignAllLiveGames} type="button" disabled={resigningGames}>\n                <Flag size={16} />\n                <span>{resigningGames ? 'Resigning...' : 'Resign all live games'}</span>\n              </button>\n            </div>\n            <button className="logout-btn" onClick={logout} type="button">              <LogOut size={16} />
+            </div>
+            <div className="setting-item danger-setting-item">
+              <div className="setting-info">
+                <div className="setting-title">
+                  <Flag className="setting-icon" size={16} />
+                  <span>Live games</span>
+                </div>
+                <span className="setting-desc">Resign every ongoing game started through online matchmaking.</span>
+                {resignMessage && (
+                  <span className={`setting-feedback ${resignMessage.type}`}>{resignMessage.text}</span>
+                )}
+              </div>
+              <button className="danger-btn" onClick={handleResignAllLiveGames} type="button" disabled={resigningGames}>
+                <Flag size={16} />
+                <span>{resigningGames ? 'Resigning...' : 'Resign all live games'}</span>
+              </button>
+            </div>
+            <button className="logout-btn" onClick={logout} type="button">              <LogOut size={16} />
               <span>Log Out</span>
             </button>
           </Section>
