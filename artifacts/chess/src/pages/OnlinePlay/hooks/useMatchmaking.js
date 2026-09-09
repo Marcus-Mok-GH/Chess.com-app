@@ -64,18 +64,19 @@ export function useMatchmaking(user, isLoggedIn, settings) {
       return false;
     }
 
-    const currentElo = user.elo;
-    const currentName = user.username;
+    const currentName = String(user.username || '').trim();
+    const parsedElo = Number(user.elo);
+    const currentElo = Number.isFinite(parsedElo) ? parsedElo : 1200;
     const newPlayerId = `user_${user.id}_${matchmakingSessionId.current}`;
 
     activePlayerIdRef.current = newPlayerId;
 
-    const joined = await pollingService.joinMatchmaking(newPlayerId, currentName, currentElo, true);
+    const joinResult = await pollingService.joinMatchmaking(newPlayerId, currentName, currentElo, true);
     // If generation changed while we were awaiting, user already cancelled
     if (gen !== generationRef.current) return false;
 
-    if (!joined) {
-      setError('Failed to join matchmaking. Please try again.');
+    if (!joinResult?.success) {
+      setError(joinResult?.message || 'Failed to join matchmaking. Please try again.');
       activePlayerIdRef.current = null;
       return false;
     }
