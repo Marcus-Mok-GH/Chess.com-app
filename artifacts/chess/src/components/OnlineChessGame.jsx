@@ -390,7 +390,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
           clearOnlineSession();
           if (gameId) clearOnlineGameState(gameId);
         }}
-        navigate={navigate} canReview={gameStatus === 'ended'} onLeave={() => {
+        navigate={navigate} canReview={gameStatus === 'ended'} canLeave={gameStatus === 'ended' && (winner === 'white' || winner === 'black')} onLeave={() => {
           setDrawOffered(false);
           clearOnlineSession();
           if (gameId) clearOnlineGameState(gameId);
