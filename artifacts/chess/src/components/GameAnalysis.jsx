@@ -58,7 +58,7 @@ export default function GameAnalysis({
       try {
         const status = await getCoachStatus(true);
         setCoachStatus(status);
-        setIsReady(Boolean(status.available && user));
+        setIsReady(Boolean(status.available && status.connected && user));
 
       } catch (error) {
         console.error('[GameAnalysis] Failed to check coach availability:', error);
@@ -68,7 +68,7 @@ export default function GameAnalysis({
       }
     }
     checkAvailability();
-  }, []);
+  }, [user?.username]);
 
   const handleConnect = async () => {
     try {
