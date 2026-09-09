@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import { Chess } from 'chess.js';
 import { errorResponse, handleRouteError } from '../middleware/errors.js';
 import { userIdFromPlayerId } from '../socket/utils.js';
+import { getGameService } from '../socket/gameService.js';
 import { validateSession } from '../auth.js';
 import { getOnlineGameKv } from '../kv/onlineGameKv.js';
 
