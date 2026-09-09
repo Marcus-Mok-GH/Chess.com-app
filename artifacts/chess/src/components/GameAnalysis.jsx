@@ -4,7 +4,44 @@ import { useUser } from '../contexts/UserContext';
 import { analyzeGame, connectCoach, disconnectCoach, getCoachStatus } from '../engine/coach/coachAI';
 import './GameAnalysis.css';
 
-export default function GameAnalysis({ moveHistory, gameId = null, onClose, variant = 'modal' }) {
+const LABELS = [
+  ['blunder', 'Blunder'],
+  ['mistake', 'Mistake'],
+  ['miss', 'Miss'],
+  ['inaccuracy', 'Inaccuracy'],
+  ['brilliant', 'Brilliant'],
+  ['great', 'Great'],
+  ['best', 'Best'],
+  ['excellent', 'Excellent'],
+  ['book', 'Book'],
+  ['good', 'Good'],
+];
+
+function getMoveLabel(entry) {
+  const explicit = String(entry?.classification || entry?.label || '').trim();
+  if (explicit) return explicit.charAt(0).toUpperCase() + explicit.slice(1).toLowerCase();
+
+  const text = String(entry?.review || entry?.comment || entry?.analysis || '').toLowerCase();
+  return LABELS.find(([needle]) => text.includes(needle))?.[1] || 'Reviewed';
+}
+
+function isKeyMoment(label) {
+  return ['Blunder', 'Mistake', 'Miss', 'Inaccuracy', 'Brilliant', 'Great'].includes(label);
+}
+
+function getPly(entry, index) {
+  const ply = Number(entry?.ply);
+  if (Number.isFinite(ply) && ply > 0) return ply;
+  return index + 1;
+}
+
+export default function GameAnalysis({
+  moveHistory,
+  gameId = null,
+  onClose,
+  onSelectMove,
+  variant = 'modal',
+}) {
   const navigate = useNavigate();
   const { user } = useUser();
   const [analysis, setAnalysis] = useState(null);
@@ -13,6 +50,7 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
   const [isLoading, setIsLoading] = useState(true);
   const [coachStatus, setCoachStatus] = useState(null);
   const [authPrompt, setAuthPrompt] = useState(false);
+  const [showAllMoves, setShowAllMoves] = useState(false);
   const isInline = variant === 'inline';
 
   useEffect(() => {
@@ -99,12 +137,27 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
       : null;
 
   const summary = analysis?.summary || null;
+  const labeledMoves = moveReviews?.map((entry, index) => ({
+    entry,
+    index,
+    label: getMoveLabel(entry),
+    ply: getPly(entry, index),
+  })) || [];
+  const keyMoments = labeledMoves.filter(({ label }) => isKeyMoment(label));
+  const visibleMoves = showAllMoves ? labeledMoves : keyMoments;
+  const accuracy = Number(analysis?.accuracy ?? analysis?.summary?.accuracy);
+  const hasAccuracy = Number.isFinite(accuracy) && accuracy >= 0 && accuracy <= 100;
+  const generatedSummary = keyMoments.length
+    ? `${keyMoments.length} key moment${keyMoments.length === 1 ? '' : 's'} to revisit. Select one to load the position on the board.`
+    : `The coach reviewed ${labeledMoves.length} move${labeledMoves.length === 1 ? '' : 's'} and did not flag a critical moment.`;
 
   const content = (
     <div className="analysis-content">
       {!analysis && !isAnalyzing && (
         <div className="analysis-start">
-          <p>Analyze your game with AI coach</p>
+            <p className="analysis-start-kicker">GAME REVIEW</p>
+            <h4>Find the moments that changed the game</h4>
+            <p>Get a highlights report, move labels, and coach explanations you can follow on the board.</p>
           {isLoading ? (
             <div className="coach-loading">
               <div className="spinner"></div>
@@ -134,7 +187,7 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
           ) : (
             <>
               <button onClick={runAnalysis} className="btn btn-primary">
-                🔍 Start Analysis
+                 🔍 Start Game Review
               </button>
               <button type="button" onClick={handleDisconnect} className="btn btn-secondary">
                 Disconnect
@@ -152,21 +205,96 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
       )}
       {analysis && (
         <div className="analysis-result">
-          {summary && (
-            <div className="analysis-summary">
-              {summary}
-            </div>
+          {(summary || moveReviews) && (
+            <section className="review-highlights">
+              <div className="review-section-heading">
+                <div>
+                  <span className="review-eyebrow">HIGHLIGHTS</span>
+                  <h4>What changed the game</h4>
+                </div>
+                <span className="review-engine-note">
+                  {hasAccuracy ? 'Engine score included' : 'Coach review · engine score not available'}
+                </span>
+              </div>
+              <div className="review-stat-grid">
+                <div className="review-stat">
+                  <strong>{labeledMoves.length}</strong>
+                  <span>Moves reviewed</span>
+                </div>
+                <div className="review-stat">
+                  <strong>{keyMoments.length}</strong>
+                  <span>Key moments</span>
+                </div>
+                <div className="review-stat">
+                  <strong>{hasAccuracy ? `${Math.round(accuracy)}%` : '—'}</strong>
+                  <span>{hasAccuracy ? 'Accuracy' : 'Accuracy unavailable'}</span>
+                </div>
+              </div>
+              <p className="analysis-summary">{summary || generatedSummary}</p>
+            </section>
           )}
           {moveReviews ? (
-            <div className="analysis-move-reviews">
-              {moveReviews.map((entry, index) => {
-                const color = entry?.color === 'black' ? 'black' : 'white';
-                const moveNumber = Number.isFinite(entry?.moveNumber)
-                  ? entry.moveNumber
-                  : Math.floor(index / 2) + 1;
-                const moveLabel = `${moveNumber}${color === 'black' ? '...' : '.'}`;
-                const san = entry?.san || '';
-                const review = entry?.review || entry?.comment || entry?.analysis || '';
+            <>
+              <div className="review-coach-card">
+                <div className="review-coach-avatar">♟</div>
+                <div>
+                  <span className="review-eyebrow">COACH</span>
+                  <p>{summary || 'Start with a key moment, then use the move list to compare the rest of the game.'}</p>
+                </div>
+              </div>
+              {keyMoments.length > 0 && (
+                <div className="review-key-moments">
+                  <div className="review-list-heading">
+                    <h4>Key moments</h4>
+                    <span>{keyMoments.length} flagged</span>
+                  </div>
+                  <div className="key-moment-list">
+                    {keyMoments.map(({ entry, index, label, ply }) => {
+                      const color = entry?.color === 'black' ? 'black' : 'white';
+                      const moveNumber = Number.isFinite(entry?.moveNumber)
+                        ? entry.moveNumber
+                        : Math.floor(index / 2) + 1;
+                      const moveLabel = `${moveNumber}${color === 'black' ? '...' : '.'}`;
+                      return (
+                        <button
+                          type="button"
+                          key={`key-${moveLabel}-${index}`}
+                          className={`key-moment key-moment-${label.toLowerCase()}`}
+                          onClick={() => onSelectMove?.(ply)}
+                        >
+                          <span className="key-moment-move">{moveLabel} {entry?.san || '—'}</span>
+                          <span className="key-moment-label">{label}</span>
+                          <span className="key-moment-arrow">→</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              <div className="analysis-move-reviews">
+                <div className="review-list-heading">
+                  <h4>{showAllMoves ? 'All moves' : 'Flagged moves'}</h4>
+                  {labeledMoves.length > keyMoments.length && (
+                    <button
+                      type="button"
+                      className="review-text-button"
+                      onClick={() => setShowAllMoves((value) => !value)}
+                    >
+                      {showAllMoves ? 'Show key moments' : `Show all ${labeledMoves.length} moves`}
+                    </button>
+                  )}
+                </div>
+                {visibleMoves.length === 0 && (
+                  <p className="review-empty">No critical moves were flagged. Open All moves to read the coach notes.</p>
+                )}
+                {visibleMoves.map(({ entry, index, label, ply }) => {
+                  const color = entry?.color === 'black' ? 'black' : 'white';
+                  const moveNumber = Number.isFinite(entry?.moveNumber)
+                    ? entry.moveNumber
+                    : Math.floor(index / 2) + 1;
+                  const moveLabel = `${moveNumber}${color === 'black' ? '...' : '.'}`;
+                  const san = entry?.san || '';
+                  const review = entry?.review || entry?.comment || entry?.analysis || '';
                 return (
                   <div key={`${moveLabel}-${index}`} className="analysis-move-review">
                     <div className="analysis-move-review-header">
@@ -174,12 +302,21 @@ export default function GameAnalysis({ moveHistory, gameId = null, onClose, vari
                         {moveLabel}
                       </span>
                       <span className="analysis-move-review-san">{san || '—'}</span>
+                        <span className={`analysis-move-label move-label-${label.toLowerCase()}`}>{label}</span>
                     </div>
                     <p className="analysis-move-review-text">{review || 'No review available.'}</p>
+                      <button
+                        type="button"
+                        className="review-jump-button"
+                        onClick={() => onSelectMove?.(ply)}
+                      >
+                        Review on board →
+                      </button>
                   </div>
                 );
               })}
-            </div>
+              </div>
+            </>
           ) : (
             <div className="analysis-text">{analysis}</div>
           )}
