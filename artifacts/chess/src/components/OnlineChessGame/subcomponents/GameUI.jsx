@@ -5,6 +5,7 @@ import ChessBoard from '../../ChessBoard';
 import AnimatedPiece from '../../AnimatedPiece';
 import ChessPieceIcon from '../../ChessPieceIcon';
 import MoveHistory from '../../MoveHistory';
+import { isOnlineGameActive } from '../onlineGameStatus';
 
 export default function GameUI({
   topPlayer, bottomPlayer, game, onSquareClick, onPieceDrop, canDragPiece,
@@ -116,7 +117,7 @@ export default function GameUI({
 
 
         <div className="controls">
-          {gameStatus === 'playing' && (
+          {isOnlineGameActive(gameStatus) && (
             <>
               <button className="online-action-btn online-action-btn--draw" onClick={handleOfferDraw}>Offer Draw</button>
               <button className="online-action-btn online-action-btn--resign" onClick={handleResign}>Resign</button>
