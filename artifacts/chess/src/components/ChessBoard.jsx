@@ -73,7 +73,11 @@ export default function ChessBoard({
     onPieceDrop: (args = {}) => {
       // args: { sourceSquare: string, targetSquare: string | null, piece: DraggingPieceDataType }
       if (!args.sourceSquare || !args.targetSquare) return false;
-      return onPieceDrop?.(args.sourceSquare, args.targetSquare) ?? false;
+      const dropResult = onPieceDrop?.(args.sourceSquare, args.targetSquare) ?? false;
+      // react-chessboard expects a synchronous boolean. Async move handlers
+      // must leave the controlled board unchanged until the server confirms.
+      if (dropResult && typeof dropResult.then === 'function') return false;
+      return Boolean(dropResult);
     },
     canDragPiece: (args = {}) => {
       // The library supplies `piece.pieceType`; normalize defensively so a
