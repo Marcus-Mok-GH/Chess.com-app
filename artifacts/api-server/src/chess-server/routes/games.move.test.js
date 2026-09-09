@@ -228,6 +228,38 @@ describe('POST /api/games/:gameId/move', () => {
     expect(res.body.fen).toContain('w KQkq');
   });
 
+  it('allows the black session to move when both seats share an account', async () => {
+    const app = buildApp();
+    app.use('/api/games', gameRoutes);
+    const whitePlayerId = 'user_1_white-session';
+    const blackPlayerId = 'user_1_black-session';
+    const currentGame = mockActiveGame({
+      white_player_id: whitePlayerId,
+      black_player_id: blackPlayerId,
+    });
+    const updatedGame = {
+      ...currentGame,
+      move_count: 2,
+      fen: 'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2',
+      move_history: [
+        { san: 'e4', from: 'e2', to: 'e4' },
+        { san: 'e5', from: 'e7', to: 'e5' },
+      ],
+    };
+    validateSession.mockResolvedValueOnce(1);
+    query
+      .mockResolvedValueOnce({ rows: [currentGame] })
+      .mockResolvedValueOnce({ rows: [updatedGame], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 });
+
+    const res = await loopback(app, 'POST', '/api/games/GAME1/move',
+      { move: { from: 'e7', to: 'e5' }, playerId: blackPlayerId, expectedMoveCount: 1 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.moveCount).toBe(2);
+  });
+
   it('returns 409 when CAS fails (concurrent modification)', async () => {
     const app = buildApp();
     app.use('/api/games', gameRoutes);
