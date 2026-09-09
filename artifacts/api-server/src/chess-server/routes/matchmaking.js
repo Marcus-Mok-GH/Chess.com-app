@@ -65,17 +65,21 @@ router.post('/join', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid player ID' });
     }
 
-    if (!playerName || typeof playerName !== 'string' || playerName.trim().length < 2) {
+    if (!playerName || typeof playerName !== 'string') {
       return res.status(400).json({ success: false, message: 'Invalid player name' });
     }
 
     const trimmedName = playerName.trim();
 
-    if (!/^[a-zA-Z0-9_]+$/.test(trimmedName)) {
-      return res.status(400).json({ success: false, message: 'Player name can only contain letters, numbers, and underscores' });
+    // Matchmaking names are display values. Keep the same length boundary as
+    // the database column, but do not reject valid names containing spaces,
+    // dots, or hyphens. Authenticated usernames can contain those characters.
+    if (trimmedName.length < 2 || trimmedName.length > 50) {
+      return res.status(400).json({ success: false, message: 'Player name must be between 2 and 50 characters' });
     }
 
-    if (typeof elo !== 'number' || elo < 0 || elo > 4000) {
+    const numericElo = Number(elo);
+    if (!Number.isFinite(numericElo) || numericElo < 0 || numericElo > 4000) {
       return res.status(400).json({ success: false, message: 'Invalid ELO rating' });
     }
 
@@ -102,7 +106,7 @@ router.post('/join', async (req, res) => {
     await query(
       `INSERT INTO matchmaking_queue (socket_id, player_id, player_name, elo, is_ranked)
        VALUES ($1, $2, $3, $4, $5)`,
-      [socketId, playerId, trimmedName, elo || 1200, isRankedValue]
+      [socketId, playerId, trimmedName, numericElo || 1200, isRankedValue]
     );
 
     // Always process matchmaking immediately after join
