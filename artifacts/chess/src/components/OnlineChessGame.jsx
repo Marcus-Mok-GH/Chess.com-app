@@ -73,15 +73,16 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
         const serverMoveCount = Number.isInteger(data.move_count)
           ? data.move_count
           : history.length;
-        if (serverMoveCount >= appliedMoveCountRef.current) {
-          appliedMoveCountRef.current = serverMoveCount;
-          setGame(buildGameFromHistory(history, data.fen));
-          setMoveHistory(history);
-          if (data.status === 'ended' || data.status === 'completed') {
-            setGameStatus('ended');
-          } else if (data.status) {
-            setGameStatus(data.status === 'playing' || data.status === 'in_progress' ? 'playing' : data.status);
-          }
+        // The server is authoritative for the first hydration. Local storage can
+        // contain a snapshot from a previous match when a game code is reused,
+        // so stale client history must never veto a fresh server snapshot.
+        appliedMoveCountRef.current = serverMoveCount;
+        setGame(buildGameFromHistory(history, data.fen));
+        setMoveHistory(history);
+        if (data.status === 'ended' || data.status === 'completed') {
+          setGameStatus('ended');
+        } else if (data.status) {
+          setGameStatus(data.status === 'playing' || data.status === 'in_progress' ? 'playing' : data.status);
         }
         if (data.white_player_name || data.black_player_name) {
           if (data.white_player_name) {
