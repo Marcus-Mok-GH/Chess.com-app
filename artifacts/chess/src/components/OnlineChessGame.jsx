@@ -46,6 +46,10 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
   // Tracks the newest server snapshot applied locally so delayed socket
   // snapshots cannot roll the board back to an earlier turn.
   const animationIdRef = useRef(0);
+  // Use the server's monotonic move count for synchronization. The stored
+  // history can arrive in different serialized shapes, but move_count is the
+  // authoritative version used by the move endpoint.
+  const appliedMoveCountRef = useRef(moveHistory.length);
   const boardOrientation = playerColor || 'white';
 
   useEffect(() => {
@@ -66,8 +70,11 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
       .then((data) => {
         if (cancelled || !data) return;
         const history = normalizeMoveHistory(data.move_history);
-        if (history.length >= appliedMoveCountRef.current) {
-          appliedMoveCountRef.current = history.length;
+        const serverMoveCount = Number.isInteger(data.move_count)
+          ? data.move_count
+          : history.length;
+        if (serverMoveCount >= appliedMoveCountRef.current) {
+          appliedMoveCountRef.current = serverMoveCount;
           setGame(buildGameFromHistory(history, data.fen));
           setMoveHistory(history);
           if (data.status === 'ended' || data.status === 'completed') {
@@ -113,8 +120,11 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
 
     const handleGameState = (data) => {
       const history = normalizeMoveHistory(data.moveHistory);
-      if (history.length < appliedMoveCountRef.current) return;
-      appliedMoveCountRef.current = history.length;
+      const serverMoveCount = Number.isInteger(data.moveCount)
+        ? data.moveCount
+        : history.length;
+      if (serverMoveCount < appliedMoveCountRef.current) return;
+      appliedMoveCountRef.current = serverMoveCount;
       setGame(buildGameFromHistory(history, data.fen));
       setMoveHistory(history);
       const status = data.status === 'ended' || data.status === 'completed' ? 'ended' : (data.status || 'playing');
@@ -125,8 +135,11 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
 
     const handleMoveMade = (data) => {
       const history = normalizeMoveHistory(data.moveHistory);
-      if (history.length < appliedMoveCountRef.current) return;
-      appliedMoveCountRef.current = history.length;
+      const serverMoveCount = Number.isInteger(data.moveCount)
+        ? data.moveCount
+        : history.length;
+      if (serverMoveCount < appliedMoveCountRef.current) return;
+      appliedMoveCountRef.current = serverMoveCount;
       if (data.playerId !== playerId) {
         setDrawOffered(false);
         const lastMove = history[history.length - 1];
@@ -180,7 +193,6 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
   // Local player's own moves are confirmed via the POST response, but opponent
   // moves arrive only through this poll.  The interval avoids overlapping polls
   // via the inFlight guard and stops when the game ends.
-  const appliedMoveCountRef = useRef(moveHistory.length);
   const gameStatusRef = useRef(gameStatus);
 
   useEffect(() => {
@@ -205,8 +217,11 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
         if (cancelled || !data) return;
 
         const serverHistory = normalizeMoveHistory(data.move_history);
+        const serverMoveCount = Number.isInteger(data.move_count)
+          ? data.move_count
+          : serverHistory.length;
         const knownCount = appliedMoveCountRef.current;
-        const hasNewMoves = serverHistory.length > knownCount;
+        const hasNewMoves = serverMoveCount > knownCount;
 
         const serverStatus =
           data.status === 'ended' || data.status === 'completed'
@@ -223,7 +238,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
 
         if (!hasNewMoves) return;
 
-        appliedMoveCountRef.current = serverHistory.length;
+        appliedMoveCountRef.current = serverMoveCount;
 
         setGame(buildGameFromHistory(serverHistory, data.fen));
         setMoveHistory(serverHistory);
