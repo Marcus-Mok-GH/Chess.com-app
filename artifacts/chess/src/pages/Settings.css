@@ -505,7 +505,63 @@
   transform: translateY(0);
 }
 
-/* ── Live-game danger action ───────── */\n.danger-setting-item {\n  align-items: flex-start;\n  padding-top: 1rem;\n}\n\n.danger-setting-item .setting-info {\n  padding-top: 0.15rem;\n}\n\n.danger-btn {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  gap: 0.45rem;\n  flex-shrink: 0;\n  padding: 0.6rem 0.85rem;\n  background: transparent;\n  color: #e76f51;\n  border: 1px solid rgba(231, 111, 81, 0.55);\n  border-radius: var(--radius-md);\n  font-size: 0.82rem;\n  font-weight: 700;\n  cursor: pointer;\n  transition: all 0.2s ease;\n}\n\n.danger-btn:hover {\n  background: rgba(231, 111, 81, 0.12);\n  border-color: #e76f51;\n  transform: translateY(-1px);\n}\n\n.danger-btn:active {\n  transform: translateY(0);\n}\n\n.danger-btn:disabled {\n  cursor: wait;\n  opacity: 0.6;\n  transform: none;\n}\n\n.setting-feedback {\n  display: block;\n  margin-top: 0.4rem;\n  font-size: 0.78rem;\n}\n\n.setting-feedback.success {\n  color: var(--primary);\n}\n\n.setting-feedback.error {\n  color: #e76f51;\n}\n/* ── Reset actions ─────────────────── */
+/* ── Live-game danger action ───────── */
+.danger-setting-item {
+  align-items: flex-start;
+  padding-top: 1rem;
+}
+
+.danger-setting-item .setting-info {
+  padding-top: 0.15rem;
+}
+
+.danger-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+  padding: 0.6rem 0.85rem;
+  background: transparent;
+  color: #e76f51;
+  border: 1px solid rgba(231, 111, 81, 0.55);
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.danger-btn:hover {
+  background: rgba(231, 111, 81, 0.12);
+  border-color: #e76f51;
+  transform: translateY(-1px);
+}
+
+.danger-btn:active {
+  transform: translateY(0);
+}
+
+.danger-btn:disabled {
+  cursor: wait;
+  opacity: 0.6;
+  transform: none;
+}
+
+.setting-feedback {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.78rem;
+}
+
+.setting-feedback.success {
+  color: var(--primary);
+}
+
+.setting-feedback.error {
+  color: #e76f51;
+}
+/* ── Reset actions ─────────────────── */
 .settings-actions {
   margin-top: 1.75rem;
   text-align: center;
@@ -605,7 +661,12 @@
     min-height: 44px;
   }
 
-  .danger-btn {\n    width: 100%;\n    min-height: 44px;\n  }\n\n  .logout-btn {
+  .danger-btn {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .logout-btn {
     padding: 0.875rem;
     min-height: 48px;
     font-size: 0.9rem;
