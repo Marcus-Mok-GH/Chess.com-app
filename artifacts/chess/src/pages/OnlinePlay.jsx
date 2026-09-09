@@ -19,6 +19,12 @@ import { useMatchmaking } from './OnlinePlay/hooks/useMatchmaking';
 import LobbyUI from './OnlinePlay/subcomponents/LobbyUI';
 import './OnlinePlay.css';
 
+function playerIdsMatch(left, right) {
+  if (left == null || right == null) return false;
+  const normalize = (value) => String(value).replace(/^user_/i, '');
+  return normalize(left) === normalize(right);
+}
+
 export default function OnlinePlay() {
   const [searchParams] = useSearchParams();
   const { gameId: routeGameId } = useParams();
@@ -46,7 +52,8 @@ export default function OnlinePlay() {
     return null;
   });
   const [playerColor, setPlayerColor] = useState(() => {
-    if (savedSession?.playerColor) return savedSession.playerColor;
+    // A route/session refresh must resolve the seat from the server.
+    if (routeGameId || savedSession?.gameId) return null;
     try {
       return localStorage.getItem('last_chess_color') || null;
     } catch {
@@ -152,83 +159,69 @@ export default function OnlinePlay() {
       const code = routeGameId.toUpperCase();
       setGameId(code);
       setView('playing');
+      setPlayerColor(null);
 
-      // Hydrate color / playerId from saved session if this is the same game
       const session = loadOnlineSession();
-      let resolvedPlayerId = playerId || (user ? `user_${user.id}` : null);
-      let resolvedColor = playerColor;
+      const sessionMatches = session?.gameId === code;
+      if (sessionMatches && session.opponentInfo) setOpponentInfo(session.opponentInfo);
 
-      if (session && session.gameId === code) {
-        if (session.playerId) {
-          resolvedPlayerId = session.playerId;
-          setPlayerId(session.playerId);
-        }
-        if (session.playerColor) {
-          resolvedColor = session.playerColor;
-          setPlayerColor(session.playerColor);
-        }
-        if (session.opponentInfo) setOpponentInfo(session.opponentInfo);
-        gameSessionRef.current = { ...gameSessionRef.current, ...session };
-      } else {
-        try {
-          const lastColor = localStorage.getItem('last_chess_color');
-          const lastPlayerId = localStorage.getItem('last_chess_player_id');
-          if (lastColor && !resolvedColor) {
-            resolvedColor = lastColor;
-            setPlayerColor(lastColor);
-          }
-          if (lastPlayerId && !resolvedPlayerId) {
-            resolvedPlayerId = lastPlayerId;
-            setPlayerId(lastPlayerId);
-          }
-        } catch {
-          // ignore
-        }
-      }
+      // Never trust a cached color on refresh. Resolve the current seat from
+      // the server using the authenticated user or this match's saved player id.
+      const candidatePlayerIds = [
+        user ? `user_${user.id}` : null,
+        sessionMatches ? session.playerId : null,
+      ].filter(Boolean);
+      let cancelled = false;
 
-      // Recover color from server if still unknown (e.g. shared link / lost localStorage)
-      // Re-run when auth finishes loading so refreshes do not strand the user on the wrong side.
-      if (!resolvedColor || !resolvedPlayerId) {
-        const pid = resolvedPlayerId || (user ? `user_${user.id}` : null);
-        if (pid) {
-          api.getGameByCode(code)
-            .then((data) => {
-              if (!data || !pid) return;
-              let color = resolvedColor;
-              if (data.white_player_id === pid) color = 'white';
-              else if (data.black_player_id === pid) color = 'black';
-              // Also match by numeric user id stored without prefix
-              else if (user) {
-                const uid = String(user.id);
-                if (String(data.white_player_id) === uid || data.white_player_id === `user_${uid}`) color = 'white';
-                else if (String(data.black_player_id) === uid || data.black_player_id === `user_${uid}`) color = 'black';
-              }
-              if (color) {
-                setPlayerColor(color);
-                setPlayerId(pid);
-                persistGameSession({
-                  gameId: code,
-                  playerId: pid,
-                  playerColor: color,
-                });
-              }
-            })
-            .catch(() => {});
-        }
-      } else {
-        persistGameSession({
-          gameId: code,
-          playerId: resolvedPlayerId,
-          playerColor: resolvedColor || null,
+      api.getGameByCode(code)
+        .then((data) => {
+          if (cancelled || !data) return;
+          const whitePlayerId = candidatePlayerIds.find((id) =>
+            playerIdsMatch(data.white_player_id, id),
+          );
+          const blackPlayerId = candidatePlayerIds.find((id) =>
+            playerIdsMatch(data.black_player_id, id),
+          );
+          const resolvedPlayerId = whitePlayerId || blackPlayerId;
+          const resolvedColor = whitePlayerId ? 'white' : blackPlayerId ? 'black' : null;
+
+          if (!resolvedPlayerId || !resolvedColor) {
+            setError('Could not restore your seat in this match.');
+            return;
+          }
+
+          const opponentName = resolvedColor === 'white'
+            ? data.black_player_name
+            : data.white_player_name;
+          const opponentElo = resolvedColor === 'white'
+            ? data.black_elo
+            : data.white_elo;
+          const nextOpponentInfo = opponentName
+            ? { name: opponentName, elo: opponentElo }
+            : session?.opponentInfo || null;
+
+          setPlayerId(resolvedPlayerId);
+          setPlayerColor(resolvedColor);
+          if (nextOpponentInfo) setOpponentInfo(nextOpponentInfo);
+          persistGameSession({
+            gameId: code,
+            playerId: resolvedPlayerId,
+            playerColor: resolvedColor,
+            opponentInfo: nextOpponentInfo,
+          });
+        })
+        .catch(() => {
+          if (!cancelled) setError('Could not restore this match.');
         });
-      }
-    } else {
-      const codeFromUrl = searchParams.get('code');
-      if (codeFromUrl) {
-        setJoinCode(codeFromUrl.toUpperCase());
-        setGameMode('friendly');
-        setView('lobby');
-      }
+
+      return () => { cancelled = true; };
+    }
+
+    const codeFromUrl = searchParams.get('code');
+    if (codeFromUrl) {
+      setJoinCode(codeFromUrl.toUpperCase());
+      setGameMode('friendly');
+      setView('lobby');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeGameId, searchParams, user, isLoggedIn]);
@@ -526,7 +519,7 @@ export default function OnlinePlay() {
           </div>
         </div>
       )}
-      {view === 'playing' && gameId && (
+      {view === 'playing' && gameId && playerId && playerColor && (
         <OnlineChessGame
           gameId={gameId}
           playerId={playerId}
@@ -534,6 +527,14 @@ export default function OnlinePlay() {
           opponentInfo={opponentInfo}
           onLeave={handleLeaveGame}
         />
+      )}
+      {view === 'playing' && gameId && (!playerId || !playerColor) && (
+        <div className="waiting-container">
+          <div className="waiting-content">
+            <h2>Restoring game</h2>
+            <p>{error || 'Confirming your player seat…'}</p>
+          </div>
+        </div>
       )}
       {showLoginModal && (
         <LoginModal
