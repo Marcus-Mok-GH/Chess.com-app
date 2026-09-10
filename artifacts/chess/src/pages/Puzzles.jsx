@@ -9,7 +9,6 @@ import { explainCoachMove } from "../engine/coach/coachAI";
 import {
   Puzzle,
   Check,
-  X,
   Lightbulb,
   SkipForward,
   RotateCcw,
@@ -77,16 +76,17 @@ export default function Puzzles() {
   const [generationError, setGenerationError] = useState(null);
   const [willPlayFollowup, setWillPlayFollowup] = useState(false);
   const [solved, setSolved] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [wrongMove, setWrongMove] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [selectedSquare, setSelectedSquare] = useState(null);
 
-  // LLM Description state
+  // AI explanation state for incorrect puzzle moves
   const [llmDescription, setLlmDescription] = useState(null);
   const [llmLoading, setLlmLoading] = useState(false);
   const [llmError, setLlmError] = useState(null);
 
   const generationRequestRef = useRef(0);
+  const explanationRequestRef = useRef(0);
   const timerIds = useRef([]);
 
   const [solvedCount, setSolvedCount] = useState(0);
@@ -117,6 +117,11 @@ export default function Puzzles() {
     clearTimers();
     setInitializing(true);
     setGenerationError(null);
+    explanationRequestRef.current += 1;
+    setLlmDescription(null);
+    setLlmLoading(false);
+    setLlmError(null);
+    setWrongMove(false);
     setSelectedSquare(null);
 
     const lesson = LESSON_CATALOG[lessonIndex] || LESSON_CATALOG[0];
@@ -140,7 +145,7 @@ export default function Puzzles() {
       });
       setPosition(freshPuzzle.fen);
       setSolved(false);
-      setFailed(false);
+      setWrongMove(false);
       setShowHint(false);
       setWillPlayFollowup(false);
       return true;
@@ -169,42 +174,44 @@ export default function Puzzles() {
     };
   }, [currentLessonIndex]);
 
-  // Fetch LLM description whenever puzzle position/solution changes
-  useEffect(() => {
-    if (!puzzle?.fen || !puzzle?.solution) return;
-    let cancelled = false;
+  function clearCoachExplanation() {
+    explanationRequestRef.current += 1;
+    setLlmDescription(null);
+    setLlmLoading(false);
+    setLlmError(null);
+  }
+
+  function explainWrongMove(fenBefore, move, fenAfter) {
+    const requestId = ++explanationRequestRef.current;
     setLlmLoading(true);
     setLlmError(null);
     setLlmDescription(null);
 
-    explainCoachMove(puzzle.fen, puzzle.solution, null)
+    explainCoachMove(fenBefore, move, fenAfter, null, { puzzleMistake: true })
       .then((explanation) => {
-        if (cancelled) return;
+        if (requestId !== explanationRequestRef.current) return;
         if (explanation) {
           setLlmDescription(explanation);
         } else {
           setLlmError("No explanation returned from AI coach.");
         }
       })
-      .catch((err) => {
-        if (cancelled) return;
-        setLlmError(err instanceof Error ? err.message : String(err));
+      .catch((error) => {
+        if (requestId !== explanationRequestRef.current) return;
+        setLlmError(error instanceof Error ? error.message : String(error));
       })
       .finally(() => {
-        if (!cancelled) setLlmLoading(false);
+        if (requestId === explanationRequestRef.current) setLlmLoading(false);
       });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [puzzle?.fen, puzzle?.solution]);
+  }
 
   useEffect(() => {
     if (!puzzle) return;
     setPosition(puzzle.fen);
     setWillPlayFollowup(false);
     setSolved(false);
-    setFailed(false);
+    setWrongMove(false);
+    clearCoachExplanation();
     setShowHint(false);
     setSelectedSquare(null);
   }, [puzzle?.id, puzzle?.fen]);
@@ -278,14 +285,16 @@ export default function Puzzles() {
       moveSquaresMatch(`${sourceSquare}${targetSquare}`, puzzle.solution);
 
     if (!isSolution) {
-      setFailed(true);
+      setWrongMove(true);
       setSolved(false);
+      explainWrongMove(position, move.san, chess.fen());
       return false;
     }
 
     setPosition(chess.fen());
     setSolved(true);
-    setFailed(false);
+    setWrongMove(false);
+    clearCoachExplanation();
     setShowHint(false);
     setSelectedSquare(null);
 
@@ -345,7 +354,8 @@ export default function Puzzles() {
     clearTimers();
     setPosition(puzzle.fen);
     setSolved(false);
-    setFailed(false);
+    setWrongMove(false);
+    clearCoachExplanation();
     setShowHint(false);
     setWillPlayFollowup(false);
     setSelectedSquare(null);
@@ -361,45 +371,58 @@ export default function Puzzles() {
   }
 
   const boardStyles =
-    solved || failed ? lastMoveSquares(game) : selectedSquareStyles();
+    solved ? lastMoveSquares(game) : selectedSquareStyles();
 
   return (
     <div className="puzzles-page">
       <div className="puzzles-container">
-        {/* 🤖 LLM Description Section at the Top */}
-        <div className="puzzles-llm-top-section">
-          {llmLoading && (
-            <div className="puzzles-llm-card puzzles-llm-card--loading" role="status">
-              <div className="puzzles-llm-header">
-                <Bot className="puzzles-llm-icon" size={18} />
-                <span>AI Coach Analysis</span>
+        {/* 🤖 AI feedback after an incorrect move */}
+        {(wrongMove || llmLoading || llmError) && (
+          <div className="puzzles-llm-top-section">
+            {llmLoading && (
+              <div className="puzzles-llm-card puzzles-llm-card--loading" role="status">
+                <div className="puzzles-llm-header">
+                  <Bot className="puzzles-llm-icon" size={18} />
+                  <span>AI Coach Explanation</span>
+                </div>
+                <p className="puzzles-llm-text">
+                  <span className="puzzles-llm-spinner" /> Analyzing why that move missed...
+                </p>
               </div>
-              <p className="puzzles-llm-text">
-                <span className="puzzles-llm-spinner" /> Analyzing position...
-              </p>
-            </div>
-          )}
+            )}
 
-          {llmError && (
-            <div className="puzzles-llm-card puzzles-llm-card--error" role="alert">
-              <div className="puzzles-llm-header">
-                <AlertTriangle className="puzzles-llm-icon" size={18} />
-                <span>AI Coach Analysis Error</span>
+            {llmError && (
+              <div className="puzzles-llm-card puzzles-llm-card--error" role="alert">
+                <div className="puzzles-llm-header">
+                  <AlertTriangle className="puzzles-llm-icon" size={18} />
+                  <span>AI Coach Explanation Error</span>
+                </div>
+                <p className="puzzles-llm-error-text">{llmError}</p>
               </div>
-              <p className="puzzles-llm-error-text">{llmError}</p>
-            </div>
-          )}
+            )}
 
-          {llmDescription && !llmLoading && (
-            <div className="puzzles-llm-card">
-              <div className="puzzles-llm-header">
-                <Bot className="puzzles-llm-icon" size={18} />
-                <span>AI Coach Position Description</span>
+            {llmDescription && !llmLoading && (
+              <div className="puzzles-llm-card">
+                <div className="puzzles-llm-header">
+                  <Bot className="puzzles-llm-icon" size={18} />
+                  <span>Why that move missed</span>
+                </div>
+                <p className="puzzles-llm-text">{llmDescription}</p>
               </div>
-              <p className="puzzles-llm-text">{llmDescription}</p>
-            </div>
-          )}
-        </div>
+            )}
+
+            {wrongMove && (
+              <button
+                type="button"
+                className="puzzle-action puzzle-action--retry puzzles-llm-retry"
+                onClick={handleReset}
+                disabled={initializing || !puzzle || llmLoading}
+              >
+                <RotateCcw size={16} /> Retry
+              </button>
+            )}
+          </div>
+        )}
 
         {/* ── Lesson Scheme Header ─────────────────────────── */}
         <header className="puzzles-header">
@@ -482,11 +505,6 @@ export default function Puzzles() {
               <div className="puzzle-result puzzle-result--solved">
                 <Check size={18} /> Correct!
                 {willPlayFollowup && " (+followup)"}
-              </div>
-            )}
-            {failed && (
-              <div className="puzzle-result puzzle-result--failed">
-                <X size={18} /> Not quite — try again.
               </div>
             )}
           </div>
