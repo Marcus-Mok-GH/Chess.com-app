@@ -22,7 +22,7 @@ export function render(url) {
       }
     })
 
-    renderToPipeableStream(
+    const { pipe } = renderToPipeableStream(
       <React.StrictMode>
         <App ssr location={url} />
       </React.StrictMode>,
