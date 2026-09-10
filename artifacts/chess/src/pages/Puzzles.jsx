@@ -83,6 +83,7 @@ export default function Puzzles() {
   const [willPlayFollowup, setWillPlayFollowup] = useState(false);
   const [solved, setSolved] = useState(false);
   const [wrongMove, setWrongMove] = useState(false);
+  const [wrongMoveMessage, setWrongMoveMessage] = useState("");
   const [showHint, setShowHint] = useState(false);
   const [selectedSquare, setSelectedSquare] = useState(null);
 
@@ -131,6 +132,7 @@ export default function Puzzles() {
     setLlmLoading(false);
     setLlmError(null);
     setWrongMove(false);
+    setWrongMoveMessage("");
     setSelectedSquare(null);
 
     const lesson = LESSON_CATALOG[lessonIndex] || LESSON_CATALOG[0];
@@ -155,6 +157,7 @@ export default function Puzzles() {
       setPosition(freshPuzzle.fen);
       setSolved(false);
       setWrongMove(false);
+    setWrongMoveMessage("");
       setShowHint(false);
       setWillPlayFollowup(false);
       return true;
@@ -241,6 +244,7 @@ export default function Puzzles() {
     setWillPlayFollowup(false);
     setSolved(false);
     setWrongMove(false);
+    setWrongMoveMessage("");
     clearCoachExplanation();
     setShowHint(false);
     setSelectedSquare(null);
@@ -308,7 +312,15 @@ export default function Puzzles() {
       move = null;
     }
 
-    if (!move) return false;
+    if (!move) {
+      setWrongMove(true);
+      setWrongMoveMessage("That move is not legal in this position. Try another move.");
+      setSolved(false);
+      clearCoachExplanation();
+      setShowHint(false);
+      setSelectedSquare(null);
+      return false;
+    }
 
     const isSolution =
       move.san === puzzle.solution ||
@@ -316,6 +328,7 @@ export default function Puzzles() {
 
     if (!isSolution) {
       setWrongMove(true);
+      setWrongMoveMessage("That move missed the tactic. Try again.");
       setSolved(false);
       explainWrongMove(position, move.san, chess.fen());
       return false;
@@ -324,6 +337,7 @@ export default function Puzzles() {
     setPosition(chess.fen());
     setSolved(true);
     setWrongMove(false);
+    setWrongMoveMessage("");
     clearCoachExplanation();
     setShowHint(false);
     setSelectedSquare(null);
@@ -385,6 +399,7 @@ export default function Puzzles() {
     setPosition(puzzle.fen);
     setSolved(false);
     setWrongMove(false);
+    setWrongMoveMessage("");
     clearCoachExplanation();
     setShowHint(false);
     setWillPlayFollowup(false);
@@ -535,6 +550,11 @@ export default function Puzzles() {
               <div className="puzzle-result puzzle-result--solved">
                 <Check size={18} /> Correct!
                 {willPlayFollowup && " (+followup)"}
+              </div>
+            )}
+            {wrongMove && (
+              <div className="puzzle-result puzzle-result--wrong" role="status">
+                <AlertTriangle size={18} /> {wrongMoveMessage}
               </div>
             )}
           </div>
