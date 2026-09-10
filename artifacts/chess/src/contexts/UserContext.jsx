@@ -18,10 +18,13 @@ const UserContext = createContext(null);
 
 export function UserProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(() => localStorage.getItem(SESSION_TOKEN_KEY));
+  const [token, setToken] = useState(() => {
+    if (typeof window === 'undefined') return null;
+    try { return localStorage.getItem(SESSION_TOKEN_KEY); } catch { return null; }
+  });
   const userRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isOnline, setIsOnline] = useState(() => typeof navigator === 'undefined' ? true : navigator.onLine);
   const [isAwaitingVerification, setIsAwaitingVerification] = useState(() => {
     try { return !!localStorage.getItem(PENDING_OTP_KEY); } catch { return false; }
   });
