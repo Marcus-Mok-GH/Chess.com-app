@@ -1,7 +1,6 @@
 import "./ChessGame.css";
 import haptics from '../utils/haptics';
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../contexts/SettingsContext';
 import { normalizeMoveHistory, buildGameFromHistory } from '../engine/game/moveHistory';
 import socketService from '../services/socket';
@@ -19,7 +18,6 @@ const REACTIONS = ['GOOD', 'CLAP', 'THINK', 'WOW', 'PARTY', 'SWEAT'];
 
 export default function OnlineChessGame({ gameId, playerId, playerColor, opponentInfo, onLeave }) {
   const { settings } = useSettings();
-  const navigate = useNavigate();
   const {
     game, setGame, moveHistory, setMoveHistory, gameStatus, setGameStatus,
     endReason, setEndReason, winner, setWinner, moveError, setMoveError,
@@ -391,7 +389,7 @@ export default function OnlineChessGame({ gameId, playerId, playerColor, opponen
           clearOnlineSession();
           if (gameId) clearOnlineGameState(gameId);
         }}
-        navigate={navigate} canReview={gameStatus === 'ended'} canLeave={gameStatus === 'ended' && (winner === 'white' || winner === 'black')} onLeave={() => {
+canLeave={gameStatus === 'ended' && (winner === 'white' || winner === 'black')} onLeave={() => {
           setDrawOffered(false);
           clearOnlineSession();
           if (gameId) clearOnlineGameState(gameId);
