@@ -7,6 +7,7 @@ import { isOnline } from '../socket/presence.js';
 
 const router = express.Router();
 const CHAT_LIMIT = 50;
+const CHAT_ROOM_LIMIT = 500;
 
 async function resolveUserId(req, res) {
   const userId = await authenticatedUserId(req).catch(() => null);
@@ -17,8 +18,24 @@ async function resolveUserId(req, res) {
 function normalizeRoom(room) {
   if (typeof room !== 'string') return '';
   const trimmed = room.trim().toLowerCase();
-  if (!trimmed || trimmed.length > 50) return '';
+  if (!trimmed || trimmed.length > CHAT_ROOM_LIMIT) return '';
   return trimmed.replace(/[^a-zA-Z0-9_-]/g, '_');
+}
+function directRoomMembers(room) {
+  if (!room.startsWith('dm_')) return null;
+  const encoded = room.slice(3);
+  if (!encoded || !/^(?:[0-9a-f]{2})+$/.test(encoded)) return null;
+  const ids = Buffer.from(encoded, 'hex').toString('utf8').split(':');
+  return ids.length === 2 && ids.every(Boolean) ? ids : null;
+}
+
+async function canAccessRoom(userId, room) {
+  const members = directRoomMembers(room);
+  if (!room.startsWith('dm_')) return true;
+  if (!members || !members.includes(String(userId))) return false;
+  const friendId = members.find((id) => id !== String(userId));
+  const result = await query("SELECT 1 FROM friends WHERE status = 'active' AND ((user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)) LIMIT 1", [userId, friendId]);
+  return result.rowCount > 0;
 }
 
 // --- Friends ---
@@ -122,6 +139,8 @@ router.get('/chat/:room', async (req, res) => {
     const room = normalizeRoom(req.params.room);
     if (!room) return errorResponse(res, 400, 'Invalid room');
 
+    if (!(await canAccessRoom(userId, room))) return errorResponse(res, 403, 'You can only message your friends');
+
     const limit = parseInt(req.query.limit, 10);
     const safeLimit = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 200) : CHAT_LIMIT;
 
@@ -156,6 +175,8 @@ router.post('/chat/:room', async (req, res) => {
 
     const room = normalizeRoom(req.params.room);
     if (!room) return errorResponse(res, 400, 'Invalid room');
+
+    if (!(await canAccessRoom(userId, room))) return errorResponse(res, 403, 'You can only message your friends');
 
     const rawBody = req.body?.body;
     if (typeof rawBody !== 'string' || rawBody.trim().length === 0) return errorResponse(res, 400, 'Message cannot be empty');
