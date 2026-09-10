@@ -1,3 +1,9 @@
+## [2026-09-10] - Fix feedback submissions
+
+### Fixed
+- Mounted the feedback route in the workspace API entrypoint so `/api/feedback` is available outside the Vercel-specific server entry.
+- The feedback panel now surfaces the backend error message when delivery is unavailable instead of hiding the cause behind a generic retry message.
+
 ## [2026-09-08] - Fix puzzle AI provider model
 
 ### Fixed
