@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { Chess } from "chess.js";
 import ChessBoard from "./ChessBoard";
 import { Check, Trophy, Flame } from "lucide-react";
@@ -128,6 +129,7 @@ export function useStreakData() {
 
 export default function DailyPuzzleStreak({ compact = false }) {
   const { user, token, isLoggedIn } = useUser();
+  const navigate = useNavigate();
   const userId = user?.id || null;
   const username = user?.username || null;
 
@@ -341,7 +343,10 @@ export default function DailyPuzzleStreak({ compact = false }) {
           {!showBoard ? (
             <button
               className="daily-puzzle-solve-btn"
-              onClick={() => setShowBoard(true)}
+              onClick={() => {
+                setShowBoard(true);
+                navigate("/puzzles");
+              }}
             >
               <Flame size={18} />
               Solve Today's Puzzle
