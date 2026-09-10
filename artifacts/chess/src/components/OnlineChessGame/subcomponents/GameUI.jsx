@@ -13,7 +13,6 @@ export default function GameUI({
   removeAnimation, showVictory, gameId, opponentStatus, eloChange,
   moveError, getStatusMessage, drawOffered, handleRespondDraw,
   REACTIONS, handleSendReaction, moveHistory, gameStatus,
-  handleOfferDraw, handleResign, navigate, canReview, canLeave, onLeave,
   capturedPieces, chatMessages, handleSendMessage, playerId
 }) {
 
@@ -123,7 +122,6 @@ export default function GameUI({
               <button className="online-action-btn online-action-btn--resign" onClick={handleResign}>Resign</button>
             </>
           )}
-          <button className="online-action-btn online-action-btn--review" onClick={() => navigate(`/analysis/${gameId}`, { state: { moveHistory } })} disabled={!canReview}>Review</button>
           <button className="online-action-btn online-action-btn--leave" onClick={onLeave} disabled={!canLeave}>Leave</button>
         </div>
       </div>
