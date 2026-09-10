@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 import api from '../services/api';
-import { normalizeMoveHistory } from '../engine/game/moveHistory';
 import EloProgressChart from '../components/EloProgressChart';
 import WinRateChart from '../components/WinRateChart';
 import './GameHistory.css';
@@ -28,7 +26,6 @@ function getResultText(result) {
 
 export default function GameHistory() {
   const { user, isOnline } = useUser();
-  const navigate = useNavigate();
   const [games, setGames] = useState([]);
   const [eloHistory, setEloHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -58,19 +55,6 @@ export default function GameHistory() {
 
     loadGameData();
   }, [user, isOnline]);
-
-  const handleViewGame = (game) => {
-    // Ensure move_history is an array before navigation
-    let moveHistory = normalizeMoveHistory(game.move_history);
-
-    // Navigate to analysis with the game data
-    navigate(`/analysis/${game.game_code}`, {
-      state: {
-        moveHistory,
-        gameId: game.game_code
-      }
-    });
-  };
 
   if (!isOnline) {
     return (
@@ -148,14 +132,6 @@ export default function GameHistory() {
                   <div className="game-date">
                     {formatDate(game.created_at)}
                   </div>
-                </div>
-                <div className="game-actions">
-                  <button
-                    onClick={() => handleViewGame(game)}
-                    className="view-game-btn"
-                  >
-                    View Game
-                  </button>
                 </div>
               </div>
             ))}
