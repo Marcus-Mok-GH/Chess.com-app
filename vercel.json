@@ -6,13 +6,19 @@
   "functions": {
     "api/[...path].js": {
       "maxDuration": 15
+    },
+    "api/render.js": {
+      "maxDuration": 15
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/[...path]?path=$1" },
     {
-      "source": "/((?!api/|assets/|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|css|js|map|woff2?|json|ico|txt)$).*)",
-      "destination": "/index.html"
+      "source": "/((?!api/|assets/|.*\\.(?:html|png|jpg|jpeg|gif|svg|ico|webp|css|js|map|woff2?|json|txt)$).*)",
+      "destination": "/api/render?__route=/$1"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/[...path]?path=$1"
     }
   ]
 }
