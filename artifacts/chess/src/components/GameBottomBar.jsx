@@ -7,10 +7,8 @@ export default function GameBottomBar({
   onUndo,
   onHint,
   onResign,
-  onReview,
   canUndo,
   isThinking,
-  canReview,
   showHints = true,
   botMessage,
   selectedBot,
@@ -41,9 +39,6 @@ export default function GameBottomBar({
             Hint
           </button>
         )}
-        <button type="button" className="gbb-btn" onClick={() => { haptics.button(); onReview(); }} disabled={!canReview}>
-          Game Review
-        </button>
         <button type="button" className="gbb-btn danger" onClick={() => { haptics.button(); onResign(); }} disabled={isThinking}>
           Resign
         </button>
