@@ -86,6 +86,19 @@ export async function explainCoachMove(fenBefore, move, fenAfter, onStream = nul
   }
 }
 
+export async function summarizeLessonConcept(title, topic, description) {
+  try {
+    const data = await coachRequest('/coach/lesson-summary', {
+      method: 'POST',
+      body: JSON.stringify({ title, topic, description }),
+    });
+    return data.summary || null;
+  } catch (error) {
+    if (!isNetworkError(error)) console.error('[CoachAI] Lesson summary error:', error);
+    throw error;
+  }
+}
+
 export async function analyzeGame(moveHistory, result, gameId = null) {
   try {
     const data = await coachRequest('/coach/analyze', {
