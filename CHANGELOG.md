@@ -1,3 +1,8 @@
+## [2026-09-10] - Fix daily streak completion
+
+### Fixed
+- Kept the daily puzzle board mounted in the streak card so solving the puzzle can update and persist the streak instead of navigating away before completion.
+
 ## [2026-09-10] - Fix feedback submissions
 
 ### Fixed
