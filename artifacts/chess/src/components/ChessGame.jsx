@@ -756,10 +756,6 @@ function ChessGame(
     }
   }, [game, isThinking]);
 
-  const handleReview = useCallback(() => {
-    navigate(`/analysis/${gameId}`, { state: { moveHistory } });
-  }, [navigate, gameId, moveHistory]);
-
   useImperativeHandle(
     ref,
     () => ({
@@ -768,10 +764,8 @@ function ChessGame(
       flipBoard: handleFlipBoard,
       hint: handleGetHint,
       resign: handleResign,
-      review: handleReview,
       getStatus: () => getGameStatus,
     }),
-    [handleNewGame, handleUndo, handleFlipBoard, handleGetHint, handleResign, handleReview, getGameStatus],
   );
 
   if (!game) {
@@ -836,8 +830,6 @@ function ChessGame(
   const bottomPlayer = boardOrientation === 'white'
     ? { name: 'You', avatar: '👤', rating: '???', isBot: false, color: 'w', isCoach: false }
     : { name: selectedBot?.id === 'custom' ? `Custom Bot (${customElo})` : selectedBot?.name, avatar: selectedBot?.avatar, rating: selectedBot?.id === 'custom' ? customElo : selectedBot?.rating, isBot: true, color: 'b', botColor: selectedBot?.color, isCoach: selectedBot?.isCoach };
-
-  const canReview = getGameStatus === 'checkmate' || getGameStatus === 'resigned';
 
   return (
     <div className="chess-game">
@@ -907,10 +899,7 @@ function ChessGame(
               onResign={handleResign}
               isThinking={isThinking}
               canUndo={moveHistory.length >= 2}
-              onReview={handleReview}
               showHints={settings.showHints}
-              canAnalyze={Boolean(user)}
-              canReview={canReview}
             />
 
             {selectedBot.isCoach && (
