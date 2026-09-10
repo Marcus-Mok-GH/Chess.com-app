@@ -102,10 +102,6 @@ function AppHeader({ isGameRoute = false }) {
               <span className="sidebar-icon">📚</span>
               <span className="sidebar-label">Archive</span>
             </Link>
-            <Link to="/analysis" className={`sidebar-item ${currentPath === '/analysis' ? 'active' : ''}`}>
-              <span className="sidebar-icon">🔬</span>
-              <span className="sidebar-label">Analysis</span>
-            </Link>
           </div>
 
           <div className="sidebar-footer">
