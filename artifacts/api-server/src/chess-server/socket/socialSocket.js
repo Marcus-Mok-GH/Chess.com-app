@@ -4,13 +4,29 @@ import { markOnline, markOffline } from './presence.js';
 
 const SOCIAL_ROOM_PREFIX = 'chat:';
 const CHAT_BODY_LIMIT = 500;
-const CHAT_ROOM_LIMIT = 50;
+const CHAT_ROOM_LIMIT = 500;
 
 function normalizeRoom(room) {
   if (typeof room !== 'string') return '';
   const trimmed = room.trim().toLowerCase();
   if (!trimmed || trimmed.length > CHAT_ROOM_LIMIT) return '';
   return trimmed.replace(/[^a-zA-Z0-9_-]/g, '_');
+}
+function directRoomMembers(room) {
+  if (!room.startsWith('dm_')) return null;
+  const encoded = room.slice(3);
+  if (!encoded || !/^(?:[0-9a-f]{2})+$/.test(encoded)) return null;
+  const ids = Buffer.from(encoded, 'hex').toString('utf8').split(':');
+  return ids.length === 2 && ids.every(Boolean) ? ids : null;
+}
+
+async function canAccessRoom(userId, room) {
+  const members = directRoomMembers(room);
+  if (!room.startsWith('dm_')) return true;
+  if (!members || !members.includes(String(userId))) return false;
+  const friendId = members.find((id) => id !== String(userId));
+  const result = await query("SELECT 1 FROM friends WHERE status = 'active' AND ((user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)) LIMIT 1", [userId, friendId]);
+  return result.rowCount > 0;
 }
 
 // Socket chat + presence handlers for the social layer. Additive only: they do
@@ -19,9 +35,11 @@ function normalizeRoom(room) {
 // via complete_remote_login rather than a per-socket bearer token).
 export function setupSocialHandlers(io, socket) {
   // Chat room membership
-  socket.on('chat:join', (data) => {
+  socket.on('chat:join', async (data) => {
     const room = normalizeRoom(data?.room);
     if (!room) return;
+    const userId = typeof data?.userId === 'string' ? data.userId : '';
+    if (!(await canAccessRoom(userId, room))) return;
     socket.join(`${SOCIAL_ROOM_PREFIX}${room}`);
   });
 
@@ -42,6 +60,10 @@ export function setupSocialHandlers(io, socket) {
       return;
     }
     const userId = typeof user?.id === 'string' ? user.id : '';
+    if (!(await canAccessRoom(userId, normalizedRoom))) {
+      socket.emit('chat:error', { room: normalizedRoom, message: 'You can only message your friends' });
+      return;
+    }
     const username = typeof user?.username === 'string' ? user.username : 'guest';
     const safeRoom = normalizedRoom.replace(/[^a-zA-Z0-9_-]/g, '_');
 
