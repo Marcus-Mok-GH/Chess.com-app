@@ -3,7 +3,7 @@ let initPromise = null;
 
 // Delays (ms) between successive DB init attempts.
 // 2 retries × 5 s = up to 10 s total wait — enough for Neon compute to wake from cold.
-const DB_INIT_RETRY_DELAYS_MS = [5000, 5000];
+const DB_INIT_RETRY_DELAYS_MS = [1000, 2000];
 
 export function setDatabaseReady(ready) {
   databaseReady = Boolean(ready);
