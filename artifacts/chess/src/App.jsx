@@ -14,7 +14,6 @@ const Home = lazy(() => import('./pages/Home'))
 const Login = lazy(() => import('./pages/Login'))
 const Play = lazy(() => import('./pages/Play'))
 const OnlinePlay = lazy(() => import('./pages/OnlinePlay'))
-const Analysis = lazy(() => import('./pages/Analysis'))
 const GameHistory = lazy(() => import('./pages/GameHistory'))
 const Game = lazy(() => import('./pages/Game'))
 const Settings = lazy(() => import('./pages/Settings'))
@@ -30,7 +29,6 @@ const NotFound = lazy(() => import('./pages/not-found'))
 
 function getTitle(path) {
   if (path.startsWith('/online/') || path.startsWith('/game/')) return 'Online Play'
-  if (path.startsWith('/analysis')) return 'Game Review'
   if (path === '/home') return 'Home'
   if (path === '/play') return 'Play'
   if (path === '/online') return 'Online Play'
@@ -308,7 +306,6 @@ export default function App() {
                   <Route path="/online" element={<OnlinePlay />} />
                   <Route path="/online/:gameId" element={<OnlinePlay />} />
                   <Route path="/game/:gameId" element={<Game />} />
-                  <Route path="/analysis/:gameId?" element={<ProtectedRoute><Analysis /></ProtectedRoute>} />
                   <Route path="/history" element={<ProtectedRoute><GameHistory /></ProtectedRoute>} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/changelog" element={<Changelog />} />
