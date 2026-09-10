@@ -47,9 +47,10 @@ vi.mock('../engine/puzzles/puzzleGenerator', async (importOriginal) => {
 
 vi.mock('../engine/coach/coachAI', () => ({
   explainCoachMove: vi.fn(),
+  summarizeLessonConcept: vi.fn(),
 }));
 
-import { explainCoachMove } from '../engine/coach/coachAI';
+import { explainCoachMove, summarizeLessonConcept } from '../engine/coach/coachAI';
 
 function renderPuzzles(initialEntries = ['/puzzles']) {
   return render(
@@ -65,6 +66,7 @@ describe('Puzzles page with Lesson Scheme & LLM commentary', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     explainCoachMove.mockResolvedValue('The knight move attacks the exposed black queen.');
+    summarizeLessonConcept.mockResolvedValue('Develop your pieces, control the center, and keep your king safe.');
   });
 
   it('renders the lesson scheme header and current lesson title', async () => {
@@ -74,6 +76,19 @@ describe('Puzzles page with Lesson Scheme & LLM commentary', () => {
       expect(screen.getByText(`Lesson Scheme · 1 of ${LESSON_CATALOG.length}`)).toBeTruthy();
       expect(screen.getByText('Piece Development & Opening Principles')).toBeTruthy();
     });
+  });
+
+  it('renders a concise AI lesson concept', async () => {
+    renderPuzzles();
+
+    await waitFor(() => {
+      expect(screen.getByText('Develop your pieces, control the center, and keep your king safe.')).toBeTruthy();
+    });
+    expect(summarizeLessonConcept).toHaveBeenCalledWith(
+      LESSON_CATALOG[0].title,
+      LESSON_CATALOG[0].topic,
+      LESSON_CATALOG[0].description,
+    );
   });
 
   it('explains an incorrect move without revealing the answer and offers retry', async () => {
