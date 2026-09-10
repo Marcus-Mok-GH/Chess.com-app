@@ -312,12 +312,13 @@ export async function initDatabase() {
             id SERIAL PRIMARY KEY,
             user_id VARCHAR(100) REFERENCES users(id) ON DELETE SET NULL,
             username VARCHAR(50),
-            room VARCHAR(50) NOT NULL,
+            room VARCHAR(500) NOT NULL,
             body TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           )
         `);
         await client.query("ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS username VARCHAR(50)");
+        await client.query("ALTER TABLE chat_messages ALTER COLUMN room TYPE VARCHAR(500)");
 
         // Social layer: clubs
         await client.query(`
