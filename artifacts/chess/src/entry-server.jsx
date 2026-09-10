@@ -1,5 +1,6 @@
 import React from 'react'
 import { renderToPipeableStream } from 'react-dom/server'
+import { StaticRouter } from 'react-router-dom/server'
 import { Writable } from 'node:stream'
 import App from './App'
 
@@ -24,7 +25,7 @@ export function render(url) {
 
     const { pipe } = renderToPipeableStream(
       <React.StrictMode>
-        <App ssr location={url} />
+        <App Router={StaticRouter} routerProps={{ location: url }} />
       </React.StrictMode>,
       {
         onAllReady() {
