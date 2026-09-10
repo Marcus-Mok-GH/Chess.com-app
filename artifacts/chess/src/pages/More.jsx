@@ -13,7 +13,6 @@ const optionGroups = [
     title: 'Community',
     options: [
       { to: '/friends', icon: '👥', title: 'Friends', description: 'Connect with other players' },
-      { to: '/chat', icon: '💬', title: 'Chat', description: 'Keep the conversation going' },
       { to: '/clubs', icon: '🏛️', title: 'Clubs', description: 'Find a community to join' },
     ],
   },
