@@ -51,6 +51,7 @@ try {
   const statsRoutes = (await import("./chess-server/routes/stats.js" as any)).default;
   const puzzleRoutes = (await import("./chess-server/routes/puzzles.js" as any)).default;
   const socialRoutes = (await import("./chess-server/routes/social.js" as any)).default;
+  const feedbackRoutes = (await import("./chess-server/routes/feedback.js" as any)).default;
 
   app.use("/api/matchmaking", matchmakingRoutes);
   app.use("/api/games", gameRoutes);
@@ -61,6 +62,7 @@ try {
   app.use("/api/stats", statsRoutes);
   app.use("/api/puzzles", puzzleRoutes);
   app.use("/api/social", socialRoutes);
+  app.use("/api/feedback", feedbackRoutes);
 } catch (err) {
   console.error("Failed to load chess routes:", err);
 }
