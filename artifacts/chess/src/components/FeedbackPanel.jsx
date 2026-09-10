@@ -11,6 +11,7 @@ export function FeedbackPanel() {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const reappearTimerRef = useRef(null);
 
   useEffect(() => {
@@ -34,30 +35,7 @@ export function FeedbackPanel() {
     }, REAPPEAR_DELAY);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!message.trim()) return;
 
-    setIsSubmitting(true);
-    
-    // Simulate submission (replace with actual API call)
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    console.log('Feedback submitted:', { feedbackType, message, email });
-    
-    setIsSubmitting(false);
-    setSubmitted(true);
-    
-    setTimeout(() => {
-      setIsOpen(false);
-      setSubmitted(false);
-      setMessage('');
-      setEmail('');
-      setFeedbackType('suggestion');
-    }, 2000);
-  };
-
-  const handleKeyDown = (e) => {
     if (e.key === 'Escape') {
       setIsOpen(false);
     }
@@ -72,7 +50,7 @@ export function FeedbackPanel() {
       <div className="feedback-trigger-wrapper">
         <button
           className="feedback-trigger"
-          onClick={() => setIsOpen(true)}
+          onClick={() => { setSubmitError(''); setIsOpen(true); }}
           aria-label="Send feedback"
         >
           Feedback
@@ -159,6 +137,8 @@ export function FeedbackPanel() {
                     />
                     <span className="input-hint">We'll only use this to follow up on your feedback</span>
                   </div>
+
+                  {submitError && <p className="feedback-error" role="alert">{submitError}</p>}
 
                   <div className="feedback-buttons">
                     <button
