@@ -271,6 +271,31 @@ router.post('/explain', async (req, res) => {
   }
 });
 
+router.post('/lesson-summary', async (req, res) => {
+  try {
+    const userId = await requireCoachUser(req, res);
+    if (!userId) return;
+    const { title, topic, description } = req.body;
+    const lessonText = Array.isArray(description) ? description.join('\n') : String(description || '');
+    if (!title || !lessonText) return errorResponse(res, 400, 'Missing required fields: title, description');
+    const summaryMessages = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: `Condense this chess lesson concept into exactly 1 or 2 sentences and no more than 35 words. Keep the core teaching point clear for a beginner. Do not include a move sequence, example position details, or puzzle answer. Return only the summary text.\nLesson: ${title}\nTopic: ${topic || 'Chess'}\nContent:\n${lessonText}` },
+    ];
+    let response;
+    try {
+      response = await callCoach(summaryMessages, { userId, maxTokens: 100, temperature: 0.3 });
+    } catch (coachErr) {
+      response = await callCoachFree(summaryMessages, { maxTokens: 100, temperature: 0.3 });
+    }
+    const data = await response.json();
+    return res.json({ summary: data.choices?.[0]?.message?.content?.trim() || '' });
+  } catch (error) {
+    if (error?.status === 402) return res.status(402).json({ error: error.message, code: 'POLLINATIONS_AUTH_REQUIRED' });
+    return handleRouteError(res, error, 'Failed to summarize lesson concept');
+  }
+});
+
 router.post('/analyze', async (req, res) => {
   try {
     const userId = await requireCoachUser(req, res);
