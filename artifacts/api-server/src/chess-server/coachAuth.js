@@ -6,8 +6,8 @@ const POLLINATIONS_ISSUER = 'https://enter.pollinations.ai';
 const STATE_TTL_MS = 10 * 60 * 1000;
 const DEFAULT_BUDGET = process.env.POLLINATIONS_COACH_BUDGET || '5';
 const DEFAULT_EXPIRY_DAYS = process.env.POLLINATIONS_COACH_EXPIRY_DAYS || '7';
-const DEFAULT_COACH_MODEL = process.env.COACH_MODEL || 'openai-fast';
-const FREE_COACH_MODEL = process.env.COACH_FREE_MODEL || 'openai-fast';
+const DEFAULT_COACH_MODEL = process.env.COACH_MODEL || 'openai';
+const FREE_COACH_MODEL = process.env.COACH_FREE_MODEL || 'laguna';
 
 function getAuthorizedCoachModels() {
   const configuredModels = (process.env.POLLINATIONS_COACH_MODELS || '')
