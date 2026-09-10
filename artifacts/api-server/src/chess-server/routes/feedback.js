@@ -9,6 +9,8 @@ const FEEDBACK_LABELS = {
 };
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const RESEND_API_URL = 'https://api.resend.com/emails';
+const FEEDBACK_RECIPIENT = 'mokmarcus068@gmail.com';
+const RESEND_FROM = 'PlayChess Feedback <onboarding@resend.dev>';
 
 function escapeHtml(value) {
   return value
@@ -38,14 +40,14 @@ router.post('/', async (req, res) => {
   }
 
   const apiKey = process.env.RESEND_API_KEY;
-  const recipient = process.env.FEEDBACK_TO_EMAIL?.trim();
-  if (!apiKey || !recipient) {
-    console.error('[Feedback] Missing RESEND_API_KEY or FEEDBACK_TO_EMAIL.');
+  const recipient = FEEDBACK_RECIPIENT;
+  if (!apiKey) {
+    console.error('[Feedback] Missing RESEND_API_KEY.');
     return res.status(500).json({ error: { message: 'Feedback email is not configured.' } });
   }
 
   const label = FEEDBACK_LABELS[feedbackType];
-  const from = process.env.RESEND_FROM?.trim() || 'PlayChess Feedback <onboarding@resend.dev>';
+  const from = RESEND_FROM;
   const safeMessage = escapeHtml(normalizedMessage).replace(/\r?\n/g, '<br />');
   const safeEmail = normalizedEmail ? escapeHtml(normalizedEmail) : 'No reply email provided';
   const subject = 'PlayChess feedback: ' + label;
