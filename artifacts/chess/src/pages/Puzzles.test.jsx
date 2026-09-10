@@ -103,6 +103,7 @@ describe('Puzzles page with Lesson Scheme & LLM commentary', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Why that move missed')).toBeTruthy();
+      expect(screen.getByText('That move missed the tactic. Try again.')).toBeTruthy();
       expect(screen.getByText('The knight move attacks the exposed black queen.')).toBeTruthy();
       expect(screen.getByRole('button', { name: /retry/i })).toBeTruthy();
     });
