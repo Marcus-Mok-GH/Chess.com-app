@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useUser } from '../contexts/UserContext'
 import { Hash, Loader2, MessageCircle, RefreshCw, Send } from 'lucide-react'
 import api from '../services/api'
@@ -13,6 +13,12 @@ const ROOMS = [
   { key: 'lounge', label: 'Global Lounge' },
   { key: 'help', label: 'Help & Support' },
 ]
+function createDirectRoom(userId, friendId) {
+  const ids = [String(userId), String(friendId)].sort()
+  const payload = ids.join(':')
+  const encoded = Array.from(new TextEncoder().encode(payload)).map((byte) => byte.toString(16).padStart(2, '0')).join('')
+  return `dm_${encoded}`
+}
 
 function formatTime(value) {
   const date = new Date(value)
@@ -23,8 +29,12 @@ function formatTime(value) {
 export default function Chat() {
   const navigate = useNavigate()
   const { user, isLoggedIn, isLoading } = useUser()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const [room, setRoom] = useState(DEFAULT_ROOM)
+  const [friends, setFriends] = useState([])
+  const [friendsError, setFriendsError] = useState('')
+  const [selectedFriendId, setSelectedFriendId] = useState('')
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -34,6 +44,36 @@ export default function Chat() {
 
   const listRef = useRef(null)
   const knownIdsRef = useRef(new Set())
+
+  const activeFriend = friends.find((friend) => String(friend.id) === selectedFriendId)
+  const activeRoom = activeFriend ? createDirectRoom(user?.id, activeFriend.id) : room
+
+  useEffect(() => {
+    if (!isLoggedIn) return
+    api.getFriends()
+      .then((data) => setFriends(Array.isArray(data?.friends) ? data.friends : []))
+      .catch((err) => setFriendsError(err.message || 'Failed to load friends'))
+  }, [isLoggedIn])
+
+  useEffect(() => {
+    const requestedFriend = searchParams.get('friend')
+    if (!requestedFriend) return
+    const friend = friends.find((candidate) =>
+      candidate.username?.toLowerCase() === requestedFriend.toLowerCase() || String(candidate.id) === requestedFriend
+    )
+    if (friend) setSelectedFriendId(String(friend.id))
+  }, [friends, searchParams])
+
+  function selectFriend(friend) {
+    setSelectedFriendId(String(friend.id))
+    setSearchParams({ friend: friend.username })
+  }
+
+  function selectRoom(nextRoom) {
+    setSelectedFriendId('')
+    setRoom(nextRoom)
+    setSearchParams({})
+  }
 
   // Merge new messages in, deduping by id so socket echo + ack + polling never
   // produce duplicates.
@@ -54,7 +94,7 @@ export default function Chat() {
     if (!silent) setLoading(true)
     setError('')
     try {
-      const data = await api.getMessages(room, 50)
+      const data = await api.getMessages(activeRoom, 50)
       const list = Array.isArray(data?.messages) ? data.messages : []
       list.forEach((m) => knownIdsRef.current.add(String(m.id)))
       setMessages(list)
@@ -63,13 +103,13 @@ export default function Chat() {
     } finally {
       setLoading(false)
     }
-  }, [room])
+  }, [activeRoom])
 
   // Initial history load whenever the room (or auth) changes.
   useEffect(() => {
     if (!isLoggedIn) return
     loadMessages()
-  }, [isLoggedIn, room, loadMessages])
+  }, [isLoggedIn, activeRoom, loadMessages])
 
   // Live socket chat: join only after the connection is established, then
   // continue polling as a fallback when real-time delivery is unavailable.
@@ -81,11 +121,11 @@ export default function Chat() {
       await socket.connect().catch(() => {})
       if (!mounted) return
       setConnected(Boolean(socket.isConnected))
-      if (socket.isConnected) socket.joinChat(room)
+      if (socket.isConnected) socket.joinChat(activeRoom, String(user?.id))
     }
     connectAndJoin()
 
-    const handleMessage = (data) => { if (data?.room === room) appendMessages(data) }
+    const handleMessage = (data) => { if (data?.room === activeRoom) appendMessages(data) }
     const handleAck = (data) => { if (data?.room === room) appendMessages(data) }
     const handleStatus = (status) => { setConnected(Boolean(status?.connected)) }
     socket.on('chat:message', handleMessage)
@@ -99,9 +139,9 @@ export default function Chat() {
       socket.off('chat:message', handleMessage)
       socket.off('chat:ack', handleAck)
       socket.off('connection_status', handleStatus)
-      socket.leaveChat(room)
+      socket.leaveChat(activeRoom)
     }
-  }, [isLoggedIn, user?.id, room, appendMessages, loadMessages])
+  }, [isLoggedIn, user?.id, activeRoom, appendMessages, loadMessages])
 
   // Auto-scroll to the newest message.
   useEffect(() => {
@@ -116,14 +156,14 @@ export default function Chat() {
     setSending(true)
     setError('')
     try {
-      const sent = await socket.sendChat(room, trimmed, { id: String(user?.id), username: user?.username })
+      const sent = await socket.sendChat(activeRoom, trimmed, { id: String(user?.id), username: user?.username })
       if (sent) {
         // Server echoes the persisted message back via chat:message / chat:ack.
         setBody('')
         return
       }
       // Fall back to REST when the socket is unavailable.
-      const data = await api.sendMessage(room, trimmed)
+      const data = await api.sendMessage(activeRoom, trimmed)
       if (data?.message) appendMessages(data.message)
       setBody('')
     } catch (err) {
@@ -157,7 +197,7 @@ export default function Chat() {
     )
   }
 
-  const roomLabel = ROOMS.find((r) => r.key === room)?.label || room
+  const roomLabel = activeFriend ? `Message ${activeFriend.username}` : ROOMS.find((r) => r.key === room)?.label || room
   const connectionLabel = connected ? 'Live' : socket.isRealtimeAvailable ? 'Reconnecting' : 'Polling'
   const connectionTitle = connected
     ? 'Live delivery is active'
@@ -174,24 +214,47 @@ export default function Chat() {
             <span>Social</span>
           </div>
           <h1 className="chat-title">Chat</h1>
-          <p className="chat-subtitle">Lobby chat with players from around the site.</p>
+          <p className="chat-subtitle">Message friends directly or join a public room.</p>
         </header>
 
         <div className="chat-card card-surface">
           <div className="chat-card-top">
-            <div className="chat-rooms" role="tablist" aria-label="Chat rooms">
-              {ROOMS.map((r) => (
-                <button
-                  key={r.key}
-                  role="tab"
-                  aria-selected={r.key === room}
-                  className={`chat-room-tab ${r.key === room ? 'is-active' : ''}`}
-                  onClick={() => setRoom(r.key)}
-                >
-                  <Hash size={13} />
-                  {r.label}
-                </button>
-              ))}
+            <div className="chat-channel-groups">
+              <div className="chat-channel-group">
+                <span className="chat-channel-label">Public channels</span>
+                <div className="chat-rooms" role="tablist" aria-label="Public chat rooms">
+                  {ROOMS.map((r) => (
+                    <button
+                      key={r.key}
+                      role="tab"
+                      aria-selected={!activeFriend && r.key === room}
+                      className={'chat-room-tab ' + (!activeFriend && r.key === room ? 'is-active' : '')}
+                      onClick={() => selectRoom(r.key)}
+                    >
+                      <Hash size={13} />
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="chat-channel-group">
+                <span className="chat-channel-label">Friends</span>
+                <div className="chat-rooms" role="tablist" aria-label="Friend messages">
+                  {friends.map((friend) => (
+                    <button
+                      key={String(friend.id)}
+                      role="tab"
+                      aria-selected={String(friend.id) === selectedFriendId}
+                      className={'chat-room-tab chat-friend-tab ' + (String(friend.id) === selectedFriendId ? 'is-active' : '')}
+                      onClick={() => selectFriend(friend)}
+                    >
+                      <MessageCircle size={13} />
+                      {friend.username}
+                    </button>
+                  ))}
+                  {friends.length === 0 && <span className="chat-friend-empty">Add friends to start messaging.</span>}
+                </div>
+              </div>
             </div>
             <span className={`chat-live ${connected ? 'is-online' : ''}`} title={connectionTitle}>
               <span className="chat-live-dot" />
@@ -200,6 +263,8 @@ export default function Chat() {
           </div>
 
           <div className="chat-thread" ref={listRef} role="log" aria-live="polite" aria-label={`${roomLabel} messages`}>
+            {friendsError && <p className="chat-error" role="alert">{friendsError}</p>}
+
             {loading && messages.length === 0 ? (
               <div className="chat-loading"><Loader2 size={18} className="spin" /> Loading messages…</div>
             ) : messages.length === 0 ? (
@@ -245,7 +310,7 @@ export default function Chat() {
 
         <section className="chat-tip card-surface">
           <RefreshCw size={16} />
-          <p>Messages are saved and shown to everyone in the room. Delivery is live over socket with polling as a backup.</p>
+          <p>Friend messages stay in their own channel. Delivery is live over socket with polling as a backup.</p>
         </section>
       </div>
     </div>
