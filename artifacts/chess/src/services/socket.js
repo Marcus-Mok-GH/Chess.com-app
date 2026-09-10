@@ -1,6 +1,10 @@
 import { io } from 'socket.io-client';
 
 function resolveSocketConfig() {
+  if (typeof window === 'undefined') {
+    return { url: null, path: '/socket.io' };
+  }
+
   const isVercel = window.location.hostname.includes('.vercel.app');
   const customUrl = import.meta.env.VITE_SOCKET_URL;
   const hasCustomUrl = typeof customUrl === 'string' && customUrl.length > 0 && !customUrl.startsWith('/');
