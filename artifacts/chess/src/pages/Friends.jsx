@@ -221,9 +221,9 @@ export default function Friends() {
                     <div className="friend-actions">
                       <button
                         className="friend-action friend-action--chat"
-                        onClick={() => navigate('/chat')}
-                        title="Chat"
-                        aria-label={`Chat with ${friend.username}`}
+                        onClick={() => navigate(`/chat?friend=${encodeURIComponent(friend.username)}`)}
+                        title={`Message ${friend.username}`}
+                        aria-label={`Message ${friend.username}`}
                       >
                         <MessageCircle size={16} />
                       </button>
