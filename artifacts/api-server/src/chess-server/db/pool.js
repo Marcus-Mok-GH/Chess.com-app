@@ -38,7 +38,7 @@ if (!isServerless && unpooledUrl && unpooledUrl !== pooledUrl) {
 }
 
 const sslConfig = isProduction ? { rejectUnauthorized: false } : false;
-const timeoutMs = isProduction ? 20000 : 10000;
+const timeoutMs = isServerless ? 8000 : isProduction ? 20000 : 10000;
 const pooledHost = resolveHost(pooledUrl);
 const isNeonOnVercel = isVercel && Boolean(pooledUrl) && isNeonPooler(pooledUrl);
 
