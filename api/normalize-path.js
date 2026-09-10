@@ -2,6 +2,7 @@ const STRIPPED_API_SEGMENTS = new Set([
   'auth',
   'coach',
   'engine',
+  'feedback',
   'games',
   'matchmaking',
   'stats',
