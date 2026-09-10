@@ -24,7 +24,6 @@ const VerifyEmail = lazy(() => import('./pages/VerifyEmail'))
 const Puzzles = lazy(() => import('./pages/Puzzles'))
 const Openings = lazy(() => import('./pages/Openings'))
 const Friends = lazy(() => import('./pages/Friends'))
-const Chat = lazy(() => import('./pages/Chat'))
 const Clubs = lazy(() => import('./pages/Clubs'))
 const More = lazy(() => import('./pages/More'))
 const NotFound = lazy(() => import('./pages/not-found'))
@@ -41,7 +40,6 @@ function getTitle(path) {
   if (path === '/puzzles' || path === '/lessons') return 'Puzzles'
   if (path === '/openings') return 'Openings'
   if (path === '/friends') return 'Friends'
-  if (path === '/chat') return 'Chat'
   if (path === '/clubs') return 'Clubs'
   if (path === '/more') return 'More'
   return 'PlayChess'
@@ -97,10 +95,6 @@ function AppHeader({ isGameRoute = false }) {
             <Link to="/friends" className={`sidebar-item ${currentPath === '/friends' ? 'active' : ''}`}>
               <span className="sidebar-icon">👥</span>
               <span className="sidebar-label">Friends</span>
-            </Link>
-            <Link to="/chat" className={`sidebar-item ${currentPath === '/chat' ? 'active' : ''}`}>
-              <span className="sidebar-icon">💬</span>
-              <span className="sidebar-label">Chat</span>
             </Link>
             <Link to="/clubs" className={`sidebar-item ${currentPath === '/clubs' ? 'active' : ''}`}>
               <span className="sidebar-icon">🏛️</span>
@@ -322,7 +316,6 @@ export default function App() {
                   <Route path="/openings" element={<Suspense fallback={<RouteFallback />}><Openings /></Suspense>} />
                   <Route path="/lessons" element={<LessonsRedirect />} />
                   <Route path="/friends" element={<Suspense fallback={<RouteFallback />}><Friends /></Suspense>} />
-                  <Route path="/chat" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Chat /></Suspense></ProtectedRoute>} />
                   <Route path="/clubs" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Clubs /></Suspense></ProtectedRoute>} />
                   <Route path="/more" element={<More />} />
                 </Route>
