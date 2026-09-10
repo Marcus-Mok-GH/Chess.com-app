@@ -36,6 +36,25 @@ function randomPuzzleSeed() {
   return Date.now() ^ Math.floor(Math.random() * 0xffffffff);
 }
 
+const PUZZLE_RATING_START = 400;
+const PUZZLE_RATING_MIN = 400;
+const PUZZLE_RATING_MAX = 1800;
+
+function difficultyForRating(rating) {
+  if (rating < 700) return "beginner";
+  if (rating < 1000) return "easy";
+  if (rating < 1350) return "intermediate";
+  return "advanced";
+}
+
+function difficultyLabel(difficulty) {
+  return difficulty === "beginner" ? "Beginner" : difficulty === "easy" ? "Easy" : difficulty === "intermediate" ? "Intermediate" : "Advanced";
+}
+
+function difficultyProgress(rating) {
+  return Math.max(4, Math.min(100, Math.round(((rating - PUZZLE_RATING_MIN) / (PUZZLE_RATING_MAX - PUZZLE_RATING_MIN)) * 100)));
+}
+
 export default function Puzzles() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -74,6 +93,7 @@ export default function Puzzles() {
   const [attemptedCount, setAttemptedCount] = useState(0);
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
+  const [puzzleRating, setPuzzleRating] = useState(PUZZLE_RATING_START);
 
   const game = useMemo(() => loadFen(position), [position]);
   const sideToMove = game.turn();
@@ -102,9 +122,11 @@ export default function Puzzles() {
     const lesson = LESSON_CATALOG[lessonIndex] || LESSON_CATALOG[0];
 
     try {
+      const difficulty = difficultyForRating(puzzleRating);
       const freshPuzzle = generatePuzzleForThemes(
         lesson.puzzleThemes || [],
         seed,
+        { difficulty },
       );
 
       if (generationRequestRef.current !== requestId) return false;
@@ -114,6 +136,7 @@ export default function Puzzles() {
         lessonTitle: lesson.title,
         lessonTopic: lesson.topic,
         lessonOrder: lesson.order,
+        difficulty: difficultyForRating(puzzleRating),
       });
       setPosition(freshPuzzle.fen);
       setSolved(false);
@@ -192,12 +215,14 @@ export default function Puzzles() {
     setAttemptedCount((count) => count + 1);
     if (wasSolved) {
       setSolvedCount((count) => count + 1);
+      setPuzzleRating((rating) => Math.min(PUZZLE_RATING_MAX, rating + 80));
       setStreak((currentStreak) => {
         const nextStreak = currentStreak + 1;
         setBestStreak((currentBest) => Math.max(currentBest, nextStreak));
         return nextStreak;
       });
     } else {
+      setPuzzleRating((rating) => Math.max(PUZZLE_RATING_MIN, rating - 40));
       setStreak(0);
     }
 
@@ -387,7 +412,7 @@ export default function Puzzles() {
             </div>
             <DailyPuzzleStreak compact />
             <span className="puzzles-meta">
-              Topic: {currentLesson.topic} ({currentLesson.difficulty})
+              Topic: {currentLesson.topic} · {difficultyLabel(puzzle?.difficulty || difficultyForRating(puzzleRating))}
             </span>
           </div>
 
@@ -424,9 +449,13 @@ export default function Puzzles() {
 
           <h1 className="puzzles-title">{currentLesson.title}</h1>
           <p className="puzzles-subtitle">
-            {displaySide === "white" ? "White" : "Black"} to move. Find the
-            best tactic for this lesson.
+            {displaySide === "white" ? "White" : "Black"} to move. Start with a clear tactic; the challenge grows as you solve.
           </p>
+          <div className="puzzle-progression" aria-label={`Puzzle progression: ${difficultyLabel(difficultyForRating(puzzleRating))}, rating ${puzzleRating}`}>
+            <div className="puzzle-progression-top"><span>{difficultyLabel(difficultyForRating(puzzleRating))}</span><strong>{puzzleRating}</strong></div>
+            <div className="puzzle-progression-track"><span style={{ width: `${difficultyProgress(puzzleRating)}%` }} /></div>
+            <div className="puzzle-progression-caption">Solve to move up · miss or skip to ease back</div>
+          </div>
         </header>
 
         {/* ── Main Puzzle Layout ─────────────────────────── */}
