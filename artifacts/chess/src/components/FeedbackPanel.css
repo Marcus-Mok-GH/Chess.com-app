@@ -220,6 +220,14 @@
   color: #7a7775;
 }
 
+.feedback-error {
+  margin: 0 0 12px;
+  color: #e57373;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+}
+
 .feedback-buttons {
   display: flex;
   gap: 10px;
