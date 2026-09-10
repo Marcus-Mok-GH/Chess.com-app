@@ -35,7 +35,6 @@ import './Landing.css'
 const NAV_LINKS = [
   { icon: Play, label: 'Play', to: '/play' },
   { icon: Puzzle, label: 'Puzzles', to: '/puzzles' },
-  { icon: GraduationCap, label: 'Learn', to: '/analysis' },
   { icon: TrendingUp, label: 'Train', to: '/history' },
   { icon: Eye, label: 'Watch', to: '/history' },
   { icon: UsersRound, label: 'Community', to: '/history' },
@@ -43,7 +42,6 @@ const NAV_LINKS = [
 
 // Other-rail links (chess.com collapses less-used destinations here)
 const OTHER_LINKS = [
-  { label: 'Analysis Board', to: '/analysis' },
   { label: 'Game Archive', to: '/history' },
   { label: 'Settings', to: '/settings' },
   { label: 'Terms', to: '/terms' },
@@ -54,18 +52,6 @@ const DEMO_FEN = 'r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2
 
 // Alternating image/text feature blocks (chess.com style)
 const FEATURE_BLOCKS = [
-  {
-    icon: GraduationCap,
-    eyebrow: 'Lessons',
-    title: 'Improve Your Game with Lessons',
-    description:
-      'Step through opening principles, middlegame plans, and endgame technique with guided commentary on every position.',
-    to: '/analysis',
-    cta: 'Start a Lesson',
-    boardTheme: 'green',
-    fen: 'r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3',
-    flip: false,
-  },
   {
     icon: Bot,
     eyebrow: 'Bots',
