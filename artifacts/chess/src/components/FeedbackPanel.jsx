@@ -70,7 +70,7 @@ export function FeedbackPanel() {
       }, 2000);
     } catch (error) {
       console.error('Feedback submission failed:', error);
-      setSubmitError("We couldn't send your feedback. Please try again.");
+      setSubmitError(error instanceof Error && error.message ? error.message : "We couldn't send your feedback. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
