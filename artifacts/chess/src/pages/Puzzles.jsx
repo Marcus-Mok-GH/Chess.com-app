@@ -5,7 +5,7 @@ import ChessBoard from "../components/ChessBoard";
 import DailyPuzzleStreak from "../components/DailyPuzzleStreak";
 import { generatePuzzleForThemes } from "../engine/puzzles/puzzleGenerator";
 import { LESSON_CATALOG } from "../engine/lessons/lessonCatalog";
-import { explainCoachMove } from "../engine/coach/coachAI";
+import { explainCoachMove, summarizeLessonConcept } from "../engine/coach/coachAI";
 import {
   Puzzle,
   Check,
@@ -54,6 +54,12 @@ function difficultyProgress(rating) {
   return Math.max(4, Math.min(100, Math.round(((rating - PUZZLE_RATING_MIN) / (PUZZLE_RATING_MAX - PUZZLE_RATING_MIN)) * 100)));
 }
 
+function shortLessonFallback(description) {
+  const text = Array.isArray(description) ? description.join(" ") : String(description || "");
+  const sentences = text.match(/[^.!?]+[.!?]+/g);
+  return (sentences || [text]).slice(0, 2).join(" ").trim();
+}
+
 export default function Puzzles() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -84,9 +90,12 @@ export default function Puzzles() {
   const [llmDescription, setLlmDescription] = useState(null);
   const [llmLoading, setLlmLoading] = useState(false);
   const [llmError, setLlmError] = useState(null);
+  const [lessonConceptSummary, setLessonConceptSummary] = useState(null);
+  const [lessonConceptLoading, setLessonConceptLoading] = useState(false);
 
   const generationRequestRef = useRef(0);
   const explanationRequestRef = useRef(0);
+  const lessonSummaryRequestRef = useRef(0);
   const timerIds = useRef([]);
 
   const [solvedCount, setSolvedCount] = useState(0);
@@ -164,6 +173,27 @@ export default function Puzzles() {
       }
     }
   }
+
+  useEffect(() => {
+    const requestId = ++lessonSummaryRequestRef.current;
+    setLessonConceptLoading(true);
+    setLessonConceptSummary(null);
+
+    summarizeLessonConcept(currentLesson.title, currentLesson.topic, currentLesson.description)
+      .then((summary) => {
+        if (requestId === lessonSummaryRequestRef.current && summary) {
+          setLessonConceptSummary(summary);
+        }
+      })
+      .catch(() => {
+        // The short local fallback keeps the card useful when AI is unavailable.
+      })
+      .finally(() => {
+        if (requestId === lessonSummaryRequestRef.current) {
+          setLessonConceptLoading(false);
+        }
+      });
+  }, [currentLesson.id, currentLesson.title, currentLesson.topic, currentLesson.description]);
 
   // Sync puzzle loading when currentLessonIndex changes
   useEffect(() => {
@@ -593,15 +623,15 @@ export default function Puzzles() {
               <div className="puzzle-lesson-summary-header">
                 <GraduationCap size={14} /> Lesson Concept
               </div>
-              {Array.isArray(currentLesson.description) ? (
-                currentLesson.description.map((para, i) => (
-                  <p key={i} className="puzzle-lesson-para">
-                    {para}
-                  </p>
-                ))
-              ) : (
-                <p className="puzzle-lesson-para">{currentLesson.description}</p>
-              )}
+              <p className="puzzle-lesson-para">
+                {lessonConceptLoading ? (
+                  <>
+                    <span className="puzzles-llm-spinner" /> Condensing this lesson...
+                  </>
+                ) : (
+                  lessonConceptSummary || shortLessonFallback(currentLesson.description)
+                )}
+              </p>
             </div>
 
             <div className="puzzle-side-card puzzle-to-move-hint">
