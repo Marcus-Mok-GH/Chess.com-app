@@ -11,8 +11,17 @@ export const BASE_PUZZLES = [];
 
 const PIECE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
 const MAX_POSITION_ATTEMPTS = 72;
-const MIN_RANDOM_PLIES = 16;
-const RANDOM_PLY_SPREAD = 42;
+const DIFFICULTY_PROFILES = {
+  beginner: { minPlies: 8, plySpread: 12, maxAttempts: 96, allowMate: false, allowChecks: false, baseRating: 400 },
+  easy: { minPlies: 14, plySpread: 18, maxAttempts: 88, allowMate: false, allowChecks: true, baseRating: 700 },
+  intermediate: { minPlies: 20, plySpread: 28, maxAttempts: 80, allowMate: true, allowChecks: true, baseRating: 1000 },
+  advanced: { minPlies: 28, plySpread: 42, maxAttempts: 72, allowMate: true, allowChecks: true, baseRating: 1350 },
+};
+
+function difficultyProfile(difficulty) {
+  return DIFFICULTY_PROFILES[String(difficulty ?? "intermediate").toLowerCase()] || DIFFICULTY_PROFILES.intermediate;
+}
+
 
 function normalizeSeed(seed) {
   if (Number.isFinite(Number(seed))) return Number(seed) >>> 0 || 1;
@@ -100,9 +109,9 @@ function weightedRandomMove(chess, random) {
   return weighted[weighted.length - 1].move;
 }
 
-function sampleLegalPosition(random) {
+function sampleLegalPosition(random, profile = DIFFICULTY_PROFILES.intermediate) {
   const chess = new Chess();
-  const plies = MIN_RANDOM_PLIES + Math.floor(random() * RANDOM_PLY_SPREAD);
+  const plies = profile.minPlies + Math.floor(random() * profile.plySpread);
 
   for (let ply = 0; ply < plies; ply += 1) {
     if (chess.isGameOver()) return null;
@@ -118,6 +127,7 @@ function sampleLegalPosition(random) {
 function findMaterialTactic(chess, options = {}) {
   const candidates = [];
   const allowMate = options.allowMate ?? true;
+  const allowChecks = options.allowChecks ?? true;
 
   for (const move of chess.moves({ verbose: true })) {
     const capturedValue = PIECE_VALUES[move.captured] ?? 0;
@@ -130,7 +140,7 @@ function findMaterialTactic(chess, options = {}) {
     chess.undo();
 
     if (checkmate) {
-      if (!allowMate) continue;
+      if (!allowMate || !allowChecks) continue;
       candidates.push({
         move,
         gain: 10,
@@ -143,6 +153,7 @@ function findMaterialTactic(chess, options = {}) {
     }
 
     const gain = capturedValue + promotionValue;
+    if (!allowChecks && givesCheck) continue;
     if (gain < 2 && !givesCheck) continue;
 
     candidates.push({
@@ -177,19 +188,20 @@ function hintForTactic(candidate) {
   return "Compare every forcing capture and identify the move that wins material.";
 }
 
-function ratePuzzle(chess, gain = 0) {
+function ratePuzzle(chess, gain = 0, profile = DIFFICULTY_PROFILES.intermediate) {
   const pieceCount = chess.board().flat().filter(Boolean).length;
-  return Math.min(2200, 850 + pieceCount * 28 + gain * 110);
+  return Math.min(2200, profile.baseRating + Math.max(0, pieceCount - 20) * 18 + gain * 55);
 }
 
 function createNaturalTactic(random, options = {}) {
   const allowMate = options.allowMate ?? true;
   const requireMate = options.requireMate ?? false;
+  const profile = options.profile ?? DIFFICULTY_PROFILES.intermediate;
 
-  for (let attempt = 0; attempt < MAX_POSITION_ATTEMPTS; attempt += 1) {
-    const chess = sampleLegalPosition(random);
+  for (let attempt = 0; attempt < (profile.maxAttempts ?? MAX_POSITION_ATTEMPTS); attempt += 1) {
+    const chess = sampleLegalPosition(random, profile);
     if (!chess) continue;
-    const candidate = findMaterialTactic(chess, { allowMate });
+    const candidate = findMaterialTactic(chess, { allowMate, allowChecks: profile.allowChecks });
     if (!candidate) continue;
 
     // If requireMate is true, skip non-mate candidates
@@ -198,7 +210,8 @@ function createNaturalTactic(random, options = {}) {
     return {
       fen: chess.fen(),
       sideToMove: chess.turn() === "w" ? "white" : "black",
-      rating: ratePuzzle(chess, candidate.gain),
+      rating: ratePuzzle(chess, candidate.gain, profile),
+      difficulty: options.difficulty ?? "intermediate",
       theme: candidate.isMate ? "Checkmate Tactic" : themeForTactic(candidate),
       hint: candidate.isMate ? "Find the forcing move that ends the game in checkmate." : hintForTactic(candidate),
       solution: candidate.move.san,
@@ -260,13 +273,13 @@ function hasRequestedTheme(candidate, themes) {
  * Generate a puzzle matching requested lesson themes.
  * Dynamically creates a procedural tactical/mate position.
  */
-export function generatePuzzleForThemes(themes, seed = Date.now() ^ Math.floor(Math.random() * 0xffffffff)) {
+export function generatePuzzleForThemes(themes, seed = Date.now() ^ Math.floor(Math.random() * 0xffffffff), options = {}) {
   const requestedThemes = normalizedThemeList(themes);
   const maxAttempts = 50;
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     const attemptSeed = normalizeSeed(seed) + attempt * 1000;
-    const puzzle = generatePuzzle(attemptSeed, { themes: requestedThemes });
+    const puzzle = generatePuzzle(attemptSeed, { themes: requestedThemes, ...options });
 
     if (hasRequestedTheme(puzzle, requestedThemes)) {
       return {
@@ -278,7 +291,7 @@ export function generatePuzzleForThemes(themes, seed = Date.now() ^ Math.floor(M
   }
 
   // Fallback: return a puzzle even if theme doesn't match exactly
-  const puzzle = generatePuzzle(seed, { themes: requestedThemes });
+  const puzzle = generatePuzzle(seed, { themes: requestedThemes, ...options });
   return {
     ...puzzle,
     id: `lesson-${normalizeSeed(seed)}`,
@@ -291,8 +304,10 @@ export function generatePuzzle(seed = Date.now() ^ Math.floor(Math.random() * 0x
   const random = randomSource(normalizedSeed);
   const requestedType = String(options.type ?? "tactics").toLowerCase();
   const wantsMate = requestedType === "mate-in-1";
+  const difficulty = String(options.difficulty ?? "intermediate").toLowerCase();
+  const profile = difficultyProfile(difficulty);
 
-  const puzzle = createNaturalTactic(random, { allowMate: true, requireMate: wantsMate });
+  const puzzle = createNaturalTactic(random, { allowMate: wantsMate ? true : profile.allowMate, allowChecks: profile.allowChecks, requireMate: wantsMate, profile, difficulty });
 
   if (!puzzle || !validateGeneratedPuzzle(puzzle)) {
     throw new Error("Unable to generate a verified chess puzzle.");
