@@ -73,10 +73,10 @@ export async function getCoachingFeedback(fen, playerMove, moveHistory, onStream
   }
 }
 
-export async function explainCoachMove(fenBefore, move, fenAfter, onStream = null) {
+export async function explainCoachMove(fenBefore, move, fenAfter, onStream = null, context = {}) {
   try {
     const data = await coachRequest('/coach/explain', {
-      method: 'POST', body: JSON.stringify({ fenBefore, move, fenAfter }),
+      method: 'POST', body: JSON.stringify({ fenBefore, move, fenAfter, ...context }),
     });
     if (onStream && data.explanation) onStream(data.explanation);
     return data.explanation || null;
