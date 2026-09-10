@@ -248,11 +248,14 @@ router.post('/explain', async (req, res) => {
   try {
     const userId = await requireCoachUser(req, res);
     if (!userId) return;
-    const { fenBefore, move, fenAfter } = req.body;
+    const { fenBefore, move, fenAfter, puzzleMistake } = req.body;
     if (!fenBefore || !move) return errorResponse(res, 400, 'Missing required fields: fenBefore, move');
+    const explanationPrompt = puzzleMistake
+      ? `A student played an incorrect move while solving a chess puzzle. Explain why this move fails or misses the position's key idea in 1-2 very short sentences (max 25 words).\nPosition before: ${fenBefore}\nMove played: ${move}\nPosition after: ${fenAfter || 'N/A'}\nDo not reveal, name, or hint at the puzzle's best move or answer. Focus only on the consequence of the move and the chess concept to learn. Be educational and encouraging.`
+      : `Explain this move to a student in 1-2 very short sentences (max 25 words).\nPosition before: ${fenBefore}\nMove played: ${move}\nPosition after: ${fenAfter || 'N/A'}\nFocus on the main chess idea. Be educational but concise.`;
     const explainMessages = [
       { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: `Explain this move to a student in 1-2 very short sentences (max 25 words).\nPosition before: ${fenBefore}\nMove played: ${move}\nPosition after: ${fenAfter || 'N/A'}\nFocus on the main chess idea. Be educational but concise.` },
+      { role: 'user', content: explanationPrompt },
     ];
     let response;
     try {
