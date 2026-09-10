@@ -2,6 +2,8 @@ import { getPool, shouldClosePool } from './pool.js';
 import { ensureDatabaseReady, setDatabaseReady, isDatabaseReady } from './status.js';
 import { initDatabase } from './init.js';
 
+const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+
 const logQuery = (text, duration, rowCount) => {
   console.log('[DB] Query executed', {
     text: text.substring(0, 50),
@@ -11,8 +13,10 @@ const logQuery = (text, duration, rowCount) => {
 };
 
 export async function query(text, params) {
-  // On Vercel, ensure DB is ready
-  if (!isDatabaseReady()) {
+  // Vercel runs initDatabase() in the background during cold start. Do not
+  // block ordinary requests on the full schema bootstrap; existing tables can
+  // serve immediately, and the schema-missing fallback below still self-heals.
+  if (!isServerless && !isDatabaseReady()) {
     const ready = await ensureDatabaseReady(initDatabase);
     if (!ready) {
       throw new Error('Database failed to initialize');
