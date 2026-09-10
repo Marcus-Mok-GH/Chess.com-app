@@ -33,18 +33,6 @@ const BOARD_THEMES = [
   { id: 'purple', name: 'Purple', light: '#e8e0f0', dark: '#9070a0' },
 ];
 
-const TERMS_SECTIONS = [
-  ['Acceptance of Terms', 'By accessing and using this Chess application, you accept and agree to be bound by the terms and provisions of this agreement.'],
-  ['Description of Service', 'This application provides a chess playing platform with features including online play, game analysis, and user accounts.'],
-  ['User Accounts', 'You are responsible for maintaining the confidentiality of your account credentials and for all activities under your account.'],
-  ['Acceptable Use', 'You agree not to use the service for any unlawful purpose or in any way that could damage, disable, or impair the service.'],
-  ['Intellectual Property', 'The application and its original content are the exclusive property of the application providers.'],
-  ['Disclaimer', 'The service is provided "as is" without warranties of any kind, either express or implied.'],
-  ['Limitation of Liability', 'We shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use of the service.'],
-  ['Changes to Terms', 'We reserve the right to modify these terms at any time. Continued use after changes constitutes acceptance of modified terms.'],
-  ['Contact', 'If you have any questions about these Terms, please contact us at support@playchess.app.'],
-];
-
 const PRIVACY_SECTIONS = [
   ['Information We Collect', 'We collect information you provide directly, such as email address for account creation and gameplay data.'],
   ['How We Use Your Information', 'We use the information to provide, maintain, and improve our services, communicate with you, and ensure security.'],
@@ -416,17 +404,17 @@ export default function Settings() {
         </Section>
 
         <Section icon={ShieldCheck} title="Terms & Privacy">
-          <div className="legal-settings-block" id="terms">
-            <div className="legal-settings-heading">
-              <h3>Terms of Service</h3>
-              <span>Last updated: July 2026</span>
+          <div className="setting-item">
+            <div className="setting-info">
+              <div className="setting-title">
+                <ShieldCheck className="setting-icon" size={16} />
+                <span>Terms of Service</span>
+              </div>
+              <span className="setting-desc">Read the full Terms of Service on its dedicated page.</span>
             </div>
-            {TERMS_SECTIONS.map(([title, text], index) => (
-              <article className="legal-settings-section" key={title}>
-                <h4>{index + 1}. {title}</h4>
-                <p>{text}</p>
-              </article>
-            ))}
+            <button className="link-button" type="button" onClick={() => navigate('/terms')}>
+              View
+            </button>
           </div>
 
           <div className="legal-settings-block" id="privacy">
