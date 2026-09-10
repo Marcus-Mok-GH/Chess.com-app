@@ -1,5 +1,5 @@
 import React from 'react'
-import ReactDOM from 'react-dom/client'
+import { createRoot, hydrateRoot } from 'react-dom/client'
 import App from './App'
 import './index.css'
 import './App.css'
@@ -29,8 +29,15 @@ if ('serviceWorker' in navigator) {
   }
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+const app = (
   <React.StrictMode>
     <App />
   </React.StrictMode>
 );
+const root = document.getElementById('root');
+
+if (root.hasChildNodes()) {
+  hydrateRoot(root, app);
+} else {
+  createRoot(root).render(app);
+}
