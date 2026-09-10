@@ -36,6 +36,47 @@ export function FeedbackPanel() {
   };
 
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const trimmedMessage = message.trim();
+    if (!trimmedMessage || isSubmitting) return;
+
+    setIsSubmitting(true);
+    setSubmitError('');
+
+    try {
+      const response = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          type: feedbackType,
+          message: trimmedMessage,
+          email: email.trim() || undefined,
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(result?.error?.message || 'Unable to send feedback');
+      }
+
+      setSubmitted(true);
+      setTimeout(() => {
+        setIsOpen(false);
+        setSubmitted(false);
+        setMessage('');
+        setEmail('');
+        setFeedbackType('suggestion');
+        setSubmitError('');
+      }, 2000);
+    } catch (error) {
+      console.error('Feedback submission failed:', error);
+      setSubmitError('We couldn\\'t send your feedback. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleKeyDown = (e) => {
     if (e.key === 'Escape') {
       setIsOpen(false);
     }
