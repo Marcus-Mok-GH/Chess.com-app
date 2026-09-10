@@ -7,13 +7,16 @@ import Puzzles from './Puzzles';
 import { LESSON_CATALOG } from '../engine/lessons/lessonCatalog';
 
 vi.mock('../components/ChessBoard', () => ({
-  default: ({ onSquareClick, position }) => (
+  default: ({ onPieceDrop, onSquareClick, position }) => (
     <div data-testid="chessboard" data-position={position}>
       <button data-testid="sq-c3" onClick={() => onSquareClick && onSquareClick('c3')}>
         c3
       </button>
       <button data-testid="sq-d5" onClick={() => onSquareClick && onSquareClick('d5')}>
         d5
+      </button>
+      <button data-testid="wrong-move" onClick={() => onPieceDrop && onPieceDrop('c6', 'b4')}>
+        wrong move
       </button>
     </div>
   ),
@@ -73,13 +76,22 @@ describe('Puzzles page with Lesson Scheme & LLM commentary', () => {
     });
   });
 
-  it('displays the LLM position description when coach explanation succeeds', async () => {
+  it('explains an incorrect move without revealing the answer and offers retry', async () => {
     renderPuzzles();
 
     await waitFor(() => {
-      expect(screen.getByText('AI Coach Position Description')).toBeTruthy();
-      expect(screen.getByText('The knight move attacks the exposed black queen.')).toBeTruthy();
+      expect(screen.getByText('Piece Development & Opening Principles')).toBeTruthy();
     });
+    expect(explainCoachMove).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId('wrong-move'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Why that move missed')).toBeTruthy();
+      expect(screen.getByText('The knight move attacks the exposed black queen.')).toBeTruthy();
+      expect(screen.getByRole('button', { name: /retry/i })).toBeTruthy();
+    });
+    expect(screen.queryByText('Not quite — try again.')).toBeNull();
   });
 
   it('renders raw LLM error when coach explanation fails without masking fallback', async () => {
@@ -88,8 +100,14 @@ describe('Puzzles page with Lesson Scheme & LLM commentary', () => {
     renderPuzzles();
 
     await waitFor(() => {
-      expect(screen.getByText('AI Coach Analysis Error')).toBeTruthy();
+      expect(screen.getByText('Piece Development & Opening Principles')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('wrong-move'));
+
+    await waitFor(() => {
+      expect(screen.getByText('AI Coach Explanation Error')).toBeTruthy();
       expect(screen.getByText('402 - Connect your Pollinations account')).toBeTruthy();
+      expect(screen.getByRole('button', { name: /retry/i })).toBeTruthy();
     });
   });
 
