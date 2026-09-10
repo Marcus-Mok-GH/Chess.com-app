@@ -13,10 +13,7 @@ export default function GameControls({
   onResign,
   isThinking,
   canUndo,
-  onReview,
   showHints = true,
-  canAnalyze = true,
-  canReview = false,
 }) {
   const getStatusMessage = () => {
     if (gameStatus === 'resigned') {
@@ -123,13 +120,6 @@ export default function GameControls({
             🏳️ Resign
           </button>
         )}
-        <button
-          onClick={onReview}
-          className="btn btn-primary"
-          disabled={!canAnalyze || !canReview}
-        >
-          🧠 Game Review
-        </button>
       </div>
     </div>
   );
