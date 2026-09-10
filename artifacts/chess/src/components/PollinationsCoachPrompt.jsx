@@ -36,7 +36,6 @@ export default function PollinationsCoachPrompt({ mode = 'connect', onConnected 
   }
 
   function handleDismiss() {
-    seenRef.current = true;
     onConnected?.();
   }
 
