@@ -1,5 +1,5 @@
 import { useEffect, useState, Suspense, lazy } from 'react'
-import { BrowserRouter, Routes, Route, Link, Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom'
+import { BrowserRouter, StaticRouter, Routes, Route, Link, Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom'
 import { UserProvider, useUser } from './contexts/UserContext'
 import { SettingsProvider } from './contexts/SettingsContext'
 import { FeedbackPanel } from './components/FeedbackPanel'
@@ -282,14 +282,15 @@ function AppShell() {
   )
 }
 
-export default function App() {
+export default function App({ ssr = false, location = '/' }) {
+  const Router = ssr ? StaticRouter : BrowserRouter
   return (
     <>
       <PuterCheck />
       <ErrorBoundary>
         <UserProvider>
           <SettingsProvider>
-            <BrowserRouter>
+            <Router {...(ssr ? { location } : {})}>
               <SetUsernameModal />
               <PollinationsCoachGate />
               <GlobalVerificationGuard />
@@ -319,7 +320,7 @@ export default function App() {
                 <Route path="*" element={<Suspense fallback={<RouteFallback />}><NotFound /></Suspense>} />
               </Routes>
               <FeedbackPanel />
-            </BrowserRouter>
+            </Router>
           </SettingsProvider>
         </UserProvider>
       </ErrorBoundary>
