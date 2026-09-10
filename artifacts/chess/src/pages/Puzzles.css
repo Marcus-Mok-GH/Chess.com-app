@@ -197,6 +197,10 @@
   background: rgba(129, 182, 76, 0.18);
   color: var(--primary-hover, #6f9a3f);
 }
+.puzzle-result--wrong {
+  background: rgba(220, 53, 69, 0.2);
+  color: #ff9898;
+}
 /* ── Side panel ──────────────────────── */
 .puzzles-side {
   display: flex;
