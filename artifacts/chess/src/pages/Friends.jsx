@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUser } from '../contexts/UserContext'
-import { Users, UserPlus, UserMinus, MessageCircle, RefreshCw, ArrowUpRight, Check, Loader2, Wifi, WifiOff } from 'lucide-react'
+import { Users, UserPlus, UserMinus, RefreshCw, ArrowUpRight, Check, Loader2, Wifi, WifiOff } from 'lucide-react'
 import api from '../services/api'
 import socket from '../services/socket'
 import './Friends.css'
@@ -219,14 +219,6 @@ export default function Friends() {
                       </span>
                     </div>
                     <div className="friend-actions">
-                      <button
-                        className="friend-action friend-action--chat"
-                        onClick={() => navigate(`/chat?friend=${encodeURIComponent(friend.username)}`)}
-                        title={`Message ${friend.username}`}
-                        aria-label={`Message ${friend.username}`}
-                      >
-                        <MessageCircle size={16} />
-                      </button>
                       <button
                         className="friend-action friend-action--remove"
                         onClick={() => handleRemoveFriend(friend)}
