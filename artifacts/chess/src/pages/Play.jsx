@@ -180,12 +180,6 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
     gameRef.current?.resign?.();
   }
 
-  function handleReview() {
-    gameRef.current?.review?.();
-  }
-
-  const canReview = uiState.gameStatus === 'checkmate' || uiState.gameStatus === 'resigned';
-
   return (
     <div className="play-page">
       {phase === 'setup' ? (
@@ -217,11 +211,9 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
             onFlipBoard={handleFlipBoard}
             onHint={handleHint}
             onResign={handleResign}
-            onReview={handleReview}
             canUndo={uiState.canUndo}
             isThinking={uiState.isThinking}
             showHints={settings.showHints}
-            canReview={canReview}
             botMessage={uiState.botMessage}
             selectedBot={uiState.selectedBot}
           />
