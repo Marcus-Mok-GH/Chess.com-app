@@ -5,7 +5,6 @@ import socket from '../services/socket';
 
 const SESSION_USER_KEY = 'chess_user_session';
 const SESSION_USER_DATA_KEY = 'chess_user_data';
-const SESSION_TOKEN_KEY = 'chess_user_token';
 const PENDING_OTP_KEY = 'chess_pending_otp';
 const AUTH_REQUEST_ID_KEY = 'chess_auth_request_id';
 
@@ -18,10 +17,7 @@ const UserContext = createContext(null);
 
 export function UserProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(() => {
-    if (typeof window === 'undefined') return null;
-    try { return localStorage.getItem(SESSION_TOKEN_KEY); } catch { return null; }
-  });
+  const [token, setToken] = useState(null);
   const userRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(() => typeof navigator === 'undefined' ? true : navigator.onLine);
@@ -46,14 +42,10 @@ export function UserProvider({ children }) {
     // Slide the 7-day window forward on every successful (re)validation.
     try { localStorage.setItem(SESSION_CACHE_EPOCH_KEY, String(Date.now())); } catch {}
     if (sessionToken) {
-      localStorage.setItem(SESSION_TOKEN_KEY, sessionToken);
+      // Keep the token in memory only for cross-origin socket handshakes.
       setToken(sessionToken);
+      socket.setAuthToken(sessionToken);
     }
-  }, []);
-
-  useEffect(() => {
-    const requestId = localStorage.getItem(AUTH_REQUEST_ID_KEY);
-    if (requestId) socket.joinAuthRoom(requestId);
   }, []);
 
   useEffect(() => {
@@ -95,18 +87,12 @@ export function UserProvider({ children }) {
         } catch { try { localStorage.removeItem(SESSION_USER_DATA_KEY); } catch {} }
       }
 
-      // No token → definitely not logged in. Don't bother the backend.
-      const storedToken = (() => { try { return localStorage.getItem(SESSION_TOKEN_KEY); } catch { return null; } })();
-      if (!storedToken) {
-        if (isMounted) setIsLoading(false);
-        return;
-      }
-
+      // The HTTP-only session cookie is sent automatically with this request.
       // 2. Ask the backend whether the session is still alive. This is the call that
       //    was being treated as authoritative even on transient failures.
       let sessionResult;
       try {
-        sessionResult = await neonAuth.getSession({ token: storedToken });
+        sessionResult = await neonAuth.getSession();
       } catch (e) {
         // Network throw = transient. Keep the cached login if the cache is still fresh.
         console.warn('[UserContext] getSession threw (transient):', e?.message || e);
@@ -119,8 +105,7 @@ export function UserProvider({ children }) {
               try {
                 localStorage.removeItem(SESSION_USER_KEY);
                 localStorage.removeItem(SESSION_USER_DATA_KEY);
-                localStorage.removeItem(SESSION_TOKEN_KEY);
-                localStorage.removeItem(SESSION_CACHE_EPOCH_KEY);
+                 localStorage.removeItem(SESSION_CACHE_EPOCH_KEY);
               } catch {}
             }
           }
@@ -149,7 +134,6 @@ export function UserProvider({ children }) {
             try {
               localStorage.removeItem(SESSION_USER_KEY);
               localStorage.removeItem(SESSION_USER_DATA_KEY);
-              localStorage.removeItem(SESSION_TOKEN_KEY);
               localStorage.removeItem(SESSION_CACHE_EPOCH_KEY);
             } catch {}
           }
@@ -192,7 +176,6 @@ export function UserProvider({ children }) {
           try {
             localStorage.removeItem(SESSION_USER_KEY);
             localStorage.removeItem(SESSION_USER_DATA_KEY);
-            localStorage.removeItem(SESSION_TOKEN_KEY);
             localStorage.removeItem(SESSION_CACHE_EPOCH_KEY);
           } catch {}
         }
@@ -287,7 +270,9 @@ export function UserProvider({ children }) {
 
   const logout = useCallback(async () => {
     await neonAuth.signOut({ token }).catch(() => {});
-    localStorage.clear();
+    [SESSION_USER_KEY, SESSION_USER_DATA_KEY, PENDING_OTP_KEY, AUTH_REQUEST_ID_KEY, SESSION_CACHE_EPOCH_KEY].forEach((key) => {
+      try { localStorage.removeItem(key); } catch {}
+    });
     setUser(null);
     setToken(null);
     window.location.href = '/';

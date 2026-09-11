@@ -102,7 +102,7 @@ export function runEngine(fen, options = {}) {
       settled = true;
       clearTimeout(timer);
       try {
-        child.kill();
+        child.kill('SIGKILL');
       } catch {}
       fn();
     };

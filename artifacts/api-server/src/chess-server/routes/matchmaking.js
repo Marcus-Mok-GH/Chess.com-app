@@ -2,6 +2,7 @@ import express from 'express';
 import { query } from '../db.js';
 import { processMatchmakingOnce } from '../socket/matchmaking.js';
 import { handleRouteError } from '../middleware/errors.js';
+import { requireSession } from '../auth.js';
 
 const router = express.Router();
 
@@ -57,19 +58,16 @@ router.get('/details', async (req, res) => {
 });
 
 // Join matchmaking queue (polling-based - primary method)
-router.post('/join', async (req, res) => {
+router.post('/join', requireSession, async (req, res) => {
   try {
-    const { playerId, playerName, elo, isRanked } = req.body;
-
-    if (!playerId || typeof playerId !== 'string') {
-      return res.status(400).json({ success: false, message: 'Invalid player ID' });
+    const { isRanked } = req.body || {};
+    const playerId = String(req.userId);
+    const playerResult = await query('SELECT id, username, elo FROM users WHERE id = $1', [playerId]);
+    if (playerResult.rowCount === 0) {
+      return res.status(401).json({ success: false, message: 'User account not found' });
     }
-
-    if (!playerName || typeof playerName !== 'string') {
-      return res.status(400).json({ success: false, message: 'Invalid player name' });
-    }
-
-    const trimmedName = playerName.trim();
+    const player = playerResult.rows[0];
+    const trimmedName = String(player.username || '').trim();
 
     // Matchmaking names are display values. Keep the same length boundary as
     // the database column, but do not reject valid names containing spaces,
@@ -78,11 +76,8 @@ router.post('/join', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Player name must be between 2 and 50 characters' });
     }
 
-    const numericElo = Number(elo);
-    if (!Number.isFinite(numericElo) || numericElo < 0 || numericElo > 4000) {
-      return res.status(400).json({ success: false, message: 'Invalid ELO rating' });
-    }
-
+    const numericElo = Number(player.elo);
+    const serverElo = Number.isFinite(numericElo) && numericElo >= 0 && numericElo <= 4000 ? numericElo : 1200;
     const isRankedValue = typeof isRanked === 'boolean' ? isRanked : true;
 
     // Check for existing active games
@@ -106,7 +101,7 @@ router.post('/join', async (req, res) => {
     await query(
       `INSERT INTO matchmaking_queue (socket_id, player_id, player_name, elo, is_ranked)
        VALUES ($1, $2, $3, $4, $5)`,
-      [socketId, playerId, trimmedName, numericElo || 1200, isRankedValue]
+      [socketId, playerId, trimmedName, serverElo, isRankedValue]
     );
 
     // Always process matchmaking immediately after join
@@ -121,23 +116,19 @@ router.post('/join', async (req, res) => {
     if (MATCHMAKING_CONFIG.LOG_QUEUE_SIZE) {
       const queueSizeResult = await query('SELECT COUNT(*) as count FROM matchmaking_queue');
       const queueSize = parseInt(queueSizeResult.rows[0].count, 10);
-      console.log(`[Matchmaking/HTTP] Player ${trimmedName} (${elo}) joined queue (total: ${queueSize})`);
+      console.log(`[Matchmaking/HTTP] Player ${trimmedName} (${serverElo}) joined queue (total: ${queueSize})`);
     }
     
-    res.json({ success: true, message: 'Joined matchmaking queue' });
+    res.json({ success: true, message: 'Joined matchmaking queue', playerId });
   } catch (error) {
     handleRouteError(res, error, 'Failed to join matchmaking queue');
   }
 });
 
 // Leave matchmaking queue (polling-based)
-router.post('/leave', async (req, res) => {
+router.post('/leave', requireSession, async (req, res) => {
   try {
-    const { playerId } = req.body;
-
-    if (!playerId) {
-      return res.status(400).json({ success: false, message: 'Player ID required' });
-    }
+    const playerId = String(req.userId);
 
     await query('DELETE FROM matchmaking_queue WHERE player_id = $1', [playerId]);
 
@@ -149,13 +140,9 @@ router.post('/leave', async (req, res) => {
 });
 
 // Check for match (polling-based - primary method)
-router.get('/check-match', async (req, res) => {
+router.get('/check-match', requireSession, async (req, res) => {
   try {
-    const { playerId } = req.query;
-
-    if (!playerId) {
-      return res.status(400).json({ matchFound: false });
-    }
+    const playerId = String(req.userId);
 
     // First, verify player is still in queue and alive
     const queueCheck = await query(
@@ -232,13 +219,9 @@ async function getQueueSize() {
 }
 
 // Send heartbeat (polling-based)
-router.post('/heartbeat', async (req, res) => {
+router.post('/heartbeat', requireSession, async (req, res) => {
   try {
-    const { playerId } = req.body;
-
-    if (!playerId) {
-      return res.status(400).json({ success: false });
-    }
+    const playerId = String(req.userId);
 
     const updateResult = await query(
       'UPDATE matchmaking_queue SET last_heartbeat = CURRENT_TIMESTAMP WHERE player_id = $1 RETURNING player_name, elo',

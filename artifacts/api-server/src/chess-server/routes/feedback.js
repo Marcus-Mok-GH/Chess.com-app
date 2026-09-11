@@ -1,4 +1,5 @@
 import express from 'express';
+import { createRateLimiter, requestIp } from '../middleware/rateLimit.js';
 
 const router = express.Router();
 
@@ -9,7 +10,13 @@ const FEEDBACK_LABELS = {
 };
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const RESEND_API_URL = 'https://api.resend.com/emails';
-const FEEDBACK_RECIPIENT = 'mokmarcus068@gmail.com';
+const FEEDBACK_RECIPIENT = process.env.FEEDBACK_RECIPIENT || '';
+const feedbackRateLimit = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  keyGenerator: (req) => 'feedback:' + requestIp(req),
+  message: 'Too many feedback submissions. Please try again later.',
+});
 const RESEND_FROM = 'PlayChess Feedback <onboarding@resend.dev>';
 
 function escapeHtml(value) {
@@ -21,7 +28,7 @@ function escapeHtml(value) {
     .replaceAll("'", '&#39;');
 }
 
-router.post('/', async (req, res) => {
+router.post('/', feedbackRateLimit, async (req, res) => {
   const { type, message, email } = req.body ?? {};
   const feedbackType = typeof type === 'string' && FEEDBACK_LABELS[type] ? type : 'suggestion';
   const normalizedMessage = typeof message === 'string' ? message.trim() : '';
@@ -41,8 +48,8 @@ router.post('/', async (req, res) => {
 
   const apiKey = process.env.RESEND_API_KEY;
   const recipient = FEEDBACK_RECIPIENT;
-  if (!apiKey) {
-    console.error('[Feedback] Missing RESEND_API_KEY.');
+  if (!apiKey || !recipient) {
+    console.error('[Feedback] Missing RESEND_API_KEY or FEEDBACK_RECIPIENT.');
     return res.status(500).json({ error: { message: 'Feedback email is not configured.' } });
   }
 

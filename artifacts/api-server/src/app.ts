@@ -3,6 +3,7 @@ import cors from "cors";
 import { pinoHttp } from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { corsOptions } from "./chess-server/config/cors.js";
 
 const app: Express = express();
 
@@ -25,7 +26,14 @@ app.use(
     },
   }),
 );
-app.use(cors());
+app.use((_, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  next();
+});
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

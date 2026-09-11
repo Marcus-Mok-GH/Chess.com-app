@@ -58,6 +58,7 @@ class MatchmakingPollingService {
     try {
       const response = await fetch(`${API_BASE_URL}/matchmaking/join`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -72,11 +73,12 @@ class MatchmakingPollingService {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        console.log('[MatchmakingPolling] Joined queue:', playerId);
-        this.currentPlayerId = playerId;
-        this.startPolling(playerId);
-        this.startHeartbeat(playerId);
-        return { success: true };
+        const serverPlayerId = data.playerId || playerId;
+        console.log('[MatchmakingPolling] Joined queue:', serverPlayerId);
+        this.currentPlayerId = serverPlayerId;
+        this.startPolling(serverPlayerId);
+        this.startHeartbeat(serverPlayerId);
+        return { success: true, playerId: serverPlayerId };
       } else {
         const message = data.message || data.error?.message || 'Failed to join matchmaking queue';
         console.error('[MatchmakingPolling] Failed to join queue:', message);
@@ -98,10 +100,11 @@ class MatchmakingPollingService {
     try {
       await fetch(`${API_BASE_URL}/matchmaking/leave`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ playerId }),
+        body: JSON.stringify({}),
       });
       console.log('[MatchmakingPolling] Left queue:', playerId);
     } catch (error) {
@@ -149,6 +152,7 @@ class MatchmakingPollingService {
           `${API_BASE_URL}/matchmaking/check-match?playerId=${encodeURIComponent(playerId)}`,
           {
             cache: 'no-cache',
+            credentials: 'include',
             headers: {
               'Cache-Control': 'no-cache'
             }
@@ -249,11 +253,12 @@ class MatchmakingPollingService {
       try {
         const response = await fetch(`${API_BASE_URL}/matchmaking/heartbeat`, {
           method: 'POST',
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
             'Cache-Control': 'no-cache'
           },
-          body: JSON.stringify({ playerId }),
+          body: JSON.stringify({}),
         });
         
         if (!response.ok) {

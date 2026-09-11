@@ -2,6 +2,8 @@ import { createServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import app from "./app";
 import { logger } from "./lib/logger";
+import { corsOptions } from "./chess-server/config/cors.js";
+import { authenticateSocket } from "./chess-server/auth.js";
 
 const rawPort = process.env["PORT"];
 
@@ -20,12 +22,11 @@ if (Number.isNaN(port) || port <= 0) {
 const httpServer = createServer(app);
 
 const io = new SocketIOServer(httpServer, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"],
-  },
+  cors: corsOptions,
   path: "/socket.io",
 });
+
+io.use(authenticateSocket as any);
 
 // Dynamically import JS chess socket handlers
 async function setupSocketHandlers() {

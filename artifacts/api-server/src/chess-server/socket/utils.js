@@ -71,25 +71,20 @@ export const resolveMatchMoveOwner = (game, socketId, playerId) => {
   return { username: null, isWhite: null };
 };
 
-export const verifyPlayerAuth = (socket, game, playerId) => {
-  const isWhiteSocket = game.white_socket_id === socket.id;
-  const isBlackSocket = game.black_socket_id === socket.id;
+export const verifyPlayerAuth = (socket, game) => {
+  const authenticatedUserId = String(socket.data?.userId || '');
+  const whiteUid = userIdFromPlayerId(game.white_player_id);
+  const blackUid = userIdFromPlayerId(game.black_player_id);
+  const isWhiteSocket = game.white_socket_id === socket.id && authenticatedUserId && whiteUid != null && String(whiteUid) === authenticatedUserId;
+  const isBlackSocket = game.black_socket_id === socket.id && authenticatedUserId && blackUid != null && String(blackUid) === authenticatedUserId;
 
   if (!isWhiteSocket && !isBlackSocket) {
     return { valid: false, error: 'Unauthorized - not your game' };
   }
 
-  const requestUid = userIdFromPlayerId(playerId);
-  const whiteUid = userIdFromPlayerId(game.white_player_id);
-  const blackUid = userIdFromPlayerId(game.black_player_id);
-
-  if (isWhiteSocket && whiteUid != null && requestUid != null && whiteUid !== requestUid) {
-    return { valid: false, error: 'Player ID mismatch' };
-  }
-
-  if (isBlackSocket && blackUid != null && requestUid != null && blackUid !== requestUid) {
-    return { valid: false, error: 'Player ID mismatch' };
-  }
-
-  return { valid: true, color: isWhiteSocket ? 'white' : 'black' };
+  return {
+    valid: true,
+    color: isWhiteSocket ? 'white' : 'black',
+    playerId: isWhiteSocket ? game.white_player_id : game.black_player_id,
+  };
 };

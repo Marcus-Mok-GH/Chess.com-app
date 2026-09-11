@@ -37,7 +37,9 @@ if (!isServerless && unpooledUrl && unpooledUrl !== pooledUrl) {
   console.log(`[DB] DATABASE_URL_UNPOOLED (direct) -> ${host ?? '(unparseable)'}`);
 }
 
-const sslConfig = isProduction ? { rejectUnauthorized: false } : false;
+const sslConfig = isProduction
+  ? { rejectUnauthorized: true, ...(process.env.DATABASE_CA ? { ca: process.env.DATABASE_CA } : {}) }
+  : false;
 const timeoutMs = isServerless ? 8000 : isProduction ? 20000 : 10000;
 const pooledHost = resolveHost(pooledUrl);
 const isNeonOnVercel = isVercel && Boolean(pooledUrl) && isNeonPooler(pooledUrl);

@@ -2,6 +2,70 @@ import crypto from 'crypto';
 import { query } from './db/query.js';
 
 const SESSION_DAYS = 7;
+export const SESSION_COOKIE_NAME = 'chess_session';
+
+function getCookieValue(cookieHeader, name) {
+  if (typeof cookieHeader !== 'string') return null;
+  for (const part of cookieHeader.split(';')) {
+    const [key, ...valueParts] = part.trim().split('=');
+    if (key !== name) continue;
+    try { return decodeURIComponent(valueParts.join('=')); } catch { return valueParts.join('='); }
+  }
+  return null;
+}
+
+export function getSessionTokenFromHeaders(headers = {}) {
+  const authorization = headers.authorization || headers.Authorization;
+  if (typeof authorization === 'string' && authorization.startsWith('Bearer ')) {
+    return authorization.slice(7).trim() || null;
+  }
+  return getCookieValue(headers.cookie, SESSION_COOKIE_NAME);
+}
+
+export function getSessionToken(req) {
+  return getSessionTokenFromHeaders(req?.headers || {});
+}
+
+export function sessionCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL),
+    sameSite: 'lax',
+    path: '/',
+    maxAge: SESSION_DAYS * 24 * 60 * 60 * 1000,
+  };
+}
+
+export async function requireSession(req, res, next) {
+  const token = getSessionToken(req);
+  if (!token) return res.status(401).json({ error: { message: 'Authentication required.' } });
+  try {
+    const userId = await validateSession(token);
+    if (!userId) return res.status(401).json({ error: { message: 'Session expired.' } });
+    req.userId = String(userId);
+    next();
+  } catch (error) {
+    console.error('[Auth] session middleware failed:', error?.message || error);
+    return res.status(503).json({ error: { message: 'Session store temporarily unavailable.' } });
+  }
+}
+
+export async function authenticateSocket(socket, next) {
+  const token = socket.handshake?.auth?.token || getSessionTokenFromHeaders(socket.handshake?.headers || {});
+  if (!token) return next(new Error('Authentication required'));
+  try {
+    const userId = await validateSession(token);
+    if (!userId) return next(new Error('Session expired'));
+    const result = await query('SELECT username FROM users WHERE id = $1', [userId]);
+    if (result.rowCount === 0) return next(new Error('User not found'));
+    socket.data.userId = String(userId);
+    socket.data.username = result.rows[0].username;
+    next();
+  } catch (error) {
+    console.error('[Socket] authentication failed:', error?.message || error);
+    next(new Error('Authentication unavailable'));
+  }
+}
 
 function hashToken(token) {
   return crypto.createHash('sha256').update(token).digest('hex');

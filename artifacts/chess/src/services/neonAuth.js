@@ -46,9 +46,8 @@ async function postJson(path, body) {
   return { success: true, data, error: null };
 }
 
-async function getJson(path, token) {
+async function getJson(path) {
   const headers = { accept: 'application/json' };
-  if (token) headers.authorization = `Bearer ${token}`;
   try {
     const res = await fetch(`${neonAuthBaseUrl}${path}`, {
       method: 'GET',
@@ -73,9 +72,9 @@ export const neonAuth = {
     emailOtp: ({ email, otp }) =>
       postJson('/api/auth/sign-in/email-otp', { email, otp }),
   },
-  getSession: async ({ token } = {}) => getJson('/api/auth/session', token),
+  getSession: async () => getJson('/api/auth/session'),
   signOut: async ({ token } = {}) => {
-    const result = await postJson('/api/auth/signout', { token });
+    const result = await postJson('/api/auth/signout', {});
     return { success: true, data: { success: true }, error: result.error };
   },
 };

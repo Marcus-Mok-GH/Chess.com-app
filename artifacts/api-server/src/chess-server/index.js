@@ -23,6 +23,7 @@ import { registerSocketHandlers } from './socket/index.js';
 import { query } from './db.js';
 import { initDatabase } from './db/init.js';
 import { setDatabaseReady } from './db/status.js';
+import { authenticateSocket } from './auth.js';
 
 dotenv.config();
 
@@ -35,7 +36,16 @@ const io = new Server(httpServer, {
   cors: corsOptions,
 });
 
+io.use(authenticateSocket);
+
 // Middleware
+app.use((_, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
 app.use(cors(corsOptions));
 app.use(express.json());
 

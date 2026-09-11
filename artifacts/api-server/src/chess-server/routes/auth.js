@@ -22,13 +22,37 @@ import { query } from '../db/query.js';
 import {
   createSession,
   deleteSession,
+  getSessionToken,
+  requireSession,
+  sessionCookieOptions,
   validateSession,
+  SESSION_COOKIE_NAME,
 } from '../auth.js';
+import { createRateLimiter, normalizedEmail, requestIp } from '../middleware/rateLimit.js';
 
 const router = express.Router();
 
 const USERNAME_RE = /^[a-zA-Z0-9._-]{2,20}$/;
 const SESSION_DAYS = 7;
+const otpEmailLimit = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 5,
+  keyGenerator: (req) => 'otp:email:' + normalizedEmail(req),
+  message: 'Too many OTP requests for this email. Please try again in a minute.',
+});
+const otpIpLimit = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 20,
+  keyGenerator: (req) => 'otp:ip:' + requestIp(req),
+  message: 'Too many OTP requests from this IP. Please try again later.',
+});
+const otpAttemptLimit = createRateLimiter({
+  windowMs: 10 * 60 * 1000,
+  max: 5,
+  keyGenerator: (req) => 'otp:attempt:' + requestIp(req) + ':' + normalizedEmail(req),
+  message: 'Too many verification attempts. Please request a new code later.',
+});
+const otpRateLimit = [otpEmailLimit, otpIpLimit];
 
 // ---------------------------------------------------------------------------
 // Neon Auth proxy helpers
@@ -182,7 +206,7 @@ function cleanErrorMessage(message) {
 // ---------------------------------------------------------------------------
 // POST /api/auth/email-otp/send-verification-otp
 // ---------------------------------------------------------------------------
-router.post('/email-otp/send-verification-otp', async (req, res) => {
+router.post('/email-otp/send-verification-otp', otpRateLimit, async (req, res) => {
   const baseUrl = getNeonAuthBaseUrl();
   if (!baseUrl) return authServiceUnavailable(res);
 
@@ -213,7 +237,7 @@ router.post('/email-otp/send-verification-otp', async (req, res) => {
 // ---------------------------------------------------------------------------
 // POST /api/auth/email-otp/resend
 // ---------------------------------------------------------------------------
-router.post('/email-otp/resend', async (req, res) => {
+router.post('/email-otp/resend', otpRateLimit, async (req, res) => {
   const baseUrl = getNeonAuthBaseUrl();
   if (!baseUrl) return authServiceUnavailable(res);
 
@@ -242,7 +266,7 @@ router.post('/email-otp/resend', async (req, res) => {
 // ---------------------------------------------------------------------------
 // POST /api/auth/sign-in/email-otp
 // ---------------------------------------------------------------------------
-router.post('/sign-in/email-otp', async (req, res) => {
+router.post('/sign-in/email-otp', otpRateLimit, otpAttemptLimit, async (req, res) => {
   const baseUrl = getNeonAuthBaseUrl();
   if (!baseUrl) return authServiceUnavailable(res);
 
@@ -291,11 +315,11 @@ router.post('/sign-in/email-otp', async (req, res) => {
       return fail(res, 500, `Failed to create local session: ${err?.message || err}`);
     }
 
+    res.cookie(SESSION_COOKIE_NAME, token, sessionCookieOptions());
     return res.json({
       success: true,
       session: {
-        id: neonSession.id || token,
-        token,
+        id: neonSession.id || null,
         userId: localUser.id,
         expiresAt: neonSession.expiresAt || new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000).toISOString(),
       },
@@ -311,8 +335,7 @@ router.post('/sign-in/email-otp', async (req, res) => {
 // GET /api/auth/session
 // ---------------------------------------------------------------------------
 router.get('/session', async (req, res) => {
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const token = getSessionToken(req);
   if (!token) return res.json({ session: null, user: null });
 
   let userId;
@@ -344,7 +367,7 @@ router.get('/session', async (req, res) => {
   if (!u) return res.json({ session: null, user: null });
 
   return res.json({
-    session: { id: token, token, userId: u.id },
+    session: { id: token.slice(0, 8), userId: u.id },
     user: shapeUser(u),
   });
 });
@@ -353,8 +376,7 @@ router.get('/session', async (req, res) => {
 // POST /api/auth/signout
 // ---------------------------------------------------------------------------
 router.post('/signout', async (req, res) => {
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : req.body?.token;
+  const token = getSessionToken(req);
 
   try { await deleteSession(token); } catch { /* noop */ }
 
@@ -368,17 +390,16 @@ router.post('/signout', async (req, res) => {
     }
   }
 
+  res.clearCookie(SESSION_COOKIE_NAME, { path: '/' });
   res.json({ success: true });
 });
 
 // ---------------------------------------------------------------------------
 // POST /api/auth/update-username
 // ---------------------------------------------------------------------------
-router.post('/update-username', async (req, res) => {
+router.post('/update-username', requireSession, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-    if (!token) return fail(res, 401, 'Session token missing');
+    const userId = req.userId;
 
     const { username } = req.body || {};
     const rawUsername = typeof username === 'string' ? username : '';
@@ -392,9 +413,6 @@ router.post('/update-username', async (req, res) => {
     if (!USERNAME_RE.test(trimmed)) {
       return fail(res, 400, 'Usernames can only contain letters, numbers, dots (.), hyphens (-), and underscores (_). No spaces, @, or special characters.');
     }
-
-    const userId = await validateSession(token);
-    if (!userId) return fail(res, 401, 'Session expired.');
 
     const check = await query(
       'SELECT id FROM users WHERE LOWER(username) = LOWER($1) AND id::TEXT != $2::TEXT',

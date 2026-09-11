@@ -29,16 +29,14 @@ async function canAccessRoom(userId, room) {
   return result.rowCount > 0;
 }
 
-// Socket chat + presence handlers for the social layer. Additive only: they do
-// not touch matchmaking or game events. A user id is resolved from the outgoing
-// authenticated user info passed by the client (the socket layer authenticates
-// via complete_remote_login rather than a per-socket bearer token).
+// Socket chat + presence handlers for the social layer. Identity is always
+// resolved from socket.data, populated by socket authentication middleware.
 export function setupSocialHandlers(io, socket) {
   // Chat room membership
   socket.on('chat:join', async (data) => {
     const room = normalizeRoom(data?.room);
     if (!room) return;
-    const userId = typeof data?.userId === 'string' ? data.userId : '';
+    const userId = socket.data.userId;
     if (!(await canAccessRoom(userId, room))) return;
     socket.join(`${SOCIAL_ROOM_PREFIX}${room}`);
   });
@@ -51,7 +49,7 @@ export function setupSocialHandlers(io, socket) {
 
   // Lobby chat send + broadcast
   socket.on('chat:send', async (data) => {
-    const { room, body, user } = data || {};
+    const { room, body } = data || {};
     const normalizedRoom = normalizeRoom(room);
     if (!normalizedRoom) return;
     const normalizedBody = typeof body === 'string' ? body.trim().slice(0, CHAT_BODY_LIMIT) : '';
@@ -59,12 +57,12 @@ export function setupSocialHandlers(io, socket) {
       socket.emit('chat:error', { room: normalizedRoom, message: 'Message cannot be empty' });
       return;
     }
-    const userId = typeof user?.id === 'string' ? user.id : '';
+    const userId = socket.data.userId;
     if (!(await canAccessRoom(userId, normalizedRoom))) {
       socket.emit('chat:error', { room: normalizedRoom, message: 'You can only message your friends' });
       return;
     }
-    const username = typeof user?.username === 'string' ? user.username : 'guest';
+    const username = socket.data.username || 'player';
     const safeRoom = normalizedRoom.replace(/[^a-zA-Z0-9_-]/g, '_');
 
     let message;
@@ -101,12 +99,12 @@ export function setupSocialHandlers(io, socket) {
 
   // Presence: track the connected socket for a logged-in user. The REST friends
   // list reads this map to derive `online` flags without a second round-trip.
-  socket.on('presence:join', (data) => {
-    const userId = data?.userId;
+  socket.on('presence:join', () => {
+    const userId = socket.data.userId;
     if (!userId) return;
-    markOnline(userId, socket.id, data?.username || '');
-    socket.data.userId = userId;
-    io.emit('user:online', { userId, username: data?.username || '', socketId: socket.id });
+    const username = socket.data.username || 'player';
+    markOnline(userId, socket.id, username);
+    io.emit('user:online', { userId, username, socketId: socket.id });
   });
 
   socket.on('presence:leave', () => {

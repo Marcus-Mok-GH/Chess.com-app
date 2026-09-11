@@ -3,7 +3,8 @@ import { Chess } from 'chess.js';
 import {
   verifyPlayerAuth,
   resolveMatchMoveOwner,
-  buildPlayerMoveHistory
+  buildPlayerMoveHistory,
+  userIdFromPlayerId,
 } from '../utils.js';
 import { getGameService } from '../gameService.js';
 import { censorMessage } from '../profanity.js';
@@ -30,19 +31,20 @@ export function setupGameHandlers(io, socket) {
   const service = getGameService(io);
 
   socket.on('join_game', async (data) => {
-    const { gameId, playerId } = data;
+    const { gameId } = data || {};
+    const authenticatedUserId = String(socket.data?.userId || '');
 
     if (!gameId || typeof gameId !== 'string' || gameId.length < 4) {
       socket.emit('game_error', { message: 'Invalid game ID' });
       return;
     }
 
-    if (!playerId || typeof playerId !== 'string' || playerId.trim().length === 0) {
-      socket.emit('game_error', { message: 'Invalid player ID' });
+    if (!authenticatedUserId) {
+      socket.emit('game_error', { message: 'Authentication required' });
       return;
     }
 
-    console.log(`[Socket] Player ${playerId} joining game ${gameId}`);
+    console.log(`[Socket] Authenticated player ${authenticatedUserId} joining game ${gameId}`);
 
     const game = await service.getGame(gameId);
 
@@ -56,24 +58,15 @@ export function setupGameHandlers(io, socket) {
       return;
     }
 
-    const isWhitePlayer = game.white_player_id === playerId;
-    const isBlackPlayer = game.black_player_id === playerId;
+    const isWhitePlayer = String(userIdFromPlayerId(game.white_player_id) || '') === authenticatedUserId;
+    const isBlackPlayer = String(userIdFromPlayerId(game.black_player_id) || '') === authenticatedUserId;
     const isParticipant = isWhitePlayer || isBlackPlayer;
+    const participantPlayerId = isWhitePlayer ? game.white_player_id : isBlackPlayer ? game.black_player_id : null;
 
     // Authenticated participants may rejoin after refresh / reconnect.
     // Always re-bind their socket id so a new connection replaces the old one.
     // Spectators keep the previous spectator-style path.
-    if (!isParticipant) {
-      // Non-participants can only spectate; block if they try to claim a seat
-      if (game.white_socket_id === socket.id && game.white_player_id && game.white_player_id !== playerId) {
-        socket.emit('game_error', { message: 'Player ID mismatch' });
-        return;
-      }
-      if (game.black_socket_id === socket.id && game.black_player_id && game.black_player_id !== playerId) {
-        socket.emit('game_error', { message: 'Player ID mismatch' });
-        return;
-      }
-    }
+    // Non-participants may spectate; only the authenticated account can claim a seat.
 
     if (isWhitePlayer && game.white_socket_id !== socket.id) {
       await query(
@@ -108,22 +101,17 @@ export function setupGameHandlers(io, socket) {
 
     if (isParticipant) {
       socket.to(gameId).emit('player_joined', {
-        playerId,
+        playerId: participantPlayerId,
         timestamp: Date.now()
       });
     }
   });
 
   socket.on('make_move', async (data) => {
-    const { gameId, fen, lastMove, moveHistory, playerId } = data;
+    const { gameId, fen, lastMove, moveHistory } = data || {};
 
     if (!gameId || typeof gameId !== 'string') {
       socket.emit('move_error', { gameId: gameId || undefined, message: 'Invalid game ID' });
-      return;
-    }
-
-    if (!playerId || typeof playerId !== 'string') {
-      socket.emit('move_error', { gameId, message: 'Invalid player ID' });
       return;
     }
 
@@ -132,7 +120,7 @@ export function setupGameHandlers(io, socket) {
       return;
     }
 
-    console.log(`[Socket] Move in game ${gameId} by ${playerId}`);
+    console.log(`[Socket] Authenticated move request in game ${gameId} by ${socket.data.userId}`);
 
     const game = await service.getGame(gameId);
 
@@ -141,11 +129,12 @@ export function setupGameHandlers(io, socket) {
       return;
     }
 
-    const auth = verifyPlayerAuth(socket, game, playerId);
+    const auth = verifyPlayerAuth(socket, game);
     if (!auth.valid) {
       socket.emit('move_error', { gameId, message: auth.error });
       return;
     }
+    const playerId = auth.playerId;
 
     const activeColor = game.fen && typeof game.fen === 'string'
       ? game.fen.trim().split(/\s+/)[1]
@@ -229,15 +218,10 @@ export function setupGameHandlers(io, socket) {
   });
 
   socket.on('game_over', async (data) => {
-    const { gameId, result, reason, playerId } = data;
+    const { gameId, result, reason } = data || {};
 
     if (!gameId || typeof gameId !== 'string') {
       socket.emit('move_error', { message: 'Invalid game ID' });
-      return;
-    }
-
-    if (!playerId || typeof playerId !== 'string') {
-      socket.emit('move_error', { message: 'Invalid player ID' });
       return;
     }
 
@@ -258,11 +242,12 @@ export function setupGameHandlers(io, socket) {
       return;
     }
 
-    const auth = verifyPlayerAuth(socket, game, playerId);
+    const auth = verifyPlayerAuth(socket, game);
     if (!auth.valid) {
       socket.emit('move_error', { message: auth.error });
       return;
     }
+    const playerId = auth.playerId;
 
     const endedGame = await service.endGame(gameId, result);
     if (!endedGame) return;
@@ -276,15 +261,10 @@ export function setupGameHandlers(io, socket) {
   });
 
   socket.on('resign_game', async (data) => {
-    const { gameId, playerId } = data;
+    const { gameId } = data || {};
 
     if (!gameId || typeof gameId !== 'string') {
       socket.emit('move_error', { message: 'Invalid game ID' });
-      return;
-    }
-
-    if (!playerId || typeof playerId !== 'string') {
-      socket.emit('move_error', { message: 'Invalid player ID' });
       return;
     }
 
@@ -295,11 +275,12 @@ export function setupGameHandlers(io, socket) {
       return;
     }
 
-    const auth = verifyPlayerAuth(socket, game, playerId);
+    const auth = verifyPlayerAuth(socket, game);
     if (!auth.valid) {
       socket.emit('move_error', { message: auth.error });
       return;
     }
+    const playerId = auth.playerId;
 
     const winner = auth.color === 'white' ? 'black' : 'white';
 
@@ -315,15 +296,10 @@ export function setupGameHandlers(io, socket) {
   });
 
   socket.on('offer_draw', async (data) => {
-    const { gameId, playerId } = data;
+    const { gameId } = data || {};
 
     if (!gameId || typeof gameId !== 'string') {
       socket.emit('move_error', { message: 'Invalid game ID' });
-      return;
-    }
-
-    if (!playerId || typeof playerId !== 'string') {
-      socket.emit('move_error', { message: 'Invalid player ID' });
       return;
     }
 
@@ -334,11 +310,12 @@ export function setupGameHandlers(io, socket) {
       return;
     }
 
-    const auth = verifyPlayerAuth(socket, game, playerId);
+    const auth = verifyPlayerAuth(socket, game);
     if (!auth.valid) {
       socket.emit('move_error', { message: auth.error });
       return;
     }
+    const playerId = auth.playerId;
 
     socket.to(gameId).emit('draw_offered', {
       gameId,
@@ -348,15 +325,10 @@ export function setupGameHandlers(io, socket) {
   });
 
   socket.on('respond_draw', async (data) => {
-    const { gameId, playerId, accepted } = data;
+    const { gameId, accepted } = data || {};
 
     if (!gameId || typeof gameId !== 'string') {
       socket.emit('move_error', { message: 'Invalid game ID' });
-      return;
-    }
-
-    if (!playerId || typeof playerId !== 'string') {
-      socket.emit('move_error', { message: 'Invalid player ID' });
       return;
     }
 
@@ -367,11 +339,12 @@ export function setupGameHandlers(io, socket) {
       return;
     }
 
-    const auth = verifyPlayerAuth(socket, game, playerId);
+    const auth = verifyPlayerAuth(socket, game);
     if (!auth.valid) {
       socket.emit('move_error', { message: auth.error });
       return;
     }
+    const playerId = auth.playerId;
 
     if (accepted) {
       const endedGame = await service.endGame(gameId, 'draw');
@@ -393,15 +366,10 @@ export function setupGameHandlers(io, socket) {
   });
 
   socket.on('send_message', async (data) => {
-    const { gameId, playerId, message } = data;
+    const { gameId, message } = data || {};
 
     if (!gameId || typeof gameId !== 'string') {
       socket.emit('move_error', { message: 'Invalid game ID' });
-      return;
-    }
-
-    if (!playerId || typeof playerId !== 'string') {
-      socket.emit('move_error', { message: 'Invalid player ID' });
       return;
     }
 
@@ -422,11 +390,12 @@ export function setupGameHandlers(io, socket) {
       return;
     }
 
-    const auth = verifyPlayerAuth(socket, game, playerId);
+    const auth = verifyPlayerAuth(socket, game);
     if (!auth.valid) {
       socket.emit('move_error', { message: auth.error });
       return;
     }
+    const playerId = auth.playerId;
 
     const censoredMessage = censorMessage(message);
     io.to(gameId).emit('chat_message', {
@@ -438,15 +407,10 @@ export function setupGameHandlers(io, socket) {
   });
 
   socket.on('leave_game', async (data) => {
-    const { gameId, playerId } = data;
+    const { gameId } = data || {};
 
     if (!gameId || typeof gameId !== 'string') {
       socket.emit('move_error', { message: 'Invalid game ID' });
-      return;
-    }
-
-    if (!playerId || typeof playerId !== 'string') {
-      socket.emit('move_error', { message: 'Invalid player ID' });
       return;
     }
 
@@ -456,12 +420,14 @@ export function setupGameHandlers(io, socket) {
       return;
     }
 
-    const isWhitePlayer = game.white_player_id === playerId;
-    const isBlackPlayer = game.black_player_id === playerId;
-    if (!isWhitePlayer && !isBlackPlayer) {
-      socket.emit('game_error', { message: 'Unauthorized - not your game' });
+    const auth = verifyPlayerAuth(socket, game);
+    if (!auth.valid) {
+      socket.emit('game_error', { message: auth.error });
       return;
     }
+    const playerId = auth.playerId;
+    const isWhitePlayer = game.white_player_id === playerId;
+    const isBlackPlayer = game.black_player_id === playerId;
 
     const nextWhiteSocketId = isWhitePlayer ? null : game.white_socket_id;
     const nextBlackSocketId = isBlackPlayer ? null : game.black_socket_id;

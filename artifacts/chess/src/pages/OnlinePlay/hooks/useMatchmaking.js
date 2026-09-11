@@ -75,6 +75,8 @@ export function useMatchmaking(user, isLoggedIn, settings) {
     // If generation changed while we were awaiting, user already cancelled
     if (gen !== generationRef.current) return false;
 
+    if (joinResult?.playerId) activePlayerIdRef.current = joinResult.playerId;
+
     if (!joinResult?.success) {
       setError(joinResult?.message || 'Failed to join matchmaking. Please try again.');
       activePlayerIdRef.current = null;

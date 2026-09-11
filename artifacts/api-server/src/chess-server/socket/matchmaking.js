@@ -275,7 +275,7 @@ class MatchmakingService {
       await query(
         `INSERT INTO matchmaking_queue (socket_id, player_id, player_name, elo, is_ranked)
          VALUES ($1, $2, $3, $4, $5)`,
-        [socketId, playerId, playerName, elo || DEFAULT_ELO, isRanked]
+        [socketId, playerId, playerName, Number.isFinite(Number(elo)) ? Number(elo) : DEFAULT_ELO, isRanked]
       );
 
       console.log(`[Matchmaking] Player ${playerName} (${elo}) joined queue`);
@@ -372,9 +372,14 @@ export function getMatchmakingService(io) {
 export function setupMatchmakingHandlers(io, socket) {
   const service = getMatchmakingService(io);
 
-  socket.on('join_matchmaking', async (data) => {
-    // Validate input data
-    const { playerId, playerName, elo, isRanked } = data;
+  socket.on('join_matchmaking', async (data = {}) => {
+    const playerId = String(socket.data.userId || '');
+    const isRanked = typeof data.isRanked === 'boolean' ? data.isRanked : true;
+    const player = playerId ? (await query('SELECT username, elo FROM users WHERE id = $1', [playerId])).rows[0] : null;
+    const playerName = player?.username || '';
+    const elo = player?.elo;
+
+    // Identity and rating come from the authenticated session, never the payload.
 
     if (!playerId || typeof playerId !== 'string') {
       socket.emit('matchmaking_status', {
@@ -384,7 +389,7 @@ export function setupMatchmakingHandlers(io, socket) {
       return;
     }
 
-    if (!playerName || typeof playerName !== 'string' || playerName.trim().length < 2) {
+    if (!player) {
       socket.emit('matchmaking_status', {
         inQueue: false,
         message: 'Invalid player name'
@@ -402,7 +407,7 @@ export function setupMatchmakingHandlers(io, socket) {
       return;
     }
 
-    if (typeof elo !== 'number' || elo < 0 || elo > 4000) {
+    if (elo != null && (!Number.isFinite(Number(elo)) || Number(elo) < 0 || Number(elo) > 4000)) {
       socket.emit('matchmaking_status', {
         inQueue: false,
         message: 'Invalid ELO rating'
@@ -465,9 +470,9 @@ export function setupMatchmakingHandlers(io, socket) {
     });
   });
 
-  socket.on('leave_matchmaking', async (data) => {
-    const { playerId } = data;
-    
+  socket.on('leave_matchmaking', async () => {
+    const playerId = String(socket.data.userId || '');
+    if (!playerId) return;
     console.log(`[Socket] Player leaving matchmaking`);
     
     await service.leaveQueue(playerId);
@@ -478,8 +483,9 @@ export function setupMatchmakingHandlers(io, socket) {
     });
   });
 
-  socket.on('matchmaking_heartbeat', async (data) => {
-    const { playerId } = data;
+  socket.on('matchmaking_heartbeat', async () => {
+    const playerId = String(socket.data.userId || '');
+    if (!playerId) return;
     await service.updateHeartbeat(playerId);
     // Trigger matchmaking processing on heartbeat to catch matches faster
     setImmediate(() => service.processMatchmaking());

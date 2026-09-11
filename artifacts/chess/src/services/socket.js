@@ -38,6 +38,14 @@ class SocketService {
     this.isConnected = false;
     this.isConnecting = false;
     this.connectionPromise = null;
+    this.authToken = null;
+  }
+
+  setAuthToken(token) {
+    this.authToken = token || null;
+    if (this.socket?.connected && this.authToken) {
+      this.socket.auth = { token: this.authToken };
+    }
   }
 
   connect() {
@@ -68,6 +76,8 @@ class SocketService {
       this.socket = io(SOCKET_CONFIG.url, {
         path: SOCKET_CONFIG.path,
         transports: ['websocket', 'polling'],
+        withCredentials: true,
+        auth: this.authToken ? { token: this.authToken } : undefined,
         reconnection: true,
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,
@@ -424,7 +434,7 @@ class SocketService {
       await this.connect();
     }
     if (this.socket?.connected) {
-      this.socket.emit('presence:join', { userId: String(user.id), username: user.username });
+      this.socket.emit('presence:join');
       return true;
     }
     return false;
@@ -440,7 +450,7 @@ class SocketService {
   restoreChatRooms() {
     if (!this.socket?.connected) return;
     for (const [room, userId] of this.chatRooms) {
-      this.socket.emit('chat:join', { room, userId });
+      this.socket.emit('chat:join', { room });
     }
   }
 
@@ -448,7 +458,7 @@ class SocketService {
     if (!room) return false;
     this.chatRooms.set(room, userId);
     if (!this.socket?.connected) return false;
-    this.socket.emit('chat:join', { room, userId });
+    this.socket.emit('chat:join', { room });
     return true;
   }
 
@@ -465,7 +475,7 @@ class SocketService {
       await this.connect();
     }
     if (this.socket?.connected) {
-      this.socket.emit('chat:send', { room, body, user });
+      this.socket.emit('chat:send', { room, body });
       return true;
     }
     return false;

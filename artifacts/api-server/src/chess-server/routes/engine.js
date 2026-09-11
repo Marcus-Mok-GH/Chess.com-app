@@ -6,6 +6,7 @@ import path from 'node:path';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { errorResponse, handleRouteError } from '../middleware/errors.js';
+import { requireSession } from '../auth.js';
 
 // Resolve paths at module load time so they survive esbuild bundling.
 const _require = createRequire(import.meta.url);
@@ -70,6 +71,25 @@ try {
   console.error('[Engine] Could not resolve stockfish binary:', e.message);
 }
 
+const MAX_IN_FLIGHT = Math.max(1, Number.parseInt(process.env.ENGINE_MAX_IN_FLIGHT || '4', 10));
+let activeRequests = 0;
+
+function engineConcurrency(req, res, next) {
+  if (activeRequests >= MAX_IN_FLIGHT) {
+    return res.status(429).json({ error: { message: 'Engine is busy. Please try again shortly.' } });
+  }
+  activeRequests += 1;
+  let released = false;
+  const release = () => {
+    if (released) return;
+    released = true;
+    activeRequests = Math.max(0, activeRequests - 1);
+  };
+  res.once('finish', release);
+  res.once('close', release);
+  next();
+}
+
 const TIMEOUT_MS = (() => {
   const env = parseInt(process.env.FUNCTION_TIMEOUT_MS, 10);
   if (!isNaN(env) && env > 0) return Math.max(env - 1500, 1000);
@@ -110,7 +130,7 @@ function runEngine(fen, searchParams, bot, timeoutMs) {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      try { child.kill(); } catch {}
+      try { child.kill('SIGKILL'); } catch {}
       fn();
     };
 
@@ -177,7 +197,7 @@ function runEngine(fen, searchParams, bot, timeoutMs) {
   });
 }
 
-router.post('/move', async (req, res) => {
+router.post('/move', requireSession, engineConcurrency, async (req, res) => {
   try {
     const { fen, bot, debug } = req.body;
     if (!fen) return errorResponse(res, 400, 'Missing required field: fen');
