@@ -32,8 +32,7 @@
   ],
   "functions": {
     "api/[...path].js": {
-      "maxDuration": 15,
-      "includeFiles": "**/*stockfish*"
+      "maxDuration": 15
     },
     "api/render.js": {
       "maxDuration": 15
