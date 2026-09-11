@@ -282,7 +282,7 @@ function AppShell() {
   )
 }
 
-export default function App({ Router = BrowserRouter, routerProps = {} } = {})
+export default function App({ Router = BrowserRouter, routerProps = {} } = {}) {
   return (
     <>
       <PuterCheck />

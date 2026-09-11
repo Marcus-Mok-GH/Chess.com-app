@@ -1,3 +1,18 @@
+## [2026-09-11] - Fix Vercel deployment (frontend + SSR build)
+
+### Fixed
+- `chess/src/App.jsx`: restored the missing function-body brace (`{`) on `App` introduced by the router-selection refactor, which broke the Vite build with `Expected "{" but found "return"` — the primary Vercel build blocker.
+- `chess/src/entry-server.jsx`: react-router v7 removed the `react-router-dom/server` entrypoint; `StaticRouter` now lives at `react-router`, so the SSR build no longer fails with `Missing "./server" specifier in "react-router-dom"`.
+
+### Changed
+- `chess/package.json`: declared a direct `react-router@^7.18.0` dependency (previously only transitive via `react-router-dom`) so the SSR entry can import `StaticRouter` under pnpm's strict resolution.
+
+### Notes
+- `pnpm install --ignore-scripts` (no Stockfish postinstall needed — engines ship prebuilt `bin/`) and the full `vercel.json` build command (`api-server` esbuild + chess Vite client & SSR + `dist/` assembly) now succeed locally, and a remote preview deployment builds and deploys cleanly on Vercel.
+- Preview deployments are SSO-protected by the team, so dynamic routes were verified locally: `/` and `/login` SSR (200), static assets (200), and both compiled functions (`api/[...path]`, `api/render`) are emitted correctly.
+- No environment variables are configured on the Vercel project yet; `chess-server` database/auth/redis-backed endpoints (e.g. `/api/health` requiring `DATABASE_URL`) will error until `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `BETTER_AUTH_SECRET`, `FRONTEND_URL`, and the SMTP/RESEND/feedbacks secrets are set in the dashboard.
+- Real-time play is disabled on `.vercel.app` (frontend gates it on `VITE_SOCKET_URL`) because Vercel functions do not support persistent Socket.IO connections; set `VITE_SOCKET_URL` to a hosted Socket.IO server to enable it.
+
 ## [2026-09-10] - Fix daily streak completion
 
 ### Fixed
