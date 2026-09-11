@@ -199,6 +199,9 @@ importers:
       react-chessboard:
         specifier: ^5.10.0
         version: 5.10.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      react-router:
+        specifier: ^7.18.0
+        version: 7.18.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       react-router-dom:
         specifier: ^7.18.0
         version: 7.18.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
