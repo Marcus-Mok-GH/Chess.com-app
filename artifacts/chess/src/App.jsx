@@ -18,6 +18,7 @@ const GameHistory = lazy(() => import('./pages/GameHistory'))
 const Game = lazy(() => import('./pages/Game'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Terms = lazy(() => import('./pages/Terms'))
+const Privacy = lazy(() => import('./pages/Privacy'))
 const Changelog = lazy(() => import('./pages/Changelog'))
 const Landing = lazy(() => import('./pages/Landing'))
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail'))
@@ -36,6 +37,7 @@ function getTitle(path) {
   if (path === '/history') return 'Game History'
   if (path === '/settings') return 'Settings'
   if (path === '/terms') return 'Terms of Service'
+  if (path === '/privacy') return 'Privacy Policy'
   if (path === '/changelog') return 'Changelog'
   if (path === '/puzzles' || path === '/lessons') return 'Puzzles'
   if (path === '/openings') return 'Openings'
@@ -313,6 +315,7 @@ export default function App({ Router = BrowserRouter, routerProps = {} } = {}) {
                   <Route path="/history" element={<ProtectedRoute><GameHistory /></ProtectedRoute>} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/terms" element={<Suspense fallback={<RouteFallback />}><Terms /></Suspense>} />
+                  <Route path="/privacy" element={<Suspense fallback={<RouteFallback />}><Privacy /></Suspense>} />
                   <Route path="/changelog" element={<Changelog />} />
                   <Route path="/puzzles" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Puzzles /></Suspense></ProtectedRoute>} />
                   <Route path="/openings" element={<Suspense fallback={<RouteFallback />}><Openings /></Suspense>} />
@@ -321,7 +324,6 @@ export default function App({ Router = BrowserRouter, routerProps = {} } = {}) {
                   <Route path="/clubs" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Clubs /></Suspense></ProtectedRoute>} />
                   <Route path="/more" element={<More />} />
                 </Route>
-                <Route path="/privacy" element={<Navigate to="/settings#privacy" replace />} />
                 <Route path="*" element={<Suspense fallback={<RouteFallback />}><NotFound /></Suspense>} />
               </Routes>
               <FeedbackPanel />
