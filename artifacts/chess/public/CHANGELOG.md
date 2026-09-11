@@ -1,3 +1,8 @@
+[2026-09-11] - Install agency testing skills
+
+- Added the Test Automation Engineer, Evidence Collector, Test Results Analyzer, and Reality Checker prompts under .agents/skills/agency-testing/ for deployment validation.
+- Documented the Vercel target at https://chess-com-app.vercel.app and the repository's build/test commands in the skills index.
+
 [2026-08-20] - Terms and privacy in Settings
 
 - Moved the Terms of Service and Privacy Policy content into the Settings page under a dedicated Terms & Privacy section.
