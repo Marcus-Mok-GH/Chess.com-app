@@ -51,18 +51,20 @@ export function haptic(type = 'light', force = false) {
 /**
  * Quick feedback for common actions
  */
+const createHaptic = (type) => () => haptic(type);
+
 export const haptics = {
-  select: () => haptic('light'),
-  move: () => haptic('medium'),
-  capture: () => haptic('heavy'),
-  check: () => haptic('warning'),
-  win: () => haptic('success'),
-  lose: () => haptic('error'),
-  draw: () => haptic('medium'),
-  illegal: () => haptic('error'),
-  button: () => haptic('light'),
-  swipe: () => haptic('light'),
-  scroll: () => haptic('light'),
+  select: createHaptic('light'),
+  move: createHaptic('medium'),
+  capture: createHaptic('heavy'),
+  check: createHaptic('warning'),
+  win: createHaptic('success'),
+  lose: createHaptic('error'),
+  draw: createHaptic('medium'),
+  illegal: createHaptic('error'),
+  button: createHaptic('light'),
+  swipe: createHaptic('light'),
+  scroll: createHaptic('light'),
 };
 
 /**

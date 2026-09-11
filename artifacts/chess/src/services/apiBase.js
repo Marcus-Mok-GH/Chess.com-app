@@ -37,10 +37,11 @@ export const isNetworkError = (error) => {
   const message = error?.message || ''
   const name = error?.name || ''
 
+  const lowerMessage = message.toLowerCase();
   return name === 'TypeError'
     || message === 'Load failed'
     || message === 'Failed to fetch'
     || message.includes('NetworkError')
-    || message.toLowerCase().includes('network')
-    || message.toLowerCase().includes('aborted')
+    || lowerMessage.includes('network')
+    || lowerMessage.includes('aborted')
 }

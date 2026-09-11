@@ -4,5 +4,5 @@ export function errorResponse(res, status, message) {
 
 export function handleRouteError(res, error, message) {
   console.error(message, error);
-  return res.status(500).json({ error: message });
+  return errorResponse(res, 500, message);
 }
