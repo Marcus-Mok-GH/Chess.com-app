@@ -664,6 +664,7 @@ function ChessGame(
     suppressPersistRef.current = true;
     clearLocalGame(gameId);
     setGameId(newId);
+    navigate('/game/' + newId + '?mode=local', { replace: true });
     const newGame = new Chess();
     setGame(newGame);
     setMoveHistory([]);
@@ -692,7 +693,7 @@ function ChessGame(
         result: 'in_progress',
       });
     }, 0);
-  }, [selectedBot, gameId]);
+  }, [selectedBot, gameId, navigate]);
 
   const handleResign = useCallback(() => {
     if (hasResigned || game.isGameOver()) return;
