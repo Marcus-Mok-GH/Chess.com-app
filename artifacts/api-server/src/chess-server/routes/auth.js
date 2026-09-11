@@ -162,26 +162,57 @@ function shapeUser(row) {
 
 async function upsertUserFromNeonAuth(neonUser) {
   const id = neonUser.id;
-  const email = neonUser.email;
+  const email = typeof neonUser.email === 'string' ? neonUser.email.trim() : '';
   const defaultUsername = `player_${crypto.randomBytes(4).toString('hex')}`;
   const username = neonUser.name || neonUser.username || defaultUsername;
+  const userColumns = 'id, username, elo, games_played, wins, losses, draws, created_at, email';
 
-  const result = await query(
+  // Neon Auth can issue a new user id while the app already has a local row
+  // for the same email. Resolve by email first so the unique email constraint
+  // does not turn a valid login into a 500, and preserve local game history.
+  const existing = await query(
+    `SELECT ${userColumns}
+     FROM users
+     WHERE id = $1 OR (email IS NOT NULL AND LOWER(email) = LOWER($2))
+     ORDER BY CASE WHEN id = $1 THEN 0 ELSE 1 END
+     LIMIT 1`,
+    [id, email]
+  );
+
+  if (existing.rows.length > 0) {
+    const localUser = existing.rows[0];
+    const updated = await query(
+      `UPDATE users
+       SET email = COALESCE(NULLIF($1, ''), email), email_verified = TRUE
+       WHERE id = $2
+       RETURNING ${userColumns}`,
+      [email, localUser.id]
+    );
+    return updated.rows[0] || localUser;
+  }
+
+  // Insert only when neither the Neon id nor email exists. DO NOTHING makes
+  // concurrent first logins safe; the follow-up lookup below returns the row
+  // created by the other request.
+  const inserted = await query(
     `INSERT INTO users (id, username, email, email_verified)
-     VALUES ($1, $2, $3, TRUE)
-     ON CONFLICT (id) DO UPDATE SET email_verified = TRUE
-     RETURNING id, username, elo, games_played, wins, losses, draws, created_at, email`,
+     VALUES ($1, $2, NULLIF($3, ''), TRUE)
+     ON CONFLICT DO NOTHING
+     RETURNING ${userColumns}`,
     [id, username, email]
   );
 
-  if (result.rows.length > 0) return result.rows[0];
+  if (inserted.rows.length > 0) return inserted.rows[0];
 
-  const existing = await query(
-    `SELECT id, username, elo, games_played, wins, losses, draws, created_at, email
-     FROM users WHERE email = $1`,
-    [email]
+  const raced = await query(
+    `SELECT ${userColumns}
+     FROM users
+     WHERE id = $1 OR (email IS NOT NULL AND LOWER(email) = LOWER($2))
+     ORDER BY CASE WHEN id = $1 THEN 0 ELSE 1 END
+     LIMIT 1`,
+    [id, email]
   );
-  return existing.rows[0] || null;
+  return raced.rows[0] || null;
 }
 
 function ok(res, data) {
