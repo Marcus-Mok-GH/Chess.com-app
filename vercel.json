@@ -32,7 +32,11 @@
   ],
   "functions": {
     "api/[...path].js": {
-      "maxDuration": 15
+      "maxDuration": 15,
+      "includeFiles": [
+        "artifacts/api-server/src/chess-server/stockfish-worker.cjs",
+        "node_modules/stockfish/bin/**"
+      ]
     },
     "api/render.js": {
       "maxDuration": 15
