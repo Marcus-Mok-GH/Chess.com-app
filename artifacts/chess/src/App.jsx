@@ -282,6 +282,12 @@ function AppShell() {
   )
 }
 
+/**
+ * Root application component. Wraps the app shell in providers and a router.
+ * Accepts an explicit `Router` and `routerProps` so server rendering (a
+ * StaticRouter carrying the request location) and client rendering
+ * (BrowserRouter) share the same route tree.
+ */
 export default function App({ Router = BrowserRouter, routerProps = {} } = {}) {
   return (
     <>

@@ -4,6 +4,12 @@ import { StaticRouter } from 'react-router'
 import { Writable } from 'node:stream'
 import App from './App'
 
+
+/**
+ * Server-renders the app for a given URL into an HTML string. Runs <App>
+ * under a StaticRouter for the requested location and streams the markup
+ * back once the shell is ready.
+ */
 export function render(url) {
   return new Promise((resolve, reject) => {
     let didError = false
