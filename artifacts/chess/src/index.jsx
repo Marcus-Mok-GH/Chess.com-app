@@ -1,5 +1,5 @@
 import React from 'react'
-import { createRoot, hydrateRoot } from 'react-dom/client'
+import { createRoot } from 'react-dom/client'
 import App from './App'
 import './index.css'
 import './App.css'
@@ -36,8 +36,7 @@ const app = (
 );
 const root = document.getElementById('root');
 
-if (root.hasChildNodes()) {
-  hydrateRoot(root, app);
-} else {
-  createRoot(root).render(app);
-}
+// The server-rendered shell can include browser-only state (session, settings,
+// and viewport-dependent UI). Render the client tree from scratch so those
+// values cannot trigger hydration mismatches after deployment.
+createRoot(root).render(app);
