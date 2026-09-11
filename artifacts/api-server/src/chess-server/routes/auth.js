@@ -29,6 +29,7 @@ import {
   SESSION_COOKIE_NAME,
 } from '../auth.js';
 import { createRateLimiter, normalizedEmail, requestIp } from '../middleware/rateLimit.js';
+import { sendOtpEmail } from '../mailer.js';
 
 const router = express.Router();
 
@@ -234,18 +235,183 @@ function cleanErrorMessage(message) {
     .trim();
 }
 
+// Neon Auth remains the primary provider. These helpers keep login working
+// when its email provider is temporarily unavailable or misconfigured.
+const LOCAL_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const LOCAL_OTP_TTL_MINUTES = 10;
+const LOCAL_OTP_MAX_ATTEMPTS = 5;
+
+function normalizeLocalEmail(email) {
+  return String(email || '').trim().toLowerCase();
+}
+
+function hashLocalCode(code, salt) {
+  try {
+    return crypto.scryptSync(String(code), Buffer.from(String(salt), 'hex'), 32).toString('hex');
+  } catch {
+    return '';
+  }
+}
+
+function generateLocalCode() {
+  return String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
+}
+
+function localCodeMatches(expectedHash, candidateHash) {
+  if (!expectedHash || !candidateHash || expectedHash.length !== candidateHash.length) return false;
+  try {
+    const expected = Buffer.from(expectedHash, 'hex');
+    const candidate = Buffer.from(candidateHash, 'hex');
+    return expected.length === candidate.length && crypto.timingSafeEqual(expected, candidate);
+  } catch {
+    return false;
+  }
+}
+
+async function findLocalVerification(email) {
+  const result = await query(
+    `SELECT id, code_hash, salt, expires_at, attempts
+       FROM verifications
+      WHERE identifier = $1 AND consumed_at IS NULL AND expires_at > NOW()
+      ORDER BY created_at DESC
+      LIMIT 1`,
+    [email]
+  );
+  return result.rows[0] || null;
+}
+
+async function sendLocalOtp(email) {
+  const normalized = normalizeLocalEmail(email);
+  if (!LOCAL_EMAIL_RE.test(normalized)) {
+    return { ok: false, status: 400, message: 'A valid email is required.' };
+  }
+
+  const code = generateLocalCode();
+  const salt = crypto.randomBytes(16).toString('hex');
+  const codeHash = hashLocalCode(code, salt);
+  const expiresAt = new Date(Date.now() + LOCAL_OTP_TTL_MINUTES * 60 * 1000);
+
+  try {
+    await sendOtpEmail({ to: normalized, code });
+  } catch (error) {
+    console.error('[Auth] local OTP email failed:', error?.message || error);
+    return { ok: false, status: 502, message: 'Email delivery is unavailable. Please try again later.' };
+  }
+
+  try {
+    await query(
+      'UPDATE verifications SET consumed_at = NOW() WHERE identifier = $1 AND consumed_at IS NULL',
+      [normalized]
+    );
+    await query(
+      `INSERT INTO verifications (identifier, code_hash, salt, value, expires_at)
+       VALUES ($1, $2, $3, 'native-email-otp', $4)`,
+      [normalized, codeHash, salt, expiresAt]
+    );
+    return { ok: true, status: 200, message: 'Verification code sent.' };
+  } catch (error) {
+    console.error('[Auth] local OTP storage failed:', error?.message || error);
+    return { ok: false, status: 500, message: 'Could not prepare verification. Please try again.' };
+  }
+}
+
+async function findOrCreateLocalUser(email) {
+  const columns = 'id, username, elo, games_played, wins, losses, draws, created_at, email';
+  const existing = await query(
+    `SELECT ${columns} FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1`,
+    [email]
+  );
+  if (existing.rows.length > 0) return existing.rows[0];
+
+  const username = `player_${crypto.randomBytes(4).toString('hex')}`;
+  const inserted = await query(
+    `INSERT INTO users (id, username, email, email_verified)
+     VALUES (gen_random_uuid()::TEXT, $1, $2, TRUE)
+     ON CONFLICT DO NOTHING
+     RETURNING ${columns}`,
+    [username, email]
+  );
+  if (inserted.rows.length > 0) return inserted.rows[0];
+
+  const raced = await query(
+    `SELECT ${columns} FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1`,
+    [email]
+  );
+  return raced.rows[0] || null;
+}
+
+async function tryLocalSignIn(email, otp, req, res) {
+  let verification;
+  try {
+    verification = await findLocalVerification(email);
+  } catch (error) {
+    console.error('[Auth] local OTP lookup failed:', error?.message || error);
+    return false;
+  }
+  if (!verification) return false;
+
+  if (verification.attempts >= LOCAL_OTP_MAX_ATTEMPTS) {
+    await query('UPDATE verifications SET consumed_at = NOW() WHERE id = $1', [verification.id]).catch(() => {});
+    fail(res, 429, 'Too many incorrect attempts. Please request a new code.');
+    return true;
+  }
+
+  const matches = localCodeMatches(
+    verification.code_hash,
+    hashLocalCode(otp, verification.salt)
+  );
+  if (!matches) {
+    await query(
+      'UPDATE verifications SET attempts = attempts + 1 WHERE id = $1',
+      [verification.id]
+    ).catch(() => {});
+    fail(res, 400, 'Incorrect code. Please try again.');
+    return true;
+  }
+
+  try {
+    await query('UPDATE verifications SET consumed_at = NOW() WHERE id = $1', [verification.id]);
+    const localUser = await findOrCreateLocalUser(email);
+    if (!localUser) throw new Error('User record was not created.');
+    const token = await createSession(localUser.id, {
+      ipAddress: req.ip || null,
+      userAgent: req.headers['user-agent'] || null,
+    });
+    res.cookie(SESSION_COOKIE_NAME, token, sessionCookieOptions());
+    res.json({
+      success: true,
+      session: {
+        id: token,
+        userId: localUser.id,
+        expiresAt: new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000).toISOString(),
+      },
+      user: shapeUser(localUser),
+    });
+  } catch (error) {
+    console.error('[Auth] local OTP sign-in failed:', error?.message || error);
+    fail(res, 500, 'Verification failed. Please try again.');
+  }
+  return true;
+}
+
+async function tryLocalSend(res, email) {
+  const result = await sendLocalOtp(email);
+  if (result.ok) return ok(res, { message: result.message, provider: 'local' });
+  return fail(res, result.status, result.message);
+}
+
 // ---------------------------------------------------------------------------
 // POST /api/auth/email-otp/send-verification-otp
 // ---------------------------------------------------------------------------
 router.post('/email-otp/send-verification-otp', otpRateLimit, async (req, res) => {
   const baseUrl = getNeonAuthBaseUrl();
-  if (!baseUrl) return authServiceUnavailable(res);
+  const incoming = req.body || {};
+  if (!baseUrl) return tryLocalSend(res, incoming.email);
 
   try {
     const headers = extractProxyHeaders(req);
     // Neon Auth requires an explicit OTP `type`. Default to "sign-in" for the
     // login flow; allow callers to override with email-verification / forget-password.
-    const incoming = req.body || {};
     const body = { ...incoming, type: incoming.type || 'sign-in' };
     const result = await proxyToNeonAuth('/api/auth/email-otp/send-verification-otp', {
       method: 'POST',
@@ -254,6 +420,9 @@ router.post('/email-otp/send-verification-otp', otpRateLimit, async (req, res) =
     });
 
     if (!result.ok) {
+      if (result.status >= 500 || result.status === 404) {
+        return tryLocalSend(res, incoming.email);
+      }
       const errMessage = result.data?.error?.message || result.data?.message || JSON.stringify(result.data);
       return fail(res, result.status, errMessage);
     }
@@ -261,7 +430,7 @@ router.post('/email-otp/send-verification-otp', otpRateLimit, async (req, res) =
     return res.status(result.status).json(result.data);
   } catch (err) {
     console.error('[Auth] send-verification-otp proxy error:', err?.message || err);
-    return fail(res, 502, `Auth service connection failed after 3 retries: ${err?.message || err}`);
+    return tryLocalSend(res, incoming.email);
   }
 });
 
@@ -270,11 +439,11 @@ router.post('/email-otp/send-verification-otp', otpRateLimit, async (req, res) =
 // ---------------------------------------------------------------------------
 router.post('/email-otp/resend', otpRateLimit, async (req, res) => {
   const baseUrl = getNeonAuthBaseUrl();
-  if (!baseUrl) return authServiceUnavailable(res);
+  const incoming = req.body || {};
+  if (!baseUrl) return tryLocalSend(res, incoming.email);
 
   try {
     const headers = extractProxyHeaders(req);
-    const incoming = req.body || {};
     const body = { ...incoming, type: incoming.type || 'sign-in' };
     const result = await proxyToNeonAuth('/api/auth/email-otp/send-verification-otp', {
       method: 'POST',
@@ -283,6 +452,9 @@ router.post('/email-otp/resend', otpRateLimit, async (req, res) => {
     });
 
     if (!result.ok) {
+      if (result.status >= 500 || result.status === 404) {
+        return tryLocalSend(res, incoming.email);
+      }
       const errMessage = result.data?.error?.message || result.data?.message || JSON.stringify(result.data);
       return fail(res, result.status, errMessage);
     }
@@ -290,7 +462,7 @@ router.post('/email-otp/resend', otpRateLimit, async (req, res) => {
     return res.status(result.status).json(result.data);
   } catch (err) {
     console.error('[Auth] resend proxy error:', err?.message || err);
-    return fail(res, 502, `Auth service connection failed after 3 retries: ${err?.message || err}`);
+    return tryLocalSend(res, incoming.email);
   }
 });
 
@@ -299,6 +471,9 @@ router.post('/email-otp/resend', otpRateLimit, async (req, res) => {
 // ---------------------------------------------------------------------------
 router.post('/sign-in/email-otp', otpRateLimit, otpAttemptLimit, async (req, res) => {
   const baseUrl = getNeonAuthBaseUrl();
+  const email = normalizeLocalEmail(req.body?.email);
+  const otp = String(req.body?.otp || '').trim();
+  if (await tryLocalSignIn(email, otp, req, res)) return;
   if (!baseUrl) return authServiceUnavailable(res);
 
   try {
@@ -310,6 +485,9 @@ router.post('/sign-in/email-otp', otpRateLimit, otpAttemptLimit, async (req, res
     });
 
     if (!result.ok) {
+      if (result.status >= 500 || result.status === 404) {
+        if (await tryLocalSignIn(email, otp, req, res)) return;
+      }
       const errMessage = result.data?.error?.message || result.data?.message || JSON.stringify(result.data);
       return fail(res, result.status, errMessage);
     }
@@ -358,6 +536,7 @@ router.post('/sign-in/email-otp', otpRateLimit, otpAttemptLimit, async (req, res
     });
   } catch (err) {
     console.error('[Auth] sign-in/email-otp proxy error:', err?.message || err);
+    if (await tryLocalSignIn(email, otp, req, res)) return;
     return fail(res, 502, `Auth service connection failed after 3 retries: ${err?.message || err}`);
   }
 });
