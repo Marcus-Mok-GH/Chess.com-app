@@ -33,10 +33,7 @@
   "functions": {
     "api/[...path].js": {
       "maxDuration": 15,
-      "includeFiles": [
-        "artifacts/api-server/src/chess-server/stockfish-worker.cjs",
-        "node_modules/stockfish/bin/**"
-      ]
+      "includeFiles": "**/*stockfish*"
     },
     "api/render.js": {
       "maxDuration": 15
