@@ -21,24 +21,20 @@ const _dirname = path.dirname(fileURLToPath(import.meta.url));
  * the route module when the package is consumed as source).
  * @type {string}
  */
-const PRIMARY_WORKER_SCRIPT = path.resolve(_dirname, 'stockfish-worker.cjs');
+const WORKER_SCRIPT_CANDIDATES = [
+  path.resolve(_dirname, 'stockfish-worker.cjs'),
+  path.resolve(_dirname, '..', 'stockfish-worker.cjs'),
+  path.resolve(process.cwd(), 'artifacts/api-server/src/chess-server/stockfish-worker.cjs'),
+  path.resolve(process.cwd(), 'artifacts/api-server/dist/stockfish-worker.cjs'),
+  path.resolve(process.cwd(), 'dist/stockfish-worker.cjs'),
+];
 /**
- * Fallback location used when the package is consumed from the esbuild
- * bundle output (`dist/`), where the worker is hoisted one level up.
- * @type {string}
- */
-const FALLBACK_WORKER_SCRIPT = path.resolve(_dirname, '..', 'stockfish-worker.cjs');
-/**
- * Resolved worker script path. Stays `null` when neither candidate exists on
- * disk so runEngine can fail fast through its not-found guard instead
- * of attempting to spawn a non-existent file.
+ * Resolve the worker from both source and serverless bundle layouts. Vercel
+ * runs the catch-all API from a traced function directory, not the source
+ * directory, so cwd-based candidates are required in production.
  * @type {string|null}
  */
-const WORKER_SCRIPT = existsSync(PRIMARY_WORKER_SCRIPT)
-  ? PRIMARY_WORKER_SCRIPT
-  : existsSync(FALLBACK_WORKER_SCRIPT)
-    ? FALLBACK_WORKER_SCRIPT
-    : null;
+const WORKER_SCRIPT = WORKER_SCRIPT_CANDIDATES.find((candidate) => existsSync(candidate)) || null;
 
 // Stockfish binary path (single-threaded WASM, no SharedArrayBuffer needed)
 let STOCKFISH_BIN;
