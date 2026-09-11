@@ -106,6 +106,24 @@ function getSearchParams(bot) {
   if (nodes < 50000) return `go movetime ${Math.min(Math.floor(nodes / 10), 1000)}`;
   return `go depth ${Math.min(depth, 12)}`;
 }
+function getFallbackMove(fen) {
+  const chess = new Chess(fen);
+  const moves = chess.moves({ verbose: true });
+  if (!moves.length) return null;
+
+  // Prefer a forcing move when one is available, then fall back to the first
+  // legal move. This keeps guest games playable when a serverless deployment
+  // cannot load Stockfish assets; Stockfish remains the normal path when its
+  // worker is available.
+  const move = moves.find((candidate) => candidate.captured || candidate.san?.includes('+')) || moves[0];
+  return move.from + move.to + (move.promotion || '');
+}
+
+function shouldUseFallback(error) {
+  if (!STOCKFISH_BIN || !WORKER_SCRIPT) return true;
+  const message = String(error?.message || '').toLowerCase();
+  return /stockfish|worker|wasm|enoent|spawn/.test(message);
+}
 
 function runEngine(fen, searchParams, bot, timeoutMs) {
   return new Promise((resolve, reject) => {
@@ -211,6 +229,19 @@ router.post('/move', engineConcurrency, async (req, res) => {
       debugInfo: debug ? { fen, searchParams, botName: bot?.name } : null,
     });
   } catch (error) {
+    if (shouldUseFallback(error)) {
+      const bestMove = getFallbackMove(fen);
+      if (bestMove) {
+        console.warn('[Engine] Stockfish unavailable; returning a legal fallback move:', error.message);
+        return res.json({
+          type: 'result',
+          bestMove,
+          engineFallback: true,
+          debugInfo: debug ? { fen, searchParams, botName: bot?.name, engineFallback: true } : null,
+        });
+      }
+    }
+
     console.error('[Engine] Move error:', error.message);
     return handleRouteError(res, error, 'Failed to calculate move');
   }
