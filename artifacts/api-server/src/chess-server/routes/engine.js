@@ -6,7 +6,6 @@ import path from 'node:path';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { errorResponse, handleRouteError } from '../middleware/errors.js';
-import { requireSession } from '../auth.js';
 
 // Resolve paths at module load time so they survive esbuild bundling.
 const _require = createRequire(import.meta.url);
@@ -197,7 +196,9 @@ function runEngine(fen, searchParams, bot, timeoutMs) {
   });
 }
 
-router.post('/move', requireSession, engineConcurrency, async (req, res) => {
+// Local bot games are intentionally available to guests. The concurrency
+// guard still protects the serverless engine from unbounded parallel work.
+router.post('/move', engineConcurrency, async (req, res) => {
   try {
     const { fen, bot, debug } = req.body;
     if (!fen) return errorResponse(res, 400, 'Missing required field: fen');
