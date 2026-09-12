@@ -45,6 +45,10 @@ export function useGameCore(gameId, playerId, playerColor, settings) {
   const moveInFlightRef = useRef(false);
   const colorCode = playerColor === 'white' ? 'w' : 'b';
   const moveCountRef = useRef(initialHistory.length);
+  const turnStartedAtRef = useRef(Date.now());
+  const hiddenStartedAtRef = useRef(null);
+  const hiddenMsRef = useRef(0);
+  const focusLossesRef = useRef(0);
 
   const persistSnapshot = useCallback((nextGame, nextHistory, status = 'playing') => {
     if (!gameId || !nextGame) return;
@@ -54,6 +58,28 @@ export function useGameCore(gameId, playerId, playerColor, settings) {
       gameStatus: status,
     });
   }, [gameId]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') hiddenStartedAtRef.current = Date.now();
+      else if (hiddenStartedAtRef.current !== null) {
+        hiddenMsRef.current += Math.max(0, Date.now() - hiddenStartedAtRef.current);
+        hiddenStartedAtRef.current = null;
+      }
+    };
+    const onBlur = () => { focusLossesRef.current += 1; };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('blur', onBlur);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('blur', onBlur);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (game?.turn() === colorCode) turnStartedAtRef.current = Date.now();
+  }, [game, colorCode, moveHistory.length]);
 
   useEffect(() => {
     if (!gameId || !game) return;
@@ -85,6 +111,14 @@ export function useGameCore(gameId, playerId, playerColor, settings) {
 
     moveInFlightRef.current = true;
 
+    const hiddenMs = hiddenMsRef.current + (hiddenStartedAtRef.current === null ? 0 : Math.max(0, Date.now() - hiddenStartedAtRef.current));
+    const fairPlaySignals = {
+      thinkTimeMs: Math.max(0, Date.now() - turnStartedAtRef.current),
+      hiddenMs,
+      focusLosses: focusLossesRef.current,
+      visibility: typeof document === 'undefined' ? 'visible' : document.visibilityState,
+    };
+
     const storedHistory = toStoredMoveHistory(gameCopy.history({ verbose: true }));
 
     try {
@@ -93,6 +127,7 @@ export function useGameCore(gameId, playerId, playerColor, settings) {
         move: { from: move.from, to: move.to, promotion: move.promotion || 'q', san: move.san },
         playerId,
         expectedMoveCount: moveCountRef.current,
+        fairPlaySignals,
         token: getAuthToken(),
       });
 
@@ -104,6 +139,10 @@ export function useGameCore(gameId, playerId, playerColor, settings) {
       setGame(newGame);
       setMoveHistory(serverHistory);
       moveCountRef.current = serverHistory.length;
+      turnStartedAtRef.current = Date.now();
+      hiddenMsRef.current = 0;
+      hiddenStartedAtRef.current = typeof document !== 'undefined' && document.visibilityState === 'hidden' ? Date.now() : null;
+      focusLossesRef.current = 0;
 
       playSoundEffect(settings, { type: move.captured ? 'capture' : 'move' });
       if (newGame.inCheck()) playSoundEffect(settings, { type: 'check' });
