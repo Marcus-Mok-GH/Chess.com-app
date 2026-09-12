@@ -75,6 +75,13 @@ export async function initDatabase() {
 
         await client.query("CREATE TABLE IF NOT EXISTS game_integrity_reviews (game_code VARCHAR(20) PRIMARY KEY REFERENCES games(game_code) ON DELETE CASCADE, status VARCHAR(20) NOT NULL DEFAULT 'queued', error_message TEXT, analyzed_moves INTEGER NOT NULL DEFAULT 0, white_analyzed_moves INTEGER NOT NULL DEFAULT 0, black_analyzed_moves INTEGER NOT NULL DEFAULT 0, white_accuracy NUMERIC(6,2), black_accuracy NUMERIC(6,2), white_centipawn_loss NUMERIC(8,2), black_centipawn_loss NUMERIC(8,2), white_best_move_rate NUMERIC(8,4), black_best_move_rate NUMERIC(8,4), suspicious_score INTEGER NOT NULL DEFAULT 0, flagged_players TEXT[] NOT NULL DEFAULT '{}', analysis_json JSONB NOT NULL DEFAULT '{}'::jsonb, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
         await client.query('CREATE INDEX IF NOT EXISTS idx_integrity_reviews_status_score ON game_integrity_reviews(status, suspicious_score DESC)');
+        await client.query('ALTER TABLE game_integrity_reviews ADD COLUMN IF NOT EXISTS review_decision VARCHAR(20)');
+        await client.query('ALTER TABLE game_integrity_reviews ADD COLUMN IF NOT EXISTS reviewer_id VARCHAR(100)');
+        await client.query('ALTER TABLE game_integrity_reviews ADD COLUMN IF NOT EXISTS review_note TEXT');
+        await client.query('ALTER TABLE game_integrity_reviews ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP');
+        await client.query("CREATE TABLE IF NOT EXISTS fair_play_reports (id BIGSERIAL PRIMARY KEY, game_code VARCHAR(20) NOT NULL REFERENCES games(game_code) ON DELETE CASCADE, reporter_id VARCHAR(100) NOT NULL, reported_player_id VARCHAR(100) NOT NULL, reason VARCHAR(40) NOT NULL, details TEXT, status VARCHAR(20) NOT NULL DEFAULT 'open', reviewer_id VARCHAR(100), review_note TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE (game_code, reporter_id))");
+        await client.query('CREATE INDEX IF NOT EXISTS idx_fair_play_reports_status_created ON fair_play_reports(status, created_at DESC)');
+
         // User settings table
         await client.query(`
           CREATE TABLE IF NOT EXISTS user_settings (
