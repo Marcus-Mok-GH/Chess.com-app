@@ -31,7 +31,7 @@ function cachePuzzle(puzzle) {
     generatedPuzzles.delete(oldestId);
     puzzleCacheExpiry.delete(oldestId);
   }
-  cachePuzzle(puzzle);
+  generatedPuzzles.set(puzzle.id, puzzle);
   puzzleCacheExpiry.set(puzzle.id, now + PUZZLE_CACHE_TTL_MS);
 }
 
