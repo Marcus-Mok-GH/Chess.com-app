@@ -31,7 +31,8 @@ export const BOTS = [
 export function createCustomBot(elo) {
   // Calculate bot parameters based on ELO
   // ELO ranges: 400-2500
-  const normalizedElo = Math.max(400, Math.min(2500, elo));
+  const numericElo = Number(elo);
+  const normalizedElo = Number.isFinite(numericElo) ? Math.max(400, Math.min(2500, numericElo)) : 1000;
   
   // Map ELO to depth (1-6)
   let depth;
