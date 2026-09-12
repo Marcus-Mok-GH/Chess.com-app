@@ -6,8 +6,9 @@ import { errorResponse, handleRouteError } from '../middleware/errors.js';
 import { userIdFromPlayerId } from '../socket/utils.js';
 import { getGameService } from '../socket/gameService.js';
 import { getSessionToken, validateSession } from '../auth.js';
-import { getIntegrityReviews, isIntegrityReviewer, scheduleGameAnalysis } from '../services/antiCheatService.js';
+import { getIntegrityReviews, isIntegrityReviewer, scheduleGameAnalysis, recordIntegrityDecision } from '../services/antiCheatService.js';
 import { getOnlineGameKv } from '../kv/onlineGameKv.js';
+import { sanitizeFairPlaySignals, withFairPlayMetadata } from '../services/fairPlayTelemetry.js';
 
 const router = express.Router();
 
@@ -62,6 +63,57 @@ router.post('/integrity/reviews/:gameId/analyze', async (req, res) => {
   } catch (error) { return handleRouteError(res, error, 'Failed to queue integrity analysis'); }
 });
 
+const FAIR_PLAY_REPORT_REASONS = new Set(['engine_assistance', 'outside_help', 'account_sharing', 'suspicious_behavior', 'other']);
+
+router.post('/integrity/report', async (req, res) => {
+  try {
+    const authUserId = await validateSession(getSessionToken(req));
+    if (!authUserId) return errorResponse(res, 401, 'Authentication required');
+    const gameCode = String(req.body?.gameId || '').trim().toUpperCase();
+    const reason = String(req.body?.reason || '').trim();
+    const details = req.body?.details == null ? null : String(req.body.details).trim().slice(0, 1000);
+    if (!gameCode || !FAIR_PLAY_REPORT_REASONS.has(reason)) return errorResponse(res, 400, 'Valid game ID and report reason are required');
+
+    const gameResult = await query('SELECT game_code, white_player_id, black_player_id FROM games WHERE game_code = $1 LIMIT 1', [gameCode]);
+    const game = gameResult.rows[0];
+    if (!game) return errorResponse(res, 404, 'Game not found');
+    const reporterId = String(authUserId);
+    const isWhite = String(game.white_player_id || '') === reporterId;
+    const isBlack = String(game.black_player_id || '') === reporterId;
+    if (!isWhite && !isBlack) return errorResponse(res, 403, 'Only a game participant can report it');
+    const reportedPlayerId = isWhite ? game.black_player_id : game.white_player_id;
+    if (!reportedPlayerId) return errorResponse(res, 400, 'No opponent is attached to this game');
+
+    const report = await query(
+      'INSERT INTO fair_play_reports (game_code, reporter_id, reported_player_id, reason, details) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (game_code, reporter_id) DO UPDATE SET reason = EXCLUDED.reason, details = EXCLUDED.details, status = 'open', updated_at = CURRENT_TIMESTAMP RETURNING id, game_code, reason, status, created_at',
+      [gameCode, reporterId, String(reportedPlayerId), reason, details]
+    );
+    return res.status(201).json({ success: true, report: report.rows[0] });
+  } catch (error) { return handleRouteError(res, error, 'Failed to submit fair-play report'); }
+});
+
+router.get('/integrity/reports', async (req, res) => {
+  try {
+    const reviewerId = await validateSession(getSessionToken(req));
+    if (!isIntegrityReviewer(reviewerId)) return errorResponse(res, 403, 'Integrity review access denied');
+    const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 50, 1), 100);
+    const reports = await query('SELECT * FROM fair_play_reports ORDER BY CASE WHEN status = 'open' THEN 0 ELSE 1 END, created_at DESC LIMIT $1', [limit]);
+    return res.json({ success: true, reports: reports.rows });
+  } catch (error) { return handleRouteError(res, error, 'Failed to load fair-play reports'); }
+});
+
+router.patch('/integrity/reviews/:gameId', async (req, res) => {
+  try {
+    const reviewerId = await validateSession(getSessionToken(req));
+    if (!isIntegrityReviewer(reviewerId)) return errorResponse(res, 403, 'Integrity review access denied');
+    const decision = String(req.body?.decision || '');
+    if (!['confirmed', 'cleared', 'needs_review'].includes(decision)) return errorResponse(res, 400, 'Invalid review decision');
+    const review = await recordIntegrityDecision(req.params.gameId.toUpperCase(), { decision, reviewerId, note: req.body?.note });
+    if (!review) return errorResponse(res, 404, 'Integrity review not found');
+    return res.json({ success: true, review });
+  } catch (error) { return handleRouteError(res, error, 'Failed to update integrity review'); }
+});
+
 // Save game result
 router.post('/save', async (req, res) => {
   try {
@@ -75,6 +127,7 @@ router.post('/save', async (req, res) => {
       playerColor = 'white',
       finalFen,
       gameCode: requestedGameCode,
+      fairPlaySignals,
     } = req.body;
 
     if (!result) return errorResponse(res, 400, 'Result is required');
@@ -627,9 +680,13 @@ router.post('/:gameId/move', async (req, res) => {
       return errorResponse(res, 422, 'Illegal move');
     }
 
+    const newMove = withFairPlayMetadata({
+      san: applied.san, from: applied.from, to: applied.to, promotion: applied.promotion,
+      captured: applied.captured || null, color: applied.color, piece: applied.piece,
+    }, { playerId, signals: sanitizeFairPlaySignals(fairPlaySignals) });
     const newHistory = Array.isArray(game.move_history)
-      ? [...game.move_history, JSON.stringify({ san: applied.san, from: applied.from, to: applied.to, promotion: applied.promotion, captured: applied.captured || null, color: applied.color, piece: applied.piece })]
-      : [JSON.stringify({ san: applied.san, from: applied.from, to: applied.to, promotion: applied.promotion, captured: applied.captured || null, color: applied.color, piece: applied.piece })];
+      ? [...game.move_history, JSON.stringify(newMove)]
+      : [JSON.stringify(newMove)];
 
     const casResult = await query(
       `UPDATE active_games
