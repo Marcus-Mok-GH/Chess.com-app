@@ -6,6 +6,7 @@ import AnimatedPiece from '../../AnimatedPiece';
 import ChessPieceIcon from '../../ChessPieceIcon';
 import MoveHistory from '../../MoveHistory';
 import { isOnlineGameActive } from '../onlineGameStatus';
+import api from '../../../services/api';
 
 export default function GameUI({
   topPlayer, bottomPlayer, game, onSquareClick, onPieceDrop, canDragPiece,
@@ -18,11 +19,25 @@ export default function GameUI({
 }) {
 
   const [chatInput, setChatInput] = React.useState('');
+  const [reportReason, setReportReason] = React.useState('engine_assistance');
+  const [reportDetails, setReportDetails] = React.useState('');
+  const [reportStatus, setReportStatus] = React.useState('');
   const chatEndRef = React.useRef(null);
 
   React.useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
+
+  const onReport = async () => {
+    try {
+      const token = localStorage.getItem('chess_user_token');
+      await api.reportFairPlay({ gameId, reason: reportReason, details: reportDetails, token });
+      setReportStatus('Report submitted for private review.');
+      setReportDetails('');
+    } catch (error) {
+      setReportStatus(error?.message || 'Could not submit report');
+    }
+  };
 
   const onSend = (e) => {
     e.preventDefault();
@@ -115,6 +130,22 @@ export default function GameUI({
           </form>
         </div>
 
+
+        {gameStatus === 'ended' && (
+          <div className="fair-play-report">
+            <strong>Report fair-play concern</strong>
+            <select value={reportReason} onChange={(event) => setReportReason(event.target.value)}>
+              <option value="engine_assistance">Engine assistance</option>
+              <option value="outside_help">Outside help</option>
+              <option value="account_sharing">Account sharing</option>
+              <option value="suspicious_behavior">Suspicious behavior</option>
+              <option value="other">Other</option>
+            </select>
+            <textarea value={reportDetails} onChange={(event) => setReportDetails(event.target.value)} maxLength={1000} placeholder="Optional details" />
+            <button className="online-action-btn" onClick={onReport}>Submit private report</button>
+            {reportStatus && <div className="status-message">{reportStatus}</div>}
+          </div>
+        )}
 
         <div className="controls">
           {isOnlineGameActive(gameStatus) && (
