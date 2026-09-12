@@ -94,8 +94,9 @@ export async function analyzeRankedGame(gameCode) {
   if (white.flagged && game.white_player_id) flaggedPlayers.push(String(game.white_player_id));
   if (black.flagged && game.black_player_id) flaggedPlayers.push(String(game.black_player_id));
   const suspiciousScore = Math.max(white.suspiciousScore, black.suspiciousScore);
-  await setReviewStatus(gameCode, 'complete', { analyzedMoves: whiteMoves.length + blackMoves.length, whiteAnalyzedMoves: white.analyzedMoves, blackAnalyzedMoves: black.analyzedMoves, whiteAccuracy: white.accuracy, blackAccuracy: black.accuracy, whiteCentipawnLoss: white.centipawnLoss, blackCentipawnLoss: black.centipawnLoss, whiteBestMoveRate: white.bestMoveRate, blackBestMoveRate: black.bestMoveRate, suspiciousScore, flaggedPlayers, analysisJson: { engineDepth: ENGINE_DEPTH, maxMoves: MAX_ANALYZED_MOVES, truncated: moveHistory.length > MAX_ANALYZED_MOVES, white, black, moves: [...whiteMoves, ...blackMoves] } });
-  return { status: 'complete', gameCode, suspiciousScore, flaggedPlayers };
+  const reviewStatus = flaggedPlayers.length ? 'flagged' : 'complete';
+  await setReviewStatus(gameCode, reviewStatus, { analyzedMoves: whiteMoves.length + blackMoves.length, whiteAnalyzedMoves: white.analyzedMoves, blackAnalyzedMoves: black.analyzedMoves, whiteAccuracy: white.accuracy, blackAccuracy: black.accuracy, whiteCentipawnLoss: white.centipawnLoss, blackCentipawnLoss: black.centipawnLoss, whiteBestMoveRate: white.bestMoveRate, blackBestMoveRate: black.bestMoveRate, suspiciousScore, flaggedPlayers, analysisJson: { engineDepth: ENGINE_DEPTH, maxMoves: MAX_ANALYZED_MOVES, truncated: moveHistory.length > MAX_ANALYZED_MOVES, white, black, moves: [...whiteMoves, ...blackMoves] } });
+  return { status: reviewStatus, gameCode, suspiciousScore, flaggedPlayers };
 }
 
 async function drainQueue() {
