@@ -132,7 +132,7 @@ class ApiService {
     return this.request(`/games/by-code/${encodeURIComponent(gameCode)}`);
   }
 
-  async postMove({ gameId, move, playerId, expectedMoveCount, token }) {
+  async postMove({ gameId, move, playerId, expectedMoveCount, fairPlaySignals, token }) {
     const headers = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
     const controller = new AbortController();
@@ -140,9 +140,19 @@ class ApiService {
     return this.request(`/games/${encodeURIComponent(gameId)}/move`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ move, playerId, expectedMoveCount }),
+      body: JSON.stringify({ move, playerId, expectedMoveCount, fairPlaySignals }),
       signal: controller.signal,
     }).finally(() => clearTimeout(timeoutId));
+  }
+
+  async reportFairPlay({ gameId, reason, details, token }) {
+    const headers = {};
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    return this.request('/games/integrity/report', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ gameId, reason, details }),
+    });
   }
 
   async endOnlineGame({ gameId, playerId, result, reason, token }) {
