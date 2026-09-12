@@ -5,6 +5,7 @@
 import { Chess } from 'chess.js';
 import { query } from '../db.js';
 import { isStockfishConfigured, runEngine } from './engineWorker.js';
+import { buildTimingMetrics } from './fairPlayTelemetry.js';
 
 const MAX_ANALYZED_MOVES = 160;
 const ENGINE_DEPTH = 8;
@@ -47,13 +48,38 @@ async function setReviewStatus(gameCode, status, fields = {}) {
 
 function playerMetrics(moves) {
   const analyzedMoves = moves.length;
-  if (!analyzedMoves) return { analyzedMoves: 0, accuracy: null, centipawnLoss: null, bestMoveRate: null, suspiciousScore: 0, flagged: false };
+  if (!analyzedMoves) return { analyzedMoves: 0, accuracy: null, centipawnLoss: null, bestMoveRate: null, suspiciousScore: 0, flagged: false, timing: buildTimingMetrics(moves), signals: [] };
   const centipawnLoss = moves.reduce((sum, move) => sum + move.centipawnLoss, 0) / analyzedMoves;
   const bestMoveRate = moves.filter(move => move.isBestMove).length / analyzedMoves;
   const accuracy = clamp(100 - centipawnLoss * 0.35, 0, 100);
-  const suspiciousScore = Math.round(clamp(bestMoveRate * 60 + Math.max(0, 85 - centipawnLoss) * 0.4, 0, 100));
-  const flagged = analyzedMoves >= 12 && ((bestMoveRate >= 0.9 && centipawnLoss <= 25) || (bestMoveRate >= 0.82 && centipawnLoss <= 12));
-  return { analyzedMoves, accuracy: Number(accuracy.toFixed(2)), centipawnLoss: Number(centipawnLoss.toFixed(2)), bestMoveRate: Number(bestMoveRate.toFixed(4)), suspiciousScore, flagged };
+  const timing = buildTimingMetrics(moves);
+  const engineSignal = analyzedMoves >= 12 && ((bestMoveRate >= 0.9 && centipawnLoss <= 25) || (bestMoveRate >= 0.82 && centipawnLoss <= 12));
+  const consistencySignal = analyzedMoves >= 24 && bestMoveRate >= 0.94 && centipawnLoss <= 18;
+  const timingSignal = timing.hasClientTelemetry && timing.observedMoves >= 8 && timing.fastMoveRate >= 0.75 && timing.medianThinkTimeMs <= 900;
+  const signals = [
+    engineSignal ? 'engine_correlation' : null,
+    consistencySignal ? 'long_sample_consistency' : null,
+    timingSignal ? 'rapid_response_pattern' : null,
+  ].filter(Boolean);
+  const suspiciousScore = Math.round(clamp(
+    bestMoveRate * 60 + Math.max(0, 85 - centipawnLoss) * 0.4 + timing.suspiciousScore * 0.45,
+    0,
+    100,
+  ));
+  // A single high engine-correlation metric is a review signal, not a verdict.
+  // Flag automatically only when a second independent signal agrees, or when a
+  // long sample is exceptionally unlikely without assistance.
+  const flagged = analyzedMoves >= 12 && (signals.length >= 2 || (engineSignal && analyzedMoves >= 40 && bestMoveRate >= 0.96 && centipawnLoss <= 10));
+  return {
+    analyzedMoves,
+    accuracy: Number(accuracy.toFixed(2)),
+    centipawnLoss: Number(centipawnLoss.toFixed(2)),
+    bestMoveRate: Number(bestMoveRate.toFixed(4)),
+    suspiciousScore,
+    flagged,
+    timing,
+    signals,
+  };
 }
 
 export async function analyzeRankedGame(gameCode) {
@@ -95,7 +121,7 @@ export async function analyzeRankedGame(gameCode) {
   if (black.flagged && game.black_player_id) flaggedPlayers.push(String(game.black_player_id));
   const suspiciousScore = Math.max(white.suspiciousScore, black.suspiciousScore);
   const reviewStatus = flaggedPlayers.length ? 'flagged' : 'complete';
-  await setReviewStatus(gameCode, reviewStatus, { analyzedMoves: whiteMoves.length + blackMoves.length, whiteAnalyzedMoves: white.analyzedMoves, blackAnalyzedMoves: black.analyzedMoves, whiteAccuracy: white.accuracy, blackAccuracy: black.accuracy, whiteCentipawnLoss: white.centipawnLoss, blackCentipawnLoss: black.centipawnLoss, whiteBestMoveRate: white.bestMoveRate, blackBestMoveRate: black.bestMoveRate, suspiciousScore, flaggedPlayers, analysisJson: { engineDepth: ENGINE_DEPTH, maxMoves: MAX_ANALYZED_MOVES, truncated: moveHistory.length > MAX_ANALYZED_MOVES, white, black, moves: [...whiteMoves, ...blackMoves] } });
+  await setReviewStatus(gameCode, reviewStatus, { analyzedMoves: whiteMoves.length + blackMoves.length, whiteAnalyzedMoves: white.analyzedMoves, blackAnalyzedMoves: black.analyzedMoves, whiteAccuracy: white.accuracy, blackAccuracy: black.accuracy, whiteCentipawnLoss: white.centipawnLoss, blackCentipawnLoss: black.centipawnLoss, whiteBestMoveRate: white.bestMoveRate, blackBestMoveRate: black.bestMoveRate, suspiciousScore, flaggedPlayers, analysisJson: { detectionVersion: 2, engineDepth: ENGINE_DEPTH, maxMoves: MAX_ANALYZED_MOVES, truncated: moveHistory.length > MAX_ANALYZED_MOVES, white, black, moves: [...whiteMoves, ...blackMoves] } });
   return { status: reviewStatus, gameCode, suspiciousScore, flaggedPlayers };
 }
 
@@ -121,4 +147,14 @@ export async function getIntegrityReviews({ status = null, limit = 50 } = {}) {
     return (await query('SELECT * FROM game_integrity_reviews WHERE status = $1 ORDER BY suspicious_score DESC, updated_at DESC LIMIT $2', [status, safeLimit])).rows;
   }
   return (await query('SELECT * FROM game_integrity_reviews ORDER BY suspicious_score DESC, updated_at DESC LIMIT $1', [safeLimit])).rows;
+
+export async function recordIntegrityDecision(gameCode, { decision, reviewerId, note = null } = {}) {
+  const allowed = new Set(['confirmed', 'cleared', 'needs_review']);
+  if (!gameCode || !allowed.has(decision) || !reviewerId) return null;
+  const result = await query(
+    'UPDATE game_integrity_reviews SET review_decision = $2, reviewer_id = $3, review_note = $4, reviewed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE game_code = $1 RETURNING *',
+    [gameCode, decision, String(reviewerId), note ? String(note).slice(0, 2000) : null]
+  );
+  return result.rows[0] || null;
+}
 }
