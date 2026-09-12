@@ -15,7 +15,7 @@ export default function GameUI({
   moveError, getStatusMessage, drawOffered, handleRespondDraw,
   REACTIONS, handleSendReaction, moveHistory, gameStatus,
   capturedPieces, chatMessages, handleSendMessage, playerId,
-  handleOfferDraw, handleResign, onLeave, canLeave
+  handleOfferDraw, handleResign, onLeave, canLeave, chatEnabled
 }) {
 
   const [chatInput, setChatInput] = React.useState('');
@@ -103,9 +103,11 @@ export default function GameUI({
           </div>
         )}
 
-        <div className="reactions">
-          {REACTIONS.map(r => <button key={r} onClick={() => handleSendReaction(r)}>{r}</button>)}
-        </div>
+        {chatEnabled && (
+          <div className="reactions">
+            {REACTIONS.map(r => <button key={r} onClick={() => handleSendReaction(r)}>{r}</button>)}
+          </div>
+        )}
 
         <MoveHistory history={moveHistory} />
         <div className="chat-container">
@@ -118,16 +120,18 @@ export default function GameUI({
             ))}
             <div ref={chatEndRef} />
           </div>
-          <form onSubmit={onSend} className="chat-input-form">
-            <input 
-              type="text" 
-              value={chatInput} 
-              onChange={(e) => setChatInput(e.target.value)}
-              placeholder="Type a message..."
-              maxLength={500}
-            />
-            <button type="submit">Send</button>
-          </form>
+          {chatEnabled && (
+            <form onSubmit={onSend} className="chat-input-form">
+              <input 
+                type="text" 
+                value={chatInput} 
+                onChange={(e) => setChatInput(e.target.value)}
+                placeholder="Type a message..."
+                maxLength={500}
+              />
+              <button type="submit">Send</button>
+            </form>
+          )}
         </div>
 
 

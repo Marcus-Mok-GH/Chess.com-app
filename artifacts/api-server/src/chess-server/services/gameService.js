@@ -1,13 +1,9 @@
 import { query } from '../db.js';
-import { userIdFromPlayerId, hasValidEloPair } from './utils.js';
+import { userIdFromPlayerId, hasValidEloPair } from './gameUtils.js';
 import { getOnlineGameKv } from '../kv/onlineGameKv.js';
-import { scheduleGameAnalysis } from '../services/antiCheatService.js';
+import { scheduleGameAnalysis } from './antiCheatService.js';
 
 export class GameService {
-  constructor(io) {
-    this.io = io;
-  }
-
   async getGame(gameId) {
     try {
       const result = await query(
@@ -264,20 +260,7 @@ export class GameService {
         );
       }
 
-      // Notify players of ELO changes
-      if (game.white_socket_id) {
-        this.io.to(game.white_socket_id).emit('elo_updated', {
-          newElo: newWhiteElo,
-          change: newWhiteElo - game.white_elo
-        });
-      }
-
-      if (game.black_socket_id) {
-        this.io.to(game.black_socket_id).emit('elo_updated', {
-          newElo: newBlackElo,
-          change: newBlackElo - game.black_elo
-        });
-      }
+      console.log(`[Game] ELO updated: white ${game.white_elo} → ${newWhiteElo}, black ${game.black_elo} → ${newBlackElo} (result: ${result})`);
     } catch (error) {
       console.error('[Game] Error updating player ELOs:', error);
     }
@@ -286,9 +269,9 @@ export class GameService {
 
 let gameServiceInstance = null;
 
-export function getGameService(io) {
+export function getGameService() {
   if (!gameServiceInstance) {
-    gameServiceInstance = new GameService(io);
+    gameServiceInstance = new GameService();
   }
   return gameServiceInstance;
 }

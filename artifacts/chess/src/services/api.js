@@ -1,268 +1,352 @@
-import { API_BASE_URL, isNetworkError } from './apiBase';
+import { API_BASE_URL, isNetworkError } from "./apiBase";
 
 class ApiService {
-  async request(endpoint, options = {}) {
-    const url = `${API_BASE_URL}${endpoint}`;
-    const token = null;
-    const config = {
-      ...options,
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...options.headers,
-      },
-    };
+    async request(endpoint, options = {}) {
+        const url = `${API_BASE_URL}${endpoint}`;
+        const token = null;
+        const config = {
+            ...options,
+            credentials: "include",
+            headers: {
+                "Content-Type": "application/json",
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                ...options.headers,
+            },
+        };
 
-    try {
-      const response = await fetch(url, config);
-      const data = await response.json().catch(() => ({}));
-      
-      if (!response.ok) {
-        const errorMessage = data.error?.message || data.error || `HTTP error ${response.status}`;
-        throw new Error(errorMessage);
-      }
+        try {
+            const response = await fetch(url, config);
+            const data = await response.json().catch(() => ({}));
 
-      return data;
-    } catch (error) {
-      if (isNetworkError(error)) {
-        throw new Error('Cannot reach server. Please check your connection.');
-      }
-      throw error;
+            if (!response.ok) {
+                const errorMessage =
+                    data.error?.message ||
+                    data.error ||
+                    `HTTP error ${response.status}`;
+                throw new Error(errorMessage);
+            }
+
+            return data;
+        } catch (error) {
+            if (isNetworkError(error)) {
+                throw new Error(
+                    "Cannot reach server. Please check your connection.",
+                );
+            }
+            throw error;
+        }
     }
-  }
 
-  async updateUsername(username, token) {
-    return this.request('/auth/update-username', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify({ username }),
-    });
-  }
+    async updateUsername(username, token) {
+        return this.request("/auth/update-username", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+            },
+            body: JSON.stringify({ username }),
+        });
+    }
 
-  async getUserSettings(username, token = null) {
-    return this.request(`/users/${encodeURIComponent(username)}/settings`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
-  }
+    async getUserSettings(username, token = null) {
+        return this.request(`/users/${encodeURIComponent(username)}/settings`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+    }
 
-  async updateUserSettings(username, settings, token = null) {
-    return this.request(`/users/${encodeURIComponent(username)}/settings`, {
-      method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: JSON.stringify({ settings }),
-    });
-  }
+    async updateUserSettings(username, settings, token = null) {
+        return this.request(`/users/${encodeURIComponent(username)}/settings`, {
+            method: "POST",
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            body: JSON.stringify({ settings }),
+        });
+    }
 
-  async getLeaderboard(limit = 10) {
-    return this.request(`/users/leaderboard/top?limit=${limit}`);
-  }
+    async getLeaderboard(limit = 10) {
+        return this.request(`/users/leaderboard/top?limit=${limit}`);
+    }
 
-  async getEloHistory(username, limit = 100) {
-    return this.request(`/users/${encodeURIComponent(username)}/elo-history?limit=${limit}`);
-  }
+    async getEloHistory(username, limit = 100) {
+        return this.request(
+            `/users/${encodeURIComponent(username)}/elo-history?limit=${limit}`,
+        );
+    }
 
-  async getQueueStatus() {
-    return this.request('/matchmaking/status');
-  }
+    async getQueueStatus() {
+        return this.request("/matchmaking/status");
+    }
 
-  async getPublicStats() {
-    return this.request('/stats/public');
-  }
+    async getPublicStats() {
+        return this.request("/stats/public");
+    }
 
-  async saveGame(payload) {
-    return this.request('/games/save', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
-  }
+    async saveGame(payload) {
+        return this.request("/games/save", {
+            method: "POST",
+            body: JSON.stringify(payload),
+        });
+    }
 
-  async getGameHistory(username, limit = 20) {
-    return this.request(`/games/history/${encodeURIComponent(username)}?limit=${limit}`);
-  }
+    async getGameHistory(username, limit = 20) {
+        return this.request(
+            `/games/history/${encodeURIComponent(username)}?limit=${limit}`,
+        );
+    }
 
-  // Get in-progress local game by code and username
-  async getLocalGameByCode(username, gameCode) {
-    return this.request(`/games/local/${encodeURIComponent(username)}/${encodeURIComponent(gameCode)}`);
-  }
+    // Get in-progress local game by code and username
+    async getLocalGameByCode(username, gameCode) {
+        return this.request(
+            `/games/local/${encodeURIComponent(username)}/${encodeURIComponent(gameCode)}`,
+        );
+    }
 
-  async getLatestIncompleteLocalGame(username) {
-    return this.request(`/games/local/latest/${encodeURIComponent(username)}`);
-  }
+    async getLatestIncompleteLocalGame(username) {
+        return this.request(
+            `/games/local/latest/${encodeURIComponent(username)}`,
+        );
+    }
 
-  // Create a friendly local game record
-  async createLocalGame({ gameCode, userId, username, opponentName, opponentElo, playerColor }) {
-    return this.request('/games/local/create', {
-      method: 'POST',
-      body: JSON.stringify({
+    // Create a friendly local game record
+    async createLocalGame({
         gameCode,
         userId,
         username,
         opponentName,
         opponentElo,
         playerColor,
-      }),
-    });
-  }
+    }) {
+        return this.request("/games/local/create", {
+            method: "POST",
+            body: JSON.stringify({
+                gameCode,
+                userId,
+                username,
+                opponentName,
+                opponentElo,
+                playerColor,
+            }),
+        });
+    }
 
-  async createOnlineGame({ playerId, playerName, playerColor, playerElo, gameCode }) {
-    return this.request('/games/online/create', {
-      method: 'POST',
-      body: JSON.stringify({ playerId, playerName, playerColor, playerElo, gameCode }),
-    });
-  }
+    async createOnlineGame({
+        playerId,
+        playerName,
+        playerColor,
+        playerElo,
+        gameCode,
+    }) {
+        return this.request("/games/online/create", {
+            method: "POST",
+            body: JSON.stringify({
+                playerId,
+                playerName,
+                playerColor,
+                playerElo,
+                gameCode,
+            }),
+        });
+    }
 
-  async joinOnlineGame({ gameCode, playerId, playerName, playerElo }) {
-    return this.request('/games/online/join', {
-      method: 'POST',
-      body: JSON.stringify({ gameCode, playerId, playerName, playerElo }),
-    });
-  }
+    async joinOnlineGame({ gameCode, playerId, playerName, playerElo }) {
+        return this.request("/games/online/join", {
+            method: "POST",
+            body: JSON.stringify({ gameCode, playerId, playerName, playerElo }),
+        });
+    }
 
-  async leaveOnlineGame({ gameCode, playerId }) {
-    return this.request('/games/online/leave', {
-      method: 'POST',
-      body: JSON.stringify({ gameCode, playerId }),
-    });
-  }
+    async leaveOnlineGame({ gameCode, playerId }) {
+        return this.request("/games/online/leave", {
+            method: "POST",
+            body: JSON.stringify({ gameCode, playerId }),
+        });
+    }
 
-  async getGameByCode(gameCode) {
-    return this.request(`/games/by-code/${encodeURIComponent(gameCode)}`);
-  }
+    async getGameByCode(gameCode) {
+        return this.request(`/games/by-code/${encodeURIComponent(gameCode)}`);
+    }
 
-  async postMove({ gameId, move, playerId, expectedMoveCount, fairPlaySignals, token }) {
-    const headers = {};
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
-    return this.request(`/games/${encodeURIComponent(gameId)}/move`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ move, playerId, expectedMoveCount, fairPlaySignals }),
-      signal: controller.signal,
-    }).finally(() => clearTimeout(timeoutId));
-  }
+    async postMove({
+        gameId,
+        move,
+        playerId,
+        expectedMoveCount,
+        fairPlaySignals,
+        token,
+    }) {
+        const headers = {};
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        return this.request(`/games/${encodeURIComponent(gameId)}/move`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+                move,
+                playerId,
+                expectedMoveCount,
+                fairPlaySignals,
+            }),
+            signal: controller.signal,
+        }).finally(() => clearTimeout(timeoutId));
+    }
 
-  async reportFairPlay({ gameId, reason, details, token }) {
-    const headers = {};
-    if (token) headers['Authorization'] = 'Bearer ' + token;
-    return this.request('/games/integrity/report', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ gameId, reason, details }),
-    });
-  }
+    async reportFairPlay({ gameId, reason, details, token }) {
+        const headers = {};
+        if (token) headers["Authorization"] = "Bearer " + token;
+        return this.request("/games/integrity/report", {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ gameId, reason, details }),
+        });
+    }
 
-  async endOnlineGame({ gameId, playerId, result, reason, token }) {
-    const headers = {};
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
-    return this.request(`/games/${encodeURIComponent(gameId)}/end`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ playerId, result, reason }),
-      signal: controller.signal,
-    }).finally(() => clearTimeout(timeoutId));
-  }
+    async endOnlineGame({ gameId, playerId, result, reason, token }) {
+        const headers = {};
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        return this.request(`/games/${encodeURIComponent(gameId)}/end`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ playerId, result, reason }),
+            signal: controller.signal,
+        }).finally(() => clearTimeout(timeoutId));
+    }
 
-  async resignAllLiveGames(token = null) {
-    const headers = {};
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-    return this.request('/games/resign-all-live', {
-      method: 'POST',
-      headers,
-    });
-  }
-  async getEngineMove({ fen, bot }) {
-    return this.request('/engine/move', {
-      method: 'POST',
-      body: JSON.stringify({ fen, bot }),
-    });
-  }
+    async resignAllLiveGames(token = null) {
+        const headers = {};
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+        return this.request("/games/resign-all-live", {
+            method: "POST",
+            headers,
+        });
+    }
+    async getEngineMove({ fen, bot }) {
+        return this.request("/engine/move", {
+            method: "POST",
+            body: JSON.stringify({ fen, bot }),
+        });
+    }
 
-  // ── Learning ─────────────────────────────────────────────────────────────
-  async getLessons() {
-    return this.request('/lessons');
-  }
+    // ── Learning ─────────────────────────────────────────────────────────────
+    async getLessons() {
+        return this.request("/lessons");
+    }
 
-  async getLesson(lessonId) {
-    return this.request(`/lessons/${encodeURIComponent(lessonId)}`);
-  }
+    async getLesson(lessonId) {
+        return this.request(`/lessons/${encodeURIComponent(lessonId)}`);
+    }
 
-  async getLessonProgress() {
-    return this.request('/lessons/progress');
-  }
+    async getLessonProgress() {
+        return this.request("/lessons/progress");
+    }
 
-  async saveLessonProgress(lessonId, progress) {
-    return this.request(`/lessons/${encodeURIComponent(lessonId)}/progress`, {
-      method: 'POST',
-      body: JSON.stringify(progress),
-    });
-  }
+    async saveLessonProgress(lessonId, progress) {
+        return this.request(
+            `/lessons/${encodeURIComponent(lessonId)}/progress`,
+            {
+                method: "POST",
+                body: JSON.stringify(progress),
+            },
+        );
+    }
 
-  // ── Opening explorer ─────────────────────────────────────────────────────
-  async getOpeningRoots() {
-    return this.request('/openings');
-  }
+    // ── Opening explorer ─────────────────────────────────────────────────────
+    async getOpeningRoots() {
+        return this.request("/openings");
+    }
 
-  async getOpeningChildren(fen) {
-    return this.request(`/openings/children?fen=${encodeURIComponent(fen)}`);
-  }
+    async getOpeningChildren(fen) {
+        return this.request(
+            `/openings/children?fen=${encodeURIComponent(fen)}`,
+        );
+    }
 
-  async searchOpenings(query) {
-    return this.request(`/openings/search?q=${encodeURIComponent(query)}`);
-  }
+    async searchOpenings(query) {
+        return this.request(`/openings/search?q=${encodeURIComponent(query)}`);
+    }
 
-  // ── Social layer: friends ─────────────────────────────────────────────────
-  async getFriends() {
-    return this.request('/social/friends');
-  }
+    // ── Social layer: friends ─────────────────────────────────────────────────
+    async getFriends() {
+        return this.request("/social/friends");
+    }
 
-  async addFriend(username) {
-    return this.request(`/social/friends/${encodeURIComponent(username)}`, {
-      method: 'POST',
-    });
-  }
+    async addFriend(username) {
+        return this.request(`/social/friends/${encodeURIComponent(username)}`, {
+            method: "POST",
+        });
+    }
 
-  async removeFriend(username) {
-    return this.request(`/social/friends/${encodeURIComponent(username)}`, {
-      method: 'DELETE',
-    });
-  }
+    async removeFriend(username) {
+        return this.request(`/social/friends/${encodeURIComponent(username)}`, {
+            method: "DELETE",
+        });
+    }
 
-  // ── Social layer: lobby / room chat ───────────────────────────────────────
-  async getMessages(room, limit = 50) {
-    return this.request(`/social/chat/${encodeURIComponent(room)}?limit=${limit}`);
-  }
+    // ── Social layer: lobby / room chat ───────────────────────────────────────
+    async getMessages(room, limit = 50) {
+        return this.request(
+            `/social/chat/${encodeURIComponent(room)}?limit=${limit}`,
+        );
+    }
 
-  async sendMessage(room, body) {
-    return this.request(`/social/chat/${encodeURIComponent(room)}`, {
-      method: 'POST',
-      body: JSON.stringify({ body }),
-    });
-  }
+    async sendMessage(room, body) {
+        return this.request(`/social/chat/${encodeURIComponent(room)}`, {
+            method: "POST",
+            body: JSON.stringify({ body }),
+        });
+    }
 
-  // ── Social layer: clubs ───────────────────────────────────────────────────
-  async getClubs() {
-    return this.request('/social/clubs');
-  }
+    // ── Social layer: clubs ───────────────────────────────────────────────────
+    async getClubs() {
+        return this.request("/social/clubs");
+    }
 
-  async createClub({ name, description, slug }) {
-    return this.request('/social/clubs', {
-      method: 'POST',
-      body: JSON.stringify({ name, description, slug }),
-    });
-  }
+    async createClub({ name, description, slug }) {
+        return this.request("/social/clubs", {
+            method: "POST",
+            body: JSON.stringify({ name, description, slug }),
+        });
+    }
 
-  async joinClub(slug) {
-    return this.request(`/social/clubs/${encodeURIComponent(slug)}/join`, {
-      method: 'POST',
-    });
-  }
+    async joinClub(slug) {
+        return this.request(`/social/clubs/${encodeURIComponent(slug)}/join`, {
+            method: "POST",
+        });
+    }
 
+    // ── Social layer: draw offers & presence ─────────────────────────────────
+    async offerDraw(gameId, playerId) {
+        return this.request(`/games/${encodeURIComponent(gameId)}/draw-offer`, {
+            method: "POST",
+            body: JSON.stringify({ playerId }),
+        });
+    }
+
+    async getDrawOffer(gameId) {
+        return this.request(`/games/${encodeURIComponent(gameId)}/draw-offer`);
+    }
+
+    async respondDraw(gameId, playerId, accept) {
+        return this.request(
+            `/games/${encodeURIComponent(gameId)}/draw-respond`,
+            {
+                method: "POST",
+                body: JSON.stringify({ playerId, accept }),
+            },
+        );
+    }
+
+    async presenceHeartbeat() {
+        return this.request("/social/presence/heartbeat", { method: "POST" });
+    }
+
+    async getPresence(userId) {
+        return this.request(`/social/presence/${encodeURIComponent(userId)}`);
+    }
+
+    async getUserProfile(username) {
+        return this.request(`/users/${encodeURIComponent(username)}`);
+    }
 }
 
 export const api = new ApiService();

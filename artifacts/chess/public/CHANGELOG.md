@@ -1,3 +1,15 @@
+[2026-09-12] - Polling migration code-review fixes
+
+- Draw offers are stored atomically (no double-offer race), only seated players can read a draw offer or a game's chat room, and a draw response no longer confirms a lost offer on storage failure.
+- Presence: a user is only marked offline after the last mounted consumer stops its heartbeat, and the in-memory heartbeat is respected when Redis has no entry.
+- Gameplay: polling continues until the server-confirmed terminal snapshot (winner, profile/Elo fetch) is applied; resign clears recovery state only after the server confirms; Leave is now available after draws.
+- Guests see chat disabled in online games (no chat polling, no send input).
+
+[2026-09-12] - Realtime over HTTP (replaces Socket.IO)
+
+- Online play no longer needs a Socket.IO server: draw offers/responses, resignations, in-game chat, and friend/opponent presence now run over the same HTTP polling as moves and game state, so realtime play works on Vercel.
+- In-game chat now persists to the server and survives a refresh; opponent online status and post-game rating change come from server polling.
+
 [2026-09-12] - Restore api-server build (fair-play SQL quoting)
 
 - Fixed the fair-play report insert and integrity-reports query in `chess-server/routes/games.js` where single-quoted SQL values (`'open'`) sat inside single-quoted JS strings, breaking the api-server esbuild bundle and every production deployment. Switched the JS delimiters to double quotes; SQL wording is unchanged.

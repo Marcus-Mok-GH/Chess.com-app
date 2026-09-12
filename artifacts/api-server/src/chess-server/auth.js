@@ -50,23 +50,6 @@ export async function requireSession(req, res, next) {
   }
 }
 
-export async function authenticateSocket(socket, next) {
-  const token = socket.handshake?.auth?.token || getSessionTokenFromHeaders(socket.handshake?.headers || {});
-  if (!token) return next(new Error('Authentication required'));
-  try {
-    const userId = await validateSession(token);
-    if (!userId) return next(new Error('Session expired'));
-    const result = await query('SELECT username FROM users WHERE id = $1', [userId]);
-    if (result.rowCount === 0) return next(new Error('User not found'));
-    socket.data.userId = String(userId);
-    socket.data.username = result.rows[0].username;
-    next();
-  } catch (error) {
-    console.error('[Socket] authentication failed:', error?.message || error);
-    next(new Error('Authentication unavailable'));
-  }
-}
-
 function hashToken(token) {
   return crypto.createHash('sha256').update(token).digest('hex');
 }

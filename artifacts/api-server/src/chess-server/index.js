@@ -1,6 +1,4 @@
 import express from 'express';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -19,11 +17,9 @@ import openingRoutes from './routes/openings.js';
 import lessonRoutes from './routes/lessons.js';
 import socialRoutes from './routes/social.js';
 import feedbackRoutes from './routes/feedback.js';
-import { registerSocketHandlers } from './socket/index.js';
 import { query } from './db.js';
 import { initDatabase } from './db/init.js';
 import { setDatabaseReady } from './db/status.js';
-import { authenticateSocket } from './auth.js';
 
 dotenv.config();
 
@@ -31,12 +27,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const httpServer = createServer(app);
-const io = new Server(httpServer, {
-  cors: corsOptions,
-});
-
-io.use(authenticateSocket);
 
 // Middleware
 app.use((_, res, next) => {
@@ -102,14 +92,8 @@ if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
   });
 }
 
-// Socket.IO
-io.on('connection', (socket) => {
-  try {
-    registerSocketHandlers(io, socket);
-  } catch (err) {
-    console.error('[Socket Error]:', err);
-  }
-});
+// Realtime features use HTTP polling (see routes/games.js draw endpoints,
+// routes/social.js presence heartbeat, routes/matchmaking.js queue).
 
 // Database connection check and cleanup job
 const checkDbConnection = async () => {
@@ -144,7 +128,7 @@ if (!process.env.VERCEL) {
   (async () => {
     await checkDbConnection();
     setInterval(cleanupStaleGames, 1000 * 60 * 30); // Every 30 minutes
-    httpServer.listen(PORT, () => {
+    app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
     });
   })();

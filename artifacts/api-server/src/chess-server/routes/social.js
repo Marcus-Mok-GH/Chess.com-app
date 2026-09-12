@@ -1,372 +1,508 @@
-import express from 'express';
-import { query } from '../db.js';
-import { errorResponse, handleRouteError } from '../middleware/errors.js';
-import { authenticatedUserId } from '../coachAuth.js';
-import { censorMessage } from '../socket/profanity.js';
-import { isOnline } from '../socket/presence.js';
+import express from "express";
+import { authenticatedUserId } from "../coachAuth.js";
+import { query } from "../db.js";
+import { errorResponse, handleRouteError } from "../middleware/errors.js";
+import { isOnline, markActive } from "../services/presenceService.js";
+import { censorMessage } from "../services/profanity.js";
+import { userIdFromPlayerId } from "../services/gameUtils.js";
 
 const router = express.Router();
 const CHAT_LIMIT = 50;
 const CHAT_ROOM_LIMIT = 500;
 
 async function resolveUserId(req, res) {
-  const userId = await authenticatedUserId(req).catch(() => null);
-  if (!userId) errorResponse(res, 401, 'Authentication required');
-  return userId;
+    const userId = await authenticatedUserId(req).catch(() => null);
+    if (!userId) errorResponse(res, 401, "Authentication required");
+    return userId;
 }
 
 function normalizeRoom(room) {
-  if (typeof room !== 'string') return '';
-  const trimmed = room.trim().toLowerCase();
-  if (!trimmed || trimmed.length > CHAT_ROOM_LIMIT) return '';
-  return trimmed.replace(/[^a-zA-Z0-9_-]/g, '_');
+    if (typeof room !== "string") return "";
+    const trimmed = room.trim().toLowerCase();
+    if (!trimmed || trimmed.length > CHAT_ROOM_LIMIT) return "";
+    return trimmed.replace(/[^a-zA-Z0-9_-]/g, "_");
 }
 function directRoomMembers(room) {
-  if (!room.startsWith('dm_')) return null;
-  const encoded = room.slice(3);
-  if (!encoded || !/^(?:[0-9a-f]{2})+$/.test(encoded)) return null;
-  const ids = Buffer.from(encoded, 'hex').toString('utf8').split(':');
-  return ids.length === 2 && ids.every(Boolean) ? ids : null;
+    if (!room.startsWith("dm_")) return null;
+    const encoded = room.slice(3);
+    if (!encoded || !/^(?:[0-9a-f]{2})+$/.test(encoded)) return null;
+    const ids = Buffer.from(encoded, "hex").toString("utf8").split(":");
+    return ids.length === 2 && ids.every(Boolean) ? ids : null;
+}
+
+// In-game chat uses the (lowercased) active game id as the room name. When a
+// room resolves to an active game, only its two seated players may read or
+// write it. Returns null when the room is not an active game id so callers keep
+// the existing open behavior for non-game rooms exactly as today.
+async function roomGameParticipation(userId, room) {
+    if (!userId || !room) return null;
+    const result = await query(
+        "SELECT game_id, white_player_id, black_player_id FROM active_games WHERE game_id = $1 LIMIT 1",
+        [room.toUpperCase()],
+    );
+    const game = result.rows[0];
+    if (!game) return null;
+    const whiteUid = userIdFromPlayerId(game.white_player_id);
+    const blackUid = userIdFromPlayerId(game.black_player_id);
+    const uid = String(userId);
+    return (
+        (whiteUid != null && String(whiteUid) === uid) ||
+        (blackUid != null && String(blackUid) === uid)
+    );
 }
 
 async function canAccessRoom(userId, room) {
-  const members = directRoomMembers(room);
-  if (!room.startsWith('dm_')) return true;
-  if (!members || !members.includes(String(userId))) return false;
-  const friendId = members.find((id) => id !== String(userId));
-  const result = await query("SELECT 1 FROM friends WHERE status = 'active' AND ((user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)) LIMIT 1", [userId, friendId]);
-  return result.rowCount > 0;
+    const members = directRoomMembers(room);
+    if (!room.startsWith("dm_")) {
+        const participation = await roomGameParticipation(userId, room);
+        if (participation !== null) return participation;
+        return true;
+    }
+    if (!members || !members.includes(String(userId))) return false;
+    const friendId = members.find((id) => id !== String(userId));
+    const result = await query(
+        "SELECT 1 FROM friends WHERE status = 'active' AND ((user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)) LIMIT 1",
+        [userId, friendId],
+    );
+    return result.rowCount > 0;
 }
 
 // --- Friends ---
-router.get('/friends', async (req, res) => {
-  try {
-    const userId = await resolveUserId(req, res);
-    if (!userId) return;
+router.get("/friends", async (req, res) => {
+    try {
+        const userId = await resolveUserId(req, res);
+        if (!userId) return;
 
-    const result = await query(
-      `SELECT f.user_id, f.friend_id, f.status, f.created_at, u.username
+        const result = await query(
+            `SELECT f.user_id, f.friend_id, f.status, f.created_at, u.username
        FROM friends f
        JOIN users u ON u.id = CASE WHEN f.user_id = $1 THEN f.friend_id ELSE f.user_id END
        WHERE f.user_id = $1 OR f.friend_id = $1
        ORDER BY u.username ASC`,
-      [userId]
-    );
+            [userId],
+        );
 
-    const friends = result.rows.map((row) => ({
-      id: row.user_id === userId ? row.friend_id : row.user_id,
-      username: row.username,
-      status: row.status,
-      online: isOnline(row.user_id === userId ? row.friend_id : row.user_id),
-      createdAt: row.created_at,
-    }));
+        const friends = await Promise.all(
+            result.rows.map(async (row) => {
+                const friendId =
+                    row.user_id === userId ? row.friend_id : row.user_id;
+                return {
+                    id: friendId,
+                    username: row.username,
+                    status: row.status,
+                    online: await isOnline(friendId),
+                    createdAt: row.created_at,
+                };
+            }),
+        );
 
-    res.json({ friends, count: friends.length });
-  } catch (error) {
-    handleRouteError(res, error, 'Failed to list friends');
-  }
+        res.json({ friends, count: friends.length });
+    } catch (error) {
+        handleRouteError(res, error, "Failed to list friends");
+    }
 });
 
-router.post('/friends/:username', async (req, res) => {
-  try {
-    const userId = await resolveUserId(req, res);
-    if (!userId) return;
-
-    const username = req.params.username;
-    if (!username || typeof username !== 'string') return errorResponse(res, 400, 'Username is required');
-
-    const target = await query('SELECT id FROM users WHERE LOWER(username) = LOWER($1)', [username.trim()]);
-    if (target.rowCount === 0) return errorResponse(res, 404, 'User not found');
-
-    const friendId = target.rows[0].id;
-    if (friendId === userId) return errorResponse(res, 400, 'You cannot add yourself as a friend');
-
-    // Store the friendship as a single normalized pair (lower id, higher id) so
-    // mutual adds cannot create two rows that would duplicate the friend in the
-    // list query below.
-    const ids = [String(userId), String(friendId)].sort();
-    const [rowUserId, rowFriendId] = ids;
-
+router.post("/friends/:username", async (req, res) => {
     try {
-      await query(
-        `INSERT INTO friends (user_id, friend_id, status)
+        const userId = await resolveUserId(req, res);
+        if (!userId) return;
+
+        const username = req.params.username;
+        if (!username || typeof username !== "string")
+            return errorResponse(res, 400, "Username is required");
+
+        const target = await query(
+            "SELECT id FROM users WHERE LOWER(username) = LOWER($1)",
+            [username.trim()],
+        );
+        if (target.rowCount === 0)
+            return errorResponse(res, 404, "User not found");
+
+        const friendId = target.rows[0].id;
+        if (friendId === userId)
+            return errorResponse(
+                res,
+                400,
+                "You cannot add yourself as a friend",
+            );
+
+        // Store the friendship as a single normalized pair (lower id, higher id) so
+        // mutual adds cannot create two rows that would duplicate the friend in the
+        // list query below.
+        const ids = [String(userId), String(friendId)].sort();
+        const [rowUserId, rowFriendId] = ids;
+
+        try {
+            await query(
+                `INSERT INTO friends (user_id, friend_id, status)
          VALUES ($1, $2, 'active')
          ON CONFLICT (user_id, friend_id) DO UPDATE SET status = 'active'`,
-        [rowUserId, rowFriendId]
-      );
-    } catch (error) {
-      if (error?.code === '23505' || error?.constraint === 'friends_not_self') {
-        return errorResponse(res, 409, 'Already friends');
-      }
-      throw error;
-    }
+                [rowUserId, rowFriendId],
+            );
+        } catch (error) {
+            if (
+                error?.code === "23505" ||
+                error?.constraint === "friends_not_self"
+            ) {
+                return errorResponse(res, 409, "Already friends");
+            }
+            throw error;
+        }
 
-    res.json({ success: true, friend: { id: friendId, username: username.trim() } });
-  } catch (error) {
-    handleRouteError(res, error, 'Failed to add friend');
-  }
+        res.json({
+            success: true,
+            friend: { id: friendId, username: username.trim() },
+        });
+    } catch (error) {
+        handleRouteError(res, error, "Failed to add friend");
+    }
 });
 
-router.delete('/friends/:username', async (req, res) => {
-  try {
-    const userId = await resolveUserId(req, res);
-    if (!userId) return;
+router.delete("/friends/:username", async (req, res) => {
+    try {
+        const userId = await resolveUserId(req, res);
+        if (!userId) return;
 
-    const username = req.params.username;
-    if (!username || typeof username !== 'string') return errorResponse(res, 400, 'Username is required');
+        const username = req.params.username;
+        if (!username || typeof username !== "string")
+            return errorResponse(res, 400, "Username is required");
 
-    const target = await query('SELECT id FROM users WHERE LOWER(username) = LOWER($1)', [username.trim()]);
-    if (target.rowCount === 0) return errorResponse(res, 404, 'User not found');
-    const friendId = target.rows[0].id;
+        const target = await query(
+            "SELECT id FROM users WHERE LOWER(username) = LOWER($1)",
+            [username.trim()],
+        );
+        if (target.rowCount === 0)
+            return errorResponse(res, 404, "User not found");
+        const friendId = target.rows[0].id;
 
-    await query(
-      `DELETE FROM friends WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)`,
-      [userId, friendId]
-    );
+        await query(
+            `DELETE FROM friends WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)`,
+            [userId, friendId],
+        );
 
-    res.json({ success: true });
-  } catch (error) {
-    handleRouteError(res, error, 'Failed to remove friend');
-  }
+        res.json({ success: true });
+    } catch (error) {
+        handleRouteError(res, error, "Failed to remove friend");
+    }
 });
 
 // --- Chat ---
-router.get('/chat/:room', async (req, res) => {
-  try {
-    const userId = await resolveUserId(req, res);
-    if (!userId) return;
+router.get("/chat/:room", async (req, res) => {
+    try {
+        const userId = await resolveUserId(req, res);
+        if (!userId) return;
 
-    const room = normalizeRoom(req.params.room);
-    if (!room) return errorResponse(res, 400, 'Invalid room');
+        const room = normalizeRoom(req.params.room);
+        if (!room) return errorResponse(res, 400, "Invalid room");
 
-    if (!(await canAccessRoom(userId, room))) return errorResponse(res, 403, 'You can only message your friends');
+        if (!(await canAccessRoom(userId, room)))
+            return errorResponse(res, 403, "You can only message your friends");
 
-    const limit = parseInt(req.query.limit, 10);
-    const safeLimit = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 200) : CHAT_LIMIT;
+        const limit = parseInt(req.query.limit, 10);
+        const safeLimit =
+            Number.isInteger(limit) && limit > 0
+                ? Math.min(limit, 200)
+                : CHAT_LIMIT;
 
-    const result = await query(
-      `SELECT id, user_id, username, room, body, created_at
+        const result = await query(
+            `SELECT id, user_id, username, room, body, created_at
        FROM chat_messages
        WHERE room = $1
        ORDER BY created_at DESC
        LIMIT $2`,
-      [room, safeLimit]
-    );
+            [room, safeLimit],
+        );
 
-    const messages = result.rows.reverse().map((row) => ({
-      id: row.id,
-      userId: row.user_id,
-      username: row.username || 'guest',
-      room: row.room,
-      body: row.body,
-      timestamp: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
-    }));
+        const messages = result.rows.reverse().map((row) => ({
+            id: row.id,
+            userId: row.user_id,
+            username: row.username || "guest",
+            room: row.room,
+            body: row.body,
+            timestamp:
+                row.created_at instanceof Date
+                    ? row.created_at.toISOString()
+                    : row.created_at,
+        }));
 
-    res.json({ room, messages });
-  } catch (error) {
-    handleRouteError(res, error, 'Failed to load messages');
-  }
+        res.json({ room, messages });
+    } catch (error) {
+        handleRouteError(res, error, "Failed to load messages");
+    }
 });
 
-router.post('/chat/:room', async (req, res) => {
-  try {
-    const userId = await resolveUserId(req, res);
-    if (!userId) return;
+router.post("/chat/:room", async (req, res) => {
+    try {
+        const userId = await resolveUserId(req, res);
+        if (!userId) return;
 
-    const room = normalizeRoom(req.params.room);
-    if (!room) return errorResponse(res, 400, 'Invalid room');
+        const room = normalizeRoom(req.params.room);
+        if (!room) return errorResponse(res, 400, "Invalid room");
 
-    if (!(await canAccessRoom(userId, room))) return errorResponse(res, 403, 'You can only message your friends');
+        if (!(await canAccessRoom(userId, room)))
+            return errorResponse(res, 403, "You can only message your friends");
 
-    const rawBody = req.body?.body;
-    if (typeof rawBody !== 'string' || rawBody.trim().length === 0) return errorResponse(res, 400, 'Message cannot be empty');
-    const body = rawBody.trim().slice(0, 500);
+        const rawBody = req.body?.body;
+        if (typeof rawBody !== "string" || rawBody.trim().length === 0)
+            return errorResponse(res, 400, "Message cannot be empty");
+        const body = rawBody.trim().slice(0, 500);
 
-    const userResult = await query('SELECT username FROM users WHERE id = $1', [userId]);
-    const username = userResult.rows[0]?.username || 'guest';
+        const userResult = await query(
+            "SELECT username FROM users WHERE id = $1",
+            [userId],
+        );
+        const username = userResult.rows[0]?.username || "guest";
 
-    const result = await query(
-      `INSERT INTO chat_messages (user_id, username, room, body)
+        const result = await query(
+            `INSERT INTO chat_messages (user_id, username, room, body)
        VALUES ($1, $2, $3, $4)
        RETURNING id, user_id, username, room, body, created_at`,
-      [userId, username, room, censorMessage(body)]
-    );
+            [userId, username, room, censorMessage(body)],
+        );
 
-    const message = result.rows[0];
-    res.json({
-      message: {
-        id: message.id,
-        userId: message.user_id,
-        username: message.username,
-        room: message.room,
-        body: message.body,
-        timestamp: message.created_at instanceof Date ? message.created_at.toISOString() : message.created_at,
-      },
-    });
-  } catch (error) {
-    handleRouteError(res, error, 'Failed to send message');
-  }
+        const message = result.rows[0];
+        res.json({
+            message: {
+                id: message.id,
+                userId: message.user_id,
+                username: message.username,
+                room: message.room,
+                body: message.body,
+                timestamp:
+                    message.created_at instanceof Date
+                        ? message.created_at.toISOString()
+                        : message.created_at,
+            },
+        });
+    } catch (error) {
+        handleRouteError(res, error, "Failed to send message");
+    }
+});
+
+// --- Presence (HTTP polling) ---
+// Mark the authenticated user as online. The client polls this every 60-90s;
+// each call refreshes the presence KV entry (TTL 90s) so a stopped client
+// naturally drops off the friends list.
+router.post("/presence/heartbeat", async (req, res) => {
+    try {
+        const userId = await resolveUserId(req, res);
+        if (!userId) return;
+
+        const userResult = await query(
+            "SELECT username FROM users WHERE id = $1",
+            [userId],
+        );
+        await markActive(userId, userResult.rows[0]?.username || "");
+
+        res.json({ success: true, online: true });
+    } catch (error) {
+        handleRouteError(res, error, "Failed to update presence");
+    }
+});
+
+router.get("/presence/:userId", async (req, res) => {
+    try {
+        const authUserId = await resolveUserId(req, res);
+        if (!authUserId) return;
+        const targetUserId = req.params.userId;
+        if (!targetUserId || typeof targetUserId !== "string")
+            return errorResponse(res, 400, "Invalid user ID");
+        const online = await isOnline(targetUserId);
+        res.json({ userId: targetUserId, online: Boolean(online) });
+    } catch (error) {
+        handleRouteError(res, error, "Failed to check presence");
+    }
 });
 
 // --- Clubs ---
-router.get('/clubs', async (req, res) => {
-  try {
-    const result = await query(
-      `SELECT c.id, c.slug, c.name, c.description, c.created_by, c.created_at,
+router.get("/clubs", async (req, res) => {
+    try {
+        const result = await query(
+            `SELECT c.id, c.slug, c.name, c.description, c.created_by, c.created_at,
               COUNT(cm.user_id) AS member_count
        FROM clubs c
        LEFT JOIN club_members cm ON cm.club_id = c.id
        GROUP BY c.id
-       ORDER BY c.created_at DESC`
-    );
+       ORDER BY c.created_at DESC`,
+        );
 
-    const clubs = result.rows.map((row) => ({
-      id: row.id,
-      slug: row.slug,
-      name: row.name,
-      description: row.description,
-      createdBy: row.created_by,
-      createdAt: row.created_at,
-      memberCount: parseInt(row.member_count, 10),
-    }));
+        const clubs = result.rows.map((row) => ({
+            id: row.id,
+            slug: row.slug,
+            name: row.name,
+            description: row.description,
+            createdBy: row.created_by,
+            createdAt: row.created_at,
+            memberCount: parseInt(row.member_count, 10),
+        }));
 
-    res.json({ clubs, count: clubs.length });
-  } catch (error) {
-    handleRouteError(res, error, 'Failed to list clubs');
-  }
+        res.json({ clubs, count: clubs.length });
+    } catch (error) {
+        handleRouteError(res, error, "Failed to list clubs");
+    }
 });
 
-router.post('/clubs', async (req, res) => {
-  try {
-    const userId = await resolveUserId(req, res);
-    if (!userId) return;
-
-    const { name, description, slug } = req.body || {};
-    if (typeof name !== 'string' || name.trim().length === 0) return errorResponse(res, 400, 'Club name is required');
-    if (typeof description !== 'string') return errorResponse(res, 400, 'Description is required');
-
-    const trimmedName = name.trim().slice(0, 80);
-    let slugValue = '';
-
-    if (typeof slug === 'string' && slug.trim()) {
-      slugValue = slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 50);
-    }
-    if (!slugValue) {
-      slugValue = trimmedName.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 50);
-    }
-    if (!slugValue) return errorResponse(res, 400, 'Could not generate a club slug');
-
+router.post("/clubs", async (req, res) => {
     try {
-      const result = await query(
-        `INSERT INTO clubs (slug, name, description, created_by)
+        const userId = await resolveUserId(req, res);
+        if (!userId) return;
+
+        const { name, description, slug } = req.body || {};
+        if (typeof name !== "string" || name.trim().length === 0)
+            return errorResponse(res, 400, "Club name is required");
+        if (typeof description !== "string")
+            return errorResponse(res, 400, "Description is required");
+
+        const trimmedName = name.trim().slice(0, 80);
+        let slugValue = "";
+
+        if (typeof slug === "string" && slug.trim()) {
+            slugValue = slug
+                .trim()
+                .toLowerCase()
+                .replace(/[^a-z0-9-]/g, "-")
+                .replace(/-+/g, "-")
+                .replace(/^-|-$/g, "")
+                .slice(0, 50);
+        }
+        if (!slugValue) {
+            slugValue = trimmedName
+                .toLowerCase()
+                .replace(/[^a-z0-9-]/g, "-")
+                .replace(/-+/g, "-")
+                .replace(/^-|-$/g, "")
+                .slice(0, 50);
+        }
+        if (!slugValue)
+            return errorResponse(res, 400, "Could not generate a club slug");
+
+        try {
+            const result = await query(
+                `INSERT INTO clubs (slug, name, description, created_by)
          VALUES ($1, $2, $3, $4)
          RETURNING id, slug, name, description, created_by, created_at`,
-        [slugValue, trimmedName, description.trim(), userId]
-      );
-      const club = result.rows[0];
-      await query(
-        `INSERT INTO club_members (club_id, user_id, role)
+                [slugValue, trimmedName, description.trim(), userId],
+            );
+            const club = result.rows[0];
+            await query(
+                `INSERT INTO club_members (club_id, user_id, role)
          VALUES ($1, $2, 'owner')`,
-        [club.id, userId]
-      );
-      res.status(201).json({ club });
+                [club.id, userId],
+            );
+            res.status(201).json({ club });
+        } catch (error) {
+            if (error?.code === "23505")
+                return errorResponse(
+                    res,
+                    409,
+                    "A club with that slug already exists",
+                );
+            throw error;
+        }
     } catch (error) {
-      if (error?.code === '23505') return errorResponse(res, 409, 'A club with that slug already exists');
-      throw error;
+        handleRouteError(res, error, "Failed to create club");
     }
-  } catch (error) {
-    handleRouteError(res, error, 'Failed to create club');
-  }
 });
 
-router.get('/clubs/:slug', async (req, res) => {
-  try {
-    const slug = req.params.slug;
-    const result = await query(
-      `SELECT c.id, c.slug, c.name, c.description, c.created_by, c.created_at,
+router.get("/clubs/:slug", async (req, res) => {
+    try {
+        const slug = req.params.slug;
+        const result = await query(
+            `SELECT c.id, c.slug, c.name, c.description, c.created_by, c.created_at,
               COUNT(cm.user_id) AS member_count
        FROM clubs c
        LEFT JOIN club_members cm ON cm.club_id = c.id
        WHERE c.slug = $1
        GROUP BY c.id`,
-      [slug]
-    );
+            [slug],
+        );
 
-    if (result.rowCount === 0) return errorResponse(res, 404, 'Club not found');
+        if (result.rowCount === 0)
+            return errorResponse(res, 404, "Club not found");
 
-    const club = result.rows[0];
-    const membersResult = await query(
-      `SELECT cm.club_id, cm.user_id, cm.role, cm.created_at, u.username
+        const club = result.rows[0];
+        const membersResult = await query(
+            `SELECT cm.club_id, cm.user_id, cm.role, cm.created_at, u.username
        FROM club_members cm
        JOIN users u ON u.id = cm.user_id
        WHERE cm.club_id = $1
        ORDER BY u.username ASC`,
-      [club.id]
-    );
+            [club.id],
+        );
 
-    res.json({
-      club: {
-        id: club.id,
-        slug: club.slug,
-        name: club.name,
-        description: club.description,
-        createdBy: club.created_by,
-        createdAt: club.created_at,
-        memberCount: parseInt(club.member_count, 10),
-      },
-      members: membersResult.rows.map((row) => ({
-        userId: row.user_id,
-        username: row.username,
-        role: row.role,
-      })),
-    });
-  } catch (error) {
-    handleRouteError(res, error, 'Failed to load club');
-  }
+        res.json({
+            club: {
+                id: club.id,
+                slug: club.slug,
+                name: club.name,
+                description: club.description,
+                createdBy: club.created_by,
+                createdAt: club.created_at,
+                memberCount: parseInt(club.member_count, 10),
+            },
+            members: membersResult.rows.map((row) => ({
+                userId: row.user_id,
+                username: row.username,
+                role: row.role,
+            })),
+        });
+    } catch (error) {
+        handleRouteError(res, error, "Failed to load club");
+    }
 });
 
-router.post('/clubs/:slug/join', async (req, res) => {
-  try {
-    const userId = await resolveUserId(req, res);
-    if (!userId) return;
-
-    const clubResult = await query('SELECT id, slug FROM clubs WHERE slug = $1', [req.params.slug]);
-    if (clubResult.rowCount === 0) return errorResponse(res, 404, 'Club not found');
-
+router.post("/clubs/:slug/join", async (req, res) => {
     try {
-      await query(
-        `INSERT INTO club_members (club_id, user_id, role)
+        const userId = await resolveUserId(req, res);
+        if (!userId) return;
+
+        const clubResult = await query(
+            "SELECT id, slug FROM clubs WHERE slug = $1",
+            [req.params.slug],
+        );
+        if (clubResult.rowCount === 0)
+            return errorResponse(res, 404, "Club not found");
+
+        try {
+            await query(
+                `INSERT INTO club_members (club_id, user_id, role)
          VALUES ($1, $2, 'member')
          ON CONFLICT (club_id, user_id) DO NOTHING`,
-        [clubResult.rows[0].id, userId]
-      );
-    } catch (error) {
-      if (error?.code === '23505') {
-        return res.json({ success: true, message: 'Already a member' });
-      }
-      throw error;
-    }
+                [clubResult.rows[0].id, userId],
+            );
+        } catch (error) {
+            if (error?.code === "23505") {
+                return res.json({ success: true, message: "Already a member" });
+            }
+            throw error;
+        }
 
-    res.json({ success: true, club: clubResult.rows[0] });
-  } catch (error) {
-    handleRouteError(res, error, 'Failed to join club');
-  }
+        res.json({ success: true, club: clubResult.rows[0] });
+    } catch (error) {
+        handleRouteError(res, error, "Failed to join club");
+    }
 });
 
-router.post('/clubs/:slug/leave', async (req, res) => {
-  try {
-    const userId = await resolveUserId(req, res);
-    if (!userId) return;
+router.post("/clubs/:slug/leave", async (req, res) => {
+    try {
+        const userId = await resolveUserId(req, res);
+        if (!userId) return;
 
-    const clubResult = await query('SELECT id FROM clubs WHERE slug = $1', [req.params.slug]);
-    if (clubResult.rowCount === 0) return errorResponse(res, 404, 'Club not found');
+        const clubResult = await query("SELECT id FROM clubs WHERE slug = $1", [
+            req.params.slug,
+        ]);
+        if (clubResult.rowCount === 0)
+            return errorResponse(res, 404, "Club not found");
 
-    await query('DELETE FROM club_members WHERE club_id = $1 AND user_id = $2', [clubResult.rows[0].id, userId]);
+        await query(
+            "DELETE FROM club_members WHERE club_id = $1 AND user_id = $2",
+            [clubResult.rows[0].id, userId],
+        );
 
-    res.json({ success: true });
-  } catch (error) {
-    handleRouteError(res, error, 'Failed to leave club');
-  }
+        res.json({ success: true });
+    } catch (error) {
+        handleRouteError(res, error, "Failed to leave club");
+    }
 });
 
 export default router;

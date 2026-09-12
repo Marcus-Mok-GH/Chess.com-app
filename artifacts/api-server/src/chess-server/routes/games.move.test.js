@@ -12,7 +12,7 @@ vi.mock('../auth.js', () => ({
   deleteSession: vi.fn(),
 }));
 
-vi.mock('../socket/utils.js', () => ({
+vi.mock('../services/gameUtils.js', () => ({
   userIdFromPlayerId: (pid) => {
     if (!pid || typeof pid !== 'string') return null;
     const m = pid.match(/^user_(\d+)/);
@@ -331,7 +331,7 @@ describe('POST /api/games/:gameId/end', () => {
     const res = await loopback(app, 'POST', '/api/games/GAME1/end',
       { playerId: 'user_2', result: 'draw', reason: 'agreement' });
     expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/socket draw flow|draw agreement/i);
+    expect(res.body.error).toMatch(/dedicated draw endpoints|draw endpoints/i);
   });
 
   it('rejects a false checkmate result', async () => {

@@ -1,14 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { GameService } from './game.js';
+import { GameService } from '../services/gameService.js';
 import { query } from '../db.js';
 
 vi.mock('../db.js', () => ({
   query: vi.fn(),
 }));
-
-const createIo = () => ({
-  to: vi.fn(() => ({ emit: vi.fn() })),
-});
 
 const calculateNewElo = (playerElo, opponentElo, score) => {
   const expectedScore = 1 / (1 + Math.pow(10, (opponentElo - playerElo) / 400));
@@ -21,7 +17,7 @@ describe('GameService.updatePlayerElos', () => {
   });
 
   it('updates ELO for both players when IDs are user_*', async () => {
-    const service = new GameService(createIo());
+    const service = new GameService();
     query.mockResolvedValue({ rows: [], rowCount: 1 });
 
     const game = {
@@ -51,7 +47,7 @@ describe('GameService.updatePlayerElos', () => {
   });
 
   it('skips updates when ELOs are missing', async () => {
-    const service = new GameService(createIo());
+    const service = new GameService();
 
     await service.updatePlayerElos({
       white_player_id: 'user_1',
@@ -64,7 +60,7 @@ describe('GameService.updatePlayerElos', () => {
   });
 
   it('skips updates when player IDs are not linked to users', async () => {
-    const service = new GameService(createIo());
+    const service = new GameService();
 
     await service.updatePlayerElos({
       white_player_id: 'guest_abc',
@@ -83,7 +79,7 @@ describe('GameService.endGame', () => {
   });
 
   it('stores numeric user IDs when persisting games', async () => {
-    const service = new GameService(createIo());
+    const service = new GameService();
 
     const gameRow = {
       game_id: 'GAME123',
@@ -117,7 +113,7 @@ describe('GameService.updateGameStateCAS', () => {
   });
 
   it('updates fen and increments move_count when expected count matches', async () => {
-    const service = new GameService(createIo());
+    const service = new GameService();
     const updatedGame = {
       game_id: 'GAME1', fen: 'new-fen', move_history: ['e4', 'e5'],
       move_count: 1, status: 'playing', game_mode: 'ranked',
@@ -140,7 +136,7 @@ describe('GameService.updateGameStateCAS', () => {
   });
 
   it('returns null when CAS condition fails (concurrent move)', async () => {
-    const service = new GameService(createIo());
+    const service = new GameService();
     query.mockResolvedValueOnce({ rows: [], rowCount: 0 });
 
     const result = await service.updateGameStateCAS('GAME1', 'stale-fen', ['e4'], 0);
@@ -150,7 +146,7 @@ describe('GameService.updateGameStateCAS', () => {
   });
 
   it('returns null when game status is not playing', async () => {
-    const service = new GameService(createIo());
+    const service = new GameService();
     query.mockResolvedValueOnce({ rows: [], rowCount: 0 });
 
     const result = await service.updateGameStateCAS('GAME1', 'new-fen', ['e4'], 5);

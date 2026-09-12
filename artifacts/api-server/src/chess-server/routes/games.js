@@ -3,11 +3,12 @@ import { query } from '../db.js';
 import crypto from 'crypto';
 import { Chess } from 'chess.js';
 import { errorResponse, handleRouteError } from '../middleware/errors.js';
-import { userIdFromPlayerId } from '../socket/utils.js';
-import { getGameService } from '../socket/gameService.js';
+import { userIdFromPlayerId } from '../services/gameUtils.js';
+import { getGameService } from '../services/gameService.js';
 import { getSessionToken, validateSession } from '../auth.js';
 import { getIntegrityReviews, isIntegrityReviewer, scheduleGameAnalysis, recordIntegrityDecision } from '../services/antiCheatService.js';
 import { getOnlineGameKv } from '../kv/onlineGameKv.js';
+import { getDrawOfferKv, DRAW_OFFER_STORAGE_ERROR } from '../kv/drawOfferKv.js';
 import { sanitizeFairPlaySignals, withFairPlayMetadata } from '../services/fairPlayTelemetry.js';
 
 const router = express.Router();
@@ -39,6 +40,25 @@ function replayStoredHistory(moveHistory) {
 // Generate a unique game code
 function generateGameCode() {
   return crypto.randomBytes(4).toString('hex').toUpperCase();
+}
+
+// Match a playerId against a game's seats. Prefers the exact seat string so two
+// sessions from the same account do not both resolve (same rule as /:gameId/move);
+// falls back to normalized user-id comparison for legacy games without
+// session-suffixed player ids.
+function seatedPlayerId(game, requestUid, playerId) {
+  if (!game || !playerId) return null;
+  let isWhite = String(game.white_player_id) === playerId;
+  let isBlack = String(game.black_player_id) === playerId;
+  if (!isWhite && !isBlack && requestUid != null) {
+    const whiteUid = userIdFromPlayerId(game.white_player_id);
+    const blackUid = userIdFromPlayerId(game.black_player_id);
+    isWhite = whiteUid != null && requestUid === whiteUid;
+    isBlack = blackUid != null && requestUid === blackUid;
+  }
+  if (isWhite) return game.white_player_id;
+  if (isBlack) return game.black_player_id;
+  return null;
 }
 
 // Integrity review endpoints are restricted to CHESS_REVIEW_ADMIN_IDS.
@@ -798,6 +818,113 @@ router.post('/resign-all-live', async (req, res) => {
     return handleRouteError(res, error, 'Failed to resign live games');
   }
 });
+router.post('/:gameId/draw-offer', async (req, res) => {
+  try {
+    const gameId = (req.params.gameId || '').toUpperCase();
+    const { playerId } = req.body || {};
+    if (!gameId || !playerId) return errorResponse(res, 400, 'Valid game ID and player ID are required');
+
+    const authUserId = await validateSession(getSessionToken(req));
+    const requestUid = userIdFromPlayerId(playerId);
+    if (authUserId == null || requestUid == null || String(authUserId) !== String(requestUid)) {
+      return errorResponse(res, 403, 'Session identity does not match player');
+    }
+
+    const activeResult = await query('SELECT * FROM active_games WHERE game_id = $1', [gameId]);
+    const game = activeResult.rows[0];
+    if (!game || game.status !== 'playing') return errorResponse(res, 404, 'Game not found or not active');
+
+    const seated = seatedPlayerId(game, requestUid, playerId);
+    if (!seated) return errorResponse(res, 403, 'Unauthorized — not your game');
+
+    const kv = getDrawOfferKv();
+    const created = await kv.createIfAbsent(gameId, { offeredBy: seated, createdAt: new Date().toISOString() });
+    if (created === DRAW_OFFER_STORAGE_ERROR) {
+      return errorResponse(res, 503, 'Draw offer could not be stored');
+    }
+    if (created) return errorResponse(res, 409, 'A draw offer already exists for this game');
+    return res.json({ success: true, offeredBy: seated });
+  } catch (error) {
+    return handleRouteError(res, error, 'Failed to offer draw');
+  }
+});
+
+// Read the current draw offer for a game. No side effects.
+router.get('/:gameId/draw-offer', async (req, res) => {
+  try {
+    const gameId = (req.params.gameId || '').toUpperCase();
+    if (!gameId) return errorResponse(res, 400, 'Game ID is required');
+
+    const authUserId = await validateSession(getSessionToken(req));
+    if (!authUserId) return errorResponse(res, 401, 'Authentication required');
+
+    const activeResult = await query('SELECT * FROM active_games WHERE game_id = $1', [gameId]);
+    const game = activeResult.rows[0];
+    if (!game || game.status !== 'playing') return errorResponse(res, 404, 'Game not found or not active');
+
+    const whiteUid = userIdFromPlayerId(game.white_player_id);
+    const blackUid = userIdFromPlayerId(game.black_player_id);
+    const isWhite = whiteUid != null && String(whiteUid) === String(authUserId);
+    const isBlack = blackUid != null && String(blackUid) === String(authUserId);
+    if (!isWhite && !isBlack) return errorResponse(res, 403, 'Unauthorized — not your game');
+
+    const offer = await getDrawOfferKv().get(gameId);
+    return res.json({ success: true, offer: offer || null });
+  } catch (error) {
+    return handleRouteError(res, error, 'Failed to get draw offer');
+  }
+});
+
+// Accept or decline a standing draw offer. On acceptance the game is ended as a
+// draw (status 'draw', never a resignation) with ELO applied as a draw by the
+// shared end-game service. The offer is removed from KV in both cases.
+router.post('/:gameId/draw-respond', async (req, res) => {
+  try {
+    const gameId = (req.params.gameId || '').toUpperCase();
+    const { playerId, accept } = req.body || {};
+    // `token` is accepted for legacy client compatibility but identity always
+    // resolves from the session (Bearer header or cookie), like every /api route.
+    if (!gameId || !playerId) return errorResponse(res, 400, 'Valid game ID and player ID are required');
+    if (typeof accept !== 'boolean') return errorResponse(res, 400, 'Draw response must be a boolean');
+
+    const authUserId = await validateSession(getSessionToken(req));
+    const requestUid = userIdFromPlayerId(playerId);
+    if (authUserId == null || requestUid == null || String(authUserId) !== String(requestUid)) {
+      return errorResponse(res, 403, 'Session identity does not match player');
+    }
+
+    const activeResult = await query('SELECT * FROM active_games WHERE game_id = $1', [gameId]);
+    const game = activeResult.rows[0];
+    if (!game || game.status !== 'playing') return errorResponse(res, 404, 'Game not found or not active');
+
+    const seated = seatedPlayerId(game, requestUid, playerId);
+    if (!seated) return errorResponse(res, 403, 'Unauthorized — not your game');
+
+    const kv = getDrawOfferKv();
+    const offer = await kv.get(gameId);
+    if (!offer) return errorResponse(res, 409, 'No active draw offer');
+    if (offer.offeredBy === seated) return errorResponse(res, 409, 'No active draw offer from your opponent');
+
+    if (accept === true) {
+      // Accept: end the game first, then clear the offer. endGame is the atomic
+      // gate here (UPDATE ... WHERE status = 'playing'), so at most one accept
+      // transition succeeds; the offer is destroyed only after a successful
+      // terminal transition and is left intact when endGame reports no playing row.
+      const endedGame = await getGameService().endGame(gameId, 'draw');
+      if (!endedGame) return errorResponse(res, 409, 'Game already ended');
+      await kv.del(gameId);
+      return res.json({ success: true, status: 'draw' });
+    }
+
+    // Decline: atomically consume the offer so exactly one decline succeeds.
+    const consumed = await kv.consumeIfMatches(gameId, offer.offeredBy);
+    if (!consumed) return errorResponse(res, 409, 'No active draw offer');
+    return res.json({ success: true, status: 'declined' });
+  } catch (error) {
+    return handleRouteError(res, error, 'Failed to respond to draw offer');
+  }
+});
+
 router.post('/:gameId/end', async (req, res) => {
   try {
     const gameId = (req.params.gameId || '').toUpperCase();
@@ -817,7 +944,7 @@ router.post('/:gameId/end', async (req, res) => {
       return errorResponse(res, 403, 'Session identity does not match player');
     }
     if (reason === 'draw' || reason === 'agreement') {
-      return errorResponse(res, 400, 'Use the socket draw flow for agreed draws');
+      return errorResponse(res, 400, 'Use the dedicated draw endpoints for agreed draws');
     }
 
     const activeResult = await query('SELECT * FROM active_games WHERE game_id = $1', [gameId]);
