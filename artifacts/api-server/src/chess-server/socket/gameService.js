@@ -85,7 +85,7 @@ export class GameService {
     try {
       const result = await query(
         `UPDATE active_games
-         SET fen = $1, move_history = $2, updated_at = CURRENT_TIMESTAMP
+         SET fen = $1, move_history = $2, move_count = COALESCE(array_length($2, 1), 0), updated_at = CURRENT_TIMESTAMP
          WHERE game_id = $3
          RETURNING *`,
         [fen, moveHistory, gameId]
@@ -206,7 +206,7 @@ export class GameService {
     // ELO calculation using standard formula
     const calculateNewElo = (playerElo, opponentElo, score) => {
       const expectedScore = 1 / (1 + Math.pow(10, (opponentElo - playerElo) / 400));
-      return Math.round(playerElo + 32 * (score - expectedScore));
+      return Math.max(100, Math.min(4000, Math.round(playerElo + 32 * (score - expectedScore))));
     };
 
     try {
