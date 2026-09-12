@@ -10,6 +10,19 @@ import { getGameService } from '../gameService.js';
 import { censorMessage } from '../profanity.js';
 import { getOnlineGameKv } from '../../kv/onlineGameKv.js';
 
+const drawOffers = new Map();
+const DRAW_OFFER_TTL_MS = 10 * 60 * 1000;
+
+function adjudicatePosition(chess) {
+  if (chess.isCheckmate()) return { result: chess.turn() === 'w' ? 'black' : 'white', reason: 'checkmate' };
+  if (chess.isStalemate()) return { result: 'draw', reason: 'stalemate' };
+  if (chess.isInsufficientMaterial()) return { result: 'draw', reason: 'insufficient_material' };
+  if (chess.isFivefoldRepetition?.()) return { result: 'draw', reason: 'fivefold_repetition' };
+  if (chess.isThreefoldRepetition?.()) return { result: 'draw', reason: 'threefold_repetition' };
+  if (chess.isDrawByFiftyMoves?.()) return { result: 'draw', reason: 'fifty_moves' };
+  return null;
+}
+
 const upsertMatchMoves = async ({ gameId, username, moveHistory, isWhite }) => {
   if (!gameId || !username || typeof isWhite !== 'boolean') return;
   const playerMoves = buildPlayerMoveHistory(moveHistory, isWhite);
@@ -147,11 +160,11 @@ export function setupGameHandlers(io, socket) {
     }
 
     const serverHistory = Array.isArray(game.move_history) ? game.move_history : [];
-    const expectedMoveCount = game.move_count || 0;
+    const expectedMoveCount = Number.isInteger(game.move_count) ? game.move_count : serverHistory.length;
     const clientMoveCount = moveHistory.length;
 
-    if (clientMoveCount !== serverHistory.length + 1) {
-      socket.emit('move_error', { gameId, message: 'Stale move: history out of sync' });
+    if (serverHistory.length > 500 || clientMoveCount !== serverHistory.length + 1) {
+      socket.emit('move_error', { gameId, message: 'Stale or oversized move history' });
       return;
     }
 
@@ -181,84 +194,40 @@ export function setupGameHandlers(io, socket) {
         return;
       }
 
-      const casResult = await service.updateGameStateCAS(gameId, chess.fen(), moveHistory, expectedMoveCount);
+      const canonicalMove = {
+        san: applied.san, from: applied.from, to: applied.to,
+        promotion: applied.promotion || null, captured: applied.captured || null,
+        color: applied.color, piece: applied.piece
+      };
+      const newHistory = [...serverHistory, JSON.stringify(canonicalMove)];
+      const casResult = await service.updateGameStateCAS(gameId, chess.fen(), newHistory, expectedMoveCount);
       if (!casResult) {
         socket.emit('move_error', { gameId, message: 'Stale move: state changed' });
         return;
       }
 
       const matchIdentity = resolveMatchMoveOwner(game, socket.id, playerId);
-      await upsertMatchMoves({
-        gameId,
-        username: matchIdentity.username,
-        moveHistory,
-        isWhite: matchIdentity.isWhite
-      });
+      await upsertMatchMoves({ gameId, username: matchIdentity.username, moveHistory: newHistory, isWhite: matchIdentity.isWhite });
 
-      socket.emit('move_ack', {
-        gameId,
-        fen: chess.fen(),
-        moveCount: expectedMoveCount + 1,
-        playerId,
-        timestamp: Date.now()
-      });
+      socket.emit('move_ack', { gameId, fen: chess.fen(), moveCount: expectedMoveCount + 1, playerId, lastMove: canonicalMove, timestamp: Date.now() });
+      io.to(gameId).emit('move_made', { gameId, fen: chess.fen(), lastMove: canonicalMove, moveHistory: newHistory, playerId, timestamp: Date.now() });
 
-      io.to(gameId).emit('move_made', {
-        gameId,
-        fen: chess.fen(),
-        lastMove,
-        moveHistory,
-        playerId,
-        timestamp: Date.now()
-      });
+      const outcome = adjudicatePosition(chess);
+      if (outcome) {
+        const endedGame = await service.endGame(gameId, outcome.result);
+        if (endedGame) {
+          drawOffers.delete(gameId);
+          io.to(gameId).emit('game_ended', { gameId, result: outcome.result, reason: outcome.reason, timestamp: Date.now() });
+        }
+      }
     } catch (error) {
       console.error('[Socket] Chess validation error:', error);
       socket.emit('move_error', { gameId, message: 'Invalid move' });
     }
   });
 
-  socket.on('game_over', async (data) => {
-    const { gameId, result, reason } = data || {};
-
-    if (!gameId || typeof gameId !== 'string') {
-      socket.emit('move_error', { message: 'Invalid game ID' });
-      return;
-    }
-
-    if (!result || !['white', 'black', 'draw'].includes(result)) {
-      socket.emit('move_error', { message: 'Invalid result' });
-      return;
-    }
-
-    if (!reason || typeof reason !== 'string') {
-      socket.emit('move_error', { message: 'Invalid reason' });
-      return;
-    }
-
-    const game = await service.getGame(gameId);
-
-    if (!game || game.status !== 'playing') {
-      socket.emit('game_error', { message: 'Game not found or not active' });
-      return;
-    }
-
-    const auth = verifyPlayerAuth(socket, game);
-    if (!auth.valid) {
-      socket.emit('move_error', { message: auth.error });
-      return;
-    }
-    const playerId = auth.playerId;
-
-    const endedGame = await service.endGame(gameId, result);
-    if (!endedGame) return;
-
-    io.to(gameId).emit('game_ended', {
-      gameId,
-      result,
-      reason,
-      timestamp: Date.now()
-    });
-  });
+  // Results are derived from the validated server position; client results are ignored.
+  socket.on('game_over', () => {});
 
   socket.on('resign_game', async (data) => {
     const { gameId } = data || {};
@@ -317,6 +286,7 @@ export function setupGameHandlers(io, socket) {
     }
     const playerId = auth.playerId;
 
+    drawOffers.set(gameId, { offeredBy: playerId, expiresAt: Date.now() + DRAW_OFFER_TTL_MS });
     socket.to(gameId).emit('draw_offered', {
       gameId,
       offeredBy: playerId,
@@ -346,22 +316,23 @@ export function setupGameHandlers(io, socket) {
     }
     const playerId = auth.playerId;
 
-    if (accepted) {
+    if (typeof accepted !== 'boolean') {
+      socket.emit('move_error', { gameId, message: 'Draw response must be boolean' });
+      return;
+    }
+    const offer = drawOffers.get(gameId);
+    if (!offer || offer.expiresAt < Date.now() || offer.offeredBy === playerId) {
+      drawOffers.delete(gameId);
+      socket.emit('move_error', { gameId, message: 'No active draw offer from your opponent' });
+      return;
+    }
+    drawOffers.delete(gameId);
+    if (accepted === true) {
       const endedGame = await service.endGame(gameId, 'draw');
       if (!endedGame) return;
-
-      io.to(gameId).emit('game_ended', {
-        gameId,
-        result: 'draw',
-        reason: 'agreement',
-        timestamp: Date.now()
-      });
+      io.to(gameId).emit('game_ended', { gameId, result: 'draw', reason: 'agreement', timestamp: Date.now() });
     } else {
-      io.to(gameId).emit('draw_declined', {
-        gameId,
-        declinedBy: playerId,
-        timestamp: Date.now()
-      });
+      io.to(gameId).emit('draw_declined', { gameId, declinedBy: playerId, timestamp: Date.now() });
     }
   });
 
@@ -432,7 +403,7 @@ export function setupGameHandlers(io, socket) {
     const nextWhiteSocketId = isWhitePlayer ? null : game.white_socket_id;
     const nextBlackSocketId = isBlackPlayer ? null : game.black_socket_id;
     const bothPlayersGone = !nextWhiteSocketId && !nextBlackSocketId;
-    const nextStatus = bothPlayersGone ? 'ended' : game.status;
+    const nextStatus = game.status;
 
     const updated = await query(
       `UPDATE active_games
@@ -446,18 +417,15 @@ export function setupGameHandlers(io, socket) {
     );
 
     if (updated.rows[0]) {
-      await service.persistGameSnapshot(
-        updated.rows[0],
-        null,
-        nextStatus === 'ended' ? 'completed' : nextStatus
-      );
-
-      if (bothPlayersGone || nextStatus === 'ended') {
-        const kv = getOnlineGameKv();
-        await kv.del(gameId);
+      if (bothPlayersGone) {
+        const outcome = adjudicatePosition(new Chess(updated.rows[0].fen));
+        const endedGame = await service.endGame(gameId, outcome?.result || 'draw');
+        drawOffers.delete(gameId);
+        if (endedGame) io.to(gameId).emit('game_ended', { gameId, result: outcome?.result || 'draw', reason: outcome?.reason || 'both_players_left', timestamp: Date.now() });
+      } else {
+        await service.persistGameSnapshot(updated.rows[0], null, nextStatus);
       }
     }
-
     socket.leave(gameId);
 
     socket.to(gameId).emit('player_left', {
