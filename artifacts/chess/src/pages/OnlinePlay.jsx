@@ -280,17 +280,18 @@ export default function OnlinePlay() {
             }
         };
 
+        const handleQueueDetails = (data) => {
+            if (data?.total !== undefined) setPlayersInQueue(data.total);
+        };
+
         pollingService.on("match_found", handleMatchFound);
         pollingService.on("matchmaking_error", handleMatchmakingError);
-        pollingService.on(
-            "queue_details",
-            (data) =>
-                data?.total !== undefined && setPlayersInQueue(data.total),
-        );
+        pollingService.on("queue_details", handleQueueDetails);
 
         return () => {
             pollingService.off("match_found", handleMatchFound);
             pollingService.off("matchmaking_error", handleMatchmakingError);
+            pollingService.off("queue_details", handleQueueDetails);
         };
     }, [
         view,

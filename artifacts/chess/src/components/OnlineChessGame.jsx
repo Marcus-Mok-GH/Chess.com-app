@@ -73,6 +73,12 @@ export default function OnlineChessGame({
     // authoritative version used by the move endpoint.
     const appliedMoveCountRef = useRef(moveHistory.length);
     const eloFetchedRef = useRef(false);
+    // Becomes true once the poll loop has applied a server-confirmed "ended"
+    // snapshot (winner, profile/Elo fetch, endReason). While false, polling
+    // continues even when the game has ended locally so the terminal player
+    // who set "ended" before api.endOnlineGame resolved still gets the
+    // terminal sync. Once synced, polling stops to match prior behavior.
+    const terminalSyncDoneRef = useRef(false);
     const chatTickRef = useRef(0);
     const presenceTickRef = useRef(0);
     const boardOrientation = playerColor || "white";
@@ -168,7 +174,11 @@ export default function OnlineChessGame({
         let inFlight = false;
         const intervalId = setInterval(async () => {
             if (cancelled || inFlight) return;
-            if (gameStatusRef.current === "ended") return;
+            if (
+                gameStatusRef.current === "ended" &&
+                terminalSyncDoneRef.current
+            )
+                return;
             inFlight = true;
             try {
                 const data = await api.getGameByCode(gameId);
@@ -218,6 +228,8 @@ export default function OnlineChessGame({
                     // endReason: set to result if draw; otherwise leave null (resign shows "X wins")
                     if (!endReason)
                         setEndReason(data.result === "draw" ? "draw" : null);
+                    // Terminal snapshot fully applied — stop polling.
+                    terminalSyncDoneRef.current = true;
                 } else if (
                     gameStatusRef.current !== "ended" &&
                     (data.status === "playing" || data.status === "in_progress")
@@ -241,8 +253,9 @@ export default function OnlineChessGame({
                     }
                 }
 
-                // Chat — every ~4 ticks (~6s)
-                if (tick % 4 === 0) {
+                // Chat — every ~4 ticks (~6s). Guests have no session and the
+                // server chat routes 401 without one, so skip for guests.
+                if (tick % 4 === 0 && user) {
                     try {
                         const myUid = playerId.split("_")[1];
                         const room = gameId.toLowerCase();
@@ -546,6 +559,7 @@ export default function OnlineChessGame({
                 }}
                 REACTIONS={REACTIONS}
                 handleSendReaction={(r) => {
+                    if (!user) return;
                     const room = gameId.toLowerCase();
                     api.sendMessage(room, r)
                         .then((res) => {
@@ -560,6 +574,7 @@ export default function OnlineChessGame({
                 }}
                 chatMessages={chatMessages}
                 handleSendMessage={(m) => {
+                    if (!user) return;
                     const room = gameId.toLowerCase();
                     api.sendMessage(room, m)
                         .then((res) => {
@@ -575,29 +590,31 @@ export default function OnlineChessGame({
                 playerId={playerId}
                 moveHistory={moveHistory}
                 gameStatus={gameStatus}
+                chatEnabled={Boolean(user)}
                 handleOfferDraw={() => {
                     api.offerDraw(gameId, playerId).catch((e) =>
                         setMoveError(e.message),
                     );
                 }}
-                handleResign={() => {
+                handleResign={async () => {
                     setDrawOffered(false);
                     const opponentColor =
                         playerColor === "white" ? "black" : "white";
-                    api.endOnlineGame({
-                        gameId,
-                        playerId,
-                        result: opponentColor,
-                        reason: "resignation",
-                        token: localStorage.getItem("chess_user_token"),
-                    }).catch((e) => setMoveError(e.message));
-                    clearOnlineSession();
-                    if (gameId) clearOnlineGameState(gameId);
+                    try {
+                        await api.endOnlineGame({
+                            gameId,
+                            playerId,
+                            result: opponentColor,
+                            reason: "resignation",
+                            token: localStorage.getItem("chess_user_token"),
+                        });
+                        clearOnlineSession();
+                        if (gameId) clearOnlineGameState(gameId);
+                    } catch (e) {
+                        setMoveError(e.message);
+                    }
                 }}
-                canLeave={
-                    gameStatus === "ended" &&
-                    (winner === "white" || winner === "black")
-                }
+                canLeave={gameStatus === "ended"}
                 onLeave={() => {
                     setDrawOffered(false);
                     clearOnlineSession();

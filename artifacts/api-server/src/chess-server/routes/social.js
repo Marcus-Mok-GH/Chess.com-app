@@ -4,6 +4,7 @@ import { query } from "../db.js";
 import { errorResponse, handleRouteError } from "../middleware/errors.js";
 import { isOnline, markActive } from "../services/presenceService.js";
 import { censorMessage } from "../services/profanity.js";
+import { userIdFromPlayerId } from "../services/gameUtils.js";
 
 const router = express.Router();
 const CHAT_LIMIT = 50;
@@ -29,9 +30,34 @@ function directRoomMembers(room) {
     return ids.length === 2 && ids.every(Boolean) ? ids : null;
 }
 
+// In-game chat uses the (lowercased) active game id as the room name. When a
+// room resolves to an active game, only its two seated players may read or
+// write it. Returns null when the room is not an active game id so callers keep
+// the existing open behavior for non-game rooms exactly as today.
+async function roomGameParticipation(userId, room) {
+    if (!userId || !room) return null;
+    const result = await query(
+        "SELECT game_id, white_player_id, black_player_id FROM active_games WHERE game_id = $1 LIMIT 1",
+        [room.toUpperCase()],
+    );
+    const game = result.rows[0];
+    if (!game) return null;
+    const whiteUid = userIdFromPlayerId(game.white_player_id);
+    const blackUid = userIdFromPlayerId(game.black_player_id);
+    const uid = String(userId);
+    return (
+        (whiteUid != null && String(whiteUid) === uid) ||
+        (blackUid != null && String(blackUid) === uid)
+    );
+}
+
 async function canAccessRoom(userId, room) {
     const members = directRoomMembers(room);
-    if (!room.startsWith("dm_")) return true;
+    if (!room.startsWith("dm_")) {
+        const participation = await roomGameParticipation(userId, room);
+        if (participation !== null) return participation;
+        return true;
+    }
     if (!members || !members.includes(String(userId))) return false;
     const friendId = members.find((id) => id !== String(userId));
     const result = await query(

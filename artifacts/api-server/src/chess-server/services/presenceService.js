@@ -62,7 +62,11 @@ export class PresenceStore {
     if (this.enabled) {
       try {
         const raw = await this._redis.get(buildKey(userId));
-        return Boolean(normalizePresence(raw));
+        // A successful GET that holds no valid entry (e.g. a failed markActive
+        // fell back to the in-memory store) must still check memory before
+        // reporting offline. A valid Redis entry short-circuits so an expired
+        // presence is never resurrected by a stale memory copy.
+        return Boolean(normalizePresence(raw)) || this._isOnlineInMemory(userId);
       } catch (err) {
         console.error('[Presence] isOnline failed (non-fatal):', err?.message);
         return this._isOnlineInMemory(userId);

@@ -28,6 +28,7 @@ vi.mock('../kv/onlineGameKv.js', () => ({
 
 vi.mock('../kv/drawOfferKv.js', () => ({
   getDrawOfferKv: vi.fn(),
+  DRAW_OFFER_STORAGE_ERROR: Symbol('DRAW_OFFER_STORAGE_ERROR'),
 }));
 
 vi.mock('../services/gameService.js', () => ({
@@ -38,7 +39,7 @@ const START_FEN = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1';
 
 import { query } from '../db.js';
 import { validateSession } from '../auth.js';
-import { getDrawOfferKv } from '../kv/drawOfferKv.js';
+import { getDrawOfferKv, DRAW_OFFER_STORAGE_ERROR } from '../kv/drawOfferKv.js';
 import { getGameService } from '../services/gameService.js';
 
 let gameRoutes;
@@ -109,6 +110,8 @@ beforeEach(async () => {
     get: vi.fn().mockResolvedValue(null),
     set: vi.fn().mockResolvedValue(undefined),
     del: vi.fn().mockResolvedValue(undefined),
+    createIfAbsent: vi.fn().mockResolvedValue(null),
+    consumeIfMatches: vi.fn().mockResolvedValue({ offeredBy: 'user_2', createdAt: new Date().toISOString() }),
   };
   getDrawOfferKv.mockReturnValue(mockOfferKv);
   mockGameService = {
@@ -161,13 +164,23 @@ describe('POST /api/games/:gameId/draw-offer', () => {
     const app = buildApp();
     app.use('/api/games', gameRoutes);
     query.mockResolvedValueOnce({ rows: [mockActiveGame()] });
-    mockOfferKv.get.mockResolvedValueOnce({
+    mockOfferKv.createIfAbsent.mockResolvedValueOnce({
       offeredBy: 'user_1',
       createdAt: new Date().toISOString(),
     });
 
     const res = await loopback(app, 'POST', '/api/games/GAME1/draw-offer', { playerId: 'user_2' });
     expect(res.status).toBe(409);
+  });
+
+  it('reports 503 when the offer cannot be stored', async () => {
+    const app = buildApp();
+    app.use('/api/games', gameRoutes);
+    query.mockResolvedValueOnce({ rows: [mockActiveGame()] });
+    mockOfferKv.createIfAbsent.mockResolvedValueOnce(DRAW_OFFER_STORAGE_ERROR);
+
+    const res = await loopback(app, 'POST', '/api/games/GAME1/draw-offer', { playerId: 'user_2' });
+    expect(res.status).toBe(503);
   });
 
   it('stores a draw offer and returns the offering player', async () => {
@@ -178,7 +191,7 @@ describe('POST /api/games/:gameId/draw-offer', () => {
     const res = await loopback(app, 'POST', '/api/games/GAME1/draw-offer', { playerId: 'user_2' });
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ success: true, offeredBy: 'user_2' });
-    expect(mockOfferKv.set).toHaveBeenCalledWith(
+    expect(mockOfferKv.createIfAbsent).toHaveBeenCalledWith(
       'GAME1',
       expect.objectContaining({ offeredBy: 'user_2', createdAt: expect.any(String) })
     );
@@ -198,6 +211,7 @@ describe('GET /api/games/:gameId/draw-offer', () => {
   it('returns the current offer', async () => {
     const app = buildApp();
     app.use('/api/games', gameRoutes);
+    query.mockResolvedValueOnce({ rows: [mockActiveGame()] });
     mockOfferKv.get.mockResolvedValueOnce({ offeredBy: 'user_1', createdAt: '2026-01-01T00:00:00Z' });
 
     const res = await loopback(app, 'GET', '/api/games/GAME1/draw-offer');
@@ -208,9 +222,30 @@ describe('GET /api/games/:gameId/draw-offer', () => {
     });
   });
 
+  it('returns 403 when the requester is not a participant', async () => {
+    const app = buildApp();
+    app.use('/api/games', gameRoutes);
+    query.mockResolvedValueOnce({ rows: [mockActiveGame()] });
+    validateSession.mockResolvedValue(9);
+
+    const res = await loopback(app, 'GET', '/api/games/GAME1/draw-offer');
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/your game|not your game/i);
+  });
+
+  it('returns 404 when the game is not active', async () => {
+    const app = buildApp();
+    app.use('/api/games', gameRoutes);
+    query.mockResolvedValueOnce({ rows: [mockActiveGame({ status: 'ended' })] });
+
+    const res = await loopback(app, 'GET', '/api/games/GAME1/draw-offer');
+    expect(res.status).toBe(404);
+  });
+
   it('returns null when no offer exists', async () => {
     const app = buildApp();
     app.use('/api/games', gameRoutes);
+    query.mockResolvedValueOnce({ rows: [mockActiveGame()] });
 
     const res = await loopback(app, 'GET', '/api/games/GAME1/draw-offer');
     expect(res.status).toBe(200);
@@ -288,6 +323,22 @@ describe('POST /api/games/:gameId/draw-respond', () => {
     expect(res.body).toEqual({ success: true, status: 'draw' });
     expect(mockGameService.endGame).toHaveBeenCalledWith('GAME1', 'draw');
     expect(mockOfferKv.del).toHaveBeenCalledWith('GAME1');
+    expect(mockGameService.endGame.mock.invocationCallOrder[0])
+      .toBeLessThan(mockOfferKv.del.mock.invocationCallOrder[0]);
+  });
+
+  it('does not clear the offer when accepting fails because the game already ended', async () => {
+    const app = buildApp();
+    app.use('/api/games', gameRoutes);
+    query.mockResolvedValueOnce({ rows: [mockActiveGame()] });
+    mockOfferKv.get.mockResolvedValueOnce({ offeredBy: 'user_2', createdAt: new Date().toISOString() });
+    mockGameService.endGame.mockResolvedValueOnce(null);
+
+    validateSession.mockResolvedValue(1);
+    const res = await loopback(app, 'POST', '/api/games/GAME1/draw-respond', { playerId: 'user_1', accept: true });
+
+    expect(res.status).toBe(409);
+    expect(mockOfferKv.del).not.toHaveBeenCalled();
   });
 
   it('declines the offer and clears it without ending the game', async () => {
@@ -295,6 +346,7 @@ describe('POST /api/games/:gameId/draw-respond', () => {
     app.use('/api/games', gameRoutes);
     query.mockResolvedValueOnce({ rows: [mockActiveGame()] });
     mockOfferKv.get.mockResolvedValueOnce({ offeredBy: 'user_2', createdAt: new Date().toISOString() });
+    mockOfferKv.consumeIfMatches.mockResolvedValueOnce({ offeredBy: 'user_2', createdAt: new Date().toISOString() });
 
     validateSession.mockResolvedValue(1);
     const res = await loopback(app, 'POST', '/api/games/GAME1/draw-respond', { playerId: 'user_1', accept: false });
@@ -302,6 +354,21 @@ describe('POST /api/games/:gameId/draw-respond', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ success: true, status: 'declined' });
     expect(mockGameService.endGame).not.toHaveBeenCalled();
-    expect(mockOfferKv.del).toHaveBeenCalledWith('GAME1');
+    expect(mockOfferKv.consumeIfMatches).toHaveBeenCalledWith('GAME1', 'user_2');
+    expect(mockOfferKv.del).not.toHaveBeenCalled();
+  });
+
+  it('returns 409 when the offer was already consumed by a concurrent reply', async () => {
+    const app = buildApp();
+    app.use('/api/games', gameRoutes);
+    query.mockResolvedValueOnce({ rows: [mockActiveGame()] });
+    mockOfferKv.get.mockResolvedValueOnce({ offeredBy: 'user_2', createdAt: new Date().toISOString() });
+    mockOfferKv.consumeIfMatches.mockResolvedValueOnce(null);
+
+    validateSession.mockResolvedValue(1);
+    const res = await loopback(app, 'POST', '/api/games/GAME1/draw-respond', { playerId: 'user_1', accept: false });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/offer/i);
   });
 });

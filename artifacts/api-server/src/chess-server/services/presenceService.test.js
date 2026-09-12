@@ -58,6 +58,24 @@ describe('PresenceStore', () => {
     vi.useRealTimers();
   });
 
+  it('reports online from memory when Redis set failed and a later GET returns null', async () => {
+    const redis = createMockRedis();
+    redis.set.mockRejectedValueOnce(new Error('redis unavailable'));
+    redis.get.mockResolvedValue(null);
+    const store = new PresenceStore(redis, TTL_SECONDS);
+
+    await store.markActive('user1', 'alice');
+    expect(await store.isOnline('user1')).toBe(true);
+  });
+
+  it('prefers a valid Redis entry over the in-memory fallback', async () => {
+    const redis = createMockRedis();
+    const store = new PresenceStore(redis, TTL_SECONDS);
+    await store.markActive('user1', 'alice');
+    expect(await store.isOnline('user1')).toBe(true);
+    expect(redis.get).toHaveBeenCalledWith('presence:user1');
+  });
+
   it('lists only online members', async () => {
     const store = new PresenceStore(null, TTL_SECONDS);
     await store.markActive('u1', 'a');

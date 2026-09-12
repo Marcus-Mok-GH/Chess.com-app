@@ -8,7 +8,7 @@ import { getGameService } from '../services/gameService.js';
 import { getSessionToken, validateSession } from '../auth.js';
 import { getIntegrityReviews, isIntegrityReviewer, scheduleGameAnalysis, recordIntegrityDecision } from '../services/antiCheatService.js';
 import { getOnlineGameKv } from '../kv/onlineGameKv.js';
-import { getDrawOfferKv } from '../kv/drawOfferKv.js';
+import { getDrawOfferKv, DRAW_OFFER_STORAGE_ERROR } from '../kv/drawOfferKv.js';
 import { sanitizeFairPlaySignals, withFairPlayMetadata } from '../services/fairPlayTelemetry.js';
 
 const router = express.Router();
@@ -838,10 +838,11 @@ router.post('/:gameId/draw-offer', async (req, res) => {
     if (!seated) return errorResponse(res, 403, 'Unauthorized — not your game');
 
     const kv = getDrawOfferKv();
-    const existing = await kv.get(gameId);
-    if (existing) return errorResponse(res, 409, 'A draw offer already exists for this game');
-
-    await kv.set(gameId, { offeredBy: seated, createdAt: new Date().toISOString() });
+    const created = await kv.createIfAbsent(gameId, { offeredBy: seated, createdAt: new Date().toISOString() });
+    if (created === DRAW_OFFER_STORAGE_ERROR) {
+      return errorResponse(res, 503, 'Draw offer could not be stored');
+    }
+    if (created) return errorResponse(res, 409, 'A draw offer already exists for this game');
     return res.json({ success: true, offeredBy: seated });
   } catch (error) {
     return handleRouteError(res, error, 'Failed to offer draw');
@@ -856,6 +857,16 @@ router.get('/:gameId/draw-offer', async (req, res) => {
 
     const authUserId = await validateSession(getSessionToken(req));
     if (!authUserId) return errorResponse(res, 401, 'Authentication required');
+
+    const activeResult = await query('SELECT * FROM active_games WHERE game_id = $1', [gameId]);
+    const game = activeResult.rows[0];
+    if (!game || game.status !== 'playing') return errorResponse(res, 404, 'Game not found or not active');
+
+    const whiteUid = userIdFromPlayerId(game.white_player_id);
+    const blackUid = userIdFromPlayerId(game.black_player_id);
+    const isWhite = whiteUid != null && String(whiteUid) === String(authUserId);
+    const isBlack = blackUid != null && String(blackUid) === String(authUserId);
+    if (!isWhite && !isBlack) return errorResponse(res, 403, 'Unauthorized — not your game');
 
     const offer = await getDrawOfferKv().get(gameId);
     return res.json({ success: true, offer: offer || null });
@@ -894,13 +905,20 @@ router.post('/:gameId/draw-respond', async (req, res) => {
     if (!offer) return errorResponse(res, 409, 'No active draw offer');
     if (offer.offeredBy === seated) return errorResponse(res, 409, 'No active draw offer from your opponent');
 
-    await kv.del(gameId);
-
     if (accept === true) {
+      // Accept: end the game first, then clear the offer. endGame is the atomic
+      // gate here (UPDATE ... WHERE status = 'playing'), so at most one accept
+      // transition succeeds; the offer is destroyed only after a successful
+      // terminal transition and is left intact when endGame reports no playing row.
       const endedGame = await getGameService().endGame(gameId, 'draw');
       if (!endedGame) return errorResponse(res, 409, 'Game already ended');
+      await kv.del(gameId);
       return res.json({ success: true, status: 'draw' });
     }
+
+    // Decline: atomically consume the offer so exactly one decline succeeds.
+    const consumed = await kv.consumeIfMatches(gameId, offer.offeredBy);
+    if (!consumed) return errorResponse(res, 409, 'No active draw offer');
     return res.json({ success: true, status: 'declined' });
   } catch (error) {
     return handleRouteError(res, error, 'Failed to respond to draw offer');

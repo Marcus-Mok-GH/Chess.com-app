@@ -20,6 +20,10 @@ export function useMatchmaking(user, isLoggedIn, settings) {
     // Incremented on every start/cancel so stale match_found callbacks
     // arriving after a cancel are ignored.
     const generationRef = useRef(0);
+    // Tracks the generation of the most recent startMatchmaking() call. Used
+    // to decide whether it is safe to clean up a stale join that resolved
+    // after the generation moved on.
+    const lastJoinGenRef = useRef(0);
 
     const clearMatchmakingTimers = useCallback(() => {
         if (searchTimeInterval.current) {
@@ -52,6 +56,7 @@ export function useMatchmaking(user, isLoggedIn, settings) {
 
     const startMatchmaking = useCallback(async () => {
         const gen = ++generationRef.current;
+        lastJoinGenRef.current = gen;
         setMatchmakingTransport("polling");
         setError("");
         setSearchTime(0);
@@ -75,8 +80,19 @@ export function useMatchmaking(user, isLoggedIn, settings) {
             currentElo,
             true,
         );
-        // If generation changed while we were awaiting, user already cancelled
-        if (gen !== generationRef.current) return false;
+        // If generation changed while we were awaiting, user already cancelled.
+        // The server keys matchmaking_queue rows on the authenticated user (one
+        // row per user) and its leave route cannot scope to a specific client
+        // playerId, so blindly calling leaveMatchmaking here could delete a
+        // newer generation's row. Only clean up this stale join when no newer
+        // join was started after it — otherwise leave the row to be replaced by
+        // the newer join's insert.
+        if (gen !== generationRef.current) {
+            if (lastJoinGenRef.current === gen) {
+                pollingService.leaveMatchmaking(newPlayerId).catch(() => {});
+            }
+            return false;
+        }
 
         if (joinResult?.playerId)
             activePlayerIdRef.current = joinResult.playerId;

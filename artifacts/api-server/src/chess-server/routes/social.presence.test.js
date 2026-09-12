@@ -122,3 +122,78 @@ describe("GET /api/social/presence/:userId", () => {
         expect(isOnline).toHaveBeenCalledWith("user_1");
     });
 });
+
+describe("chat room authorization", () => {
+    it("allows a game participant to read an active game room", async () => {
+        const app = buildApp();
+        app.use("/api/social", socialRoutes);
+        query
+            .mockResolvedValueOnce({
+                rows: [{ game_id: "GAME1", white_player_id: "user_2", black_player_id: "user_3" }],
+            })
+            .mockResolvedValueOnce({ rows: [] });
+
+        const res = await loopback(app, "GET", "/api/social/chat/game1");
+        expect(res.status).toBe(200);
+        expect(res.body.room).toBe("game1");
+        expect(res.body.messages).toEqual([]);
+    });
+
+    it("allows a game participant to post to an active game room", async () => {
+        const app = buildApp();
+        app.use("/api/social", socialRoutes);
+        query
+            .mockResolvedValueOnce({
+                rows: [{ game_id: "GAME1", white_player_id: "user_2", black_player_id: "user_3" }],
+            })
+            .mockResolvedValueOnce({ rows: [{ username: "alice" }] })
+            .mockResolvedValueOnce({
+                rows: [{ id: 1, user_id: 2, username: "alice", room: "game1", body: "hi", created_at: new Date() }],
+            });
+
+        const res = await loopback(app, "POST", "/api/social/chat/game1", { body: "hi" });
+        expect(res.status).toBe(200);
+        expect(res.body.message.body).toBe("hi");
+    });
+
+    it("rejects a non-participant reading an active game room", async () => {
+        const app = buildApp();
+        app.use("/api/social", socialRoutes);
+        authenticatedUserId.mockResolvedValueOnce(99);
+        query.mockResolvedValueOnce({
+            rows: [{ game_id: "GAME1", white_player_id: "user_2", black_player_id: "user_3" }],
+        });
+
+        const res = await loopback(app, "GET", "/api/social/chat/game1");
+        expect(res.status).toBe(403);
+        expect(res.body.error).toMatch(/friends/i);
+    });
+
+    it("rejects a non-participant posting to an active game room", async () => {
+        const app = buildApp();
+        app.use("/api/social", socialRoutes);
+        authenticatedUserId.mockResolvedValueOnce(99);
+        query.mockResolvedValueOnce({
+            rows: [{ game_id: "GAME1", white_player_id: "user_2", black_player_id: "user_3" }],
+        });
+
+        const res = await loopback(app, "POST", "/api/social/chat/game1", { body: "hi" });
+        expect(res.status).toBe(403);
+        expect(res.body.error).toMatch(/friends/i);
+    });
+
+    it("keeps non-game rooms open (existing behavior)", async () => {
+        const app = buildApp();
+        app.use("/api/social", socialRoutes);
+        query
+            .mockResolvedValueOnce({ rows: [] })
+            .mockResolvedValueOnce({ rows: [{ username: "alice" }] })
+            .mockResolvedValueOnce({
+                rows: [{ id: 1, user_id: 2, username: "alice", room: "lobby", body: "hi", created_at: new Date() }],
+            });
+
+        const res = await loopback(app, "POST", "/api/social/chat/lobby", { body: "hi" });
+        expect(res.status).toBe(200);
+        expect(res.body.message.room).toBe("lobby");
+    });
+});
