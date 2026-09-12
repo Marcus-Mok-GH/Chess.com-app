@@ -35,6 +35,7 @@ function createMockSocket(id = 'socket-1') {
   const handlers = {};
   return {
     id,
+    data: { userId: 'user_1' },
     emitted,
     on: vi.fn((event, cb) => { handlers[event] = cb; }),
     join: vi.fn(),
@@ -85,11 +86,15 @@ describe('make_move handler — move_error includes gameId', () => {
   });
 
   it('includes gameId on invalid player ID validation', async () => {
+    mockGetGame.mockResolvedValue({ ...VALID_GAME });
+    const { verifyPlayerAuth } = await import('../utils.js');
+    verifyPlayerAuth.mockReturnValue({ valid: false, error: 'Invalid player' });
+
     const socket = createMockSocket();
     const io = createMockIo();
     setupGameHandlers(io, socket);
 
-    socket._trigger('make_move', { gameId: 'GAME1', playerId: '', moveHistory: ['e4'] });
+    await socket._trigger('make_move', { gameId: 'GAME1', playerId: '', moveHistory: ['e4'] });
 
     const err = socket.emitted.find((e) => e.event === 'move_error');
     expect(err).toBeDefined();

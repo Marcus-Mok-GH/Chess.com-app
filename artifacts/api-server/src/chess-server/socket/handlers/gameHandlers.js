@@ -134,7 +134,7 @@ export function setupGameHandlers(io, socket) {
       return;
     }
 
-    console.log(`[Socket] Authenticated move request in game ${gameId} by ${socket.data.userId}`);
+    console.log(`[Socket] Authenticated move request in game ${gameId} by ${socket.data?.userId}`);
 
     const game = await service.getGame(gameId);
 
