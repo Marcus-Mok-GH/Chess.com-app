@@ -15,6 +15,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { Chess } from "chess.js";
 
 const _require = createRequire(import.meta.url);
 const _dirname =
@@ -85,6 +86,8 @@ export function runEngine(fen, options = {}) {
   } = options;
 
   return new Promise((resolve, reject) => {
+    if (typeof fen !== "string" || /[\r\n]/.test(fen)) return reject(new Error("Invalid FEN."));
+    try { new Chess(fen); } catch { return reject(new Error("Invalid FEN.")); }
     if (!isStockfishConfigured()) {
       return reject(new Error("Stockfish binary or worker script not found."));
     }
@@ -160,6 +163,8 @@ export function runEngine(fen, options = {}) {
       }
     });
 
+    child.stdin.on("error", (err) => settle(() => reject(err)));
+
     child.stderr.on("data", (data) => {
       console.error("[Stockfish Worker]", data.toString().trim());
     });
@@ -178,14 +183,22 @@ export function runEngine(fen, options = {}) {
       `position fen ${fen}`,
     ];
 
-    if (multiPv) commands.push(`setoption name MultiPV value 500`);
+    if (multiPv) {
+      const multiPvCount = Number.isFinite(Number(multiPv)) ? Number(multiPv) : 3;
+      commands.push(`setoption name MultiPV value ${Math.min(Math.max(Math.trunc(multiPvCount), 2), 5)}`);
+    }
     let goCmd;
     if (movetime) goCmd = `go movetime ${movetime}`;
     else if (nodes) goCmd = `go nodes ${nodes}`;
     else goCmd = `go depth ${Math.min(Math.max(depth, 1), 20)}`;
     commands.push(goCmd, "quit");
 
-    child.stdin.write(commands.join("\n") + "\n");
+    try {
+      if (!child.stdin.writable) return settle(() => reject(new Error("Engine stdin is not writable.")));
+      child.stdin.end(commands.join("\n") + "\n");
+    } catch (error) {
+      settle(() => reject(error));
+    }
   });
 }
 
