@@ -13,7 +13,8 @@ export default function GameUI({
   removeAnimation, showVictory, gameId, opponentStatus, eloChange,
   moveError, getStatusMessage, drawOffered, handleRespondDraw,
   REACTIONS, handleSendReaction, moveHistory, gameStatus,
-  capturedPieces, chatMessages, handleSendMessage, playerId
+  capturedPieces, chatMessages, handleSendMessage, playerId,
+  handleOfferDraw, handleResign, onLeave, canLeave
 }) {
 
   const [chatInput, setChatInput] = React.useState('');
