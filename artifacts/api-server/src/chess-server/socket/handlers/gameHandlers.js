@@ -9,6 +9,7 @@ import {
 import { getGameService } from '../gameService.js';
 import { censorMessage } from '../profanity.js';
 import { getOnlineGameKv } from '../../kv/onlineGameKv.js';
+import { sanitizeFairPlaySignals, withFairPlayMetadata } from '../../services/fairPlayTelemetry.js';
 
 const drawOffers = new Map();
 const DRAW_OFFER_TTL_MS = 10 * 60 * 1000;
@@ -121,7 +122,7 @@ export function setupGameHandlers(io, socket) {
   });
 
   socket.on('make_move', async (data) => {
-    const { gameId, fen, lastMove, moveHistory } = data || {};
+    const { gameId, fen, lastMove, moveHistory, fairPlaySignals } = data || {};
 
     if (!gameId || typeof gameId !== 'string') {
       socket.emit('move_error', { gameId: gameId || undefined, message: 'Invalid game ID' });
@@ -194,11 +195,11 @@ export function setupGameHandlers(io, socket) {
         return;
       }
 
-      const canonicalMove = {
+      const canonicalMove = withFairPlayMetadata({
         san: applied.san, from: applied.from, to: applied.to,
         promotion: applied.promotion || null, captured: applied.captured || null,
-        color: applied.color, piece: applied.piece
-      };
+        color: applied.color, piece: applied.piece,
+      }, { playerId, signals: sanitizeFairPlaySignals(fairPlaySignals) });
       const newHistory = [...serverHistory, JSON.stringify(canonicalMove)];
       const casResult = await service.updateGameStateCAS(gameId, chess.fen(), newHistory, expectedMoveCount);
       if (!casResult) {
