@@ -5,7 +5,8 @@ import { Chess } from 'chess.js';
 import { errorResponse, handleRouteError } from '../middleware/errors.js';
 import { userIdFromPlayerId } from '../socket/utils.js';
 import { getGameService } from '../socket/gameService.js';
-import { validateSession } from '../auth.js';
+import { getSessionToken, validateSession } from '../auth.js';
+import { getIntegrityReviews, isIntegrityReviewer, scheduleGameAnalysis } from '../services/antiCheatService.js';
 import { getOnlineGameKv } from '../kv/onlineGameKv.js';
 
 const router = express.Router();
@@ -38,6 +39,28 @@ function replayStoredHistory(moveHistory) {
 function generateGameCode() {
   return crypto.randomBytes(4).toString('hex').toUpperCase();
 }
+
+// Integrity review endpoints are restricted to CHESS_REVIEW_ADMIN_IDS.
+router.get('/integrity/reviews', async (req, res) => {
+  try {
+    const userId = await validateSession(getSessionToken(req));
+    if (!isIntegrityReviewer(userId)) return errorResponse(res, 403, 'Integrity review access denied');
+    const reviews = await getIntegrityReviews({ status: req.query.status || null, limit: req.query.limit });
+    return res.json({ success: true, reviews });
+  } catch (error) { return handleRouteError(res, error, 'Failed to load integrity reviews'); }
+});
+
+router.post('/integrity/reviews/:gameId/analyze', async (req, res) => {
+  try {
+    const userId = await validateSession(getSessionToken(req));
+    if (!isIntegrityReviewer(userId)) return errorResponse(res, 403, 'Integrity review access denied');
+    const game = await query('SELECT game_code, game_mode, status FROM games WHERE game_code = $1', [req.params.gameId]);
+    if (!game.rows[0]) return errorResponse(res, 404, 'Game not found');
+    if (game.rows[0].game_mode !== 'ranked' || game.rows[0].status !== 'completed') return errorResponse(res, 409, 'Only completed ranked games can be analyzed');
+    scheduleGameAnalysis(game.rows[0].game_code);
+    return res.status(202).json({ success: true, queued: true, gameCode: game.rows[0].game_code });
+  } catch (error) { return handleRouteError(res, error, 'Failed to queue integrity analysis'); }
+});
 
 // Save game result
 router.post('/save', async (req, res) => {
@@ -816,6 +839,7 @@ router.post('/:gameId/end', async (req, res) => {
        finished.move_history || [], finished.game_mode]
     );
     await getOnlineGameKv().del(gameId);
+    if (finished.game_mode === 'ranked') scheduleGameAnalysis(gameId);
     return res.json({ success: true, status: 'ended', result, alreadyEnded: false });
   } catch (error) {
     return handleRouteError(res, error, 'Failed to end game');
