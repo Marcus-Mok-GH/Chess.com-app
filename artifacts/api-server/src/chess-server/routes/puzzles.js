@@ -6,8 +6,16 @@
 import { Router } from 'express';
 import { Chess } from 'chess.js';
 import puzzleService from '../services/puzzleService.js';
+import { authenticatedUserId } from '../coachAuth.js';
 
 const router = Router();
+
+async function requirePuzzleUser(req, res, requestedUserId = null) {
+  const userId = await authenticatedUserId(req);
+  if (!userId) { res.status(401).json({ success: false, error: { message: 'Authentication required' } }); return null; }
+  if (requestedUserId != null && String(requestedUserId) !== String(userId)) { res.status(403).json({ success: false, error: { message: 'You can only access your own puzzles' } }); return null; }
+  return String(userId);
+}
 
 /**
  * GET /api/puzzles
@@ -19,7 +27,7 @@ router.get('/', async (req, res) => {
     const { limit = 10, difficulty, type, userId, method } = req.query;
     
     const options = {
-      limit: parseInt(limit) || 10,
+      limit: Math.min(Math.max(parseInt(limit, 10) || 10, 1), 50),
       difficulty,
       type,
       userId,
@@ -338,6 +346,8 @@ router.post('/stockfish', async (req, res) => {
 router.get('/user/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
+    const authenticatedId = await requirePuzzleUser(req, res, userId);
+    if (!authenticatedId) return;
     const puzzles = puzzleService.getPuzzlesByUser(userId);
     
     res.json({
@@ -392,6 +402,10 @@ router.get('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const authenticatedId = await requirePuzzleUser(req, res);
+    if (!authenticatedId) return;
+    const puzzle = puzzleService.getPuzzleById(id);
+    if (!puzzle || String(puzzle.userId) !== authenticatedId) return res.status(404).json({ success: false, error: { message: 'Puzzle not found' } });
     const success = puzzleService.deletePuzzle(id);
     
     if (!success) {
