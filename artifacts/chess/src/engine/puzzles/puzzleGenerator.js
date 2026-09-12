@@ -24,14 +24,14 @@ function difficultyProfile(difficulty) {
 
 
 function normalizeSeed(seed) {
-  if (Number.isFinite(Number(seed))) return Number(seed) >>> 0 || 1;
+  if (Number.isFinite(Number(seed))) return Number(seed) >>> 0;
   const text = String(seed ?? "");
   let hash = 2166136261;
   for (let index = 0; index < text.length; index += 1) {
     hash ^= text.charCodeAt(index);
     hash = Math.imul(hash, 16777619);
   }
-  return hash >>> 0 || 1;
+  return hash >>> 0;
 }
 
 function randomSource(seed) {
@@ -337,7 +337,7 @@ export async function generatePuzzleWithAI(description, options = {}) {
   return {
     ...puzzle,
     id: `ai-${normalizeSeed(seed)}`,
-    hint: description ? `AI prompt: ${description}` : puzzle.hint,
+    hint: description ? 'Solve the tactical position and look for the strongest forcing move.' : puzzle.hint,
     aiGenerated: true,
     provider,
     description,
@@ -351,8 +351,11 @@ export async function generatePuzzleByMethod(method, options = {}) {
 }
 
 export async function generateMultiplePuzzles(count = 5, options = {}) {
-  return Array.from({ length: count }, (_, index) =>
-    generatePuzzle(options.seed === undefined ? undefined : Number(options.seed) + index, { type: options.type }),
+  const numericCount = Number(count);
+  const safeCount = Number.isFinite(numericCount) ? Math.min(Math.max(Math.trunc(numericCount), 0), 50) : 5;
+  const numericSeed = Number(options.seed);
+  return Array.from({ length: safeCount }, (_, index) =>
+    generatePuzzle(options.seed === undefined || !Number.isFinite(numericSeed) ? undefined : numericSeed + index, { type: options.type }),
   );
 }
 
@@ -375,6 +378,7 @@ export function selectRandomPuzzle(puzzles, options = {}) {
   const filteredByDifficulty = options.difficulty ? filterByDifficulty(puzzles, options.difficulty) : [...puzzles];
   const filtered = options.theme ? filterByTheme(filteredByDifficulty, options.theme) : filteredByDifficulty;
   const choices = filtered.length > 0 ? filtered : puzzles;
+  if (choices.length === 0) return null;
   return { ...choices[Math.floor(Math.random() * choices.length)], id: `random-${Date.now()}` };
 }
 
