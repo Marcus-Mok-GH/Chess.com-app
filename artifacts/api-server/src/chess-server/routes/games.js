@@ -85,7 +85,7 @@ router.post('/integrity/report', async (req, res) => {
     if (!reportedPlayerId) return errorResponse(res, 400, 'No opponent is attached to this game');
 
     const report = await query(
-      'INSERT INTO fair_play_reports (game_code, reporter_id, reported_player_id, reason, details) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (game_code, reporter_id) DO UPDATE SET reason = EXCLUDED.reason, details = EXCLUDED.details, status = 'open', updated_at = CURRENT_TIMESTAMP RETURNING id, game_code, reason, status, created_at',
+      "INSERT INTO fair_play_reports (game_code, reporter_id, reported_player_id, reason, details) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (game_code, reporter_id) DO UPDATE SET reason = EXCLUDED.reason, details = EXCLUDED.details, status = 'open', updated_at = CURRENT_TIMESTAMP RETURNING id, game_code, reason, status, created_at",
       [gameCode, reporterId, String(reportedPlayerId), reason, details]
     );
     return res.status(201).json({ success: true, report: report.rows[0] });
@@ -97,7 +97,7 @@ router.get('/integrity/reports', async (req, res) => {
     const reviewerId = await validateSession(getSessionToken(req));
     if (!isIntegrityReviewer(reviewerId)) return errorResponse(res, 403, 'Integrity review access denied');
     const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 50, 1), 100);
-    const reports = await query('SELECT * FROM fair_play_reports ORDER BY CASE WHEN status = 'open' THEN 0 ELSE 1 END, created_at DESC LIMIT $1', [limit]);
+    const reports = await query("SELECT * FROM fair_play_reports ORDER BY CASE WHEN status = 'open' THEN 0 ELSE 1 END, created_at DESC LIMIT $1", [limit]);
     return res.json({ success: true, reports: reports.rows });
   } catch (error) { return handleRouteError(res, error, 'Failed to load fair-play reports'); }
 });

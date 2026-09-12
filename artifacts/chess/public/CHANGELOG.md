@@ -1,3 +1,7 @@
+[2026-09-12] - Restore api-server build (fair-play SQL quoting)
+
+- Fixed the fair-play report insert and integrity-reports query in `chess-server/routes/games.js` where single-quoted SQL values (`'open'`) sat inside single-quoted JS strings, breaking the api-server esbuild bundle and every production deployment. Switched the JS delimiters to double quotes; SQL wording is unchanged.
+
 [2026-09-11] - Install agency testing skills
 
 - Added the Test Automation Engineer, Evidence Collector, Test Results Analyzer, and Reality Checker prompts under .agents/skills/agency-testing/ for deployment validation.

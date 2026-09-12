@@ -1,3 +1,11 @@
+## [2026-09-12] - Restore api-server build (fair-play SQL quoting)
+
+### Fixed
+- `chess-server/routes/games.js`: corrected the JS string-literal quoting in the fair-play report insert and the integrity-reports query. Both used single quotes as the JS delimiter while embedding the SQL value `'open'`, so esbuild stopped parsing at `status = 'open'` (`Expected ")" but found "open"`) and every Vercel production deployment failed. The strings now use double-quote JS delimiters, keeping the SQL single quotes intact — SQL semantics are unchanged.
+
+### Notes
+- Verified with `pnpm --filter @workspace/api-server run build`, the full `vercel.json` build command locally (`vercel build`), and the test suite: the previously failing `games.move.test.js` tests (which could not parse the imports from `games.js`) now pass. The remaining pre-existing failures (socket-handler, puzzle-generator, auth-proxy, matchmaking-polling, vercel-index tests) also fail on the base commit and are unrelated to this change.
+
 ## [2026-09-11] - Fix Vercel deployment (frontend + SSR build)
 
 ### Fixed
