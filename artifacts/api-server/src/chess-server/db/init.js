@@ -73,6 +73,8 @@ export async function initDatabase() {
         await client.query('ALTER TABLE games ALTER COLUMN game_code TYPE VARCHAR(20)');
         await client.query('ALTER TABLE games ALTER COLUMN result TYPE VARCHAR(20)');
 
+        await client.query("CREATE TABLE IF NOT EXISTS game_integrity_reviews (game_code VARCHAR(20) PRIMARY KEY REFERENCES games(game_code) ON DELETE CASCADE, status VARCHAR(20) NOT NULL DEFAULT 'queued', error_message TEXT, analyzed_moves INTEGER NOT NULL DEFAULT 0, white_analyzed_moves INTEGER NOT NULL DEFAULT 0, black_analyzed_moves INTEGER NOT NULL DEFAULT 0, white_accuracy NUMERIC(6,2), black_accuracy NUMERIC(6,2), white_centipawn_loss NUMERIC(8,2), black_centipawn_loss NUMERIC(8,2), white_best_move_rate NUMERIC(8,4), black_best_move_rate NUMERIC(8,4), suspicious_score INTEGER NOT NULL DEFAULT 0, flagged_players TEXT[] NOT NULL DEFAULT '{}', analysis_json JSONB NOT NULL DEFAULT '{}'::jsonb, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
+        await client.query('CREATE INDEX IF NOT EXISTS idx_integrity_reviews_status_score ON game_integrity_reviews(status, suspicious_score DESC)');
         // User settings table
         await client.query(`
           CREATE TABLE IF NOT EXISTS user_settings (
