@@ -47,7 +47,7 @@ export async function initDatabase() {
             black_player_id VARCHAR(100) REFERENCES users(id),
             white_player_name VARCHAR(50),
             black_player_name VARCHAR(50),
-            result VARCHAR(10),
+            result VARCHAR(20),
             game_mode VARCHAR(20) DEFAULT 'friendly',
             fen TEXT,
             move_history TEXT[],
@@ -63,7 +63,7 @@ export async function initDatabase() {
         await client.query('ALTER TABLE games ADD COLUMN IF NOT EXISTS black_player_id VARCHAR(100)');
         await client.query('ALTER TABLE games ADD COLUMN IF NOT EXISTS white_player_name VARCHAR(50)');
         await client.query('ALTER TABLE games ADD COLUMN IF NOT EXISTS black_player_name VARCHAR(50)');
-        await client.query('ALTER TABLE games ADD COLUMN IF NOT EXISTS result VARCHAR(10)');
+        await client.query('ALTER TABLE games ADD COLUMN IF NOT EXISTS result VARCHAR(20)');
         await client.query("ALTER TABLE games ADD COLUMN IF NOT EXISTS game_mode VARCHAR(20) DEFAULT 'friendly'");
         await client.query('ALTER TABLE games ADD COLUMN IF NOT EXISTS fen TEXT');
         await client.query("ALTER TABLE games ADD COLUMN IF NOT EXISTS move_history TEXT[] DEFAULT '{}'");
@@ -71,6 +71,7 @@ export async function initDatabase() {
         await client.query('ALTER TABLE games ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
         await client.query('ALTER TABLE games ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
         await client.query('ALTER TABLE games ALTER COLUMN game_code TYPE VARCHAR(20)');
+        await client.query('ALTER TABLE games ALTER COLUMN result TYPE VARCHAR(20)');
 
         // User settings table
         await client.query(`
@@ -266,7 +267,7 @@ export async function initDatabase() {
             game_code VARCHAR(20),
             game_mode VARCHAR(20) DEFAULT 'ranked',
             opponent_elo INTEGER,
-            result VARCHAR(10),
+            result VARCHAR(20),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           )
         `);
