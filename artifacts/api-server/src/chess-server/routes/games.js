@@ -589,7 +589,7 @@ router.get('/by-code/:gameCode', async (req, res) => {
 router.post('/:gameId/move', async (req, res) => {
   try {
     const gameId = (req.params.gameId || '').toUpperCase();
-    const { move, playerId, expectedMoveCount } = req.body;
+    const { move, playerId, expectedMoveCount, fairPlaySignals } = req.body;
 
     if (!gameId || typeof gameId !== 'string' || gameId.length < 2) {
       return errorResponse(res, 400, 'Invalid game ID');
