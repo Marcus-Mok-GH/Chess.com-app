@@ -88,6 +88,47 @@ CREATE TABLE IF NOT EXISTS match_moves (
     PRIMARY KEY (game_id, username)
 );
 
+
+-- Fair-play review records. Signals are evidence for review, not automatic proof.
+CREATE TABLE IF NOT EXISTS game_integrity_reviews (
+    game_code VARCHAR(20) PRIMARY KEY REFERENCES games(game_code) ON DELETE CASCADE,
+    status VARCHAR(20) NOT NULL DEFAULT 'queued',
+    error_message TEXT,
+    analyzed_moves INTEGER NOT NULL DEFAULT 0,
+    white_analyzed_moves INTEGER NOT NULL DEFAULT 0,
+    black_analyzed_moves INTEGER NOT NULL DEFAULT 0,
+    white_accuracy NUMERIC(6,2),
+    black_accuracy NUMERIC(6,2),
+    white_centipawn_loss NUMERIC(8,2),
+    black_centipawn_loss NUMERIC(8,2),
+    white_best_move_rate NUMERIC(8,4),
+    black_best_move_rate NUMERIC(8,4),
+    suspicious_score INTEGER NOT NULL DEFAULT 0,
+    flagged_players TEXT[] NOT NULL DEFAULT '{}',
+    analysis_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    review_decision VARCHAR(20),
+    reviewer_id VARCHAR(100),
+    review_note TEXT,
+    reviewed_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS fair_play_reports (
+    id BIGSERIAL PRIMARY KEY,
+    game_code VARCHAR(20) NOT NULL REFERENCES games(game_code) ON DELETE CASCADE,
+    reporter_id VARCHAR(100) NOT NULL,
+    reported_player_id VARCHAR(100) NOT NULL,
+    reason VARCHAR(40) NOT NULL,
+    details TEXT,
+    status VARCHAR(20) NOT NULL DEFAULT 'open',
+    reviewer_id VARCHAR(100),
+    review_note TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (game_code, reporter_id)
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_users_elo ON users(elo DESC);
@@ -103,6 +144,8 @@ CREATE INDEX IF NOT EXISTS idx_active_games_status ON active_games(status);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_match_moves_game_username_unique ON match_moves(game_id, username);
 CREATE INDEX IF NOT EXISTS idx_match_moves_game_id ON match_moves(game_id);
 CREATE INDEX IF NOT EXISTS idx_match_moves_username ON match_moves(username);
+CREATE INDEX IF NOT EXISTS idx_integrity_reviews_status_score ON game_integrity_reviews(status, suspicious_score DESC);
+CREATE INDEX IF NOT EXISTS idx_fair_play_reports_status_created ON fair_play_reports(status, created_at DESC);
 
 -- Updated at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
