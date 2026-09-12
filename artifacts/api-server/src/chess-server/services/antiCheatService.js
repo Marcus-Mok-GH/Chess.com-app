@@ -143,10 +143,12 @@ export function scheduleGameAnalysis(gameCode) {
 
 export async function getIntegrityReviews({ status = null, limit = 50 } = {}) {
   const safeLimit = Math.min(Math.max(Number.parseInt(limit, 10) || 50, 1), 100);
-  if (status && ['queued', 'running', 'complete', 'flagged', 'unavailable', 'invalid_replay'].includes(status)) {
+  const validStatuses = ['queued', 'running', 'complete', 'flagged', 'unavailable', 'invalid_replay'];
+  if (status && validStatuses.includes(status)) {
     return (await query('SELECT * FROM game_integrity_reviews WHERE status = $1 ORDER BY suspicious_score DESC, updated_at DESC LIMIT $2', [status, safeLimit])).rows;
   }
   return (await query('SELECT * FROM game_integrity_reviews ORDER BY suspicious_score DESC, updated_at DESC LIMIT $1', [safeLimit])).rows;
+}
 
 export async function recordIntegrityDecision(gameCode, { decision, reviewerId, note = null } = {}) {
   const allowed = new Set(['confirmed', 'cleared', 'needs_review']);
@@ -156,5 +158,4 @@ export async function recordIntegrityDecision(gameCode, { decision, reviewerId, 
     [gameCode, decision, String(reviewerId), note ? String(note).slice(0, 2000) : null]
   );
   return result.rows[0] || null;
-}
 }
