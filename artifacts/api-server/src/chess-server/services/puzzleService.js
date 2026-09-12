@@ -15,7 +15,35 @@ import stockfishService from './stockfishService.js';
 
 // In-memory storage for generated puzzles (persist to DB in production)
 const generatedPuzzles = new Map();
+const puzzleCacheExpiry = new Map();
+const PUZZLE_CACHE_MAX = 1000;
+const PUZZLE_CACHE_TTL_MS = 30 * 60 * 1000;
 let randomGenerationCounter = 0;
+
+function cachePuzzle(puzzle) {
+  const now = Date.now();
+  for (const [id, expiresAt] of puzzleCacheExpiry) {
+    if (expiresAt <= now) { generatedPuzzles.delete(id); puzzleCacheExpiry.delete(id); }
+  }
+  while (generatedPuzzles.size >= PUZZLE_CACHE_MAX) {
+    const oldestId = generatedPuzzles.keys().next().value;
+    if (oldestId === undefined) break;
+    generatedPuzzles.delete(oldestId);
+    puzzleCacheExpiry.delete(oldestId);
+  }
+  cachePuzzle(puzzle);
+  puzzleCacheExpiry.set(puzzle.id, now + PUZZLE_CACHE_TTL_MS);
+}
+
+function getCachedPuzzle(id) {
+  const expiresAt = puzzleCacheExpiry.get(id);
+  if (!expiresAt || expiresAt <= Date.now()) {
+    generatedPuzzles.delete(id);
+    puzzleCacheExpiry.delete(id);
+    return null;
+  }
+  return generatedPuzzles.get(id) || null;
+}
 
 const SUPPORTED_METHODS = new Set(['rules', 'stockfish', 'ai', 'auto']);
 
@@ -94,7 +122,8 @@ export function getRandomPuzzle(options = {}) {
  * @returns {Puzzle[]}
  */
 export function getRandomPuzzles(options = {}) {
-  const { limit = 10, ...rest } = options;
+  const limit = Math.min(Math.max(Number.parseInt(options.limit, 10) || 10, 1), 50);
+  const { ...rest } = options;
   const puzzles = [];
   
   for (let i = 0; i < limit; i++) {
@@ -115,9 +144,8 @@ export function getRandomPuzzles(options = {}) {
  */
 export function getPuzzleById(id) {
   // Check generated puzzles first
-  if (generatedPuzzles.has(id)) {
-    return generatedPuzzles.get(id);
-  }
+  const cachedPuzzle = getCachedPuzzle(id);
+  if (cachedPuzzle) return cachedPuzzle;
 
 
   return null;
@@ -181,7 +209,7 @@ export async function generatePuzzle(options = {}) {
   }
   
   // Store the generated puzzle
-  generatedPuzzles.set(puzzle.id, puzzle);
+  cachePuzzle(puzzle);
   
   // Update statistics
   stats.totalGenerated++;
@@ -283,8 +311,8 @@ export async function validateSolution(puzzleId, move) {
  * @returns {Puzzle[]}
  */
 export function getPuzzlesByUser(userId) {
-  return Array.from(generatedPuzzles.values())
-    .filter(p => p.userId === userId);
+  for (const id of [...generatedPuzzles.keys()]) getCachedPuzzle(id);
+  return Array.from(generatedPuzzles.values()).filter(p => p.userId === userId);
 }
 
 /**
@@ -295,6 +323,7 @@ export function getPuzzlesByUser(userId) {
 export function deletePuzzle(id) {
   if (generatedPuzzles.has(id)) {
     generatedPuzzles.delete(id);
+    puzzleCacheExpiry.delete(id);
     return true;
   }
   return false;
@@ -371,7 +400,7 @@ export function generateFromFEN(fen, options = {}) {
   }
   
   // Store it
-  generatedPuzzles.set(puzzle.id, puzzle);
+  cachePuzzle(puzzle);
   
   return puzzle;
 }
@@ -496,6 +525,7 @@ function findBestMove(fen) {
  */
 export function clearGeneratedPuzzles() {
   generatedPuzzles.clear();
+  puzzleCacheExpiry.clear();
 }
 
 /**
