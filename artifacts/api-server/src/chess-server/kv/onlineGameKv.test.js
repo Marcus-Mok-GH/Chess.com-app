@@ -10,7 +10,7 @@ vi.mock('../auth.js', () => ({
   deleteSession: vi.fn(),
 }));
 
-vi.mock('../socket/utils.js', () => ({
+vi.mock('../services/gameUtils.js', () => ({
   userIdFromPlayerId: (pid) => {
     if (!pid || typeof pid !== 'string') return null;
     const m = pid.match(/^user_(\d+)/);

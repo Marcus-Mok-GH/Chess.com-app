@@ -1,3 +1,16 @@
+## [2026-09-12] - Replace Socket.IO with HTTP polling
+
+### Changed
+- **Realtime over HTTP** — removed Socket.IO entirely (server `socket/` package and client `services/socket.js`); draw/resign, in-game chat, friend presence, and matchmaking now run over the HTTP polling already used for moves and game state. This is what makes realtime play work on Vercel, where long-lived Socket.IO connections are not supported.
+- `chess-server/routes/games.js`: added `POST/GET /:gameId/draw-offer` and `POST /:gameId/draw-respond` (KV-backed offer store with TTL, ownership checked via session identity); agreed draws no longer route through the legacy socket flow.
+- `chess-server/routes/social.js`: added `POST /presence/heartbeat` and `GET /presence/:userId` backed by a KV presence store (90s TTL, in-memory fallback for local dev).
+- `chess-server/services/`: extracted `gameService.js`, `gameUtils.js`, `presenceService.js`, `matchmakingService.js`, `profanity.js` from the removed socket layer.
+- `chess/frontend`: `OnlineChessGame` now extends its 1.5s game poll to cover draw offers, in-game chat history, opponent presence, and post-game ELO updates; resign/draw send HTTP requests with the session identity. `OnlinePlay` and matchmaking are polling-only; `Friends` uses the presence heartbeat and server-authoritative online flags instead of socket events.
+- Removed `socket.io`/`socket.io-client` dependencies and the Vite `/socket.io` proxy.
+
+### Notes
+- Verified with the full Vitest suite (new `social.presence.test.js`, `games.draw.test.js`, `gameService/gameUtils/presenceService` tests pass) and both production builds (`api-server` esbuild and chess Vite). The 4 failing tests and the `cors.js` typecheck error also fail on the base commit and are unrelated.
+
 ## [2026-09-12] - Restore api-server build (fair-play SQL quoting)
 
 ### Fixed

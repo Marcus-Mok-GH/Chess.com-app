@@ -7,13 +7,14 @@ const MATCHMAKING_INTERVAL_MS = 2000;
 const MATCHMAKING_BATCH_SIZE = 200;
 const MATCHMAKING_IDLE_BACKOFF = 10000;
 
-// Matchmaking service class
+// Matchmaking service class. Pure HTTP/polling — there is no Socket.IO server
+// anymore, so a created match is never pushed over a socket. Clients discover
+// it by polling GET /api/matchmaking/check-match, which reads active_games.
 class MatchmakingService {
-  constructor(io, options = {}) {
-    this.io = io;
+  constructor(options = {}) {
     this.matchmakingInterval = null;
     this.matchmakingDelay = MATCHMAKING_INTERVAL_MS;
-    this.enableLoop = options.enableLoop !== false;
+    this.enableLoop = options.enableLoop === true;
     this.isProcessing = false;
     if (this.enableLoop) {
       this.startMatchmakingLoop();
@@ -198,6 +199,8 @@ class MatchmakingService {
           gameId,
           isPlayer1White ? player1.player_id : player2.player_id,
           isPlayer1White ? player2.player_id : player1.player_id,
+          // HTTP matchmaking players join with socket ids of the form
+          // `polling-<playerId>`; preserve them so check-match keeps working.
           isPlayer1White ? player1.socket_id : player2.socket_id,
           isPlayer1White ? player2.socket_id : player1.socket_id,
           isPlayer1White ? player1.player_name : player2.player_name,
@@ -209,53 +212,11 @@ class MatchmakingService {
         ]
       );
 
-      // Notify both players via Socket.IO (only works for socket-connected players)
-      // Polling-based players will discover the match via HTTP polling
-      const matchData = {
-        gameId,
-        gameMode: player1.is_ranked ? 'ranked' : 'friendly',
-        players: {
-          white: {
-            id: isPlayer1White ? player1.player_id : player2.player_id,
-            name: isPlayer1White ? player1.player_name : player2.player_name,
-            elo: isPlayer1White ? player1.elo : player2.elo
-          },
-          black: {
-            id: isPlayer1White ? player2.player_id : player1.player_id,
-            name: isPlayer1White ? player2.player_name : player1.player_name,
-            elo: isPlayer1White ? player2.elo : player1.elo
-          }
-        }
-      };
-
       console.log(`[Matchmaking] Game ${gameId} inserted into active_games (mode=${player1.is_ranked ? 'ranked' : 'friendly'})`);
-      console.log(`[Matchmaking]   White: ${matchData.players.white.name} (${matchData.players.white.elo}) id=${matchData.players.white.id}`);
-      console.log(`[Matchmaking]   Black: ${matchData.players.black.name} (${matchData.players.black.elo}) id=${matchData.players.black.id}`);
+      console.log(`[Matchmaking]   White: ${isPlayer1White ? player1.player_name : player2.player_name} (${isPlayer1White ? player1.elo : player2.elo}) id=${isPlayer1White ? player1.player_id : player2.player_id}`);
+      console.log(`[Matchmaking]   Black: ${isPlayer1White ? player2.player_name : player1.player_name} (${isPlayer1White ? player2.elo : player1.elo}) id=${isPlayer1White ? player2.player_id : player1.player_id}`);
+      console.log(`[Matchmaking]   Match discovered by HTTP polling via GET /api/matchmaking/check-match`);
 
-      // Only emit to players if their socket_id doesn't start with 'polling-'
-      // (polling-based players don't have active socket connections)
-      if (this.io && !player1.socket_id.startsWith('polling-')) {
-        console.log(`[Matchmaking] Emitting match_found to ${player1.player_name} via socket ${player1.socket_id} (color=${isPlayer1White ? 'white' : 'black'})`);
-        this.io.to(player1.socket_id).emit('match_found', {
-          ...matchData,
-          yourColor: isPlayer1White ? 'white' : 'black',
-          yourId: player1.player_id
-        });
-      } else {
-        console.log(`[Matchmaking] ${player1.player_name} is polling-based (${player1.socket_id}), skipping socket emit`);
-      }
-      if (this.io && !player2.socket_id.startsWith('polling-')) {
-        console.log(`[Matchmaking] Emitting match_found to ${player2.player_name} via socket ${player2.socket_id} (color=${isPlayer1White ? 'black' : 'white'})`);
-        this.io.to(player2.socket_id).emit('match_found', {
-          ...matchData,
-          yourColor: isPlayer1White ? 'black' : 'white',
-          yourId: player2.player_id
-        });
-      } else {
-        console.log(`[Matchmaking] ${player2.player_name} is polling-based (${player2.socket_id}), skipping socket emit`);
-      }
-
-      console.log(`[Matchmaking] ✅ Match ${gameId} fully created and events emitted`);
       return true;
     } catch (error) {
       console.error('[Matchmaking] Error creating match:', error);
@@ -358,152 +319,10 @@ class MatchmakingService {
   }
 }
 
-// Export singleton instance
-let matchmakingService = null;
-
-export function getMatchmakingService(io) {
-  if (!matchmakingService) {
-    matchmakingService = new MatchmakingService(io);
-  }
-  return matchmakingService;
-}
-
-// Socket.io event handlers
-export function setupMatchmakingHandlers(io, socket) {
-  const service = getMatchmakingService(io);
-
-  socket.on('join_matchmaking', async (data = {}) => {
-    const playerId = String(socket.data.userId || '');
-    const isRanked = typeof data.isRanked === 'boolean' ? data.isRanked : true;
-    const player = playerId ? (await query('SELECT username, elo FROM users WHERE id = $1', [playerId])).rows[0] : null;
-    const playerName = player?.username || '';
-    const elo = player?.elo;
-
-    // Identity and rating come from the authenticated session, never the payload.
-
-    if (!playerId || typeof playerId !== 'string') {
-      socket.emit('matchmaking_status', {
-        inQueue: false,
-        message: 'Invalid player ID'
-      });
-      return;
-    }
-
-    if (!player) {
-      socket.emit('matchmaking_status', {
-        inQueue: false,
-        message: 'Invalid player name'
-      });
-      return;
-    }
-
-    const trimmedName = playerName.trim();
-
-    if (!/^[a-zA-Z0-9_]+$/.test(trimmedName)) {
-      socket.emit('matchmaking_status', {
-        inQueue: false,
-        message: 'Player name can only contain letters, numbers, and underscores'
-      });
-      return;
-    }
-
-    if (elo != null && (!Number.isFinite(Number(elo)) || Number(elo) < 0 || Number(elo) > 4000)) {
-      socket.emit('matchmaking_status', {
-        inQueue: false,
-        message: 'Invalid ELO rating'
-      });
-      return;
-    }
-
-    if (typeof isRanked !== 'boolean') {
-      socket.emit('matchmaking_status', {
-        inQueue: false,
-        message: 'Invalid rank preference'
-      });
-      return;
-    }
-
-    console.log(`[Socket] Player ${trimmedName} joining matchmaking`);
-
-    try {
-      const existingGame = await query(
-        `SELECT game_id FROM active_games
-         WHERE (white_player_id = $1 OR black_player_id = $1)
-         AND status IN ('playing', 'waiting')
-         LIMIT 1`,
-        [playerId]
-      );
-
-      if (existingGame.rowCount > 0) {
-        socket.emit('matchmaking_error', {
-          message: 'You are already in an active game.'
-        });
-        socket.emit('matchmaking_status', {
-          inQueue: false,
-          message: 'Already in an active game'
-        });
-        return;
-      }
-    } catch (error) {
-      console.error('[Matchmaking] Error checking active games:', error);
-      socket.emit('matchmaking_error', {
-        message: 'Unable to verify active game status.'
-      });
-      socket.emit('matchmaking_status', {
-        inQueue: false,
-        message: 'Failed to join matchmaking'
-      });
-      return;
-    }
-
-    const success = await service.joinQueue(
-      socket.id,
-      playerId,
-      trimmedName,
-      elo,
-      isRanked
-    );
-
-    socket.emit('matchmaking_status', {
-      inQueue: success,
-      message: success ? 'Joined matchmaking queue' : 'Failed to join queue'
-    });
-  });
-
-  socket.on('leave_matchmaking', async () => {
-    const playerId = String(socket.data.userId || '');
-    if (!playerId) return;
-    console.log(`[Socket] Player leaving matchmaking`);
-    
-    await service.leaveQueue(playerId);
-    
-    socket.emit('matchmaking_status', {
-      inQueue: false,
-      message: 'Left matchmaking queue'
-    });
-  });
-
-  socket.on('matchmaking_heartbeat', async () => {
-    const playerId = String(socket.data.userId || '');
-    if (!playerId) return;
-    await service.updateHeartbeat(playerId);
-    // Trigger matchmaking processing on heartbeat to catch matches faster
-    setImmediate(() => service.processMatchmaking());
-  });
-
-  socket.on('get_queue_status', async () => {
-    const count = await service.getQueueStatus();
-    socket.emit('queue_status', { playersInQueue: count });
-  });
-
-  socket.on('get_queue_details', async () => {
-    const details = await service.getQueueDetails();
-    socket.emit('queue_details', details);
-  });
-}
-
-export async function processMatchmakingOnce(io) {
-  const service = new MatchmakingService(io, { enableLoop: false });
+// One-at-a-time processing for HTTP join/heartbeat triggers. No Socket.IO
+// server exists anymore, so no io reference is required.
+export async function processMatchmakingOnce() {
+  const service = new MatchmakingService({ enableLoop: false });
   await service.processMatchmaking();
 }
 

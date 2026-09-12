@@ -1,6 +1,6 @@
 import express from 'express';
 import { query } from '../db.js';
-import { processMatchmakingOnce } from '../socket/matchmaking.js';
+import { processMatchmakingOnce } from '../services/matchmakingService.js';
 import { handleRouteError } from '../middleware/errors.js';
 import { requireSession } from '../auth.js';
 
@@ -107,7 +107,7 @@ router.post('/join', requireSession, async (req, res) => {
     // Always process matchmaking immediately after join
     if (MATCHMAKING_CONFIG.PROCESS_ON_HEARTBEAT) {
       console.log(`[Matchmaking/HTTP] Processing matchmaking after join`);
-      await processMatchmakingOnce(null).catch(err => {
+      await processMatchmakingOnce().catch(err => {
         console.error('[Matchmaking/HTTP] Error processing matchmaking on join:', err);
       });
     }
@@ -236,7 +236,7 @@ router.post('/heartbeat', requireSession, async (req, res) => {
     // Always trigger matchmaking on heartbeat to ensure matches are processed
     if (MATCHMAKING_CONFIG.PROCESS_ON_HEARTBEAT) {
       console.log(`[Matchmaking/HTTP] Heartbeat from ${playerId}, triggering matchmaking`);
-      await processMatchmakingOnce(null).catch(err => {
+      await processMatchmakingOnce().catch(err => {
         console.error('[Matchmaking/HTTP] Error processing matchmaking on heartbeat:', err);
       });
     }
