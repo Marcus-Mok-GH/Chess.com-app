@@ -1,8 +1,6 @@
 export function setupAuthHandlers(io, socket) {
-  socket.on('join_auth_room', (requestId) => {
-    if (!requestId) return;
-    console.log(`[Socket] Client ${socket.id} joining auth room: ${requestId}`);
-    socket.join(`auth_${requestId}`);
+  socket.on('join_auth_room', () => {
+    socket.emit('auth_error', { message: 'Auth room subscriptions are disabled.' });
   });
 
   // Never relay client-supplied sessions or user records over a socket.
