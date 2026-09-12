@@ -1,6 +1,7 @@
 import { query } from '../db.js';
 import { userIdFromPlayerId, hasValidEloPair } from './utils.js';
 import { getOnlineGameKv } from '../kv/onlineGameKv.js';
+import { scheduleGameAnalysis } from '../services/antiCheatService.js';
 
 export class GameService {
   constructor(io) {
@@ -158,6 +159,7 @@ export class GameService {
 
   async endGame(gameId, result) {
     try {
+      if (!['white', 'black', 'draw'].includes(result)) return null;
       const gameResult = await query(
         `UPDATE active_games
          SET status = 'ended', result = $2, updated_at = CURRENT_TIMESTAMP
@@ -175,6 +177,7 @@ export class GameService {
 
         if (game.game_mode === 'ranked') {
           await this.updatePlayerElos(game, result);
+          void scheduleGameAnalysis(gameId);
         }
       }
 
