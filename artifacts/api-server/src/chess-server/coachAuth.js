@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { query } from './db.js';
-import { validateSession } from './auth.js';
+import { getSessionToken, validateSession } from './auth.js';
 
 const POLLINATIONS_ISSUER = 'https://enter.pollinations.ai';
 const STATE_TTL_MS = 10 * 60 * 1000;
@@ -39,21 +39,21 @@ function decryptToken(payload) {
   return Buffer.concat([decipher.update(Buffer.from(ciphertextRaw, 'base64url')), decipher.final()]).toString('utf8');
 }
 
-function getRequestOrigin(req) {
-  const forwardedProto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
-  const forwardedHost = String(req.headers['x-forwarded-host'] || '').split(',')[0].trim();
-  if (forwardedHost) return `${forwardedProto || 'https'}://${forwardedHost}`;
-  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, '');
-  return `${req.protocol || 'http'}://${req.get('host')}`;
+function getRequestOrigin() {
+  const configured = String(process.env.APP_URL || '').trim();
+  if (!configured) throw new Error('APP_URL must be configured for coach redirects.');
+  const origin = new URL(configured);
+  if (!['http:', 'https:'].includes(origin.protocol)) throw new Error('APP_URL must use http or https.');
+  return origin.origin;
 }
 
 export function coachAppRedirect(req, suffix = '') {
-  const appUrl = (process.env.APP_URL || getRequestOrigin(req)).replace(/\/$/, '');
+  const appUrl = getRequestOrigin();
   return `${appUrl}/play${suffix}`;
 }
 
 function getRedirectUri(req) {
-  return (process.env.POLLINATIONS_REDIRECT_URI || `${getRequestOrigin(req)}/api/coach/callback`).replace(/\/$/, '');
+  return (process.env.POLLINATIONS_REDIRECT_URI || `${getRequestOrigin()}/api/coach/callback`).replace(/\/$/, '');
 }
 
 async function discover() {
@@ -67,9 +67,9 @@ export function coachConfigurationStatus() {
 }
 
 export async function authenticatedUserId(req) {
-  const authorization = req.headers.authorization || '';
-  if (!authorization.startsWith('Bearer ')) return null;
-  return validateSession(authorization.slice(7));
+  const token = getSessionToken(req);
+  if (!token) return null;
+  return validateSession(token);
 }
 
 export async function createAuthorizationUrl(req) {
