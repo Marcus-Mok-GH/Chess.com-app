@@ -1,3 +1,9 @@
+## [2026-09-13] - Prevent duplicate online matches per account
+
+### Fixed
+- Added account-level advisory transaction locks and session-id normalization across matchmaking and friendly online-game creation/joining, so one account cannot occupy multiple waiting or playing matches at once.
+- Added focused regression tests for session-suffixed player ids, both board seats, terminal games, and game exclusion.
+
 ## [2026-09-12] - Address AI code-review findings on the polling migration
 
 ### Fixed
