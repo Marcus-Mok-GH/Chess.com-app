@@ -12,7 +12,7 @@ const logQuery = (text, duration, rowCount) => {
   });
 };
 
-export async function query(text, params) {
+async function ensureReadyForQuery() {
   // Vercel runs initDatabase() in the background during cold start. Do not
   // block ordinary requests on the full schema bootstrap; existing tables can
   // serve immediately, and the schema-missing fallback below still self-heals.
@@ -22,6 +22,10 @@ export async function query(text, params) {
       throw new Error('Database failed to initialize');
     }
   }
+}
+
+export async function query(text, params) {
+  await ensureReadyForQuery();
 
   const start = Date.now();
   const pool = getPool();
@@ -52,6 +56,36 @@ export async function query(text, params) {
     await pool.end();
   }
   return res;
+}
+
+
+export async function withTransaction(callback) {
+  if (typeof callback !== 'function') {
+    throw new TypeError('withTransaction requires a callback');
+  }
+
+  await ensureReadyForQuery();
+  const pool = getPool();
+  if (!pool) {
+    throw new Error('Database pool not initialized. Check DATABASE_URL.');
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await callback(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    try {
+      await client.query('ROLLBACK');
+    } catch (rollbackError) {
+      console.error('[DB] Transaction rollback failed:', rollbackError?.message || rollbackError);
+    }
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 export default query;
