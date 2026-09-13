@@ -15,6 +15,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
 
       - name: Validate PR against CONTRIBUTIONS.md rules
         env:
@@ -68,10 +69,10 @@ jobs:
             'postgres(ql)?://[^\s]+'
           )
 
-          git diff --name-only "origin/$BRANCH_BASE"...HEAD 2>/dev/null | while read -r f; do
+          git diff --name-only -z "origin/$BRANCH_BASE"...HEAD 2>/dev/null | while IFS= read -r -d '' f; do
             [[ -f "$f" ]] || continue
             for pat in "${SECRET_PATTERNS[@]}"; do
-              if grep -Eqi "$pat" "$f" 2>/dev/null; then
+              if grep -IqE "$pat" -- "$f" 2>/dev/null; then
                 echo "- Possible secret detected in \`${f}\` matching pattern \`${pat}\`. Remove credentials and use environment variables instead." >> "$ISSUES_FILE"
                 break
               fi
@@ -79,7 +80,7 @@ jobs:
           done
 
           # ── 4. No secrets in diff hunks ────────────────────────────────
-          if git diff "origin/$BRANCH_BASE"...HEAD 2>/dev/null | grep -Eq '(?i)(password|secret|token|api[_-]?key)\s*[=:]\s*["\x27][A-Za-z0-9!@#$%^&*]{8,}'; then
+          if git diff "origin/$BRANCH_BASE"...HEAD 2>/dev/null | grep -Eqi '(password|secret|token|api[_-]?key)\s*[=:]\s*["\x27][A-Za-z0-9!@#$%^&*]{8,}'; then
             echo "- A diff hunk contains a value that looks like a credential. Review and redact before submitting." >> "$ISSUES_FILE"
           fi
 
@@ -92,7 +93,7 @@ jobs:
           fi
 
           # ── 6. Large binary blobs ──────────────────────────────────────
-          LARGE=$(git diff --stat "origin/$BRANCH_BASE"...HEAD 2>/dev/null | awk '$NF ~ /^[0-9]+$/ && $NF > 500 {print $NF " " $2}')
+          LARGE=$(git diff --numstat "origin/$BRANCH_BASE"...HEAD 2>/dev/null | awk 'BEGIN{OFS=" "} {if ($1 ~ /^[0-9]+$/ && $1+0 > 500) print $1, $2; else if ($2 == "-") print $2, $3}')
           if [[ -n "$LARGE" ]]; then
             echo "- Large files added ($LARGE). Consider using Git LFS for binary assets." >> "$ISSUES_FILE"
           fi
@@ -125,6 +126,7 @@ jobs:
           "
             done < <(sort -u "$ISSUES_FILE" 2>/dev/null || true)
             COMMENT+="
+
           ## Next Steps
           - Fix the issues above and push updates to this branch.
           - Ensure all checklist items are marked.
