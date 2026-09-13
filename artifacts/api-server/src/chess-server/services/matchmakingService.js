@@ -1,4 +1,5 @@
-import { query } from '../db.js';
+import { query, withTransaction } from '../db.js';
+import { accountIdForPlayer, findActiveGameForAccount, lockAccounts } from './activeGameGuard.js';
 
 const DEFAULT_ELO = 1200;
 const ELO_RANGE_INITIAL = 500; // Increased from 200 for better matching
@@ -168,56 +169,69 @@ class MatchmakingService {
 
   async createMatch(player1, player2) {
     try {
-      // Verify players are still in queue
-      const check = await query('SELECT count(*) FROM matchmaking_queue WHERE player_id IN ($1, $2)', [player1.player_id, player2.player_id]);
-      if (parseInt(check.rows[0].count) !== 2) {
-        console.warn('[Matchmaking] Players left queue before match creation');
-        return false;
-      }
+      return await withTransaction(async (client) => {
+        const player1Account = accountIdForPlayer(player1.player_id);
+        const player2Account = accountIdForPlayer(player2.player_id);
+        if (!player1Account || player1Account === player2Account) {
+          console.warn('[Matchmaking] Refusing to match an account against itself');
+          return false;
+        }
 
-      // Generate a unique game ID
-      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      let gameId = '';
-      for (let i = 0; i < 6; i++) {
-        gameId += chars[Math.floor(Math.random() * chars.length)];
-      }
+        await lockAccounts(client, [player1.player_id, player2.player_id]);
 
-      // Randomly assign colors
-      const isPlayer1White = Math.random() < 0.5;
-      
-      // Create active game in database
-      await query(
-        `INSERT INTO active_games (
-          game_id, 
-          white_player_id, black_player_id,
-          white_socket_id, black_socket_id,
-          white_player_name, black_player_name,
-          white_elo, black_elo,
-          status, game_mode
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-        [
-          gameId,
-          isPlayer1White ? player1.player_id : player2.player_id,
-          isPlayer1White ? player2.player_id : player1.player_id,
-          // HTTP matchmaking players join with socket ids of the form
-          // `polling-<playerId>`; preserve them so check-match keeps working.
-          isPlayer1White ? player1.socket_id : player2.socket_id,
-          isPlayer1White ? player2.socket_id : player1.socket_id,
-          isPlayer1White ? player1.player_name : player2.player_name,
-          isPlayer1White ? player2.player_name : player1.player_name,
-          isPlayer1White ? player1.elo : player2.elo,
-          isPlayer1White ? player2.elo : player1.elo,
-          'playing',
-          player1.is_ranked ? 'ranked' : 'friendly'
-        ]
-      );
+        // Re-check both the queue and active-game state after acquiring the
+        // account locks. This is the authoritative race-safe gate.
+        const check = await client.query(
+          'SELECT count(*) FROM matchmaking_queue WHERE player_id IN ($1, $2)',
+          [player1.player_id, player2.player_id]
+        );
+        if (parseInt(check.rows[0].count, 10) !== 2) {
+          console.warn('[Matchmaking] Players left queue before match creation');
+          return false;
+        }
 
-      console.log(`[Matchmaking] Game ${gameId} inserted into active_games (mode=${player1.is_ranked ? 'ranked' : 'friendly'})`);
-      console.log(`[Matchmaking]   White: ${isPlayer1White ? player1.player_name : player2.player_name} (${isPlayer1White ? player1.elo : player2.elo}) id=${isPlayer1White ? player1.player_id : player2.player_id}`);
-      console.log(`[Matchmaking]   Black: ${isPlayer1White ? player2.player_name : player1.player_name} (${isPlayer1White ? player2.elo : player1.elo}) id=${isPlayer1White ? player2.player_id : player1.player_id}`);
-      console.log(`[Matchmaking]   Match discovered by HTTP polling via GET /api/matchmaking/check-match`);
+        const player1ActiveGame = await findActiveGameForAccount(client, player1.player_id);
+        const player2ActiveGame = await findActiveGameForAccount(client, player2.player_id);
+        if (player1ActiveGame || player2ActiveGame) {
+          console.warn('[Matchmaking] Refusing to create a second active game for an account');
+          return false;
+        }
 
-      return true;
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let gameId = '';
+        for (let i = 0; i < 6; i++) {
+          gameId += chars[Math.floor(Math.random() * chars.length)];
+        }
+
+        const isPlayer1White = Math.random() < 0.5;
+        await client.query(
+          `INSERT INTO active_games (
+            game_id,
+            white_player_id, black_player_id,
+            white_socket_id, black_socket_id,
+            white_player_name, black_player_name,
+            white_elo, black_elo,
+            status, game_mode
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+          [
+            gameId,
+            isPlayer1White ? player1.player_id : player2.player_id,
+            isPlayer1White ? player2.player_id : player1.player_id,
+            isPlayer1White ? player1.socket_id : player2.socket_id,
+            isPlayer1White ? player2.socket_id : player1.socket_id,
+            isPlayer1White ? player1.player_name : player2.player_name,
+            isPlayer1White ? player2.player_name : player1.player_name,
+            isPlayer1White ? player1.elo : player2.elo,
+            isPlayer1White ? player2.elo : player1.elo,
+            'playing',
+            player1.is_ranked ? 'ranked' : 'friendly'
+          ]
+        );
+
+        console.log(`[Matchmaking] Game ${gameId} inserted into active_games (mode=${player1.is_ranked ? 'ranked' : 'friendly'})`);
+        console.log(`[Matchmaking]   Match discovered by HTTP polling via GET /api/matchmaking/check-match`);
+        return true;
+      });
     } catch (error) {
       console.error('[Matchmaking] Error creating match:', error);
       return false;
