@@ -1,0 +1,156 @@
+name: PR Bot — Contribution Compliance Check
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  pr-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Validate PR against CONTRIBUTIONS.md rules
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_BASE: ${{ github.event.pull_request.base.ref }}
+          PR_HEAD: ${{ github.event.pull_request.head.ref }}
+        run: |
+          ISSUES=()
+          COMMENTS=""
+          CLOSE=false
+          CLOSE_REASON=""
+
+          # ── 1. Title format: type: short description ──────────────────
+          if [[ ! "$PR_TITLE" =~ ^(feat|fix|docs|style|refactor|test|chore|build|ci|perf):\ .+ ]]; then
+            ISSUES+=("Title must follow conventional commits format: \`type: short description\` (e.g. \`fix: prevent duplicate matchmaking\`)")
+          fi
+
+          # ── 2. Required PR body sections ───────────────────────────────
+          if [[ -z "$PR_BODY" ]]; then
+            CLOSE=true
+            CLOSE_REASON="Pull request body is empty. Please use the provided PR template."
+          else
+            MISSING_SECTIONS=()
+            for section in "## Summary" "## Related issue" "## Changes" "## Testing"; do
+              if ! grep -qF "$section" <<<"$PR_BODY"; then
+                MISSING_SECTIONS+=("$section")
+              fi
+            done
+            if [[ ${#MISSING_SECTIONS[@]} -gt 0 ]]; then
+              ISSUES+=("Missing required sections:${IFS}"$(printf '\n  - %s' "${MISSING_SECTIONS[@]}"))
+            fi
+
+            # Checklist: at least one blank checkbox remains unchecked
+            if grep -qE '^\- \[ \]' <<<"$PR_BODY"; then
+              ISSUES+=("Unfilled checklist items remain. Please complete the checklist before submitting.")
+            fi
+          fi
+
+          # ── 3. Secret detection in changed files ──────────────────────
+          SECRET_PATTERNS=(
+            'pk_[A-Za-z0-9]{20,}'
+            'sk_[A-Za-z0-9]{20,}'
+            'ghp_[A-Za-z0-9]{36,}'
+            'github_pat_[A-Za-z0-9_]{20,}'
+            'xox[baprs]-[A-Za-z0-9-]+'
+            'Bearer [A-Za-z0-9._\-]{20,}'
+            'password\s*[=:]\s*["\x27][A-Za-z0-9!@#$%^&*]{8,}'
+            'api[_-]?key\s*[=:]\s*["\x27][A-Za-z0-9]{20,}'
+            'database[_-]?url\s*[=:]\s*["\x27][A-Za-z0-9:/_-]+(://[^/]+)+[A-Za-z0-9]'
+            'mongodb(\+srv)?://[^\s]+'
+            'postgres(ql)?://[^\s]+'
+            'mysql://[^\s]+'
+          )
+
+          BRANCH_BASE="${PR_BASE:-main}"
+          if git diff --name-only "origin/$BRANCH_BASE"...HEAD 2>/dev/null | while read -r f; do
+            if [[ -f "$f" ]]; then
+              for pat in "${SECRET_PATTERNS[@]}"; do
+                if grep -IqE "$pat" "$f" 2>/dev/null; then
+                  echo "FOUND:$f:$pat"
+                  break
+                fi
+              done
+            fi
+          done | read -r SECRET_LINE; do
+            FILE=$(echo "$SECRET_LINE" | cut -d: -f2)
+            PAT=$(echo "$SECRET_LINE" | cut -d: -f3-)
+            ISSUES+=("Possible secret detected in \`${FILE}\` matching pattern \`${PAT}\`. Remove credentials and use environment variables instead.")
+          done
+
+          # Also check diff directly for secrets introduced in this PR
+          DIFF_OUTPUT=$(git diff "origin/$BRANCH_BASE"...HEAD -- "*.env*" "*.env.*" ".env" "*.json" "*.yml" "*.yaml" "*.ts" "*.tsx" "*.js" "*.jsx" 2>/dev/null || true)
+          if echo "$DIFF_OUTPUT" | grep -Eq '(?i)(password|secret|token|api[_-]?key)\s*[=:]\s*["\x27][^\s"'\'']{8,}'; then
+            ISSUES+=("A diff hunk contains a value that looks like a credential. Review and redact before merging.")
+          fi
+
+          # ── 4. No force-push / rewritten history ──────────────────────
+          COMMITS_BEFORE=$(git rev-list --count "origin/$BRANCH_BASE"..HEAD 2>/dev/null || echo "0")
+          if [[ "$PR_HEAD" == "$BRANCH_BASE" ]] && [[ "$COMMITS_BEFORE" -gt 5 ]]; then
+            ISSUES+=("Direct push to \`${BRANCH_BASE}\` detected with many commits. Please work from a feature branch.")
+          fi
+
+          # ── 5. No large untracked binary blobs ────────────────────────
+          LARGE_FILES=$(git diff --stat "origin/$BRANCH_BASE"...HEAD 2>/dev/null | awk '$NF ~ /^[0-9]+$/ && $NF > 500 {print $0}')
+          if [[ -n "$LARGE_FILES" ]]; then
+            ISSUES+=("Large files added (${LARGE_FILES}). Consider using Git LFS for binary assets.")
+          fi
+
+          # ── Report results ────────────────────────────────────────────
+          if [[ ${#ISSUES[@]} -eq 0 ]] && [[ "$CLOSE" != "true" ]]; then
+            echo "::notice::PR compliance check passed."
+            exit 0
+          fi
+
+          # Build comment body
+          COMMENT="# :warning: PR Compliance Check
+
+          "
+          if [[ ${#ISSUES[@]} -gt 0 ]]; then
+            COMMENT+="The following issues were found during automated review against [CONTRIBUTIONS.md](../blob/main/CONTRIBUTIONS.md):
+
+          "
+            for issue in "${ISSUES[@]}"; do
+              COMMENT+="- $issue
+          "
+            done
+            COMMENT+="
+          ## Next Steps
+          - Fix the issues above and push updates to this branch.
+          - Ensure all checklist items are marked.
+          - If a rule does not apply to your change, explain why in a comment.
+          "
+          fi
+
+          if [[ "$CLOSE" == "true" ]]; then
+            COMMENT+="${CLOSE_REASON}
+            
+          This PR will be closed automatically. Please resubmit with a valid PR template."
+          fi
+
+          echo "---ISSUES---"
+          printf '%s\n' "${ISSUES[@]}"
+          echo "---CLOSE---"
+          echo "$CLOSE"
+          echo "---COMMENT---"
+          echo "$COMMENT"
+
+          # Post comment
+          if [[ ${#ISSUES[@]} -gt 0 ]] || [[ "$CLOSE" == "true" ]]; then
+            echo "$COMMENT" | gh issue comment "$PR_NUMBER" --body-file -
+          fi
+
+          # Close if critical
+          if [[ "$CLOSE" == "true" ]]; then
+            gh pr close "$PR_NUMBER" --comment "$COMMENT"
+          fi
