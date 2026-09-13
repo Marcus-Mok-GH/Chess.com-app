@@ -45,7 +45,8 @@ export async function findActiveGameForAccount(client, playerId, { excludeGameId
   );
 
   return result.rows.find((game) =>
-    (!excludeGameId || String(game.game_id) !== String(excludeGameId))
+    (game.status === 'playing' || game.status === 'waiting')
+    && (!excludeGameId || String(game.game_id) !== String(excludeGameId))
     && activeGameMatchesAccount(game, playerId)
   ) || null;
 }
