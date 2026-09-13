@@ -1,5 +1,6 @@
 import express from 'express';
-import { query } from '../db.js';
+import { query, withTransaction } from '../db.js';
+import { activeGameMatchesAccount, findActiveGameForAccount, lockAccounts } from '../services/activeGameGuard.js';
 import crypto from 'crypto';
 import { Chess } from 'chess.js';
 import { errorResponse, handleRouteError } from '../middleware/errors.js';
@@ -339,25 +340,34 @@ router.post('/online/create', async (req, res) => {
 
     const gameCode = (requestedGameCode || generateGameCode()).toString().toUpperCase();
     const isWhite = playerColor === 'white';
+    const created = await withTransaction(async (client) => {
+      await lockAccounts(client, [playerId]);
+      const activeGame = await findActiveGameForAccount(client, playerId, { excludeGameId: gameCode });
+      if (activeGame) return false;
 
-    await query(
-      `INSERT INTO active_games (
-        game_id, white_player_id, black_player_id, white_player_name,
-        black_player_name, white_elo, black_elo, status, game_mode
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-      ON CONFLICT (game_id) DO UPDATE SET
-        white_player_id = EXCLUDED.white_player_id,
-        black_player_id = EXCLUDED.black_player_id,
-        white_player_name = EXCLUDED.white_player_name,
-        black_player_name = EXCLUDED.black_player_name,
-        white_elo = EXCLUDED.white_elo, black_elo = EXCLUDED.black_elo,
-        status = EXCLUDED.status, game_mode = EXCLUDED.game_mode,
-        updated_at = CURRENT_TIMESTAMP`,
-      [gameCode, isWhite ? playerId : null, isWhite ? null : playerId,
-       isWhite ? playerName : null, isWhite ? null : playerName,
-       isWhite ? playerElo || null : null, isWhite ? null : playerElo || null,
-       'waiting', 'friendly']
-    );
+      await client.query(
+        `INSERT INTO active_games (
+          game_id, white_player_id, black_player_id, white_player_name,
+          black_player_name, white_elo, black_elo, status, game_mode
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+        ON CONFLICT (game_id) DO UPDATE SET
+          white_player_id = EXCLUDED.white_player_id,
+          black_player_id = EXCLUDED.black_player_id,
+          white_player_name = EXCLUDED.white_player_name,
+          black_player_name = EXCLUDED.black_player_name,
+          white_elo = EXCLUDED.white_elo, black_elo = EXCLUDED.black_elo,
+          status = EXCLUDED.status, game_mode = EXCLUDED.game_mode,
+          updated_at = CURRENT_TIMESTAMP`,
+        [gameCode, isWhite ? playerId : null, isWhite ? null : playerId,
+         isWhite ? playerName : null, isWhite ? null : playerName,
+         isWhite ? playerElo || null : null, isWhite ? null : playerElo || null,
+         'waiting', 'friendly']
+      );
+      return true;
+    });
+
+    if (!created) return errorResponse(res, 409, 'You are already in an active online match');
+
     const kv = getOnlineGameKv();
     await kv.set(gameCode, {
       game_id: gameCode, game_code: gameCode,
@@ -384,41 +394,53 @@ router.post('/online/join', async (req, res) => {
       return errorResponse(res, 400, 'Invalid player ELO');
     }
 
-    const existing = await query('SELECT * FROM active_games WHERE game_id = $1',
-      [gameCode.toUpperCase()]);
-    if (existing.rows.length === 0) return errorResponse(res, 404, 'Game not found');
+    const normalizedGameCode = gameCode.toUpperCase();
+    const joinResult = await withTransaction(async (client) => {
+      await lockAccounts(client, [playerId]);
+      const existing = await client.query('SELECT * FROM active_games WHERE game_id = $1', [normalizedGameCode]);
+      if (existing.rows.length === 0) return { error: 'not_found' };
 
-    const game = existing.rows[0];
-    if (game.status !== 'waiting') return errorResponse(res, 400, 'Game already started or ended');
-    if (game.white_player_id === playerId || game.black_player_id === playerId) {
-      return errorResponse(res, 409, 'You are already assigned to this game');
-    }
+      const game = existing.rows[0];
+      if (game.status !== 'waiting') return { error: 'not_waiting' };
+      if (activeGameMatchesAccount(game, playerId)) return { error: 'already_assigned' };
 
-    const isWhiteOpen = !game.white_player_id;
-    const assignedColor = isWhiteOpen ? 'white' : 'black';
-    const updated = await query(
-      `UPDATE active_games
-       SET white_player_id = COALESCE(white_player_id, $2),
-           black_player_id = COALESCE(black_player_id, $3),
-           white_player_name = COALESCE(white_player_name, $4),
-           black_player_name = COALESCE(black_player_name, $5),
-           white_elo = COALESCE(white_elo, $6),
-           black_elo = COALESCE(black_elo, $7),
-           status = 'playing', updated_at = CURRENT_TIMESTAMP
-       WHERE game_id = $1 AND status = 'waiting'
-         AND ((white_player_id IS NULL AND black_player_id IS NOT NULL)
-           OR (white_player_id IS NOT NULL AND black_player_id IS NULL))
-      RETURNING *`,
-      [gameCode.toUpperCase(),
-       isWhiteOpen ? playerId : null, isWhiteOpen ? null : playerId,
-       isWhiteOpen ? playerName : null, isWhiteOpen ? null : playerName,
-       isWhiteOpen ? playerElo || null : null, isWhiteOpen ? null : playerElo || null]
-    );
-    if (!updated.rows[0]) return errorResponse(res, 409, 'Game was joined by another player');
+      const activeGame = await findActiveGameForAccount(client, playerId, { excludeGameId: normalizedGameCode });
+      if (activeGame) return { error: 'active' };
 
-    const kv = getOnlineGameKv();
-    await kv.set(gameCode.toUpperCase(), {
-      game_id: gameCode.toUpperCase(), game_code: gameCode.toUpperCase(),
+      const isWhiteOpen = !game.white_player_id;
+      const assignedColor = isWhiteOpen ? 'white' : 'black';
+      const updated = await client.query(
+        `UPDATE active_games
+         SET white_player_id = COALESCE(white_player_id, $2),
+             black_player_id = COALESCE(black_player_id, $3),
+             white_player_name = COALESCE(white_player_name, $4),
+             black_player_name = COALESCE(black_player_name, $5),
+             white_elo = COALESCE(white_elo, $6),
+             black_elo = COALESCE(black_elo, $7),
+             status = 'playing', updated_at = CURRENT_TIMESTAMP
+         WHERE game_id = $1 AND status = 'waiting'
+           AND ((white_player_id IS NULL AND black_player_id IS NOT NULL)
+             OR (white_player_id IS NOT NULL AND black_player_id IS NULL))
+         RETURNING *`,
+        [normalizedGameCode,
+         isWhiteOpen ? playerId : null, isWhiteOpen ? null : playerId,
+         isWhiteOpen ? playerName : null, isWhiteOpen ? null : playerName,
+         isWhiteOpen ? playerElo || null : null, isWhiteOpen ? null : playerElo || null]
+      );
+      if (!updated.rows[0]) return { error: 'join_conflict' };
+      return { game, assignedColor };
+    });
+
+    if (joinResult.error === 'not_found') return errorResponse(res, 404, 'Game not found');
+    if (joinResult.error === 'not_waiting') return errorResponse(res, 400, 'Game already started or ended');
+    if (joinResult.error === 'already_assigned') return errorResponse(res, 409, 'You are already assigned to this game');
+    if (joinResult.error === 'active') return errorResponse(res, 409, 'You are already in an active online match');
+    if (joinResult.error === 'join_conflict') return errorResponse(res, 409, 'Game was joined by another player');
+
+    const { game, assignedColor } = joinResult;
+    const isWhiteOpen = assignedColor === 'white';
+    await getOnlineGameKv().set(normalizedGameCode, {
+      game_id: normalizedGameCode, game_code: normalizedGameCode,
       fen: game.fen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
       move_history: game.move_history || [], move_count: game.move_count || 0,
       status: 'playing', game_mode: game.game_mode || 'friendly',
@@ -430,7 +452,7 @@ router.post('/online/join', async (req, res) => {
       black_elo: isWhiteOpen ? game.black_elo : playerElo || null,
     });
 
-    res.json({ success: true, gameCode: gameCode.toUpperCase(), playerColor: assignedColor });
+    res.json({ success: true, gameCode: normalizedGameCode, playerColor: assignedColor });
   } catch (error) {
     return handleRouteError(res, error, 'Failed to join online game');
   }
@@ -441,15 +463,17 @@ router.post('/online/leave', async (req, res) => {
   try {
     const { gameCode, playerId } = req.body;
     if (!gameCode || !playerId) return errorResponse(res, 400, 'Game code and player id are required');
-    await query(
-      `UPDATE active_games SET status = 'ended', updated_at = CURRENT_TIMESTAMP
-       WHERE game_id = $1 AND (white_player_id = $2 OR black_player_id = $2)`,
-      [gameCode.toUpperCase(), playerId]
-    );
+    const normalizedGameCode = gameCode.toUpperCase();
+    await withTransaction(async (client) => {
+      await lockAccounts(client, [playerId]);
+      await client.query(
+        `UPDATE active_games SET status = 'ended', updated_at = CURRENT_TIMESTAMP
+         WHERE game_id = $1 AND (white_player_id = $2 OR black_player_id = $2)`,
+        [normalizedGameCode, playerId]
+      );
+    });
 
-    const kv = getOnlineGameKv();
-    await kv.del(gameCode.toUpperCase());
-
+    await getOnlineGameKv().del(normalizedGameCode);
     res.json({ success: true });
   } catch (error) {
     return handleRouteError(res, error, 'Failed to leave online game');
