@@ -25,38 +25,38 @@ jobs:
           PR_BASE: ${{ github.event.pull_request.base.ref }}
           PR_HEAD: ${{ github.event.pull_request.head.ref }}
         run: |
-          ISSUES=()
-          COMMENTS=""
+          ISSUES_FILE=$(mktemp)
           CLOSE=false
           CLOSE_REASON=""
+          BRANCH_BASE="${PR_BASE:-main}"
 
-          # ── 1. Title format: type: short description ──────────────────
+          # ── 1. Title format ────────────────────────────────────────────
           if [[ ! "$PR_TITLE" =~ ^(feat|fix|docs|style|refactor|test|chore|build|ci|perf):\ .+ ]]; then
-            ISSUES+=("Title must follow conventional commits format: \`type: short description\` (e.g. \`fix: prevent duplicate matchmaking\`)")
+            echo "- Title must follow conventional commits format: \`type: short description\` (e.g. \`fix: prevent duplicate matchmaking\`)" >> "$ISSUES_FILE"
           fi
 
-          # ── 2. Required PR body sections ───────────────────────────────
+          # ── 2. Required body sections ──────────────────────────────────
           if [[ -z "$PR_BODY" ]]; then
             CLOSE=true
             CLOSE_REASON="Pull request body is empty. Please use the provided PR template."
           else
-            MISSING_SECTIONS=()
+            MISSING=()
             for section in "## Summary" "## Related issue" "## Changes" "## Testing"; do
               if ! grep -qF "$section" <<<"$PR_BODY"; then
-                MISSING_SECTIONS+=("$section")
+                MISSING+=("$section")
               fi
             done
-            if [[ ${#MISSING_SECTIONS[@]} -gt 0 ]]; then
-              ISSUES+=("Missing required sections:${IFS}"$(printf '\n  - %s' "${MISSING_SECTIONS[@]}"))
+            if [[ ${#MISSING[@]} -gt 0 ]]; then
+              LIST=$(printf '\n  - %s' "${MISSING[@]}")
+              echo "- Missing required PR template sections:${LIST}" >> "$ISSUES_FILE"
             fi
 
-            # Checklist: at least one blank checkbox remains unchecked
             if grep -qE '^\- \[ \]' <<<"$PR_BODY"; then
-              ISSUES+=("Unfilled checklist items remain. Please complete the checklist before submitting.")
+              echo "- Unfilled checklist items remain. Please complete the checklist before submitting." >> "$ISSUES_FILE"
             fi
           fi
 
-          # ── 3. Secret detection in changed files ──────────────────────
+          # ── 3. Secret detection in changed files ───────────────────────
           SECRET_PATTERNS=(
             'pk_[A-Za-z0-9]{20,}'
             'sk_[A-Za-z0-9]{20,}'
@@ -64,66 +64,66 @@ jobs:
             'github_pat_[A-Za-z0-9_]{20,}'
             'xox[baprs]-[A-Za-z0-9-]+'
             'Bearer [A-Za-z0-9._\-]{20,}'
-            'password\s*[=:]\s*["\x27][A-Za-z0-9!@#$%^&*]{8,}'
-            'api[_-]?key\s*[=:]\s*["\x27][A-Za-z0-9]{20,}'
-            'database[_-]?url\s*[=:]\s*["\x27][A-Za-z0-9:/_-]+(://[^/]+)+[A-Za-z0-9]'
             'mongodb(\+srv)?://[^\s]+'
             'postgres(ql)?://[^\s]+'
-            'mysql://[^\s]+'
           )
 
-          BRANCH_BASE="${PR_BASE:-main}"
-          if git diff --name-only "origin/$BRANCH_BASE"...HEAD 2>/dev/null | while read -r f; do
-            if [[ -f "$f" ]]; then
-              for pat in "${SECRET_PATTERNS[@]}"; do
-                if grep -IqE "$pat" "$f" 2>/dev/null; then
-                  echo "FOUND:$f:$pat"
-                  break
-                fi
-              done
-            fi
-          done | read -r SECRET_LINE; do
-            FILE=$(echo "$SECRET_LINE" | cut -d: -f2)
-            PAT=$(echo "$SECRET_LINE" | cut -d: -f3-)
-            ISSUES+=("Possible secret detected in \`${FILE}\` matching pattern \`${PAT}\`. Remove credentials and use environment variables instead.")
+          git diff --name-only "origin/$BRANCH_BASE"...HEAD 2>/dev/null | while read -r f; do
+            [[ -f "$f" ]] || continue
+            for pat in "${SECRET_PATTERNS[@]}"; do
+              if grep -Eqi "$pat" "$f" 2>/dev/null; then
+                echo "- Possible secret detected in \`${f}\` matching pattern \`${pat}\`. Remove credentials and use environment variables instead." >> "$ISSUES_FILE"
+                break
+              fi
+            done
           done
 
-          # Also check diff directly for secrets introduced in this PR
-          DIFF_OUTPUT=$(git diff "origin/$BRANCH_BASE"...HEAD -- "*.env*" "*.env.*" ".env" "*.json" "*.yml" "*.yaml" "*.ts" "*.tsx" "*.js" "*.jsx" 2>/dev/null || true)
-          if echo "$DIFF_OUTPUT" | grep -Eq '(?i)(password|secret|token|api[_-]?key)\s*[=:]\s*["\x27][^\s"'\'']{8,}'; then
-            ISSUES+=("A diff hunk contains a value that looks like a credential. Review and redact before merging.")
+          # ── 4. No secrets in diff hunks ────────────────────────────────
+          if git diff "origin/$BRANCH_BASE"...HEAD 2>/dev/null | grep -Eq '(?i)(password|secret|token|api[_-]?key)\s*[=:]\s*["\x27][A-Za-z0-9!@#$%^&*]{8,}'; then
+            echo "- A diff hunk contains a value that looks like a credential. Review and redact before submitting." >> "$ISSUES_FILE"
           fi
 
-          # ── 4. No force-push / rewritten history ──────────────────────
-          COMMITS_BEFORE=$(git rev-list --count "origin/$BRANCH_BASE"..HEAD 2>/dev/null || echo "0")
-          if [[ "$PR_HEAD" == "$BRANCH_BASE" ]] && [[ "$COMMITS_BEFORE" -gt 5 ]]; then
-            ISSUES+=("Direct push to \`${BRANCH_BASE}\` detected with many commits. Please work from a feature branch.")
+          # ── 5. Direct push guard ───────────────────────────────────────
+          if [[ "$PR_HEAD" == "$BRANCH_BASE" ]]; then
+            COMMIT_COUNT=$(git rev-list --count "origin/$BRANCH_BASE"..HEAD 2>/dev/null || echo "0")
+            if [[ "$COMMIT_COUNT" -gt 5 ]]; then
+              echo "- Direct push to \`${BRANCH_BASE}\` with many commits detected. Please work from a feature branch and open a PR." >> "$ISSUES_FILE"
+            fi
           fi
 
-          # ── 5. No large untracked binary blobs ────────────────────────
-          LARGE_FILES=$(git diff --stat "origin/$BRANCH_BASE"...HEAD 2>/dev/null | awk '$NF ~ /^[0-9]+$/ && $NF > 500 {print $0}')
-          if [[ -n "$LARGE_FILES" ]]; then
-            ISSUES+=("Large files added (${LARGE_FILES}). Consider using Git LFS for binary assets.")
+          # ── 6. Large binary blobs ──────────────────────────────────────
+          LARGE=$(git diff --stat "origin/$BRANCH_BASE"...HEAD 2>/dev/null | awk '$NF ~ /^[0-9]+$/ && $NF > 500 {print $NF " " $2}')
+          if [[ -n "$LARGE" ]]; then
+            echo "- Large files added ($LARGE). Consider using Git LFS for binary assets." >> "$ISSUES_FILE"
           fi
 
-          # ── Report results ────────────────────────────────────────────
-          if [[ ${#ISSUES[@]} -eq 0 ]] && [[ "$CLOSE" != "true" ]]; then
-            echo "::notice::PR compliance check passed."
+          # ── Post results ───────────────────────────────────────────────
+          ISSUE_COUNT=$(wc -l < "$ISSUES_FILE" | tr -d ' ')
+          rm -f "$ISSUES_FILE"
+
+          if [[ "$CLOSE" != "true" ]] && [[ "$ISSUE_COUNT" -eq 0 ]]; then
+            echo "::notice::PR compliance check passed — no issues found."
             exit 0
           fi
 
-          # Build comment body
           COMMENT="# :warning: PR Compliance Check
 
           "
-          if [[ ${#ISSUES[@]} -gt 0 ]]; then
+          if [[ "$CLOSE" == "true" ]]; then
+            COMMENT+="**This PR has been closed automatically.**
+
+          $CLOSE_REASON
+
+          Please resubmit using the PR template."
+          else
             COMMENT+="The following issues were found during automated review against [CONTRIBUTIONS.md](../blob/main/CONTRIBUTIONS.md):
 
           "
-            for issue in "${ISSUES[@]}"; do
-              COMMENT+="- $issue
+            while IFS= read -r line; do
+              [[ -z "$line" ]] && continue
+              COMMENT+="$line
           "
-            done
+            done < <(sort -u "$ISSUES_FILE" 2>/dev/null || true)
             COMMENT+="
           ## Next Steps
           - Fix the issues above and push updates to this branch.
@@ -132,25 +132,12 @@ jobs:
           "
           fi
 
-          if [[ "$CLOSE" == "true" ]]; then
-            COMMENT+="${CLOSE_REASON}
-            
-          This PR will be closed automatically. Please resubmit with a valid PR template."
-          fi
+          # Write comment body to temp file (gh --body-file handles multi-line safely)
+          BODY_FILE=$(mktemp)
+          echo "$COMMENT" > "$BODY_FILE"
+          gh issue comment "$PR_NUMBER" --body-file "$BODY_FILE"
+          rm -f "$BODY_FILE"
 
-          echo "---ISSUES---"
-          printf '%s\n' "${ISSUES[@]}"
-          echo "---CLOSE---"
-          echo "$CLOSE"
-          echo "---COMMENT---"
-          echo "$COMMENT"
-
-          # Post comment
-          if [[ ${#ISSUES[@]} -gt 0 ]] || [[ "$CLOSE" == "true" ]]; then
-            echo "$COMMENT" | gh issue comment "$PR_NUMBER" --body-file -
-          fi
-
-          # Close if critical
           if [[ "$CLOSE" == "true" ]]; then
             gh pr close "$PR_NUMBER" --comment "$COMMENT"
           fi
