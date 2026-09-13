@@ -17,6 +17,9 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
+      - name: Fetch base ref for diff comparison
+        run: git fetch origin "${PR_BASE:-main}"
+
       - name: Validate PR against CONTRIBUTIONS.md rules
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -143,3 +146,25 @@ jobs:
           if [[ "$CLOSE" == "true" ]]; then
             gh pr close "$PR_NUMBER" --comment "$COMMENT"
           fi
+
+  push-guard:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch base ref for diff comparison
+        run: git fetch origin "${PR_BASE:-main}"
+
+      - name: Check direct push to main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          COMMIT_COUNT=$(git rev-list --count HEAD 2>/dev/null || echo "0")
+          if [[ "$COMMIT_COUNT" -gt 5 ]]; then
+            echo "::error::Direct push of $COMMIT_COUNT commits detected on main. Please open a pull request instead and work from a feature branch." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "::notice::Push compliance check passed ($COMMIT_COUNT commit(s))."
