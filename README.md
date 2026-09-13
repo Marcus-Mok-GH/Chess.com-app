@@ -108,6 +108,10 @@ chess.com-app/
 
 ---
 
+## Contributing
+
+See [CONTRIBUTIONS.md](CONTRIBUTIONS.md) for what contributors can work on, project boundaries, required checks, and pull request expectations.
+
 ## AI Coach — Pollinations User-Pays Setup
 
 The AI coach uses Pollinations BYOP (Bring Your Own Pollen), not the free/keyless API path. Each player must sign in to Pollinations and approve a budget in the consent screen; coaching requests are then billed against that player's authorized Pollen key. The app never stores a Pollinations app secret or pays for player usage.
