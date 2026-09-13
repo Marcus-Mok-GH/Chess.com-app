@@ -1,0 +1,170 @@
+name: PR Bot — Contribution Compliance Check
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  pr-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Fetch base ref for diff comparison
+        run: git fetch origin "${PR_BASE:-main}"
+
+      - name: Validate PR against CONTRIBUTIONS.md rules
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_BASE: ${{ github.event.pull_request.base.ref }}
+          PR_HEAD: ${{ github.event.pull_request.head.ref }}
+        run: |
+          ISSUES_FILE=$(mktemp)
+          CLOSE=false
+          CLOSE_REASON=""
+          BRANCH_BASE="${PR_BASE:-main}"
+
+          # ── 1. Title format ────────────────────────────────────────────
+          if [[ ! "$PR_TITLE" =~ ^(feat|fix|docs|style|refactor|test|chore|build|ci|perf):\ .+ ]]; then
+            echo "- Title must follow conventional commits format: \`type: short description\` (e.g. \`fix: prevent duplicate matchmaking\`)" >> "$ISSUES_FILE"
+          fi
+
+          # ── 2. Required body sections ──────────────────────────────────
+          if [[ -z "$PR_BODY" ]]; then
+            CLOSE=true
+            CLOSE_REASON="Pull request body is empty. Please use the provided PR template."
+          else
+            MISSING=()
+            for section in "## Summary" "## Related issue" "## Changes" "## Testing"; do
+              if ! grep -qF "$section" <<<"$PR_BODY"; then
+                MISSING+=("$section")
+              fi
+            done
+            if [[ ${#MISSING[@]} -gt 0 ]]; then
+              LIST=$(printf '\n  - %s' "${MISSING[@]}")
+              echo "- Missing required PR template sections:${LIST}" >> "$ISSUES_FILE"
+            fi
+
+            if grep -qE '^\- \[ \]' <<<"$PR_BODY"; then
+              echo "- Unfilled checklist items remain. Please complete the checklist before submitting." >> "$ISSUES_FILE"
+            fi
+          fi
+
+          # ── 3. Secret detection in changed files ───────────────────────
+          SECRET_PATTERNS=(
+            'pk_[A-Za-z0-9]{20,}'
+            'sk_[A-Za-z0-9]{20,}'
+            'ghp_[A-Za-z0-9]{36,}'
+            'github_pat_[A-Za-z0-9_]{20,}'
+            'xox[baprs]-[A-Za-z0-9-]+'
+            'Bearer [A-Za-z0-9._\-]{20,}'
+            'mongodb(\+srv)?://[^\s]+'
+            'postgres(ql)?://[^\s]+'
+          )
+
+          git diff --name-only -z "origin/$BRANCH_BASE"...HEAD 2>/dev/null | while IFS= read -r -d '' f; do
+            [[ -f "$f" ]] || continue
+            for pat in "${SECRET_PATTERNS[@]}"; do
+              if grep -IqE "$pat" -- "$f" 2>/dev/null; then
+                echo "- Possible secret detected in \`${f}\` matching pattern \`${pat}\`. Remove credentials and use environment variables instead." >> "$ISSUES_FILE"
+                break
+              fi
+            done
+          done
+
+          # ── 4. No secrets in diff hunks ────────────────────────────────
+          if git diff "origin/$BRANCH_BASE"...HEAD 2>/dev/null | grep -Eqi '(password|secret|token|api[_-]?key)\s*[=:]\s*["\x27][A-Za-z0-9!@#$%^&*]{8,}'; then
+            echo "- A diff hunk contains a value that looks like a credential. Review and redact before submitting." >> "$ISSUES_FILE"
+          fi
+
+          # ── 5. Direct push guard ───────────────────────────────────────
+          if [[ "$PR_HEAD" == "$BRANCH_BASE" ]]; then
+            COMMIT_COUNT=$(git rev-list --count "origin/$BRANCH_BASE"..HEAD 2>/dev/null || echo "0")
+            if [[ "$COMMIT_COUNT" -gt 5 ]]; then
+              echo "- Direct push to \`${BRANCH_BASE}\` with many commits detected. Please work from a feature branch and open a PR." >> "$ISSUES_FILE"
+            fi
+          fi
+
+          # ── 6. Large binary blobs ──────────────────────────────────────
+          LARGE=$(git diff --numstat "origin/$BRANCH_BASE"...HEAD 2>/dev/null | awk 'BEGIN{OFS=" "} {if ($1 ~ /^[0-9]+$/ && $1+0 > 500) print $1, $2; else if ($2 == "-") print $2, $3}')
+          if [[ -n "$LARGE" ]]; then
+            echo "- Large files added ($LARGE). Consider using Git LFS for binary assets." >> "$ISSUES_FILE"
+          fi
+
+          # ── Post results ───────────────────────────────────────────────
+          ISSUE_COUNT=$(wc -l < "$ISSUES_FILE" | tr -d ' ')
+          rm -f "$ISSUES_FILE"
+
+          if [[ "$CLOSE" != "true" ]] && [[ "$ISSUE_COUNT" -eq 0 ]]; then
+            echo "::notice::PR compliance check passed — no issues found."
+            exit 0
+          fi
+
+          COMMENT="# :warning: PR Compliance Check
+
+          "
+          if [[ "$CLOSE" == "true" ]]; then
+            COMMENT+="**This PR has been closed automatically.**
+
+          $CLOSE_REASON
+
+          Please resubmit using the PR template."
+          else
+            COMMENT+="The following issues were found during automated review against [CONTRIBUTIONS.md](../blob/main/CONTRIBUTIONS.md):
+
+          "
+            while IFS= read -r line; do
+              [[ -z "$line" ]] && continue
+              COMMENT+="$line
+          "
+            done < <(sort -u "$ISSUES_FILE" 2>/dev/null || true)
+            COMMENT+="
+
+          ## Next Steps
+          - Fix the issues above and push updates to this branch.
+          - Ensure all checklist items are marked.
+          - If a rule does not apply to your change, explain why in a comment.
+          "
+          fi
+
+          # Write comment body to temp file (gh --body-file handles multi-line safely)
+          BODY_FILE=$(mktemp)
+          echo "$COMMENT" > "$BODY_FILE"
+          gh issue comment "$PR_NUMBER" --body-file "$BODY_FILE"
+          rm -f "$BODY_FILE"
+
+          if [[ "$CLOSE" == "true" ]]; then
+            gh pr close "$PR_NUMBER" --comment "$COMMENT"
+          fi
+
+  push-guard:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch base ref for diff comparison
+        run: git fetch origin "${PR_BASE:-main}"
+
+      - name: Check direct push to main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          COMMIT_COUNT=$(git rev-list --count HEAD 2>/dev/null || echo "0")
+          if [[ "$COMMIT_COUNT" -gt 5 ]]; then
+            echo "::error::Direct push of $COMMIT_COUNT commits detected on main. Please open a pull request instead and work from a feature branch." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "::notice::Push compliance check passed ($COMMIT_COUNT commit(s))."

@@ -1,3 +1,8 @@
+## [2026-09-13] - Add PR compliance bot
+
+### Added
+- `.github/workflows/pr-bot.yml`: automated PR review on open/synchronize that checks conventional commit title format, required template sections, and detects secrets in diffs; closes critical-violation PRs and comments actionable feedback.
+
 ## [2026-09-13] - Prevent duplicate online matches per account
 
 ### Fixed
