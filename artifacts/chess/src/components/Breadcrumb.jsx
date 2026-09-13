@@ -10,38 +10,22 @@ const breadcrumbMap = {
 export default function Breadcrumb() {
   const navigate = useNavigate()
   const location = useLocation()
-  
-  const currentPath = location.pathname.startsWith('/online/') ? '/online' : location.pathname
-  
-  const getBreadcrumbs = () => {
-    const crumbs = []
-    
-    // Always start with home
-    if (currentPath !== '/') {
-      crumbs.push(breadcrumbMap['/'])
-    }
-    
-    // Add current page if not home
-    if (currentPath !== '/' && breadcrumbMap[currentPath]) {
-      crumbs.push(breadcrumbMap[currentPath])
-    }
-    
-    // Special case for online game rooms
-    if (location.pathname.startsWith('/online/')) {
-      const gameId = location.pathname.split('/')[2]
-      if (gameId) {
-        crumbs.push({
-          title: `Game ${gameId.slice(0, 8)}...`,
-          path: location.pathname
-        })
-      }
-    }
-    
-    return crumbs
-  }
+  const { pathname } = location
+  const currentPath = pathname.startsWith('/online/') ? '/online' : pathname
+  const isOnlineGame = pathname.startsWith('/online/')
+  const gameId = isOnlineGame ? pathname.split('/')[2] : null
 
-  const breadcrumbs = getBreadcrumbs()
-  
+  const breadcrumbs = currentPath === '/'
+    ? []
+    : [
+        breadcrumbMap['/'],
+        breadcrumbMap[currentPath],
+        gameId && {
+          title: `Game ${gameId.slice(0, 8)}...`,
+          path: pathname,
+        },
+      ].filter(Boolean)
+
   if (breadcrumbs.length <= 1) return null
 
   return (
@@ -50,7 +34,7 @@ export default function Breadcrumb() {
         <span key={crumb.path} className="breadcrumb-item">
           {index < breadcrumbs.length - 1 ? (
             <>
-              <button 
+              <button
                 className="breadcrumb-link"
                 onClick={() => navigate(crumb.path)}
               >
