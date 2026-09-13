@@ -1,5 +1,6 @@
 import express from 'express';
-import { query } from '../db.js';
+import { query, withTransaction } from '../db.js';
+import { findActiveGameForAccount, lockAccounts } from '../services/activeGameGuard.js';
 import { processMatchmakingOnce } from '../services/matchmakingService.js';
 import { handleRouteError } from '../middleware/errors.js';
 import { requireSession } from '../auth.js';
@@ -80,29 +81,28 @@ router.post('/join', requireSession, async (req, res) => {
     const serverElo = Number.isFinite(numericElo) && numericElo >= 0 && numericElo <= 4000 ? numericElo : 1200;
     const isRankedValue = typeof isRanked === 'boolean' ? isRanked : true;
 
-    // Check for existing active games
-    const existingGame = await query(
-      `SELECT game_id FROM active_games
-       WHERE (white_player_id = $1 OR black_player_id = $1)
-       AND status IN ('playing', 'waiting')
-       LIMIT 1`,
-      [playerId]
-    );
+    // Lock the account while checking active games and entering the queue.
+    // This closes the race where two tabs submit /join at the same time.
+    const joined = await withTransaction(async (client) => {
+      await lockAccounts(client, [playerId]);
+      const existingGame = await findActiveGameForAccount(client, playerId);
+      if (existingGame) return false;
 
-    if (existingGame.rowCount > 0) {
-      return res.status(409).json({ success: false, message: 'You are already in an active game.' });
+      // Remove any existing entry for this player to avoid duplicates.
+      await client.query('DELETE FROM matchmaking_queue WHERE player_id = $1', [playerId]);
+
+      const socketId = `polling-${playerId}`;
+      await client.query(
+        `INSERT INTO matchmaking_queue (socket_id, player_id, player_name, elo, is_ranked)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [socketId, playerId, trimmedName, serverElo, isRankedValue]
+      );
+      return true;
+    });
+
+    if (!joined) {
+      return res.status(409).json({ success: false, message: 'You are already in an active online match.' });
     }
-
-    // Remove any existing entry for this player to avoid duplicates
-    await query('DELETE FROM matchmaking_queue WHERE player_id = $1', [playerId]);
-
-    // Add to queue with polling-specific socket_id
-    const socketId = `polling-${playerId}`;
-    await query(
-      `INSERT INTO matchmaking_queue (socket_id, player_id, player_name, elo, is_ranked)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [socketId, playerId, trimmedName, serverElo, isRankedValue]
-    );
 
     // Always process matchmaking immediately after join
     if (MATCHMAKING_CONFIG.PROCESS_ON_HEARTBEAT) {
