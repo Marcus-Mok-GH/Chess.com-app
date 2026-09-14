@@ -2,6 +2,46 @@ import { useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import './WinRateChart.css';
 
+const formatDate = (dateString) =>
+  new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+const getLineColor = (winRate) => {
+  if (winRate >= 60) return '#81b64c';
+  if (winRate >= 50) return '#b8b8b8';
+  return '#e57373';
+};
+
+const CustomTooltip = ({ active, payload }) => {
+  if (!active || !payload?.length) {
+    return null;
+  }
+
+  const data = payload[0].payload;
+
+  return (
+    <div className="winrate-tooltip">
+      <div className="tooltip-header">
+        <span className="tooltip-games">Game {data.game}</span>
+        <span className={`tooltip-winrate ${data.winRate >= 50 ? 'positive' : 'negative'}`}>
+          {data.winRate}% win rate
+        </span>
+      </div>
+      <div className="tooltip-stats">
+        <span className="stat-item win">{data.wins}W</span>
+        <span className="stat-item loss">{data.losses}L</span>
+        <span className="stat-item draw">{data.draws}D</span>
+      </div>
+      {data.gameCode && (
+        <div className="tooltip-game">
+          <span className="game-result">{data.result}</span>
+          <span className="game-code">vs {data.opponentElo}</span>
+        </div>
+      )}
+      <div className="tooltip-date">{formatDate(data.date)}</div>
+    </div>
+  );
+};
+
 const WinRateChart = ({ history = [] }) => {
   const chartData = useMemo(() => {
     if (!history || history.length === 0) {
@@ -60,7 +100,7 @@ const WinRateChart = ({ history = [] }) => {
     return data;
   }, [history]);
 
-  if (!chartData || chartData.length === 0) {
+  if (chartData.length === 0) {
     return (
       <div className="winrate-chart-container">
         <div className="winrate-chart-placeholder">
@@ -70,48 +110,6 @@ const WinRateChart = ({ history = [] }) => {
       </div>
     );
   }
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
-
-  const getLineColor = (winRate) => {
-    if (winRate >= 60) return '#81b64c';
-    if (winRate >= 50) return '#b8b8b8';
-    return '#e57373';
-  };
-
-  const CustomTooltip = ({ active, payload }) => {
-    if (!active || !payload || !payload.length) {
-      return null;
-    }
-
-    const data = payload[0].payload;
-
-    return (
-      <div className="winrate-tooltip">
-        <div className="tooltip-header">
-          <span className="tooltip-games">Game {data.game}</span>
-          <span className={`tooltip-winrate ${data.winRate >= 50 ? 'positive' : 'negative'}`}>
-            {data.winRate}% win rate
-          </span>
-        </div>
-        <div className="tooltip-stats">
-          <span className="stat-item win">{data.wins}W</span>
-          <span className="stat-item loss">{data.losses}L</span>
-          <span className="stat-item draw">{data.draws}D</span>
-        </div>
-        {data.gameCode && (
-          <div className="tooltip-game">
-            <span className="game-result">{data.result}</span>
-            <span className="game-code">vs {data.opponentElo}</span>
-          </div>
-        )}
-        <div className="tooltip-date">{formatDate(data.date)}</div>
-      </div>
-    );
-  };
 
   // Calculate domain for Y-axis (0-100 for win rate percentage)
   const winRateMin = 0;
