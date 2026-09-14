@@ -1,3 +1,12 @@
+## [2026-09-14] - Simplify chart rendering helpers
+
+### Changed
+- Moved pure date, color, dot, and tooltip helpers out of the Elo and win-rate chart render functions so they are created once instead of on every render.
+- Removed redundant chart-data guards while preserving the existing chart inputs, output, labels, colors, and loading behavior.
+
+### Notes
+- This is a behavior-preserving maintenance change. Authentication, API, matchmaking, game state, engine, puzzle, coach, social, and persistence code was intentionally left untouched.
+
 ## [2026-09-13] - Add PR compliance bot
 
 ### Added
