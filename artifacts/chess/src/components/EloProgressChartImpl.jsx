@@ -2,6 +2,64 @@ import { useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Dot } from 'recharts';
 import './EloProgressChart.css';
 
+const RESULT_COLORS = Object.freeze({
+  win: '#81b64c',
+  loss: '#e57373',
+  draw: '#9e9b98',
+  start: '#81b64c',
+  current: '#fff',
+  default: '#81b64c',
+});
+
+const formatDate = (dateString) =>
+  new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+const getResultColor = (result) => RESULT_COLORS[result] ?? RESULT_COLORS.default;
+
+const CustomDot = (props) => {
+  const { payload } = props;
+  const isEndpoint = payload.result === 'start' || payload.result === 'current';
+  const isCurrent = payload.result === 'current';
+
+  return (
+    <Dot
+      {...props}
+      r={isEndpoint ? 6 : 4}
+      fill={getResultColor(payload.result)}
+      stroke={isCurrent ? '#fff' : 'none'}
+      strokeWidth={isCurrent ? 2 : 0}
+    />
+  );
+};
+
+const CustomTooltip = ({ active, payload }) => {
+  if (!active || !payload?.length) {
+    return null;
+  }
+
+  const data = payload[0].payload;
+
+  return (
+    <div className="elo-tooltip">
+      <div className="tooltip-header">
+        <span className="tooltip-elo">{data.elo}</span>
+        {data.change !== 0 && (
+          <span className={`tooltip-change ${data.change > 0 ? 'positive' : 'negative'}`}>
+            {data.change > 0 ? '+' : ''}{data.change}
+          </span>
+        )}
+      </div>
+      {data.gameCode && (
+        <div className="tooltip-game">
+          <span className="game-result">{data.result}</span>
+          <span className="game-code">vs {data.opponentElo}</span>
+        </div>
+      )}
+      <div className="tooltip-date">{formatDate(data.date)}</div>
+    </div>
+  );
+};
+
 const EloProgressChart = ({ history = [], currentElo }) => {
   const chartData = useMemo(() => {
     // Always start with initial ELO of 1200
@@ -48,7 +106,7 @@ const EloProgressChart = ({ history = [], currentElo }) => {
     return data;
   }, [history, currentElo]);
 
-  if (!chartData || chartData.length === 0) {
+  if (chartData.length === 0) {
     return (
       <div className="elo-chart-container">
         <div className="elo-chart-placeholder">
@@ -58,70 +116,6 @@ const EloProgressChart = ({ history = [], currentElo }) => {
       </div>
     );
   }
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
-
-  const getResultColor = (result) => {
-    switch (result) {
-      case 'win': return '#81b64c';
-      case 'loss': return '#e57373';
-      case 'draw': return '#9e9b98';
-      case 'start': return '#81b64c';
-      case 'current': return '#fff';
-      default: return '#81b64c';
-    }
-  };
-
-  const getCustomDot = (props) => {
-    const { cx, cy, payload } = props;
-    const color = getResultColor(payload.result);
-    const size = payload.result === 'start' || payload.result === 'current' ? 6 : 4;
-    const stroke = payload.result === 'current' ? '#fff' : 'none';
-    const strokeWidth = payload.result === 'current' ? 2 : 0;
-
-    return (
-      <Dot
-        {...props}
-        cx={cx}
-        cy={cy}
-        r={size}
-        fill={color}
-        stroke={stroke}
-        strokeWidth={strokeWidth}
-      />
-    );
-  };
-
-  const CustomTooltip = ({ active, payload }) => {
-    if (!active || !payload || !payload.length) {
-      return null;
-    }
-
-    const data = payload[0].payload;
-
-    return (
-      <div className="elo-tooltip">
-        <div className="tooltip-header">
-          <span className="tooltip-elo">{data.elo}</span>
-          {data.change !== 0 && (
-            <span className={`tooltip-change ${data.change > 0 ? 'positive' : 'negative'}`}>
-              {data.change > 0 ? '+' : ''}{data.change}
-            </span>
-          )}
-        </div>
-        {data.gameCode && (
-          <div className="tooltip-game">
-            <span className="game-result">{data.result}</span>
-            <span className="game-code">vs {data.opponentElo}</span>
-          </div>
-        )}
-        <div className="tooltip-date">{formatDate(data.date)}</div>
-      </div>
-    );
-  };
 
   const eloMin = Math.min(...chartData.map(d => d.elo)) - 50;
   const eloMax = Math.max(...chartData.map(d => d.elo)) + 50;
@@ -171,7 +165,7 @@ const EloProgressChart = ({ history = [], currentElo }) => {
             dataKey="elo"
             stroke="#81b64c"
             strokeWidth={2}
-            dot={getCustomDot}
+            dot={CustomDot}
             activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }}
             animationDuration={500}
           />
