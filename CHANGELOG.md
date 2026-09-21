@@ -1,3 +1,10 @@
+## [2026-09-21] - Improve the mobile experience
+
+### Changed
+- Refined the shared mobile header and bottom navigation with compact labels, consistent vector icons, accessible active-page state, larger touch targets, safe-area-aware spacing, and clearance for the floating Feedback control.
+- Reordered the landing hero so its message and primary actions appear before the board on phones, reduced large board previews, and removed obsolete bottom-nav whitespace.
+- Re-enabled browser zoom and switched mobile keyboard handling to resize content rather than cover focused controls.
+
 ## [2026-09-14] - Simplify chart rendering helpers
 
 ### Changed

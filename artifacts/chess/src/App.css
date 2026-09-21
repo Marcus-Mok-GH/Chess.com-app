@@ -266,11 +266,11 @@ main {
 
   .mobile-header {
     display: flex;
-    height: calc(56px + env(safe-area-inset-top, 0px));
+    height: calc(56px + var(--safe-top));
     align-items: center;
     justify-content: space-between;
-    padding: 0 1rem;
-    padding-top: env(safe-area-inset-top, 0px);
+    gap: 1rem;
+    padding: var(--safe-top) max(1rem, var(--safe-right)) 0 max(1rem, var(--safe-left));
     background: rgba(26, 26, 26, 0.85);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -282,25 +282,46 @@ main {
 
   .mobile-header .page-title {
     min-width: 0;
+    max-width: 55%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     text-align: right;
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
   }
 
   .app-logo {
+    min-width: 0;
     font-weight: 800;
-    font-size: 1rem;
+    font-size: 0.95rem;
     color: #fff;
     text-decoration: none;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.55rem;
+    white-space: nowrap;
+  }
+
+  .app-logo-mark {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    place-items: center;
+    border-radius: 9px;
+    background: var(--gradient-primary);
+    box-shadow: var(--shadow-sm);
+    color: #fff;
+    font-size: 1rem;
+    line-height: 1;
   }
 
   .bottom-nav {
-    display: flex;
-    justify-content: space-around;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     background: rgba(26, 26, 26, 0.92);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
@@ -309,8 +330,8 @@ main {
     bottom: 0;
     left: 0;
     right: 0;
-    min-height: calc(64px + env(safe-area-inset-bottom, 0px));
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    min-height: calc(64px + var(--safe-bottom));
+    padding: 0 var(--safe-right) var(--safe-bottom) var(--safe-left);
     z-index: 100;
   }
 
@@ -318,14 +339,14 @@ main {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.2rem;
+    gap: 0.15rem;
     color: var(--text-dim);
     text-decoration: none;
     font-size: 0.65rem;
     font-weight: 600;
     flex: 1;
-    padding: 0.5rem 0.25rem;
-    min-height: 52px;
+    padding: 0.4rem 0.25rem 0.35rem;
+    min-height: 64px;
     justify-content: center;
     border-radius: var(--radius-sm);
     transition: color 0.15s, background 0.15s;
@@ -335,12 +356,36 @@ main {
   .nav-item:hover { color: #fff; }
 
   .nav-item.active {
-    color: var(--primary);
-    background: rgba(129, 182, 76, 0.08);
+    color: var(--primary-hover);
   }
 
   .nav-item .nav-icon {
-    font-size: 1.3rem;
+    display: grid;
+    width: 34px;
+    height: 28px;
+    place-items: center;
+    border-radius: 999px;
+    transition: background-color 0.15s, color 0.15s;
+  }
+
+  .nav-item .nav-icon svg {
+    width: 21px;
+    height: 21px;
+    stroke-width: 2.2;
+  }
+
+  .nav-item.active .nav-icon {
+    background: rgba(129, 182, 76, 0.15);
+  }
+}
+
+@media (max-width: 360px) {
+  .mobile-header .app-logo-text {
+    display: none;
+  }
+
+  .mobile-header .page-title {
+    max-width: calc(100% - 46px);
   }
 }
 
@@ -353,8 +398,8 @@ main {
    space at the bottom of scrolling content so it can't be obscured. */
 @media (max-width: 768px) {
   main {
-    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
-    scroll-padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(72px + var(--safe-bottom));
+    scroll-padding-bottom: calc(88px + var(--safe-bottom));
   }
 
   .play-page {
