@@ -1,3 +1,7 @@
+[2026-09-21] - Guest access messaging for protected pages
+
+- Kept guests on the Puzzles, Clubs, and Game Archive routes with a clear login-required message and login action instead of immediately redirecting them to the login page.
+
 [2026-09-21] - Mobile navigation and landing optimisation
 
 - Reworked the mobile app header and bottom navigation with compact typography, consistent vector icons, current-page semantics, larger touch targets, full safe-area support, and no overlap from the floating Feedback control.

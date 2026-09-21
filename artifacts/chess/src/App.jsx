@@ -6,6 +6,7 @@ import { FeedbackPanel } from './components/FeedbackPanel'
 import ErrorBoundary from './components/ErrorBoundary'
 import SetUsernameModal from './components/SetUsernameModal'
 import PollinationsCoachPrompt from './components/PollinationsCoachPrompt'
+import ProtectedRoute from './components/ProtectedRoute'
 import api from './services/api'
 import { usePuter } from './hooks/usePuter'
 import { Globe2, House, MoreHorizontal, Swords } from 'lucide-react'
@@ -189,13 +190,6 @@ function PuterCheck() {
   return null;
 }
 
-function ProtectedRoute({ children }) {
-  const { isLoggedIn, isLoading } = useUser();
-  if (isLoading) return <div className="loading-screen"><div className="spinner"></div></div>;
-  if (!isLoggedIn) return <Navigate to="/login" replace />;
-  return children;
-}
-
 function RouteFallback() {
   return <div className="loading-screen"><div className="spinner"></div></div>
 }
@@ -332,16 +326,16 @@ export default function App({ Router = BrowserRouter, routerProps = {} } = {}) {
                   <Route path="/online" element={<OnlinePlay />} />
                   <Route path="/online/:gameId" element={<OnlinePlay />} />
                   <Route path="/game/:gameId" element={<Game />} />
-                  <Route path="/history" element={<ProtectedRoute><GameHistory /></ProtectedRoute>} />
+                  <Route path="/history" element={<ProtectedRoute loginRequiredFor="Game Archive"><GameHistory /></ProtectedRoute>} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/terms" element={<Suspense fallback={<RouteFallback />}><Terms /></Suspense>} />
                   <Route path="/privacy" element={<Suspense fallback={<RouteFallback />}><Privacy /></Suspense>} />
                   <Route path="/changelog" element={<Changelog />} />
-                  <Route path="/puzzles" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Puzzles /></Suspense></ProtectedRoute>} />
+                  <Route path="/puzzles" element={<ProtectedRoute loginRequiredFor="Puzzles"><Suspense fallback={<RouteFallback />}><Puzzles /></Suspense></ProtectedRoute>} />
                   <Route path="/openings" element={<Suspense fallback={<RouteFallback />}><Openings /></Suspense>} />
                   <Route path="/lessons" element={<LessonsRedirect />} />
                   <Route path="/friends" element={<Suspense fallback={<RouteFallback />}><Friends /></Suspense>} />
-                  <Route path="/clubs" element={<ProtectedRoute><Suspense fallback={<RouteFallback />}><Clubs /></Suspense></ProtectedRoute>} />
+                  <Route path="/clubs" element={<ProtectedRoute loginRequiredFor="Clubs"><Suspense fallback={<RouteFallback />}><Clubs /></Suspense></ProtectedRoute>} />
                   <Route path="/more" element={<More />} />
                 </Route>
                 <Route path="*" element={<Suspense fallback={<RouteFallback />}><NotFound /></Suspense>} />
