@@ -8,6 +8,7 @@ import SetUsernameModal from './components/SetUsernameModal'
 import PollinationsCoachPrompt from './components/PollinationsCoachPrompt'
 import api from './services/api'
 import { usePuter } from './hooks/usePuter'
+import { Globe2, House, MoreHorizontal, Swords } from 'lucide-react'
 import './App.css'
 
 const Home = lazy(() => import('./pages/Home'))
@@ -131,27 +132,46 @@ function AppHeader({ isGameRoute = false }) {
 
       {/* Top Mobile Header */}
       <header className="mobile-header">
-        <Link to="/" className="app-logo">♟️ PlayChess</Link>
+        <Link to="/" className="app-logo" aria-label="PlayChess home">
+          <span className="app-logo-mark" aria-hidden="true">♟</span>
+          <span className="app-logo-text">PlayChess</span>
+        </Link>
         <h1 className="page-title">{getTitle(location.pathname)}</h1>
       </header>
 
       {/* Bottom Mobile Navigation */}
-      <nav className="bottom-nav">
-        <Link to="/home" className={`nav-item ${currentPath === '/home' ? 'active' : ''}`}>
-          <div className="nav-icon">🏠</div>
+      <nav className="bottom-nav" aria-label="Mobile navigation">
+        <Link
+          to="/home"
+          className={`nav-item ${currentPath === '/home' ? 'active' : ''}`}
+          aria-current={currentPath === '/home' ? 'page' : undefined}
+        >
+          <span className="nav-icon" aria-hidden="true"><House /></span>
           <span>Home</span>
         </Link>
-        <Link to="/play" className={`nav-item ${currentPath === '/play' ? 'active' : ''}`}>
-          <div className="nav-icon">♟️</div>
+        <Link
+          to="/play"
+          className={`nav-item ${currentPath === '/play' ? 'active' : ''}`}
+          aria-current={currentPath === '/play' ? 'page' : undefined}
+        >
+          <span className="nav-icon" aria-hidden="true"><Swords /></span>
           <span>Play</span>
         </Link>
-        <Link to="/online" className={`nav-item ${currentPath === '/online' ? 'active' : ''}`}>
-          <div className="nav-icon">🌐</div>
+        <Link
+          to="/online"
+          className={`nav-item ${currentPath === '/online' ? 'active' : ''}`}
+          aria-current={currentPath === '/online' ? 'page' : undefined}
+        >
+          <span className="nav-icon" aria-hidden="true"><Globe2 /></span>
           <span>Online</span>
         </Link>
-        <Link to="/more" className={`nav-item ${currentPath === '/more' ? 'active' : ''}`}>
-          <div className="nav-icon">•••</div>
-          <span>More...</span>
+        <Link
+          to="/more"
+          className={`nav-item ${currentPath === '/more' ? 'active' : ''}`}
+          aria-current={currentPath === '/more' ? 'page' : undefined}
+        >
+          <span className="nav-icon" aria-hidden="true"><MoreHorizontal /></span>
+          <span>More</span>
         </Link>
       </nav>
     </>

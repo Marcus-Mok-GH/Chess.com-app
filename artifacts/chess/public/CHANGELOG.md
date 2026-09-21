@@ -1,3 +1,9 @@
+[2026-09-21] - Mobile navigation and landing optimisation
+
+- Reworked the mobile app header and bottom navigation with compact typography, consistent vector icons, current-page semantics, larger touch targets, full safe-area support, and no overlap from the floating Feedback control.
+- Reordered and resized the mobile landing hero so the primary message and actions appear before the interactive board, reduced oversized feature boards, and removed unused bottom-bar spacing.
+- Restored pinch-to-zoom and made the on-screen keyboard resize the viewport instead of covering focused content.
+
 [2026-09-12] - Polling migration code-review fixes
 
 - Draw offers are stored atomically (no double-offer race), only seated players can read a draw offer or a game's chat room, and a draw response no longer confirms a lost offer on storage failure.

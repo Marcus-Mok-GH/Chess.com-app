@@ -353,11 +353,11 @@
 .landing-burger {
   display: none;
   position: fixed;
-  top: 14px;
-  left: 14px;
+  top: max(14px, calc(var(--safe-top) + 8px));
+  left: max(14px, calc(var(--safe-left) + 8px));
   z-index: 40;
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 10px;
   background: var(--land-surface);
   border: 1px solid var(--land-border);
@@ -980,7 +980,6 @@
 
   .landing-main {
     width: 100%;
-    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
   }
 
   .landing-burger {
@@ -1019,12 +1018,16 @@
     padding: 72px 20px 32px;
   }
 
+  .landing .hero-copy {
+    order: -1;
+  }
+
   .landing .hero-title {
     font-size: clamp(2rem, 9vw, 2.75rem);
   }
 
   .landing .hero-board-frame {
-    max-width: min(480px, calc(100vw - 40px));
+    max-width: min(360px, calc(100vw - 40px));
   }
 
   .landing .stats-bar {
@@ -1049,7 +1052,7 @@
   }
 
   .landing .feature-block-board {
-    width: min(100%, 480px);
+    width: min(100%, 320px);
     margin: 0 auto;
   }
 
@@ -1079,7 +1082,7 @@
   }
 
   .landing-footer {
-    padding: 32px 20px calc(88px + env(safe-area-inset-bottom, 0px));
+    padding: 32px max(20px, var(--safe-right)) max(32px, calc(20px + var(--safe-bottom))) max(20px, var(--safe-left));
   }
 }
 
