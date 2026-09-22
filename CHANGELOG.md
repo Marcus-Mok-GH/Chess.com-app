@@ -1,3 +1,8 @@
+## [2026-09-22] - Make CORS test's Vercel origin fixture independent
+
+### Fixed
+- `chess-server/config/cors.test.js` (review follow-up): the `VERCEL_PROJECT_PRODUCTION_URL` fixture now uses a distinct bare host (`chess-com-app-preview.vercel.app`) instead of mirroring `FRONTEND_URL`, so the bare-host-to-`https` normalization test independently validates the Vercel allowlist path. Replaced `= undefined` env assignments with `delete` so the vars are truly absent.
+
 ## [2026-09-22] - Fix production login 500 (CORS origin rejection)
 
 ### Fixed

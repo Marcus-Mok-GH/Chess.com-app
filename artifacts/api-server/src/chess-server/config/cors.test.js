@@ -7,10 +7,10 @@ import cors from 'cors';
 // module load time. The production allowlist is the deployed FRONTEND_URL; the
 // Vercel same-deployment env var is a bare host (no scheme) by design.
 process.env.FRONTEND_URL = 'https://chess-com-app.vercel.app';
-process.env.VERCEL_PROJECT_PRODUCTION_URL = 'chess-com-app.vercel.app';
-process.env.VERCEL_URL = undefined;
-process.env.VERCEL_BRANCH_URL = undefined;
-process.env.FRONTEND_URLS = undefined;
+process.env.VERCEL_PROJECT_PRODUCTION_URL = 'chess-com-app-preview.vercel.app';
+delete process.env.VERCEL_URL;
+delete process.env.VERCEL_BRANCH_URL;
+delete process.env.FRONTEND_URLS;
 
 let app;
 
@@ -79,12 +79,12 @@ describe('cors origins fail closed instead of 500ing routes', () => {
   });
 
   it('allows a same-deployment origin from VERCEL_PROJECT_PRODUCTION_URL (bare host -> https)', async () => {
-    // FRONTEND_URL covers the production URL; the bare-host form is what the
-    // Vercel env var provides, so verify the => https normalizer accepts it too.
-    const res = await loopback({ path: PATH, origin: 'https://chess-com-app.vercel.app' });
+    // This host is distinct from FRONTEND_URL, so it independently validates
+    // Vercel bare-host normalization (bare host -> https) in the allowlist.
+    const res = await loopback({ path: PATH, origin: 'https://chess-com-app-preview.vercel.app' });
 
     expect(res.status).toBe(400);
-    expect(res.allowOrigin).toBe(ALLOWED_ORIGIN);
+    expect(res.allowOrigin).toBe('https://chess-com-app-preview.vercel.app');
   });
 
   it('fails closed on a disallowed origin: no 500, no Access-Control-Allow-Origin, route still reached', async () => {
