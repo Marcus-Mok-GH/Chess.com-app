@@ -1,3 +1,18 @@
+## [2026-09-22] - Make CORS test's Vercel origin fixture independent
+
+### Fixed
+- `chess-server/config/cors.test.js` (review follow-up): the `VERCEL_PROJECT_PRODUCTION_URL` fixture now uses a distinct bare host (`chess-com-app-preview.vercel.app`) instead of mirroring `FRONTEND_URL`, so the bare-host-to-`https` normalization test independently validates the Vercel allowlist path. Replaced `= undefined` env assignments with `delete` so the vars are truly absent.
+
+## [2026-09-22] - Fix production login 500 (CORS origin rejection)
+
+### Fixed
+- `chess-server/config/cors.js` no longer throws `Origin is not allowed by CORS` from the `origin` callback. When an Origin is disallowed the callback now fails closed with `callback(null, false)`, so the cors middleware passes through instead of forwarding an error to Express's error handler and turning browser logins into `500 Internal server error. Please try again later.`
+- Requests without an Origin header (curl / server-to-server) still pass through unchanged, and allowlisted origins (`FRONTEND_URLS` / `FRONTEND_URL`) plus same-deployment Vercel origins (`VERCEL_URL`, `VERCEL_PROJECT_PRODUCTION_URL`, `VERCEL_BRANCH_URL`, normalized to `https://` when the scheme is missing) are reflected as before. Arbitrary origins are never reflected, so CORS is not weakened.
+- Added `chess-server/config/cors.test.js` regression coverage: an allowlisted Origin reaches the OTP endpoint (400 missing email, not 500), disallowed and missing Origins no longer produce an Internal server error, preflight works for allowed Origins, and disallowed Origins fail closed without `Access-Control-Allow-Origin`.
+
+### Notes
+- The login 500 was reproduced live at `https://chess-com-app.vercel.app`: the browser's `POST /api/auth/email-otp/send-verification-otp` carried `Origin: https://chess-com-app.vercel.app`, which was not in the allowlist, so cors forwarded the callback error to Express's error handler. Verified before/after with a local Express loopback against the real app (disallowed Origin: 500 → fail-closed 400/204 with no CORS headers). Deployed production still has the old behavior until this change merges and redeploys.
+
 ## [2026-09-21] - Improve the mobile experience
 
 ### Changed
