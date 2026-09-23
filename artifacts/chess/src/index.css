@@ -111,16 +111,16 @@
   --radius-xl: 18px;
   --font-display: 'Nunito', 'Inter', system-ui, sans-serif;
 
-  /* Modern, layered shadows — softer and more diffuse for a "sleek" feel */
-  --shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.35);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.18);
-  --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.32), 0 2px 4px rgba(0, 0, 0, 0.18);
-  --shadow-lg: 0 14px 32px rgba(0, 0, 0, 0.42), 0 4px 8px rgba(0, 0, 0, 0.18);
-  --shadow-xl: 0 30px 60px rgba(0, 0, 0, 0.5), 0 8px 16px rgba(0, 0, 0, 0.18);
-  --shadow-2xl: 0 40px 100px rgba(0, 0, 0, 0.55);
-  --shadow-glow: 0 0 32px rgba(129, 182, 76, 0.32);
-  --shadow-glow-soft: 0 0 24px rgba(129, 182, 76, 0.18);
-  --shadow-inner: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  /* Plain shadows — no glow layers */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 6px 16px rgba(0, 0, 0, 0.35);
+  --shadow-xl: 0 12px 32px rgba(0, 0, 0, 0.4);
+  --shadow-2xl: 0 20px 48px rgba(0, 0, 0, 0.45);
+  --shadow-glow: none;
+  --shadow-glow-soft: none;
+  --shadow-inner: none;
 
   /* Chess.com semantic aliases — scoped page layers re-use these */
   --chesscom-bg: #1a1a1a;
@@ -147,13 +147,14 @@
   --move-brilliant: #4caf9a;
 
   /* Gradients — chess.com brand-forward, used sparingly for accent */
-  --gradient-primary: linear-gradient(180deg, #a3d16e 0%, #81b64c 50%, #6e9c40 100%);
-  --gradient-primary-hover: linear-gradient(180deg, #b3dc7e 0%, #92c25d 50%, #7aac49 100%);
-  --gradient-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.025) 0%, rgba(255, 255, 255, 0) 100%);
-  --gradient-elevated: linear-gradient(180deg, #2e2b28 0%, #272522 100%);
-  --gradient-hero: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(129, 182, 76, 0.08) 0%, transparent 70%);
-  --gradient-gold: linear-gradient(180deg, #f4d35e 0%, #d4a72c 100%);
-  --gradient-red: linear-gradient(180deg, #ff6b5b 0%, #e74c3c 100%);
+  /* Flat colors — gradients reserved for the board, not the UI */
+  --gradient-primary: #81b64c;
+  --gradient-primary-hover: #a3d16e;
+  --gradient-surface: none;
+  --gradient-elevated: var(--card);
+  --gradient-hero: none;
+  --gradient-gold: #d4a72c;
+  --gradient-red: #e74c3c;
 
   /* shadcn sidebar tokens */
   --sidebar: #1a1a1a;
@@ -198,7 +199,7 @@
 
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Nunito', sans-serif;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: -0.015em;
     line-height: 1.2;
     margin: 0;
@@ -231,20 +232,19 @@
 
 @layer components {
   .btn-primary {
-    background: var(--gradient-primary);
-    color: white;
-    font-weight: 800;
+    background: var(--primary);
+    color: #1a1a1a;
+    font-weight: 700;
     padding: 0.75rem 1.5rem;
     border-radius: var(--radius-md);
-    transition: var(--transition-smooth);
-    border: 1px solid rgba(0, 0, 0, 0.25);
+    transition: background var(--transition-fast);
+    border: none;
     cursor: pointer;
-    box-shadow: var(--shadow-md), var(--shadow-inner);
-    letter-spacing: 0.01em;
+    box-shadow: var(--shadow-sm);
   }
-  .btn-primary:hover { background: var(--gradient-primary-hover); transform: translateY(-1px); box-shadow: var(--shadow-lg), var(--shadow-glow-soft); }
-  .btn-primary:active { transform: translateY(0); box-shadow: var(--shadow-sm); }
-  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: var(--shadow-sm); }
+  .btn-primary:hover { background: var(--primary-hover); }
+  .btn-primary:active { background: var(--primary-dim); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
   .btn-secondary {
     background-color: var(--bg-elevated);
@@ -252,24 +252,22 @@
     font-weight: 700;
     padding: 0.75rem 1.5rem;
     border-radius: var(--radius-md);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: none;
     cursor: pointer;
-    transition: var(--transition-smooth);
-    box-shadow: var(--shadow-inner);
+    transition: background var(--transition-fast);
   }
-  .btn-secondary:hover { background-color: #565452; transform: translateY(-1px); box-shadow: var(--shadow-md); }
-  .btn-secondary:active { transform: translateY(0); }
+  .btn-secondary:hover { background-color: #565452; }
+  .btn-secondary:active { background-color: var(--bg-surface-3); }
 
   .card-surface {
-    background: var(--gradient-elevated);
+    background: var(--card);
     border: 1px solid var(--color-border-subtle);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm);
-    transition: border-color var(--transition-smooth), box-shadow var(--transition-smooth), transform var(--transition-smooth);
+    box-shadow: var(--shadow-xs);
+    transition: border-color var(--transition-fast);
   }
   .card-surface:hover {
     border-color: rgba(255, 255, 255, 0.1);
-    box-shadow: var(--shadow-md);
   }
 
   /* Modern section dividers */
@@ -302,26 +300,17 @@
     outline-offset: 2px;
   }
 
-  /* Gradient brand text */
-  .text-gradient {
-    background: linear-gradient(180deg, #ffffff 0%, #c5c5c5 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-
+  /* Brand-colored text — solid color, no gradient clip */
+  .text-gradient,
   .text-gradient-brand {
-    background: linear-gradient(180deg, #b3dc7e 0%, #81b64c 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    color: var(--primary-hover);
+    background: none;
+    -webkit-text-fill-color: currentColor;
   }
 
-  /* Glassy surface used on hero/elevated cards */
+  /* Glassy surface kept as a plain surface */
   .surface-glass {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    background: var(--card);
   }
 }
 
@@ -357,7 +346,7 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, var(--primary), var(--primary-hover), var(--primary));
+  background: var(--primary);
 }
 
 .not-found-icon {
@@ -401,22 +390,18 @@
   align-items: center;
   justify-content: center;
   padding: 0.875rem 2rem;
-  background: var(--gradient-primary);
-  color: white;
-  font-weight: 800;
+  background: var(--primary);
+  color: #1a1a1a;
+  font-weight: 700;
   font-size: 0.95rem;
-  border: 1px solid rgba(0, 0, 0, 0.25);
+  border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: var(--transition-smooth);
-  box-shadow: var(--shadow-md);
-  letter-spacing: 0.01em;
+  transition: background var(--transition-fast);
 }
 
 .not-found-btn:hover {
-  background: var(--gradient-primary-hover);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-lg), var(--shadow-glow-soft);
+  background: var(--primary-hover);
 }
 
 .not-found-btn:active {

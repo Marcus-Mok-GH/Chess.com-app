@@ -67,8 +67,8 @@ export default function LoginModal({ onClose, onContinueAsGuest, mode = 'ranked'
         {step === 'email' && (
           <>
             <div className="login-header">
-              <h2>♟️ Ready to Play?</h2>
-              <p>Sign in to track your progress, earn ELO, and climb the leaderboard</p>
+              <h2>Sign in to play</h2>
+              <p>Track your rating and keep your game history</p>
             </div>
 
             <form onSubmit={(e) => e.preventDefault()} className="login-form">
@@ -146,7 +146,7 @@ export default function LoginModal({ onClose, onContinueAsGuest, mode = 'ranked'
                   onKeyDown={(e) => e.key === 'Enter' && handleVerifyCode()}
                 />
                 {error && <span className="error-text">{error}</span>}
-                {!error && successMsg && <span className="success-text">✅ {successMsg}</span>}
+                {!error && successMsg && <span className="success-text">{successMsg}</span>}
               </div>
 
               <button

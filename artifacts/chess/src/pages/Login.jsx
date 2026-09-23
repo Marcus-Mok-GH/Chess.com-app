@@ -107,8 +107,8 @@ export default function Login() {
 
         <div className="login-header">
           <span className="login-eyebrow">PlayChess</span>
-          <h1 className="login-title">{isSignupIntent ? 'Create Your Account' : 'Welcome Back'}</h1>
-          <p className="login-subtitle">{isSignupIntent ? 'Start playing on PlayChess' : 'Sign in to your PlayChess account'}</p>
+          <h1 className="login-title">{isSignupIntent ? 'Create an account' : 'Log in'}</h1>
+          <p className="login-subtitle">{isSignupIntent ? 'Pick a username, get a rating, start playing.' : 'Enter your email and we\'ll send a code.'}</p>
         </div>
 
         <hr className="login-divider" />

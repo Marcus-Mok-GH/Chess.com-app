@@ -199,7 +199,7 @@ export default function Settings() {
           </span>
           <div>
             <h1>Settings</h1>
-            <p className="settings-subtitle">Personalize your experience</p>
+            <p className="settings-subtitle">Board, sound, and account preferences</p>
           </div>
         </div>
 

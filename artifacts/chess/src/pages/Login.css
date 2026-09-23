@@ -163,28 +163,24 @@
 
 .login-btn {
   padding: 0.875rem 1rem;
-  background: var(--gradient-primary);
-  color: white;
-  font-weight: 800;
+  background: var(--primary);
+  color: #1a1a1a;
+  font-weight: 700;
   font-size: 0.95rem;
   border-radius: var(--radius-md);
-  border: 1px solid rgba(0, 0, 0, 0.25);
+  border: none;
   cursor: pointer;
-  transition: var(--transition-smooth);
-  box-shadow: 0 4px 14px rgba(129, 182, 76, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: background var(--transition-fast);
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
 
 .login-btn:hover:not(:disabled) {
-  background: var(--gradient-primary-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(129, 182, 76, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  background: var(--primary-hover);
 }
 
 .login-btn:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(129, 182, 76, 0.2);
+  background: var(--primary-dim);
 }
 
 .login-btn:disabled {

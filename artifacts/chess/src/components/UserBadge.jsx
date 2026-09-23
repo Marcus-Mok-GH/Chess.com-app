@@ -52,7 +52,7 @@ export default function UserBadge() {
         <span className="user-avatar" aria-hidden="true">👤</span>
         <span className="user-name">{user.username}</span>
         <span className="user-elo">{user.elo}</span>
-        <span className="db-indicator" title={isOnline ? "Online" : "Offline"}>{isOnline ? '☁️' : '📴'}</span>
+        <span className="db-indicator" title={isOnline ? "Online" : "Offline"}>{isOnline ? '●' : '○'}</span>
       </button>
 
       {showDropdown && (
@@ -99,12 +99,12 @@ export default function UserBadge() {
                 window.location.href = '/history';
               }}
             >
-              📊 View Stats & Charts
+              View Stats & Charts
             </button>
             <div className="dropdown-divider" role="separator" />
             <div className="dropdown-sync-status">
               <span className={isOnline ? "sync-online" : "sync-offline"}>
-                {isOnline ? '☁️ Connected' : '📴 Offline'}
+                {isOnline ? 'Connected' : 'Offline'}
               </span>
             </div>
             <div className="dropdown-divider" role="separator" />
@@ -116,7 +116,7 @@ export default function UserBadge() {
                 setShowDropdown(false);
               }}
             >
-              🚪 Sign Out
+              Sign Out
             </button>
           </div>
         </>

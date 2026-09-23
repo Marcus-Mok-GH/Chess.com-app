@@ -30,15 +30,8 @@
   height: 52px;
   border-radius: var(--radius-xl);
   color: var(--primary);
-  background: linear-gradient(
-    135deg,
-    rgba(129, 182, 76, 0.22),
-    rgba(129, 182, 76, 0.08)
-  );
+  background: rgba(129, 182, 76, 0.1);
   border: 1px solid rgba(129, 182, 76, 0.32);
-  box-shadow:
-    var(--shadow-glow-soft),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
   flex-shrink: 0;
 }
 
@@ -125,8 +118,7 @@
   width: 3px;
   height: 18px;
   border-radius: 999px;
-  background: linear-gradient(180deg, var(--primary), rgba(129, 182, 76, 0.4));
-  box-shadow: var(--shadow-glow-soft);
+  background: var(--primary);
 }
 
 .section-icon {
@@ -297,9 +289,7 @@
 
 .theme-option.active {
   border-color: var(--primary);
-  box-shadow:
-    0 0 0 1px var(--primary),
-    var(--shadow-glow-soft);
+  box-shadow: 0 0 0 1px var(--primary);
 }
 
 .theme-preview {
@@ -411,8 +401,6 @@
 .link-button:hover {
   background: rgba(129, 182, 76, 0.1);
   border-color: var(--primary);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-glow-soft);
 }
 
 /* ── Account ───────────────────────── */
