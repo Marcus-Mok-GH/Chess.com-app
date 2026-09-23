@@ -1,3 +1,19 @@
+[2026-09-23] - Fix the four pre-existing test failures (suite now 216/216)
+
+- `matchmakingPolling.test.js`: updated the stale `joinMatchmaking` assertion from a bare-boolean expectation to the actual result-object contract (`{ success, playerId }`) that `useMatchmaking` has consumed since the HTTP-polling migration; the service was correct, the test asserted an old return shape.
+- `engine/puzzles/puzzleGenerator.js`: fixed mate-in-1 generation throwing `Unable to generate a verified chess puzzle.` — an explicit mate request inherited the beginner/easy profiles' `allowChecks: false` gate (a mate is always a check, so every candidate was rejected), and unique mate positions are too rare to surface from random playouts. Explicit mate requests now use a dedicated unique-mate search over fresh seeds (`findUniqueMateFromStart`), bypassing the checks gate.
+- `engine/puzzles/puzzleGenerator.js`: default generation no longer lets mate positions masquerade as `tactics` — a mating move scored 1000 and outranked every material gain, so seeds 1–40 could emit `type: "mate-in-1"` from a plain `generatePuzzle()` call, violating the tactics contract asserted by both the engine tests and the api-server re-export. Default generation now excludes mates entirely (`allowMate: false`); the api-server comment that mates come only from explicit requests is now true again.
+- `api-server/chess-server/mailer.js`: fixed `index.vercel.test.js` and `auth.proxy.test.js` failing at import with `Failed to resolve import "nodemailer"` — nodemailer is an intentionally optional, undeclared dependency (kept external in the esbuild bundle) that the SMTP path lazy-loads and degrades gracefully without, but Vite's transform-time import analysis statically rewrote `await import('nodemailer')` and hard-failed when the package was absent. The specifier is now built dynamically (`'node' + 'mailer'` with `@vite-ignore`) so the import stays genuinely runtime-resolved; production behavior is unchanged.
+- Verified: full Vitest suite passes — 23 test files, 216 tests, 0 failures.
+
+[2026-09-23] - Tone down the AI-generated look across the UI
+
+- Replaced every emoji icon in the interface (desktop sidebar, More page, login modal, verify-email page, user dropdown) with proper lucide vector icons in a consistent weight and size.
+- Removed the glossy "AI dashboard" styling layer: gradient buttons and logo tiles are now flat solid green, glow shadows are gone, gradient-clipped text renders as a plain brand color, glassmorphism blurs were dropped from the sidebar, mobile header, and bottom nav, and the hero/final-CTA page background glows were removed.
+- Removed hover-lift micro-interactions (cards and buttons no longer float on hover) and the repeated icon-in-tinted-box pattern on Home stat and action cards, which now lead with plain labels and numbers.
+- Rewrote the loudest marketing copy into plainer product language: hero subtitle, feature blocks, app promo, final CTA, login/welcome headings, Home quick-action descriptions, and Settings subtitle.
+- No routes, tests, or functionality changed; the full Vitest suite passes.
+
 [2026-09-22] - Make CORS test's Vercel origin fixture independent
 
 - Review follow-up on `chess-server/config/cors.test.js`: the `VERCEL_PROJECT_PRODUCTION_URL` fixture now uses a distinct bare host (`chess-com-app-preview.vercel.app`) instead of mirroring `FRONTEND_URL`, so the bare-host-to-`https` normalization assertion independently validates the Vercel allowlist path; unrelated env vars are now removed with `delete` instead of being set to `undefined`.

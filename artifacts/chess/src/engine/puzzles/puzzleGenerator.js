@@ -225,6 +225,38 @@ function createNaturalTactic(random, options = {}) {
   return null;
 }
 
+/**
+ * Unique mate-in-one positions almost never show up in random playouts (a
+ * legal position with exactly one mating move is rare), so explicit mate
+ * requests get a dedicated search over fresh seeds before the generator
+ * gives up.
+ */
+function findUniqueMateFromStart(seed) {
+  for (let attempt = 0; attempt < 400; attempt += 1) {
+    const random = randomSource(normalizeSeed(seed) + attempt * 7919);
+    const chess = sampleLegalPosition(random, DIFFICULTY_PROFILES.intermediate);
+    if (!chess) continue;
+    const matingMove = findUniqueMate(chess);
+    if (!matingMove) continue;
+
+    return {
+      fen: chess.fen(),
+      sideToMove: chess.turn() === "w" ? "white" : "black",
+      rating: ratePuzzle(chess, 10, DIFFICULTY_PROFILES.intermediate),
+      difficulty: "intermediate",
+      theme: "Checkmate Tactic",
+      hint: "Find the forcing move that ends the game in checkmate.",
+      solution: matingMove.san,
+      followup: null,
+      type: "mate-in-1",
+      tags: ["tactics", "forcing"],
+      generated: true,
+      generationMethod: "unique-mate-search",
+    };
+  }
+  return null;
+}
+
 export function validateGeneratedPuzzle(puzzle) {
   try {
     const chess = new Chess(puzzle.fen);
@@ -307,7 +339,21 @@ export function generatePuzzle(seed = Date.now() ^ Math.floor(Math.random() * 0x
   const difficulty = String(options.difficulty ?? "intermediate").toLowerCase();
   const profile = difficultyProfile(difficulty);
 
-  const puzzle = createNaturalTactic(random, { allowMate: wantsMate ? true : profile.allowMate, allowChecks: profile.allowChecks, requireMate: wantsMate, profile, difficulty });
+  // An explicitly requested mate gets a dedicated unique-mate search (mate
+  // positions are too rare to surface in random playouts). Default generation
+  // excludes mates entirely — a mate-in-one is by definition a checking move,
+  // so it must also bypass the beginner/easy profiles' allowChecks gate, and
+  // the tactics contract (tests + api re-export) requires type "tactics" with
+  // a non-mating solution for every default seed.
+  const puzzle = wantsMate
+    ? findUniqueMateFromStart(normalizedSeed)
+    : createNaturalTactic(random, {
+        allowMate: false,
+        allowChecks: profile.allowChecks,
+        requireMate: false,
+        profile,
+        difficulty,
+      });
 
   if (!puzzle || !validateGeneratedPuzzle(puzzle)) {
     throw new Error("Unable to generate a verified chess puzzle.");

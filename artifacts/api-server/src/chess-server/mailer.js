@@ -20,7 +20,14 @@ let _nodemailer = null;
 async function getNodemailer() {
   if (_nodemailer) return _nodemailer;
   try {
-    const mod = await import('nodemailer');
+    // nodemailer is an optional runtime dependency: it is intentionally absent
+    // from package.json and kept external in the production esbuild bundle,
+    // and the SMTP path below degrades to the console fallback when it is
+    // missing. Build the specifier dynamically so bundlers (esbuild/Vite
+    // import analysis) cannot resolve it at build time and hard-fail tests
+    // and bundles in environments where the package is not installed.
+    const moduleName = 'node' + 'mailer';
+    const mod = await import(/* @vite-ignore */ moduleName);
     _nodemailer = mod.default || mod;
     return _nodemailer;
   } catch {

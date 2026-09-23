@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUser } from '../contexts/UserContext'
-import { Cpu, Globe, FileText, Star, Gamepad2, Trophy, ArrowUpRight, Wifi, WifiOff, Play, BookOpen, Puzzle } from 'lucide-react'
+import { Wifi, WifiOff, Play, ArrowUpRight } from 'lucide-react'
 import api from '../services/api'
 import DailyPuzzleStreak from '../components/DailyPuzzleStreak'
 import './Home.css'
@@ -81,7 +81,7 @@ export default function Home() {
             )}
           </div>
           <h1 className="welcome-title">
-            {greeting}, <span className="username-highlight text-gradient-brand">{user.username}</span>
+            {greeting}, <span className="username-highlight">{user.username}</span>
           </h1>
           <p className="welcome-subtitle">Ready for your next game?</p>
         </section>
@@ -93,32 +93,23 @@ export default function Home() {
 
         {/* Stats Overview */}
         <section className="stats-overview">
-          <div className="stat-card card-surface elo-card">
-            <div className="stat-icon">
-              <Star size={20} />
-            </div>
+          <div className="stat-card card-surface">
             <div className="stat-content">
-              <div className="stat-label">Current Rating</div>
+              <div className="stat-label">Rating</div>
               <div className="stat-value">{user.elo}</div>
             </div>
           </div>
 
-          <div className="stat-card card-surface games-card">
-            <div className="stat-icon">
-              <Gamepad2 size={20} />
-            </div>
+          <div className="stat-card card-surface">
             <div className="stat-content">
               <div className="stat-label">Rated Games</div>
               <div className="stat-value">{user.gamesPlayed || 0}</div>
             </div>
           </div>
 
-          <div className="stat-card card-surface winrate-card">
-            <div className="stat-icon">
-              <Trophy size={20} />
-            </div>
+          <div className="stat-card card-surface">
             <div className="stat-content">
-              <div className="stat-label">Rated Win Rate</div>
+              <div className="stat-label">Win Rate</div>
               <div className="stat-value">{winRate}%</div>
             </div>
           </div>
@@ -167,15 +158,12 @@ export default function Home() {
           <h2 className="section-title">Quick Play</h2>
           <div className="action-cards">
             <button
-              className="action-card card-surface play-ai-card"
+              className="action-card card-surface"
               onClick={() => navigate('/play')}
             >
-              <div className="action-icon">
-                <Cpu size={22} />
-              </div>
               <div className="action-content">
-                <h3>Play vs AI</h3>
-                <p>Challenge our chess bots at different skill levels</p>
+                <h3>Play a bot</h3>
+                <p>Pick an opponent at any strength, from 400 up</p>
               </div>
               <ArrowUpRight className="action-arrow" size={18} />
             </button>
@@ -184,12 +172,9 @@ export default function Home() {
               className="action-card card-surface"
               onClick={() => navigate('/puzzles')}
             >
-              <div className="action-icon">
-                <Puzzle size={22} />
-              </div>
               <div className="action-content">
                 <h3>Puzzles</h3>
-                <p>Structured lesson scheme & tactical trainer</p>
+                <p>Work through the lesson scheme, one tactic at a time</p>
               </div>
               <ArrowUpRight className="action-arrow" size={18} />
             </button>
@@ -198,12 +183,9 @@ export default function Home() {
               className="action-card card-surface"
               onClick={() => navigate('/changelog')}
             >
-              <div className="action-icon">
-                <FileText size={22} />
-              </div>
               <div className="action-content">
                 <h3>Changelog</h3>
-                <p>Read release notes and latest updates</p>
+                <p>What's new and what got fixed</p>
               </div>
               <ArrowUpRight className="action-arrow" size={18} />
             </button>
@@ -212,12 +194,9 @@ export default function Home() {
               className="action-card card-surface"
               onClick={() => navigate('/openings')}
             >
-              <div className="action-icon">
-                <BookOpen size={22} />
-              </div>
               <div className="action-content">
-                <h3>Opening Explorer</h3>
-                <p>Browse chess openings and move statistics</p>
+                <h3>Openings</h3>
+                <p>Follow main lines and check the move stats</p>
               </div>
               <ArrowUpRight className="action-arrow" size={18} />
             </button>
@@ -227,15 +206,12 @@ export default function Home() {
               onClick={() => navigate('/online')}
               disabled={!isOnline}
             >
-              <div className="action-icon">
-                <Globe size={22} />
-              </div>
               <div className="action-content">
-                <h3>Play Online</h3>
+                <h3>Play online</h3>
                 <p>
                   {isOnline
-                    ? 'Find a match against other players'
-                    : 'Unavailable while offline'}
+                    ? 'Find a rated opponent at your level'
+                    : 'Connect to play online'}
                 </p>
               </div>
               {!isOnline ? (

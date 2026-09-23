@@ -26,7 +26,7 @@ import {
   Search,
   Menu,
   X,
-  Sparkles,
+  Smartphone,
   Pencil,
 } from 'lucide-react'
 import './Landing.css'
@@ -55,11 +55,11 @@ const FEATURE_BLOCKS = [
   {
     icon: Bot,
     eyebrow: 'Bots',
-    title: 'Play Chess Bots',
+    title: 'Play against the bots',
     description:
-      'Challenge 12+ AI personalities — from beginner-friendly Martin to ruthless Stockfish. Every difficulty, every time control.',
+      'Twelve opponents from 400 to 2200. Nelson talks a big game; Magnus backs his up. Pick a strength and play.',
     to: '/play',
-    cta: 'Challenge a Bot',
+    cta: 'Play a bot',
     boardTheme: 'brown',
     fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
     flip: true,
@@ -67,23 +67,23 @@ const FEATURE_BLOCKS = [
   {
     icon: Puzzle,
     eyebrow: 'Puzzles',
-    title: 'Level Up With Chess Puzzles',
+    title: 'Puzzles, tied to lessons',
     description:
-      'Sharpen your tactical vision with thousands of rated puzzles. Spot the combination, find the win, climb the rating ladder.',
+      'Every puzzle comes from a lesson topic — pins, forks, back-rank threats — so solving one teaches you the idea behind it.',
     to: '/puzzles',
-    cta: 'Solve a Puzzle',
+    cta: 'Solve a puzzle',
     boardTheme: 'blue',
     fen: 'r2qkb1r/pp2nppp/3p4/2pNN1B1/2BnP3/3P4/PPP2PPP/R2bK2R b KQkq - 1 9',
     flip: false,
   },
   {
     icon: Eye,
-    eyebrow: 'Watch',
-    title: 'Watch the Best in the World Compete',
+    eyebrow: 'Archive',
+    title: 'Keep every game you play',
     description:
-      'Replay master games move-by-move with Stockfish evaluation, negatives vs threats, and natural-language commentary.',
+      'Finished games are saved to your archive. Step through them move by move, or let the coach explain where it went wrong.',
     to: '/history',
-    cta: 'Watch Chess',
+    cta: 'Open the archive',
     boardTheme: 'green',
     fen: 'r1bq1rk1/ppp2ppp/2n2n2/3pp3/2P5/2N1PN2/PP3PPP/R1BQ1RK1 b - - 4 8',
     flip: true,
@@ -322,8 +322,8 @@ export default function Landing() {
               Play Chess Online on the #<span className="hero-title-num">1</span> Site!
             </h1>
             <p className="hero-subtitle">
-              Battle 12+ AI personalities with attitude, climb the ranked ladder against real
-              players, and analyse every move — all in one beautifully crafted interface.{' '}
+              Play the bots, find a rated opponent, and keep your games in one place. Free, no
+              download.{' '}
               <span className="hero-online">
                 {stats.livePlayers.toLocaleString()} playing now
               </span>
@@ -416,12 +416,12 @@ export default function Landing() {
         {/* === App promo (mirrors chess.com's mobile app block) === */}
         <section className="app-promo">
           <div className="app-promo-content">
-            <Sparkles size={20} className="app-promo-icon" />
+            <Smartphone size={20} className="app-promo-icon" />
             <div>
-              <h3 className="app-promo-title">Play Anywhere with the PlayChess App</h3>
+              <h3 className="app-promo-title">Works on your phone</h3>
               <p className="app-promo-sub">
-                Free, fast, and your games sync across every device. No download required — just
-                open this site and start playing.
+                The whole site runs in the browser — same account, same games, on desktop and
+                mobile.
               </p>
             </div>
           </div>
@@ -439,7 +439,7 @@ export default function Landing() {
 
         {/* === Final CTA === */}
         <section className="final-cta">
-          <h2 className="final-cta-title">Learn, Play, and Have Fun!</h2>
+          <h2 className="final-cta-title">Set up the board.</h2>
           <button
             className="btn-green btn-xl"
             onClick={() => goTo(isLoggedIn ? '/online' : '/login?mode=signup')}

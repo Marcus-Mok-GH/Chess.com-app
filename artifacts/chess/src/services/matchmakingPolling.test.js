@@ -16,7 +16,9 @@ describe('MatchmakingPollingService uses API_BASE_URL', () => {
   it('joinMatchmaking sends to API_BASE_URL/matchmaking/join', async () => {
     const { default: svc } = await import('./matchmakingPolling.js');
     const result = await svc.joinMatchmaking('player1', 'Alice', 1200, true);
-    expect(result).toBe(true);
+    // joinMatchmaking resolves to a result object ({ success, playerId }),
+    // not a bare boolean — useMatchmaking reads joinResult.success/playerId.
+    expect(result).toEqual({ success: true, playerId: 'player1' });
     const [calledUrl] = fetchMock.mock.calls[0];
     // The default API_BASE_URL is '/api', so the full URL should be /api/matchmaking/join
     expect(calledUrl).toContain('/matchmaking/join');

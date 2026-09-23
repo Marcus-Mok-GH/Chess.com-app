@@ -9,7 +9,19 @@ import PollinationsCoachPrompt from './components/PollinationsCoachPrompt'
 import ProtectedRoute from './components/ProtectedRoute'
 import api from './services/api'
 import { usePuter } from './hooks/usePuter'
-import { Globe2, House, MoreHorizontal, Swords } from 'lucide-react'
+import {
+  BookOpen,
+  Crown,
+  DoorOpen,
+  Globe2,
+  House,
+  Library,
+  MoreHorizontal,
+  Puzzle,
+  Swords,
+  UserRound,
+  UsersRound,
+} from 'lucide-react'
 import './App.css'
 
 const Home = lazy(() => import('./pages/Home'))
@@ -71,41 +83,43 @@ function AppHeader({ isGameRoute = false }) {
       <aside className="sidebar-nav">
         <div className="sidebar-content">
           <Link to="/home" className="sidebar-logo" aria-label="PlayChess home">
-            <span className="logo-mark">♟️</span>
+            <span className="logo-mark">
+              <Crown size={17} />
+            </span>
             <span className="logo-text">PlayChess</span>
           </Link>
 
           <div className="sidebar-links" aria-label="Desktop navigation">
             <Link to="/home" className={`sidebar-item ${currentPath === '/home' ? 'active' : ''}`}>
-              <span className="sidebar-icon">🏠</span>
+              <span className="sidebar-icon"><House size={17} /></span>
               <span className="sidebar-label">Home</span>
             </Link>
             <Link to="/play" className={`sidebar-item ${currentPath === '/play' ? 'active' : ''}`}>
-              <span className="sidebar-icon">♟️</span>
+              <span className="sidebar-icon"><Swords size={17} /></span>
               <span className="sidebar-label">Play</span>
             </Link>
             <Link to="/online" className={`sidebar-item ${currentPath === '/online' ? 'active' : ''}`}>
-              <span className="sidebar-icon">🌐</span>
+              <span className="sidebar-icon"><Globe2 size={17} /></span>
               <span className="sidebar-label">Online Play</span>
             </Link>
             <Link to="/puzzles" className={`sidebar-item ${currentPath === '/puzzles' || currentPath === '/lessons' ? 'active' : ''}`}>
-              <span className="sidebar-icon">🧩</span>
+              <span className="sidebar-icon"><Puzzle size={17} /></span>
               <span className="sidebar-label">Puzzles</span>
             </Link>
             <Link to="/openings" className={`sidebar-item ${currentPath === '/openings' ? 'active' : ''}`}>
-              <span className="sidebar-icon">📖</span>
+              <span className="sidebar-icon"><BookOpen size={17} /></span>
               <span className="sidebar-label">Openings</span>
             </Link>
             <Link to="/friends" className={`sidebar-item ${currentPath === '/friends' ? 'active' : ''}`}>
-              <span className="sidebar-icon">👥</span>
+              <span className="sidebar-icon"><UsersRound size={17} /></span>
               <span className="sidebar-label">Friends</span>
             </Link>
             <Link to="/clubs" className={`sidebar-item ${currentPath === '/clubs' ? 'active' : ''}`}>
-              <span className="sidebar-icon">🏛️</span>
+              <span className="sidebar-icon"><Library size={17} /></span>
               <span className="sidebar-label">Clubs</span>
             </Link>
             <Link to="/history" className={`sidebar-item ${currentPath === '/history' ? 'active' : ''}`}>
-              <span className="sidebar-icon">📚</span>
+              <span className="sidebar-icon"><Library size={17} /></span>
               <span className="sidebar-label">Archive</span>
             </Link>
           </div>
@@ -117,14 +131,16 @@ function AppHeader({ isGameRoute = false }) {
                    <span className="username">{user.username}</span>
                    <span className="elo">{user.elo}</span>
                 </div>
-                <button onClick={logout} className="sidebar-logout" title="Logout">🚪</button>
+                <button onClick={logout} className="sidebar-logout" title="Logout">
+                  <DoorOpen size={16} />
+                </button>
               </div>
             ) : (
               <button onClick={() => navigate('/login')} className="sidebar-login">Log In</button>
             )}
             {!isOnline && <span className="offline-badge">Offline</span>}
             <Link to="/settings" className={`sidebar-item ${currentPath === '/settings' ? 'active' : ''}`} title="Settings">
-              <span className="sidebar-icon">⚙️</span>
+              <span className="sidebar-icon"><UserRound size={17} /></span>
               <span className="sidebar-label">Settings</span>
             </Link>
           </div>
@@ -134,7 +150,9 @@ function AppHeader({ isGameRoute = false }) {
       {/* Top Mobile Header */}
       <header className="mobile-header">
         <Link to="/" className="app-logo" aria-label="PlayChess home">
-          <span className="app-logo-mark" aria-hidden="true">♟</span>
+          <span className="app-logo-mark" aria-hidden="true">
+            <Crown size={15} />
+          </span>
           <span className="app-logo-text">PlayChess</span>
         </Link>
         <h1 className="page-title">{getTitle(location.pathname)}</h1>

@@ -20,34 +20,24 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 12px;
-  background: rgba(129, 182, 76, 0.1);
-  border: 1px solid rgba(129, 182, 76, 0.2);
-  border-radius: var(--radius-full);
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: var(--primary-hover);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
   margin-bottom: 1rem;
 }
 
-.welcome-eyebrow svg { color: var(--primary); }
+.welcome-eyebrow svg { color: var(--text-secondary); }
 
 .welcome-title {
-  font-size: 2.5rem;
-  font-weight: 900;
+  font-size: 2.25rem;
+  font-weight: 700;
   margin: 0 0 0.5rem;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.02em;
   color: #fff;
 }
 
 .username-highlight {
-  background: var(--gradient-primary);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
+  color: var(--primary-hover);
 }
 
 .welcome-subtitle {
@@ -69,39 +59,23 @@
   padding: 1.5rem;
   display: flex;
   align-items: center;
-  gap: 1.25rem;
-  transition: transform var(--transition-smooth), border-color var(--transition-smooth);
 }
 
 .stat-card:hover {
-  transform: translateY(-2px);
   border-color: rgba(255, 255, 255, 0.1);
 }
 
-.stat-icon {
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(129, 182, 76, 0.1);
-  border: 1px solid rgba(129, 182, 76, 0.18);
-  border-radius: var(--radius-md);
-  color: var(--primary);
-  flex-shrink: 0;
-}
-
 .stat-label {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-secondary);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
 }
 
 .stat-value {
   font-size: 1.75rem;
-  font-weight: 800;
+  font-weight: 700;
   color: #fff;
   letter-spacing: -0.02em;
   line-height: 1.1;
@@ -135,15 +109,12 @@
 .stat-item {
   padding: 1.5rem 1rem;
   text-align: center;
-  transition: transform var(--transition-smooth);
 }
-
-.stat-item:hover { transform: translateY(-2px); }
 
 .stat-item .stat-number {
   display: block;
   font-size: 2rem;
-  font-weight: 800;
+  font-weight: 700;
   margin-bottom: 0.5rem;
   letter-spacing: -0.02em;
 }
@@ -151,9 +122,9 @@
 .stat-item .stat-text {
   display: block;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
   color: var(--text-secondary);
 }
 
@@ -175,7 +146,6 @@
   gap: 1.5rem;
   padding: 1.5rem;
   border-color: rgba(129, 182, 76, 0.35);
-  background: linear-gradient(135deg, rgba(129, 182, 76, 0.12), rgba(255, 255, 255, 0.03));
 }
 
 .resume-game-copy {
@@ -189,8 +159,8 @@
   margin-bottom: 0.5rem;
   color: var(--primary-hover);
   font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-weight: 700;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
@@ -212,13 +182,13 @@
   justify-content: center;
   flex-shrink: 0;
   gap: 0.5rem;
-  border: 1px solid rgba(129, 182, 76, 0.4);
+  border: none;
   border-radius: var(--radius-md);
   padding: 0.75rem 1rem;
   background: var(--primary);
-  color: #10150c;
+  color: #1a1a1a;
   cursor: pointer;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .resume-game-button:hover {
@@ -243,32 +213,18 @@
   padding: 1.5rem;
   display: flex;
   align-items: center;
-  gap: 1.25rem;
+  gap: 1rem;
   cursor: pointer;
   text-align: left;
-  transition: transform var(--transition-smooth), border-color var(--transition-smooth), background-color var(--transition-smooth);
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
 }
 
 .action-card:hover {
-  transform: translateY(-2px);
   border-color: rgba(255, 255, 255, 0.12);
   background: var(--bg-hover, #383531);
 }
 
-.action-card:active { transform: translateY(0); }
-
-.action-icon {
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(129, 182, 76, 0.1);
-  border: 1px solid rgba(129, 182, 76, 0.18);
-  border-radius: var(--radius-md);
-  color: var(--primary);
-  flex-shrink: 0;
-}
+.action-card:active { background: var(--bg-surface-3); }
 
 .action-content {
   flex: 1;
@@ -276,8 +232,8 @@
 }
 
 .action-content h3 {
-  font-size: 1.0625rem;
-  font-weight: 800;
+  font-size: 1rem;
+  font-weight: 700;
   margin: 0 0 0.25rem;
   color: #fff;
 }
@@ -292,12 +248,11 @@
 .action-arrow {
   color: var(--text-dim);
   flex-shrink: 0;
-  transition: color var(--transition-smooth), transform var(--transition-smooth);
+  transition: color var(--transition-fast);
 }
 
 .action-card:hover .action-arrow {
   color: var(--primary);
-  transform: translate(2px, -2px);
 }
 
 .play-online-card:disabled {

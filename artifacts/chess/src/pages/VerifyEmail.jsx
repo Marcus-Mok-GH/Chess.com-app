@@ -84,7 +84,7 @@ export default function VerifyEmail() {
   return (
     <div className="login-page">
       <div className="login-card">
-        <div className="login-logo">♟️</div>
+        <div className="login-logo">PlayChess</div>
         <h1 className="login-title">Check your email</h1>
         <p className="login-subtitle">
           We sent a 6-digit code to <strong>{pendingOtpEmail}</strong>
@@ -109,7 +109,7 @@ export default function VerifyEmail() {
           </div>
 
           {error && <p className="login-error">{error}</p>}
-          {!error && successMsg && <p className="login-success">✅ {successMsg}</p>}
+          {!error && successMsg && <p className="login-success">{successMsg}</p>}
 
           <button
             type="button"
