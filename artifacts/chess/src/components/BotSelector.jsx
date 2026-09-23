@@ -6,15 +6,18 @@ const REGULAR_BOTS = BOTS.filter((b) => b.id !== 'coach');
 const COACH_BOT = BOTS.find((b) => b.id === 'coach');
 
 function BotCard({ bot, selected, onSelect, disabled, customElo }) {
+  const ratingText = bot.id === 'custom' ? customElo : `Rating: ${bot.rating}`;
   return (
     <button
       type="button"
       className={`bot-card ${selected ? 'selected' : ''}`}
       onClick={() => onSelect(bot)}
       disabled={disabled}
+      aria-pressed={selected}
+      aria-label={`${bot.name}, ${ratingText}`}
       style={{ '--bot-color': bot.color }}
     >
-      <div className="bot-avatar">{bot.avatar}</div>
+      <div className="bot-avatar" aria-hidden="true">{bot.avatar}</div>
       <div className="bot-info">
         <span className="bot-name">{bot.name}</span>
         <span className="bot-rating">

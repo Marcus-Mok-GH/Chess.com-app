@@ -25,4 +25,13 @@ describe('BotSelector', () => {
     render(<BotSelector {...defaultProps} isLoggedIn={false} />);
     expect(screen.getByText('Sign in to unlock the AI Coach')).toBeDefined();
   });
+
+  it('sets aria-pressed correctly for selected and unselected bot buttons', () => {
+    render(<BotSelector {...defaultProps} />);
+    const coachButton = screen.getByRole('button', { name: /Coach/i });
+    expect(coachButton.getAttribute('aria-pressed')).toBe('true');
+
+    const doloresButton = screen.getByRole('button', { name: /Dolores/i });
+    expect(doloresButton.getAttribute('aria-pressed')).toBe('false');
+  });
 });
