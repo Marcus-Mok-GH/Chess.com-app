@@ -2,8 +2,8 @@
 
 ### Added
 - Clicking a game in Game History now opens a full game review at `/review/:gameCode`: an interactive board with last-move highlight, a vertical eval bar, move-by-move navigation (buttons plus arrow keys), a clickable move list with colored classification dots (Best / Excellent / Good / Inaccuracy / Mistake / Blunder), per-side accuracy cards, Stockfish notes per move, and LLM coach comments when the coach is connected.
-- New backend endpoint `POST /engine/evaluate-positions`: scores up to 16 positions per request with the shared Stockfish worker pool, returning side-to-move centipawn scores, best move in UCI and SAN, and game-over flags for finished positions. Guarded by the existing engine concurrency limiter, input validation, and a 503 when Stockfish is unavailable.
-- Frontend `engineReview` service chunks a whole game into batched requests with limited parallelism, progressive per-chunk results, and progress reporting, so the review fills in while Stockfish works.
+- New backend endpoint `POST /engine/evaluate-positions`: scores up to 16 positions per request with Stockfish, returning side-to-move centipawn scores, best move in UCI and SAN, and game-over flags for finished positions. Guarded by the existing engine concurrency limiter, input validation, a batch time budget tied to the function timeout, and a 503 when Stockfish is unavailable.
+- Frontend `engineReview` service chunks a whole game into batched requests with limited parallelism and progress reporting. `GameReview` applies the results after analysis completes; engine-busy (429) responses are retried with backoff.
 
 ### Notes
 - The engine reports scores from the side-to-move perspective; the review math (`reviewUtils`) converts to win percentages and per-move accuracy with the same curve family lichess-style reviews use.

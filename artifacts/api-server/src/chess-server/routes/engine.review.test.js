@@ -73,7 +73,9 @@ describe('POST /engine/evaluate-positions', () => {
     expect(results[1].bestSan).toEqual(expect.any(String));
 
     expect(results[2].gameOver).toBe(true);
-    expect(results[2].scoreCp).toBeNull();
+    // Side to move is checkmated: known score instead of null
+    expect(results[2].scoreCp).toBe(-100000);
+    expect(results[2].mate).toBe(0);
     expect(results[2].bestMove).toBeNull();
     server.close();
   });

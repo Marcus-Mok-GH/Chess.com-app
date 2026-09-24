@@ -21,21 +21,20 @@ describe('buildReviewPositions', () => {
   });
 
   it('handles string entries and stops at the first illegal move', () => {
-    const { fens, sans } = buildReviewPositions(['e4', 'e5', 'Ke2']);
-    expect(sans).toEqual(['e4', 'e5', 'Ke2']);
-    expect(fens).toHaveLength(4);
-    expect(() => new Chess(fens[3])).not.toThrow();
+    // Ke3 is illegal after e4 e5 (the e-file is not open), so replay stops there
+    const { fens, sans } = buildReviewPositions(['e4', 'e5', 'Ke3', 'Nf3']);
+    expect(sans).toEqual(['e4', 'e5']);
+    expect(fens).toHaveLength(3);
   });
 
   it('handles promotion moves', () => {
-    const game = new Chess();
-    // Italian with a fast promotion race is overkill; craft a known promotion
-    game.load('rnbq1bnr/ppppkP1p/8/8/8/8/PPPP1PPP/RNBQKBNR w KQ - 0 1');
-    // Use a fresh position: white pawn g7 promotes
-    const { sans, ucis } = buildReviewPositions(['e4', 'd5', 'exd5', 'Qxd5']);
-    expect(sans).toEqual(['e4', 'd5', 'exd5', 'Qxd5']);
-    expect(ucis[2]).toBe('e4d5');
-    void game;
+    const { sans, ucis } = buildReviewPositions([
+      'a4', 'h5', 'a5', 'h4', 'a6', 'h3', 'axb7', 'hxg2', 'bxa8=Q',
+    ]);
+    expect(sans).toEqual([
+      'a4', 'h5', 'a5', 'h4', 'a6', 'h3', 'axb7', 'hxg2', 'bxa8=Q',
+    ]);
+    expect(ucis[8]).toBe('b7a8q');
   });
 
   it('returns only the start position for an empty history', () => {

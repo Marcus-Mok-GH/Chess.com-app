@@ -23,7 +23,9 @@ class ApiService {
                     data.error?.message ||
                     data.error ||
                     `HTTP error ${response.status}`;
-                throw new Error(errorMessage);
+                const error = new Error(errorMessage);
+                error.status = response.status;
+                throw error;
             }
 
             return data;

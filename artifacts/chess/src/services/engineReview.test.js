@@ -44,15 +44,66 @@ describe('analyzeGamePositions', () => {
     expect(progressSeen[progressSeen.length - 1]).toEqual([4, 4]);
   });
 
-  it('keeps game-over positions null instead of scored', async () => {
+  it('keeps known game-over scores but no best move', async () => {
     const fens = ['a', 'b'];
     mockApi.getEngineEvaluations.mockResolvedValue({
-      results: [result('a', 30), result('b', null, true)],
+      results: [
+        result('a', 30),
+        { fen: 'b', gameOver: true, scoreCp: 0, mate: null, bestMove: null, bestSan: null },
+      ],
     });
 
     const { scores, bestMoves } = await analyzeGamePositions(fens);
-    expect(scores).toEqual([30, null]);
+    expect(scores).toEqual([30, 0]);
     expect(bestMoves).toEqual([{ bestMove: 'e2e4', bestSan: 'e4' }, null]);
+  });
+
+  it('nulls scores the server could not compute', async () => {
+    const fens = ['a', 'b'];
+    mockApi.getEngineEvaluations.mockResolvedValue({
+      results: [
+        result('a', 30),
+        { fen: 'b', gameOver: true, scoreCp: null, mate: null, bestMove: null, bestSan: null },
+      ],
+    });
+
+    const { scores } = await analyzeGamePositions(fens);
+    expect(scores).toEqual([30, null]);
+  });
+
+  it('treats a per-position error as a failed analysis', async () => {
+    const fens = ['a', 'b'];
+    mockApi.getEngineEvaluations.mockResolvedValue({
+      results: [
+        result('a', 30),
+        { fen: 'b', gameOver: false, scoreCp: null, mate: null, bestMove: null, bestSan: null, error: 'Time budget exhausted' },
+      ],
+    });
+
+    await expect(analyzeGamePositions(fens)).rejects.toThrow('Time budget exhausted');
+  });
+
+  it('retries 429 responses with backoff and succeeds', async () => {
+    const fens = ['a', 'b'];
+    const busy = new Error('Engine is busy');
+    busy.status = 429;
+    mockApi.getEngineEvaluations
+      .mockRejectedValueOnce(busy)
+      .mockResolvedValueOnce({ results: [result('a', 30), result('b', 12)] });
+
+    const { scores } = await analyzeGamePositions(fens);
+    expect(mockApi.getEngineEvaluations).toHaveBeenCalledTimes(2);
+    expect(scores).toEqual([30, 12]);
+  });
+
+  it('does not retry non-429 failures', async () => {
+    const fens = ['a', 'b'];
+    const unavailable = new Error('Stockfish engine is not available in this deployment');
+    unavailable.status = 503;
+    mockApi.getEngineEvaluations.mockRejectedValue(unavailable);
+
+    await expect(analyzeGamePositions(fens)).rejects.toThrow('Stockfish engine is not available');
+    expect(mockApi.getEngineEvaluations).toHaveBeenCalledTimes(1);
   });
 
   it('stops issuing chunks after a failed request and rejects', async () => {

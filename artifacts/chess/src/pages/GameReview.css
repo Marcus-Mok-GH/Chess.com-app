@@ -136,10 +136,6 @@
   flex-shrink: 0;
 }
 
-.review-eval-bar-flipped {
-  transform: scaleY(-1);
-}
-
 .review-eval-white {
   position: absolute;
   bottom: 0;

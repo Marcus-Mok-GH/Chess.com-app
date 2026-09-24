@@ -29,13 +29,36 @@ export async function analyzeGamePositions(fens, options = {}) {
   let done = 0;
   let failed = null;
 
+  // The server returns 429 when the engine concurrency limit is reached;
+  // that is transient, so retry it with backoff. Other statuses (e.g. 503
+  // when Stockfish is unavailable) are not retryable here.
+  const fetchWithRetry = async (payload, attempts = 3) => {
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        return await api.getEngineEvaluations(payload);
+      } catch (error) {
+        const retryable = error?.status === 429;
+        if (!retryable || attempt + 1 >= attempts) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** attempt));
+      }
+    }
+  };
+
   const runChunk = async (chunk) => {
+    let completed = false;
     try {
-      const data = await api.getEngineEvaluations({ fens: chunk.fens });
+      const data = await fetchWithRetry({ fens: chunk.fens });
+      // A 200 response can still carry per-position errors (e.g. engine
+      // failure or an exhausted time budget); treat those as a failed chunk.
+      const failedResult = (data.results || []).find((result) => result.error);
+      if (failedResult) throw new Error(failedResult.error);
       const indexed = [];
       (data.results || []).forEach((result, offset) => {
         const index = chunk.startIndex + offset;
-        scores[index] = result.gameOver || result.scoreCp == null ? null : result.scoreCp;
+        // Game-over positions keep their known score (mated = -100000,
+        // draw = 0) so the final move still gets classified; older backends
+        // that send null there fall back to null too.
+        scores[index] = result.scoreCp == null ? null : result.scoreCp;
         bestMoves[index] = result.gameOver
           ? null
           : { bestMove: result.bestMove || null, bestSan: result.bestSan || null };
@@ -47,11 +70,12 @@ export async function analyzeGamePositions(fens, options = {}) {
           bestSan: result.bestSan || null,
         });
       });
+      completed = true;
       if (onResults) onResults(indexed);
     } catch (error) {
       failed = failed || error;
     } finally {
-      done += chunk.fens.length;
+      if (completed) done += chunk.fens.length;
       if (onProgress) onProgress(Math.min(done, fens.length), fens.length);
     }
   };

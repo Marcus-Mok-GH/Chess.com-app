@@ -302,6 +302,9 @@ router.post('/evaluate-positions', engineConcurrency, async (req, res) => {
     }
 
     const results = [];
+    // Stay under the serverless function timeout: cap each engine run by the
+    // remaining batch budget and report skipped positions instead of hanging.
+    const deadline = Date.now() + TIMEOUT_MS;
     for (const fen of fens) {
       let chess;
       try { chess = new Chess(fen); } catch {
@@ -309,12 +312,24 @@ router.post('/evaluate-positions', engineConcurrency, async (req, res) => {
         continue;
       }
       if (chess.isGameOver()) {
-        results.push({ fen, gameOver: true, scoreCp: null, mate: null, bestMove: null, bestSan: null, depth: null });
+        // Finished positions have a known value: the side to move is either
+        // checkmated (-100000) or the game ended in a draw (0).
+        const scoreCp = chess.isCheckmate() ? -100000 : 0;
+        results.push({ fen, gameOver: true, scoreCp, mate: chess.isCheckmate() ? 0 : null, bestMove: null, bestSan: null, depth: null });
+        continue;
+      }
+      const remaining = deadline - Date.now();
+      if (remaining < movetimeMs + 500) {
+        results.push({ fen, gameOver: false, scoreCp: null, mate: null, bestMove: null, bestSan: null, depth: null, error: 'Time budget exhausted' });
         continue;
       }
       try {
-        const engine = await runEngine(fen, `go movetime ${movetimeMs}`, null, Math.max(4000, movetimeMs * 12));
-        const best = engine.candidates[0] || null;
+        const engine = await runEngine(fen, `go movetime ${movetimeMs}`, null, Math.min(remaining, Math.max(4000, movetimeMs * 12)));
+        // candidates[0] can hold a stale first-seen PV; prefer the candidate
+        // matching the engine's final best move, falling back to the deepest.
+        const best =
+          engine.candidates.find((c) => c.move === engine.bestMove) ||
+          engine.candidates.reduce((a, c) => (!a || c.depth > a.depth ? c : a), null);
         results.push({
           fen,
           gameOver: false,

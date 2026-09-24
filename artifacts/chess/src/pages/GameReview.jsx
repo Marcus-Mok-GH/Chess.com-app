@@ -278,7 +278,7 @@ export default function GameReview() {
   }
 
   const winPercent = whiteEval == null ? 50 : winPercentFromCp(whiteEval);
-  const engineDone = evalScores != null;
+  const engineDone = evalScores != null || positions.fens.length < 2;
   const engineActive = !engineDone && !engineError;
   const showFinalPosition = game.result && currentPly === positions.fens.length - 1;
 
