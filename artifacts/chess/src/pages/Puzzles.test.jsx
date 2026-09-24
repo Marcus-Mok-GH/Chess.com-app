@@ -52,6 +52,17 @@ vi.mock('../engine/coach/coachAI', () => ({
 
 import { explainCoachMove, summarizeLessonConcept } from '../engine/coach/coachAI';
 
+const MOCK_PUZZLE_FEN =
+  'r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3';
+
+// Puzzle generation is asynchronous (it runs in a worker), so board
+// interactions must wait until the puzzle has actually loaded.
+async function waitForPuzzleOnBoard() {
+  await waitFor(() => {
+    expect(screen.getByTestId('chessboard').getAttribute('data-position')).toBe(MOCK_PUZZLE_FEN);
+  });
+}
+
 function renderPuzzles(initialEntries = ['/puzzles']) {
   return render(
     <UserProvider>
@@ -125,6 +136,7 @@ describe('Puzzles page with Lesson Scheme & LLM commentary', () => {
     await waitFor(() => {
       expect(screen.getByText('Piece Development & Opening Principles')).toBeTruthy();
     });
+    await waitForPuzzleOnBoard();
     expect(explainCoachMove).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByTestId('wrong-move'));
@@ -146,6 +158,7 @@ describe('Puzzles page with Lesson Scheme & LLM commentary', () => {
     await waitFor(() => {
       expect(screen.getByText('Piece Development & Opening Principles')).toBeTruthy();
     });
+    await waitForPuzzleOnBoard();
     fireEvent.click(screen.getByTestId('wrong-move'));
 
     await waitFor(() => {
