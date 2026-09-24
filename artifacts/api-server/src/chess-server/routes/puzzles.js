@@ -6,6 +6,7 @@
 import { Router } from 'express';
 import { Chess } from 'chess.js';
 import puzzleService from '../services/puzzleService.js';
+import puzzleStatsService from '../services/puzzleStatsService.js';
 import { authenticatedUserId } from '../coachAuth.js';
 
 const router = Router();
@@ -231,6 +232,53 @@ router.get('/stats', async (req, res) => {
       success: false,
       error: { message: 'Failed to get stats' }
     });
+  }
+});
+
+/**
+ * GET /api/puzzles/stats/user
+ * Authenticated. Return the caller's saved puzzle stats (solved count,
+ * attempted count, streak, best streak, rating). Registered before the
+ * /:id route so "stats" is not captured as a puzzle id.
+ */
+router.get('/stats/user', async (req, res) => {
+  try {
+    const userId = await authenticatedUserId(req);
+    if (!userId) {
+      return res.status(401).json({ success: false, error: { message: 'Authentication required' } });
+    }
+    const stats = await puzzleStatsService.getStats(userId);
+    res.json({ success: true, stats: stats || puzzleStatsService.emptyStats() });
+  } catch (error) {
+    console.error('Get user puzzle stats error:', error);
+    res.status(500).json({ success: false, error: { message: 'Failed to get puzzle stats' } });
+  }
+});
+
+/**
+ * PUT /api/puzzles/stats/user
+ * Authenticated. Upsert the caller's puzzle stats.
+ * Body: { solvedCount, attemptedCount, currentStreak, bestStreak, rating }
+ */
+router.put('/stats/user', async (req, res) => {
+  try {
+    const userId = await authenticatedUserId(req);
+    if (!userId) {
+      return res.status(401).json({ success: false, error: { message: 'Authentication required' } });
+    }
+    const body = req.body || {};
+    const fields = ['solvedCount', 'attemptedCount', 'currentStreak', 'bestStreak', 'rating'];
+    for (const field of fields) {
+      const value = body[field];
+      if (typeof value !== 'number' || !Number.isFinite(value)) {
+        return res.status(400).json({ success: false, error: { message: `${field} must be a finite number` } });
+      }
+    }
+    const stats = await puzzleStatsService.saveStats(userId, body);
+    res.json({ success: true, stats });
+  } catch (error) {
+    console.error('Save user puzzle stats error:', error);
+    res.status(500).json({ success: false, error: { message: 'Failed to save puzzle stats' } });
   }
 });
 

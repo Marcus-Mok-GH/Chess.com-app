@@ -15,6 +15,9 @@ vi.mock('../components/ChessBoard', () => ({
       <button data-testid="sq-d5" onClick={() => onSquareClick && onSquareClick('d5')}>
         d5
       </button>
+      <button data-testid="correct-move" onClick={() => onPieceDrop && onPieceDrop('c6', 'a5')}>
+        correct move
+      </button>
       <button data-testid="wrong-move" onClick={() => onPieceDrop && onPieceDrop('c6', 'b4')}>
         wrong move
       </button>
@@ -30,7 +33,7 @@ vi.mock('../engine/puzzles/puzzleGenerator', async (importOriginal) => {
       id: `mock-${seed}`,
       fen: 'r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3',
       sideToMove: 'white',
-      solution: 'Nxe5',
+      solution: 'Na5',
       rating: 1000,
       hint: 'Look for a forcing knight capture.',
     })),
@@ -38,7 +41,7 @@ vi.mock('../engine/puzzles/puzzleGenerator', async (importOriginal) => {
       id: 'daily-mock',
       fen: 'r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3',
       sideToMove: 'white',
-      solution: 'Nxe5',
+      solution: 'Na5',
       rating: 1000,
       hint: 'Look for a forcing knight capture.',
     })),
@@ -50,7 +53,15 @@ vi.mock('../engine/coach/coachAI', () => ({
   summarizeLessonConcept: vi.fn(),
 }));
 
+vi.mock('../services/api', () => ({
+  default: {
+    getPuzzleStats: vi.fn(() => Promise.resolve({ success: true, stats: null })),
+    savePuzzleStats: vi.fn(() => Promise.resolve({ success: true, stats: {} })),
+  },
+}));
+
 import { explainCoachMove, summarizeLessonConcept } from '../engine/coach/coachAI';
+import api from '../services/api';
 
 const MOCK_PUZZLE_FEN =
   'r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3';
@@ -199,4 +210,69 @@ describe('Puzzles page with Lesson Scheme & LLM commentary', () => {
       expect(screen.getByText('Knight Forks')).toBeTruthy();
     });
   });
+
+  it('loads saved puzzle stats from the API on mount', async () => {
+    api.getPuzzleStats.mockResolvedValue({
+      success: true,
+      stats: {
+        solvedCount: 7,
+        attemptedCount: 10,
+        currentStreak: 3,
+        bestStreak: 9,
+        rating: 1200,
+        updatedAt: '2026-09-24T10:00:00.000Z',
+      },
+    });
+
+    renderPuzzles();
+
+    await waitForPuzzleOnBoard();
+    await waitFor(() => {
+      expect(screen.getByText('7')).toBeTruthy();
+      expect(screen.getByText('3')).toBeTruthy();
+      expect(screen.getByText('9')).toBeTruthy();
+    });
+  });
+
+  it('persists stats to the API when a puzzle is skipped', async () => {
+    api.getPuzzleStats.mockResolvedValue({ success: true, stats: null });
+    renderPuzzles();
+
+    await waitForPuzzleOnBoard();
+    expect(api.savePuzzleStats).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: /skip/i }));
+
+    await waitFor(() => {
+      expect(api.savePuzzleStats).toHaveBeenCalledWith({
+        solvedCount: 0,
+        attemptedCount: 1,
+        streak: 0,
+        bestStreak: 0,
+        rating: 400,
+      });
+    });
+  });
+
+  it('persists solved stats to the API after a correct move', async () => {
+    api.getPuzzleStats.mockResolvedValue({ success: true, stats: null });
+    renderPuzzles();
+
+    await waitForPuzzleOnBoard();
+
+    // The mocked board's correct-move button reports c6 -> a5, which
+    // matches the mock puzzle's solution (Na5) in the black-to-move FEN.
+    fireEvent.click(screen.getByTestId('correct-move'));
+
+    await waitFor(() => {
+      expect(api.savePuzzleStats).toHaveBeenCalledWith({
+        solvedCount: 1,
+        attemptedCount: 1,
+        streak: 1,
+        bestStreak: 1,
+        rating: 480,
+      });
+    }, { timeout: 3000 });
+  });
+
 });
