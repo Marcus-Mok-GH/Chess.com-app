@@ -397,6 +397,26 @@ export async function initDatabase() {
         await client.query('ALTER TABLE lesson_progress ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP');
         await client.query('ALTER TABLE lesson_progress ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
 
+        // Per-user puzzle stats (solved/streak/best/rating) so progress
+        // survives reloads and devices; one row per user.
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS puzzle_stats (
+            user_id VARCHAR(100) PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+            solved_count INTEGER NOT NULL DEFAULT 0,
+            attempted_count INTEGER NOT NULL DEFAULT 0,
+            current_streak INTEGER NOT NULL DEFAULT 0,
+            best_streak INTEGER NOT NULL DEFAULT 0,
+            rating INTEGER NOT NULL DEFAULT 400,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        await client.query('ALTER TABLE puzzle_stats ADD COLUMN IF NOT EXISTS solved_count INTEGER NOT NULL DEFAULT 0');
+        await client.query('ALTER TABLE puzzle_stats ADD COLUMN IF NOT EXISTS attempted_count INTEGER NOT NULL DEFAULT 0');
+        await client.query('ALTER TABLE puzzle_stats ADD COLUMN IF NOT EXISTS current_streak INTEGER NOT NULL DEFAULT 0');
+        await client.query('ALTER TABLE puzzle_stats ADD COLUMN IF NOT EXISTS best_streak INTEGER NOT NULL DEFAULT 0');
+        await client.query('ALTER TABLE puzzle_stats ADD COLUMN IF NOT EXISTS rating INTEGER NOT NULL DEFAULT 400');
+        await client.query('ALTER TABLE puzzle_stats ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+
         // Seed the lessons catalog idempotently so progress rows can be tied to
         // known lesson ids even on existing installations.
         for (const lesson of LESSON_CATALOG) {

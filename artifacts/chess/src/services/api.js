@@ -236,6 +236,18 @@ class ApiService {
         });
     }
 
+    // ── Puzzle Stats ───────────────────────────────────────────────────────────
+    async getPuzzleStats() {
+        return this.request("/puzzles/stats/user");
+    }
+
+    async savePuzzleStats(stats) {
+        return this.request("/puzzles/stats/user", {
+            method: "PUT",
+            body: JSON.stringify(stats),
+        });
+    }
+
     // ── Learning ─────────────────────────────────────────────────────────────
     async getLessons() {
         return this.request("/lessons");

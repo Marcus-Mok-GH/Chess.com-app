@@ -4,6 +4,7 @@ import { Chess } from "chess.js";
 import ChessBoard from "../components/ChessBoard";
 import DailyPuzzleStreak from "../components/DailyPuzzleStreak";
 import { generatePuzzleForThemesAsync } from "../engine/puzzles/puzzleWorkerClient";
+import api from "../services/api";
 import { LESSON_CATALOG } from "../engine/lessons/lessonCatalog";
 import { explainCoachMove, summarizeLessonConcept } from "../engine/coach/coachAI";
 import {
@@ -149,12 +150,57 @@ export default function Puzzles() {
   const lessonSummaryRequestRef = useRef(0);
   const timerIds = useRef([]);
   const wrongMoveOverlayTimerRef = useRef(null);
+  // Set once this session has progressed past its starting stats, so a slow
+  // stats load never overwrites progress the user just made.
+  const statsTouchedRef = useRef(false);
 
   const [solvedCount, setSolvedCount] = useState(0);
   const [attemptedCount, setAttemptedCount] = useState(0);
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const [puzzleRating, setPuzzleRating] = useState(PUZZLE_RATING_START);
+
+  // Load the user's saved puzzle stats from the database so Solved, Streak,
+  // Best, and the rating survive reloads and devices. Guests (or offline
+  // sessions) simply keep session-only stats, as before.
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .getPuzzleStats()
+      .then((data) => {
+        if (cancelled) return;
+        const saved = data?.stats;
+        if (!saved || statsTouchedRef.current) return;
+        setSolvedCount(Number(saved.solvedCount) || 0);
+        setAttemptedCount(Number(saved.attemptedCount) || 0);
+        setStreak(Number(saved.currentStreak) || 0);
+        setBestStreak(Number(saved.bestStreak) || 0);
+        const savedRating = Number(saved.rating);
+        if (Number.isFinite(savedRating) && savedRating > 0) {
+          setPuzzleRating(
+            Math.max(PUZZLE_RATING_MIN, Math.min(PUZZLE_RATING_MAX, savedRating)),
+          );
+        }
+      })
+      .catch(() => {
+        // Stats stay session-only when the backend is unreachable.
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function persistPuzzleStats(stats) {
+    api
+      .savePuzzleStats(stats)
+      .catch((error) => {
+        console.warn(
+          "[Puzzles] Failed to save puzzle stats:",
+          error?.message || error,
+        );
+      });
+  }
 
   const game = useMemo(() => loadFen(position), [position]);
   const sideToMove = game.turn();
@@ -328,19 +374,29 @@ export default function Puzzles() {
   async function goToNextPuzzle(wasSolved) {
     if (initializing) return;
 
-    setAttemptedCount((count) => count + 1);
-    if (wasSolved) {
-      setSolvedCount((count) => count + 1);
-      setPuzzleRating((rating) => Math.min(PUZZLE_RATING_MAX, rating + 80));
-      setStreak((currentStreak) => {
-        const nextStreak = currentStreak + 1;
-        setBestStreak((currentBest) => Math.max(currentBest, nextStreak));
-        return nextStreak;
-      });
-    } else {
-      setPuzzleRating((rating) => Math.max(PUZZLE_RATING_MIN, rating - 40));
-      setStreak(0);
-    }
+    const nextAttempted = attemptedCount + 1;
+    const nextSolved = wasSolved ? solvedCount + 1 : solvedCount;
+    const nextStreak = wasSolved ? streak + 1 : 0;
+    const nextBestStreak = wasSolved
+      ? Math.max(bestStreak, nextStreak)
+      : bestStreak;
+    const nextRating = wasSolved
+      ? Math.min(PUZZLE_RATING_MAX, puzzleRating + 80)
+      : Math.max(PUZZLE_RATING_MIN, puzzleRating - 40);
+
+    statsTouchedRef.current = true;
+    setAttemptedCount(nextAttempted);
+    setSolvedCount(nextSolved);
+    setStreak(nextStreak);
+    setBestStreak(nextBestStreak);
+    setPuzzleRating(nextRating);
+    persistPuzzleStats({
+      solvedCount: nextSolved,
+      attemptedCount: nextAttempted,
+      streak: nextStreak,
+      bestStreak: nextBestStreak,
+      rating: nextRating,
+    });
 
     const nextIndex = (currentLessonIndex + 1) % LESSON_CATALOG.length;
     setCurrentLessonIndex(nextIndex);
