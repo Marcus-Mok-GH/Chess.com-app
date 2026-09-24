@@ -88,7 +88,7 @@ export default function Home() {
 
         {/* Daily Puzzle Streak */}
         <section className="daily-streak-section">
-          <DailyPuzzleStreak />
+          <DailyPuzzleStreak linkToPuzzles />
         </section>
 
         {/* Stats Overview */}

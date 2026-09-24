@@ -659,3 +659,8 @@
     font-size: 0.68rem;
   }
 }
+
+/* ── Daily Puzzle Streak Section ── */
+.daily-streak-section {
+  margin-bottom: 2.5rem;
+}

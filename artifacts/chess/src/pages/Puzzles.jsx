@@ -499,6 +499,11 @@ export default function Puzzles() {
           </div>
         )}
 
+        {/* ── Daily Puzzle Streak ─────────────────────────── */}
+        <section className="daily-streak-section">
+          <DailyPuzzleStreak />
+        </section>
+
         {/* ── Lesson Scheme Header ─────────────────────────── */}
         <header className="puzzles-header">
           <div className="puzzles-header-top">
@@ -508,7 +513,6 @@ export default function Puzzles() {
                 Lesson Scheme · {currentLesson.order} of {LESSON_CATALOG.length}
               </span>
             </div>
-            <DailyPuzzleStreak compact />
             <span className="puzzles-meta">
               Topic: {currentLesson.topic} · {difficultyLabel(puzzle?.difficulty || difficultyForRating(puzzleRating))}
             </span>

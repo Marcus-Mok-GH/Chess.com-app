@@ -1,6 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, waitFor } from '@testing-library/react';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 
 // ── Module-level mocks (factories must not reference outer variables) ──────────
 
@@ -182,7 +183,11 @@ describe('DailyPuzzleStreak persistence', () => {
       mockUserLoggedIn();
 
       const { default: DailyPuzzleStreak } = await import('./DailyPuzzleStreak');
-      const { container } = render(<DailyPuzzleStreak />);
+      const { container } = render(
+        <MemoryRouter>
+          <DailyPuzzleStreak />
+        </MemoryRouter>
+      );
 
       expect(container.querySelector('.daily-puzzle-streak-spinner')).not.toBeNull();
     });
@@ -191,7 +196,11 @@ describe('DailyPuzzleStreak persistence', () => {
       mockUserGuest();
 
       const { default: DailyPuzzleStreak } = await import('./DailyPuzzleStreak');
-      const { container } = render(<DailyPuzzleStreak />);
+      const { container } = render(
+        <MemoryRouter>
+          <DailyPuzzleStreak />
+        </MemoryRouter>
+      );
 
       expect(container.querySelector('.daily-puzzle-streak-spinner')).toBeNull();
     });
@@ -202,7 +211,11 @@ describe('DailyPuzzleStreak persistence', () => {
 
       const { default: DailyPuzzleStreak } = await import('./DailyPuzzleStreak');
       await act(async () => {
-        render(<DailyPuzzleStreak />);
+        render(
+        <MemoryRouter>
+          <DailyPuzzleStreak />
+        </MemoryRouter>
+      );
       });
 
       expect(api.getUserSettings).toHaveBeenCalledWith('testplayer', 'tok-abc');
@@ -213,7 +226,11 @@ describe('DailyPuzzleStreak persistence', () => {
 
       const { default: DailyPuzzleStreak } = await import('./DailyPuzzleStreak');
       await act(async () => {
-        render(<DailyPuzzleStreak />);
+        render(
+        <MemoryRouter>
+          <DailyPuzzleStreak />
+        </MemoryRouter>
+      );
       });
 
       expect(api.getUserSettings).not.toHaveBeenCalled();
@@ -231,7 +248,11 @@ describe('DailyPuzzleStreak persistence', () => {
 
       const { default: DailyPuzzleStreak } = await import('./DailyPuzzleStreak');
       await act(async () => {
-        render(<DailyPuzzleStreak />);
+        render(
+        <MemoryRouter>
+          <DailyPuzzleStreak />
+        </MemoryRouter>
+      );
       });
 
       await waitFor(() => {
@@ -251,7 +272,11 @@ describe('DailyPuzzleStreak persistence', () => {
 
       const { default: DailyPuzzleStreak } = await import('./DailyPuzzleStreak');
       await act(async () => {
-        render(<DailyPuzzleStreak />);
+        render(
+        <MemoryRouter>
+          <DailyPuzzleStreak />
+        </MemoryRouter>
+      );
       });
 
       await waitFor(() => {
@@ -271,7 +296,11 @@ describe('DailyPuzzleStreak persistence', () => {
 
       const { default: DailyPuzzleStreak } = await import('./DailyPuzzleStreak');
       await act(async () => {
-        render(<DailyPuzzleStreak />);
+        render(
+        <MemoryRouter>
+          <DailyPuzzleStreak />
+        </MemoryRouter>
+      );
       });
 
       await waitFor(() => {
@@ -280,5 +309,59 @@ describe('DailyPuzzleStreak persistence', () => {
         expect(stored.bestStreak).toBe(20);
       });
     });
+  });
+});
+
+function LocationProbe() {
+  const location = useLocation();
+  return <div data-testid="location-probe">{location.pathname}</div>;
+}
+
+describe('Solve Today\u2019s Puzzle button navigation', () => {
+  it('navigates to /puzzles instead of expanding the board when linkToPuzzles is set', async () => {
+    mockUserGuest();
+    const { default: DailyPuzzleStreak } = await import('./DailyPuzzleStreak');
+
+    const { container, getByTestId } = render(
+      <MemoryRouter initialEntries={['/home']}>
+        <DailyPuzzleStreak linkToPuzzles />
+        <Routes>
+          <Route path="*" element={<LocationProbe />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    const btn = container.querySelector('.daily-puzzle-solve-btn');
+    expect(btn).not.toBeNull();
+
+    act(() => {
+      btn.click();
+    });
+
+    // Inline board must NOT open on the home page anymore
+    expect(container.querySelector('.daily-puzzle-board-area')).toBeNull();
+    // Navigation landed on the puzzle page
+    expect(getByTestId('location-probe').textContent).toBe('/puzzles');
+  });
+
+  it('still expands the inline board when linkToPuzzles is not set', async () => {
+    mockUserGuest();
+    const { default: DailyPuzzleStreak } = await import('./DailyPuzzleStreak');
+
+    const { container } = render(
+      <MemoryRouter initialEntries={['/puzzles']}>
+        <DailyPuzzleStreak />
+        <Routes>
+          <Route path="*" element={<LocationProbe />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    const btn = container.querySelector('.daily-puzzle-solve-btn');
+    act(() => {
+      btn.click();
+    });
+
+    expect(container.querySelector('.daily-puzzle-board-area')).not.toBeNull();
   });
 });

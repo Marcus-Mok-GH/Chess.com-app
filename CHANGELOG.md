@@ -1,3 +1,10 @@
+## [2026-09-24] - Move the daily puzzle off the home page
+
+### Fixed
+- The "Solve Today's Puzzle" button on the home page now navigates to the puzzle page (`/puzzles`) instead of expanding the daily puzzle board inline on the home page.
+- The daily puzzle (with its streak card) is now solved on the Puzzles page, where the lesson-scheme header previously showed only a compact streak badge; the duplicate badge was removed since the full streak card includes the streak count.
+- `DailyPuzzleStreak` keeps its inline-board behavior by default and only links out when the new `linkToPuzzles` prop is set (used by Home), with regression tests covering both modes.
+
 ## [2026-09-22] - Make CORS test's Vercel origin fixture independent
 
 ### Fixed
