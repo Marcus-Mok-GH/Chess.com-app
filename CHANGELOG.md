@@ -1,3 +1,11 @@
+## [2026-09-24] - Fix mobile and touchpad scrolling on the landing page
+
+### Fixed
+- The landing page could not be scrolled by touch on mobile or by trackpad wheel gestures at any width. Two CSS rules made its containers "scroll containers" with nothing to scroll, so the browser committed every scroll gesture to them instead of the page: the app-shell rule `main { overflow-y: auto }` also matched the landing page's `<main class="landing-main">`, and `.landing { overflow-x: hidden }` computes `overflow-y` to `auto`.
+- The app-shell `<main>` rules in App.css are now scoped to `.app > main` so they no longer leak onto the landing page. This also removes the accidental 2rem side padding the landing picked up at 1440px+ and the 72px bottom padding reserved for the app's bottom nav, which the landing page doesn't have.
+- `.landing` now uses `overflow-x: clip` (with `hidden` as a fallback for older browsers). Unlike `hidden`, `clip` clips horizontal overflow without creating a scroll container, so vertical gestures chain to the page.
+- Verified with emulated touch swipes, native scroll gestures, and wheel events: the landing page now scrolls, and the app shell (changelog, terms) still scrolls its own `main` with pixel-identical rendering. Frontend suite 156/156 and typecheck green.
+
 ## [2026-09-24] - Keep the lesson concept to one or two short sentences
 
 ### Changed

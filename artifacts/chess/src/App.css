@@ -253,7 +253,10 @@ main {
   .mobile-header {
     flex: 0 0 auto;
   }
-  main {
+  /* Scoped to .app > main: the landing page also renders a <main> and these
+     overflow rules turn it into an empty scroll container that swallows
+     touch/wheel gestures (mobile "cannot scroll" bug). */
+  .app > main {
     overflow-y: auto;
     overscroll-behavior-y: contain;
     -webkit-overflow-scrolling: touch;
@@ -388,7 +391,7 @@ main {
    The bottom-nav is position:fixed (~64px + safe-area), so reserve
    space at the bottom of scrolling content so it can't be obscured. */
 @media (max-width: 768px) {
-  main {
+  .app > main {
     padding-bottom: calc(72px + var(--safe-bottom));
     scroll-padding-bottom: calc(88px + var(--safe-bottom));
   }
@@ -397,7 +400,7 @@ main {
     min-height: 100%;
   }
 
-  .app.hide-bottom-nav main {
+  .app.hide-bottom-nav > main {
     padding-bottom: 0;
     scroll-padding-bottom: 0;
   }
@@ -405,14 +408,14 @@ main {
 
 /* ── Desktop page content wrapper ── */
 @media (min-width: 769px) {
-  main {
+  .app > main {
     overflow-y: auto;
   }
 }
 
 /* ── Large Desktop (1440px+) ── */
 @media (min-width: 1440px) {
-  main {
+  .app > main {
     padding: 0 2rem;
   }
 }

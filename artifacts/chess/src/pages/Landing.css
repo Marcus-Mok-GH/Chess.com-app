@@ -42,7 +42,12 @@
   background: var(--land-page);
   color: var(--land-text);
   position: relative;
-  overflow-x: hidden;
+  /* `clip` contains horizontal overflow without creating a scroll container.
+     `hidden` computes overflow-y to auto, making .landing a scroll container
+     that can't scroll - it then captures touch/wheel gestures that should
+     chain to the page (mobile users could not scroll the landing page). */
+  overflow-x: hidden; /* fallback: old browsers that ignore `clip` */
+  overflow-x: clip;
   font-family: var(--land-font);
 }
 
