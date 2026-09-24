@@ -106,6 +106,19 @@ describe('Puzzles page with Lesson Scheme & LLM commentary', () => {
     expect(screen.queryByText(/1\. e4 e5/)).toBeNull();
   });
 
+  it('keeps abbreviations such as e.g. intact in the lesson concept', async () => {
+    summarizeLessonConcept.mockResolvedValue(
+      'Watch for pins, e.g., against the queen. Develop your pieces toward the center and castle quickly.'
+    );
+
+    renderPuzzles();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Watch for pins, e\.g\., against the queen\./)).toBeTruthy();
+    });
+    expect(screen.queryByText(/^Watch for pins, e\.$/)).toBeNull();
+  });
+
   it('explains an incorrect move without revealing the answer and offers retry', async () => {
     renderPuzzles();
 

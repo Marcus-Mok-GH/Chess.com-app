@@ -58,17 +58,32 @@ function difficultyProgress(rating) {
 // AI summary and the local fallback are capped at 1-2 short sentences.
 const SHORT_CONCEPT_MAX_WORDS = 22;
 
+// A period is only a sentence boundary when it does not belong to a single
+// letter abbreviation ("e.g.", "i.e.") or a numbered move ("1. e4").
+function splitSentencesForConcept(text) {
+  const parts = text.split(/(?<=[.!?])\s+/);
+  const sentences = [];
+  for (const part of parts) {
+    const prev = sentences[sentences.length - 1];
+    if (prev && /(?:\b[a-z]\.|\b\d+\.)$/i.test(prev.trim())) {
+      sentences[sentences.length - 1] = `${prev} ${part}`;
+    } else {
+      sentences.push(part);
+    }
+  }
+  return sentences;
+}
+
 function trimToShortConcept(text, maxWords = SHORT_CONCEPT_MAX_WORDS) {
   const joined = Array.isArray(text) ? text.join(" ") : String(text || "");
   const cleaned = joined.replace(/\s+/g, " ").trim();
   if (!cleaned) return "";
 
-  const sentences = cleaned.match(/[^.!?]+[.!?]*/g) || [cleaned];
   let kept = "";
-  for (const candidate of sentences.slice(0, 2)) {
-    const sentence = candidate.trim();
-    if (!sentence) continue;
-    const next = kept ? `${kept} ${sentence}` : sentence;
+  for (const sentence of splitSentencesForConcept(cleaned).slice(0, 2)) {
+    const trimmed = sentence.trim();
+    if (!trimmed) continue;
+    const next = kept ? `${kept} ${trimmed}` : trimmed;
     if (next.split(" ").filter(Boolean).length > maxWords) break;
     kept = next;
   }

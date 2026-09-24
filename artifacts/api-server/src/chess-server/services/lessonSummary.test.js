@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { trimLessonSummary } from './lessonSummary.js';
+import { splitSentences, trimLessonSummary } from './lessonSummary.js';
 
 describe('trimLessonSummary', () => {
   it('keeps a short one-sentence summary unchanged', () => {
@@ -51,5 +51,30 @@ describe('trimLessonSummary', () => {
     expect(trimLessonSummary(null)).toBe('');
     expect(trimLessonSummary(undefined)).toBe('');
     expect(trimLessonSummary([])).toBe('');
+  });
+});
+
+describe('splitSentences abbreviation handling', () => {
+  it('keeps single-letter abbreviations inside their sentence', () => {
+    expect(trimLessonSummary('A fork attacks two pieces, e.g. a king and rook.')).toBe(
+      'A fork attacks two pieces, e.g. a king and rook.'
+    );
+  });
+
+  it('does not burn sentence slots on abbreviation periods', () => {
+    expect(
+      trimLessonSummary('A fork attacks two pieces, e.g. a king and rook. Develop pieces next.')
+    ).toBe('A fork attacks two pieces, e.g. a king and rook. Develop pieces next.');
+  });
+
+  it('keeps numbered chess moves inside their sentence', () => {
+    expect(splitSentences('1. e4 e5 2. Nf3 Nc6 3. Bc4.')).toEqual(['1. e4 e5 2. Nf3 Nc6 3. Bc4.']);
+    expect(trimLessonSummary('1. e4 e5 2. Nf3 Nc6 3. Bc4. Develop pieces next.')).toBe(
+      '1. e4 e5 2. Nf3 Nc6 3. Bc4. Develop pieces next.'
+    );
+  });
+
+  it('still ends a sentence at real terminal punctuation', () => {
+    expect(splitSentences('Develop early. Castle soon!')).toEqual(['Develop early.', 'Castle soon!']);
   });
 });
