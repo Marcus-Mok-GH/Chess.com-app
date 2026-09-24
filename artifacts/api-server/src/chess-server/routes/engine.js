@@ -247,4 +247,110 @@ router.post('/move', engineConcurrency, async (req, res) => {
   }
 });
 
+// ── Batch position evaluation (game review) ─────────────────────────────────
+
+const REVIEW_MAX_POSITIONS = 16;
+const REVIEW_MIN_MOVETIME_MS = 50;
+const REVIEW_MAX_MOVETIME_MS = 600;
+const REVIEW_DEFAULT_MOVETIME_MS = 200;
+
+/**
+ * Convert a UCI move (e.g. "e2e4", "e7e8q") into SAN for the given position.
+ * Returns null when the move is not legal in the position.
+ */
+export function uciMoveToSan(fen, uci) {
+  if (typeof uci !== 'string' || uci.length < 4) return null;
+  try {
+    const chess = new Chess(fen);
+    const from = uci.slice(0, 2);
+    const to = uci.slice(2, 4);
+    const promotion = uci.length > 4 ? uci.slice(4, 5) : undefined;
+    const applied = chess.move({ from, to, ...(promotion ? { promotion } : {}) });
+    return applied?.san || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Evaluate a batch of positions for the game-review page. Each FEN is scored
+ * from the perspective of the side to move. Positions where the game is already
+ * over are returned with `gameOver: true` and no score, so the client can show
+ * the final result without feeding them to the engine.
+ */
+router.post('/evaluate-positions', engineConcurrency, async (req, res) => {
+  try {
+    const { fens } = req.body || {};
+    if (!Array.isArray(fens) || fens.length === 0) {
+      return errorResponse(res, 400, 'Missing required field: fens (non-empty array)');
+    }
+    if (fens.length > REVIEW_MAX_POSITIONS) {
+      return errorResponse(res, 400, `Too many positions: send at most ${REVIEW_MAX_POSITIONS} per request`);
+    }
+    for (const fen of fens) {
+      if (typeof fen !== 'string' || !isValidFen(fen)) {
+        return errorResponse(res, 400, 'Invalid FEN string in fens');
+      }
+    }
+    const movetimeMs = Math.min(
+      REVIEW_MAX_MOVETIME_MS,
+      Math.max(REVIEW_MIN_MOVETIME_MS, Number.parseInt(req.body.movetimeMs, 10) || REVIEW_DEFAULT_MOVETIME_MS)
+    );
+
+    if (!STOCKFISH_BIN || !WORKER_SCRIPT) {
+      return errorResponse(res, 503, 'Stockfish engine is not available in this deployment');
+    }
+
+    const results = [];
+    // Stay under the serverless function timeout: cap each engine run by the
+    // remaining batch budget and report skipped positions instead of hanging.
+    const deadline = Date.now() + TIMEOUT_MS;
+    for (const fen of fens) {
+      let chess;
+      try { chess = new Chess(fen); } catch {
+        results.push({ fen, gameOver: true, scoreCp: null, mate: null, bestMove: null, bestSan: null, depth: null });
+        continue;
+      }
+      if (chess.isGameOver()) {
+        // Finished positions have a known value: the side to move is either
+        // checkmated (-100000) or the game ended in a draw (0).
+        const scoreCp = chess.isCheckmate() ? -100000 : 0;
+        results.push({ fen, gameOver: true, scoreCp, mate: chess.isCheckmate() ? 0 : null, bestMove: null, bestSan: null, depth: null });
+        continue;
+      }
+      const remaining = deadline - Date.now();
+      if (remaining < movetimeMs + 500) {
+        results.push({ fen, gameOver: false, scoreCp: null, mate: null, bestMove: null, bestSan: null, depth: null, error: 'Time budget exhausted' });
+        continue;
+      }
+      try {
+        const engine = await runEngine(fen, `go movetime ${movetimeMs}`, null, Math.min(remaining, Math.max(4000, movetimeMs * 12)));
+        // candidates[0] can hold a stale first-seen PV; prefer the candidate
+        // matching the engine's final best move, falling back to the deepest.
+        const best =
+          engine.candidates.find((c) => c.move === engine.bestMove) ||
+          engine.candidates.reduce((a, c) => (!a || c.depth > a.depth ? c : a), null);
+        results.push({
+          fen,
+          gameOver: false,
+          scoreCp: best ? best.score : null,
+          // The worker folds mate scores into ±100000 centipawns, so mate
+          // distance is not available here; the client renders those as "M".
+          mate: null,
+          bestMove: engine.bestMove || best?.move || null,
+          bestSan: uciMoveToSan(fen, engine.bestMove || best?.move || ''),
+          depth: best ? best.depth : null,
+        });
+      } catch (error) {
+        console.error('[Engine] Position eval failed:', fen, error.message);
+        results.push({ fen, gameOver: false, scoreCp: null, mate: null, bestMove: null, bestSan: null, depth: null, error: 'Engine search failed' });
+      }
+    }
+
+    return res.json({ results, movetimeMs });
+  } catch (error) {
+    return handleRouteError(res, error, 'Failed to evaluate positions');
+  }
+});
+
 export default router;

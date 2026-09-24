@@ -23,7 +23,9 @@ class ApiService {
                     data.error?.message ||
                     data.error ||
                     `HTTP error ${response.status}`;
-                throw new Error(errorMessage);
+                const error = new Error(errorMessage);
+                error.status = response.status;
+                throw error;
             }
 
             return data;
@@ -224,6 +226,13 @@ class ApiService {
         return this.request("/engine/move", {
             method: "POST",
             body: JSON.stringify({ fen, bot }),
+        });
+    }
+
+    async getEngineEvaluations({ fens, movetimeMs }) {
+        return this.request("/engine/evaluate-positions", {
+            method: "POST",
+            body: JSON.stringify({ fens, movetimeMs }),
         });
     }
 

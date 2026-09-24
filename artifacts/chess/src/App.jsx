@@ -29,6 +29,7 @@ const Login = lazy(() => import('./pages/Login'))
 const Play = lazy(() => import('./pages/Play'))
 const OnlinePlay = lazy(() => import('./pages/OnlinePlay'))
 const GameHistory = lazy(() => import('./pages/GameHistory'))
+const GameReview = lazy(() => import('./pages/GameReview'))
 const Game = lazy(() => import('./pages/Game'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Terms = lazy(() => import('./pages/Terms'))
@@ -345,6 +346,7 @@ export default function App({ Router = BrowserRouter, routerProps = {} } = {}) {
                   <Route path="/online/:gameId" element={<OnlinePlay />} />
                   <Route path="/game/:gameId" element={<Game />} />
                   <Route path="/history" element={<ProtectedRoute loginRequiredFor="Game Archive"><GameHistory /></ProtectedRoute>} />
+                  <Route path="/review/:gameCode" element={<ProtectedRoute loginRequiredFor="Game Review"><Suspense fallback={<RouteFallback />}><GameReview /></Suspense></ProtectedRoute>} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/terms" element={<Suspense fallback={<RouteFallback />}><Terms /></Suspense>} />
                   <Route path="/privacy" element={<Suspense fallback={<RouteFallback />}><Privacy /></Suspense>} />
