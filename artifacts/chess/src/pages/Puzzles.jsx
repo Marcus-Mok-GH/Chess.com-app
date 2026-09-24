@@ -54,10 +54,59 @@ function difficultyProgress(rating) {
   return Math.max(4, Math.min(100, Math.round(((rating - PUZZLE_RATING_MIN) / (PUZZLE_RATING_MAX - PUZZLE_RATING_MIN)) * 100)));
 }
 
-function shortLessonFallback(description) {
-  const text = Array.isArray(description) ? description.join(" ") : String(description || "");
-  const sentences = text.match(/[^.!?]+[.!?]+/g);
-  return (sentences || [text]).slice(0, 2).join(" ").trim();
+// Lesson concepts live in a small sidebar card that users skim, so both the
+// AI summary and the local fallback are capped at 1-2 short sentences.
+const SHORT_CONCEPT_MAX_WORDS = 22;
+
+/**
+ * Splits text into sentences. A period only counts as a sentence boundary
+ * when it does not belong to a single-letter abbreviation ("e.g.", "i.e.")
+ * or a numbered chess move ("1. e4"); such fragments are merged back into
+ * the sentence they belong to.
+ *
+ * @param {string} text Normalized single-spaced text.
+ * @returns {string[]} Sentence fragments, abbreviations kept intact.
+ */
+function splitSentencesForConcept(text) {
+  const parts = text.split(/(?<=[.!?])\s+/);
+  const sentences = [];
+  for (const part of parts) {
+    const prev = sentences[sentences.length - 1];
+    if (prev && /(?:\b[a-z]\.|\b\d+\.)$/i.test(prev.trim())) {
+      sentences[sentences.length - 1] = `${prev} ${part}`;
+    } else {
+      sentences.push(part);
+    }
+  }
+  return sentences;
+}
+
+/**
+ * Caps the lesson concept shown in the sidebar card at 1-2 short sentences so
+ * users can skim it, regardless of what the AI or fallback produced.
+ *
+ * @param {string | string[]} text AI summary or lesson description.
+ * @param {number} [maxWords] Total word cap across kept sentences.
+ * @returns {string} The trimmed concept, at most `maxWords` words long.
+ */
+function trimToShortConcept(text, maxWords = SHORT_CONCEPT_MAX_WORDS) {
+  const joined = Array.isArray(text) ? text.join(" ") : String(text || "");
+  const cleaned = joined.replace(/\s+/g, " ").trim();
+  if (!cleaned) return "";
+
+  let kept = "";
+  for (const sentence of splitSentencesForConcept(cleaned).slice(0, 2)) {
+    const trimmed = sentence.trim();
+    if (!trimmed) continue;
+    const next = kept ? `${kept} ${trimmed}` : trimmed;
+    if (next.split(" ").filter(Boolean).length > maxWords) break;
+    kept = next;
+  }
+  if (kept) return kept;
+
+  // A single runaway sentence: hard-trim at the word cap.
+  const words = cleaned.split(" ").filter(Boolean);
+  return `${words.slice(0, maxWords).join(" ").replace(/[,;:]$/, "")}\u2026`;
 }
 
 export default function Puzzles() {
@@ -683,7 +732,7 @@ export default function Puzzles() {
                     <span className="puzzles-llm-spinner" /> Condensing this lesson...
                   </>
                 ) : (
-                  lessonConceptSummary || shortLessonFallback(currentLesson.description)
+                  trimToShortConcept(lessonConceptSummary || currentLesson.description)
                 )}
               </p>
             </div>

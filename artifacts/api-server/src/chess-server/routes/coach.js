@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { query } from '../db.js';
+import { trimLessonSummary } from '../services/lessonSummary.js';
 import { errorResponse, handleRouteError } from '../middleware/errors.js';
 import {
   authenticatedUserId,
@@ -280,16 +281,16 @@ router.post('/lesson-summary', async (req, res) => {
     if (!title || !lessonText) return errorResponse(res, 400, 'Missing required fields: title, description');
     const summaryMessages = [
       { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: `Condense this chess lesson concept into exactly 1 or 2 sentences and no more than 35 words. Keep the core teaching point clear for a beginner. Do not include a move sequence, example position details, or puzzle answer. Return only the summary text.\nLesson: ${title}\nTopic: ${topic || 'Chess'}\nContent:\n${lessonText}` },
+      { role: 'user', content: `Condense this chess lesson concept into exactly 1 or 2 short sentences, 22 words maximum total. Keep only the core teaching point a beginner needs. Do not include a move sequence, example position details, or puzzle answer. Return only the summary text.\nLesson: ${title}\nTopic: ${topic || 'Chess'}\nContent:\n${lessonText}` },
     ];
     let response;
     try {
-      response = await callCoach(summaryMessages, { userId, maxTokens: 100, temperature: 0.3 });
+      response = await callCoach(summaryMessages, { userId, maxTokens: 80, temperature: 0.3 });
     } catch (coachErr) {
-      response = await callCoachFree(summaryMessages, { maxTokens: 100, temperature: 0.3 });
+      response = await callCoachFree(summaryMessages, { maxTokens: 80, temperature: 0.3 });
     }
     const data = await response.json();
-    return res.json({ summary: data.choices?.[0]?.message?.content?.trim() || '' });
+    return res.json({ summary: trimLessonSummary(data.choices?.[0]?.message?.content) });
   } catch (error) {
     if (error?.status === 402) return res.status(402).json({ error: error.message, code: 'POLLINATIONS_AUTH_REQUIRED' });
     return handleRouteError(res, error, 'Failed to summarize lesson concept');

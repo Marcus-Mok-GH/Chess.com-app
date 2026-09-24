@@ -1,3 +1,13 @@
+## [2026-09-24] - Keep the lesson concept to one or two short sentences
+
+### Changed
+- Sentence splitting in the cap logic keeps single-letter abbreviations ("e.g.", "i.e.") and numbered moves ("1. e4 e5 2. Nf3") inside their sentences instead of fragmenting them at every period (CodeRabbit review feedback on PR #218).
+- The Puzzles page "Lesson Concept" card now always shows 1-2 short sentences capped at 22 words, instead of the up-to-35-word summaries the coach model could return. The `/coach/lesson-summary` prompt asks for 22 words maximum and the response is trimmed server-side by a new `trimLessonSummary` helper before it is returned.
+- The frontend applies the same trim to the AI summary and the local fallback, so the card stays short even while the deployed backend still runs the old code.
+
+### Notes
+- `pnpm run typecheck` for the api-server currently fails on `src/app.ts(6,29)` (missing declaration for `config/cors.js`). Verified this failure exists on `main` before this change and is unrelated to it. Frontend typecheck, full test suite (333/333), and client+SSR build are green.
+
 ## [2026-09-24] - Move the daily puzzle off the home page
 
 ### Fixed
