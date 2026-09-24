@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Chess } from "chess.js";
 import ChessBoard from "../components/ChessBoard";
 import DailyPuzzleStreak from "../components/DailyPuzzleStreak";
-import { generatePuzzleForThemes } from "../engine/puzzles/puzzleGenerator";
+import { generatePuzzleForThemesAsync } from "../engine/puzzles/puzzleWorkerClient";
 import { LESSON_CATALOG } from "../engine/lessons/lessonCatalog";
 import { explainCoachMove, summarizeLessonConcept } from "../engine/coach/coachAI";
 import {
@@ -208,7 +208,7 @@ export default function Puzzles() {
 
     try {
       const difficulty = difficultyForRating(puzzleRating);
-      const freshPuzzle = generatePuzzleForThemes(
+      const freshPuzzle = await generatePuzzleForThemesAsync(
         lesson.puzzleThemes || [],
         seed,
         { difficulty },

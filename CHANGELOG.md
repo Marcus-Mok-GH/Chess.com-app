@@ -1,6 +1,9 @@
 ## [2026-09-24]
 
 ### Performance
+- Puzzle generation no longer freezes the app: the puzzles page now generates every lesson puzzle inside a web worker (`puzzleGenerator.worker.js`) through a promise-based client, with a synchronous fallback for browsers and test environments where workers are unavailable.
+
+### Performance
 - Game history loads fast again: the `GET /games/history/:username` response no longer ships the final FEN and full move-history JSON for every row (the list only renders a summary), the account is resolved with a single indexed lookup instead of per-row username subqueries, and the `white_player_id`/`black_player_id` columns on `games` are now indexed.
 
 ## [2026-09-24] - Game Review: Stockfish analysis and coach commentary for past games
