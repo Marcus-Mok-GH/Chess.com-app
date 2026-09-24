@@ -58,8 +58,15 @@ function difficultyProgress(rating) {
 // AI summary and the local fallback are capped at 1-2 short sentences.
 const SHORT_CONCEPT_MAX_WORDS = 22;
 
-// A period is only a sentence boundary when it does not belong to a single
-// letter abbreviation ("e.g.", "i.e.") or a numbered move ("1. e4").
+/**
+ * Splits text into sentences. A period only counts as a sentence boundary
+ * when it does not belong to a single-letter abbreviation ("e.g.", "i.e.")
+ * or a numbered chess move ("1. e4"); such fragments are merged back into
+ * the sentence they belong to.
+ *
+ * @param {string} text Normalized single-spaced text.
+ * @returns {string[]} Sentence fragments, abbreviations kept intact.
+ */
 function splitSentencesForConcept(text) {
   const parts = text.split(/(?<=[.!?])\s+/);
   const sentences = [];
@@ -74,6 +81,14 @@ function splitSentencesForConcept(text) {
   return sentences;
 }
 
+/**
+ * Caps the lesson concept shown in the sidebar card at 1-2 short sentences so
+ * users can skim it, regardless of what the AI or fallback produced.
+ *
+ * @param {string | string[]} text AI summary or lesson description.
+ * @param {number} [maxWords] Total word cap across kept sentences.
+ * @returns {string} The trimmed concept, at most `maxWords` words long.
+ */
 function trimToShortConcept(text, maxWords = SHORT_CONCEPT_MAX_WORDS) {
   const joined = Array.isArray(text) ? text.join(" ") : String(text || "");
   const cleaned = joined.replace(/\s+/g, " ").trim();
