@@ -1,3 +1,14 @@
+## [2026-09-24] - Game Review: Stockfish analysis and coach commentary for past games
+
+### Added
+- Clicking a game in Game History now opens a full game review at `/review/:gameCode`: an interactive board with last-move highlight, a vertical eval bar, move-by-move navigation (buttons plus arrow keys), a clickable move list with colored classification dots (Best / Excellent / Good / Inaccuracy / Mistake / Blunder), per-side accuracy cards, Stockfish notes per move, and LLM coach comments when the coach is connected.
+- New backend endpoint `POST /engine/evaluate-positions`: scores up to 16 positions per request with the shared Stockfish worker pool, returning side-to-move centipawn scores, best move in UCI and SAN, and game-over flags for finished positions. Guarded by the existing engine concurrency limiter, input validation, and a 503 when Stockfish is unavailable.
+- Frontend `engineReview` service chunks a whole game into batched requests with limited parallelism, progressive per-chunk results, and progress reporting, so the review fills in while Stockfish works.
+
+### Notes
+- The engine reports scores from the side-to-move perspective; the review math (`reviewUtils`) converts to win percentages and per-move accuracy with the same curve family lichess-style reviews use.
+- Frontend suite 186/186, typecheck, and client+SSR build green; api-server suite 186/186 with a real-Stockfish integration test for the new endpoint. No `touch-action` traps added; the move list scrolls only inside its own container.
+
 ## [2026-09-24] - Fix mobile and touchpad scrolling on the landing page
 
 ### Fixed
