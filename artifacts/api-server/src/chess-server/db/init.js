@@ -419,6 +419,8 @@ export async function initDatabase() {
         await client.query('CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)');
         await client.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_games_code_unique ON games(game_code)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_games_code ON games(game_code)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_games_white_player_id ON games(white_player_id)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_games_black_player_id ON games(black_player_id)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_matchmaking_player_id ON matchmaking_queue(player_id)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_matchmaking_elo ON matchmaking_queue(elo)');

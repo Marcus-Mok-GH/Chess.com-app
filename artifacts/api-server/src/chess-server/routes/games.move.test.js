@@ -346,22 +346,49 @@ describe('POST /api/games/:gameId/end', () => {
 });
 
 describe('GET /api/games/history/:username', () => {
-  it('matches completed games by the authenticated user ID as well as username', async () => {
+  it('resolves the account once and returns only summary fields', async () => {
     const app = buildApp();
     app.use('/api/games', gameRoutes);
+    const account = { id: '550e8400-e29b-41d4-a716-446655440000', username: 'Alice' };
     const games = [{
-      game_code: 'GAME1', result: 'white', move_history: ['e4'], game_mode: 'ranked',
+      game_code: 'GAME1', result: 'white', game_mode: 'ranked', created_at: '2026-09-24T12:00:00.000Z',
     }];
-    query.mockResolvedValueOnce({ rows: games });
+    query
+      .mockResolvedValueOnce({ rows: [account] })
+      .mockResolvedValueOnce({ rows: games });
 
     const res = await loopback(app, 'GET', '/api/games/history/550e8400-e29b-41d4-a716-446655440000');
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(games);
-    const sql = query.mock.calls[0][0];
+
+    const lookup = query.mock.calls[0][0];
+    expect(lookup).toContain('FROM users');
+    expect(lookup).toContain('LOWER(username) = LOWER($1)');
+
+    const sql = query.mock.calls[1][0];
     expect(sql).toContain('white_player_id = $1');
     expect(sql).toContain('black_player_id = $1');
-    expect(sql).toContain('LOWER(username) = LOWER($1)');
+    expect(sql).toContain('LOWER(white_player_name) = LOWER($2)');
+    // The large fen/move_history columns must stay out of the list payload.
+    expect(sql).not.toMatch(/\b(fen|move_history)\b/);
+    // Per-row username subqueries forced a table scan; they are gone.
+    expect(sql).not.toContain('SELECT id FROM users');
+  });
+
+  it('falls back to the raw identifier when no account matches', async () => {
+    const app = buildApp();
+    app.use('/api/games', gameRoutes);
+    query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const res = await loopback(app, 'GET', '/api/games/history/Guest');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
+    const params = query.mock.calls[1][1];
+    expect(params).toEqual([null, 'Guest', 20]);
   });
 });
 
