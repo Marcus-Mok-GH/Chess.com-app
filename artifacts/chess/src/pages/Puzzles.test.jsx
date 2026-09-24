@@ -91,6 +91,21 @@ describe('Puzzles page with Lesson Scheme & LLM commentary', () => {
     );
   });
 
+  it('trims a long AI lesson concept to one or two short sentences', async () => {
+    summarizeLessonConcept.mockResolvedValue(
+      'Develop your pieces toward the center and castle quickly. Avoid moving the same piece twice or bringing the queen out too early because chasing it costs time. A simple opening routine like 1. e4 e5 2. Nf3 Nc6 3. Bc4 keeps every move useful.'
+    );
+
+    renderPuzzles();
+
+    await waitFor(() => {
+      expect(screen.getByText('Develop your pieces toward the center and castle quickly.')).toBeTruthy();
+    });
+    // The second and third sentences are cut: users skim this card.
+    expect(screen.queryByText(/chasing it costs time/)).toBeNull();
+    expect(screen.queryByText(/1\. e4 e5/)).toBeNull();
+  });
+
   it('explains an incorrect move without revealing the answer and offers retry', async () => {
     renderPuzzles();
 
