@@ -227,6 +227,13 @@ class ApiService {
         });
     }
 
+    async getEngineEvaluations({ fens, movetimeMs }) {
+        return this.request("/engine/evaluate-positions", {
+            method: "POST",
+            body: JSON.stringify({ fens, movetimeMs }),
+        });
+    }
+
     // ── Learning ─────────────────────────────────────────────────────────────
     async getLessons() {
         return this.request("/lessons");

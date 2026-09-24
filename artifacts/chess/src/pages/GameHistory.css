@@ -53,6 +53,37 @@
   justify-content: space-between;
   align-items: center;
   transition: var(--transition-smooth);
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.game-item:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.game-review-hint {
+  margin-left: 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  opacity: 0;
+  transition: opacity var(--transition-smooth);
+  white-space: nowrap;
+}
+
+.game-item:hover .game-review-hint,
+.game-item:focus-visible .game-review-hint {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .game-review-hint {
+    opacity: 0.8;
+  }
 }
 
 .game-item:hover {

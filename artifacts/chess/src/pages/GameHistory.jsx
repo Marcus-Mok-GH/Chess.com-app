@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 import api from '../services/api';
 import EloProgressChart from '../components/EloProgressChart';
@@ -26,6 +27,7 @@ function getResultText(result) {
 
 export default function GameHistory() {
   const { user, isOnline } = useUser();
+  const navigate = useNavigate();
   const [games, setGames] = useState([]);
   const [eloHistory, setEloHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -122,7 +124,13 @@ export default function GameHistory() {
         ) : (
           <div className="games-list">
             {games.map((game) => (
-              <div key={game.game_code} className="game-item">
+              <button
+                key={game.game_code}
+                type="button"
+                className="game-item"
+                onClick={() => navigate(`/review/${encodeURIComponent(game.game_code)}`)}
+                aria-label={`Review game ${game.game_code} (${getResultText(game.result)})`}
+              >
                 <div className="game-info">
                   <div className="game-details">
                     <span className="game-code">{game.game_code}</span>
@@ -131,9 +139,10 @@ export default function GameHistory() {
                   </div>
                   <div className="game-date">
                     {formatDate(game.created_at)}
+                    <span className="game-review-hint">Review →</span>
                   </div>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}
