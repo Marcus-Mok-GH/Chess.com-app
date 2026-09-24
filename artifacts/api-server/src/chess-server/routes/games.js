@@ -485,17 +485,30 @@ router.get('/history/:username', async (req, res) => {
   try {
     const { username } = req.params;
     const limit = Math.max(1, Math.min(parseInt(req.query.limit) || 20, 100));
+    // The history list only renders summary fields, so keep fen and
+    // move_history (a large JSON column) out of the response payload.
+    // Resolve the account once up front instead of running per-row
+    // username subqueries, which forced a full table scan.
+    const userResult = await query(
+      `SELECT id, username FROM users
+       WHERE id::text = $1 OR LOWER(username) = LOWER($1)
+       LIMIT 1`,
+      [username]
+    );
+    const user = userResult.rows[0] || null;
+    const userId = user ? user.id : null;
+    // Fall back to the raw identifier so name-only rows (guest/friendly
+    // games stored by display name) still match when no account exists.
+    const name = user ? user.username : username;
     const result = await query(
-      `SELECT game_code, result, fen, move_history, game_mode, created_at
+      `SELECT game_code, result, game_mode, created_at
        FROM games
        WHERE white_player_id = $1
           OR black_player_id = $1
-          OR LOWER(white_player_name) = LOWER($1)
-          OR LOWER(black_player_name) = LOWER($1)
-          OR white_player_id IN (SELECT id FROM users WHERE LOWER(username) = LOWER($1))
-          OR black_player_id IN (SELECT id FROM users WHERE LOWER(username) = LOWER($1))
-       ORDER BY created_at DESC LIMIT $2`,
-      [username, limit]
+          OR LOWER(white_player_name) = LOWER($2)
+          OR LOWER(black_player_name) = LOWER($2)
+       ORDER BY created_at DESC LIMIT $3`,
+      [userId, name, limit]
     );
     res.json(result.rows);
   } catch (error) {
