@@ -283,12 +283,27 @@ router.post('/lesson-summary', async (req, res) => {
   try {
     const userId = await requireCoachUser(req, res);
     if (!userId) return;
-    const { title, topic, description } = req.body;
+    const { title, topic, description, puzzle } = req.body || {};
     const lessonText = Array.isArray(description) ? description.join('\n') : String(description || '');
     if (!title || !lessonText) return errorResponse(res, 400, 'Missing required fields: title, description');
+
+    // When the caller sends the generated puzzle, summarize what THIS exact
+    // position teaches instead of the generic catalog lesson text.
+    const puzzleFen = typeof puzzle?.fen === 'string' ? puzzle.fen.trim() : '';
+    const conceptPrompt = puzzleFen
+      ? `A chess student is about to try a training puzzle. Explain the concrete lesson this exact position teaches in exactly 1 or 2 short sentences, 22 words maximum total. Name the tactical pattern and the pieces involved in this specific position so it reads like coaching for this puzzle, not a generic textbook line.
+Rules: never state the winning move itself, its SAN notation, or any destination square — that spoils the puzzle. Describe what to look for instead. Return only the summary text.
+Lesson: ${title}
+Topic: ${topic || 'Chess'}
+Puzzle theme: ${typeof puzzle.theme === 'string' ? puzzle.theme : 'tactics'}
+Side to move: ${typeof puzzle.sideToMove === 'string' ? puzzle.sideToMove : 'unknown'}
+Position (FEN): ${puzzleFen}
+${typeof puzzle.solution === 'string' && puzzle.solution.trim() ? `Key move (for your analysis only, do not reveal): ${puzzle.solution.trim()}\n` : ''}Lesson description for context:\n${lessonText}`
+      : `Condense this chess lesson concept into exactly 1 or 2 short sentences, 22 words maximum total. Keep only the core teaching point a beginner needs. Do not include a move sequence, example position details, or puzzle answer. Return only the summary text.\nLesson: ${title}\nTopic: ${topic || 'Chess'}\nContent:\n${lessonText}`;
+
     const summaryMessages = [
       { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: `Condense this chess lesson concept into exactly 1 or 2 short sentences, 22 words maximum total. Keep only the core teaching point a beginner needs. Do not include a move sequence, example position details, or puzzle answer. Return only the summary text.\nLesson: ${title}\nTopic: ${topic || 'Chess'}\nContent:\n${lessonText}` },
+      { role: 'user', content: conceptPrompt },
     ];
     let response;
     try {

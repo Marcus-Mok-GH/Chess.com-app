@@ -86,11 +86,23 @@ export async function explainCoachMove(fenBefore, move, fenAfter, onStream = nul
   }
 }
 
-export async function summarizeLessonConcept(title, topic, description) {
+export async function summarizeLessonConcept(title, topic, description, puzzle = null) {
   try {
+    const body = { title, topic, description };
+    // When a generated puzzle is provided, the backend tailors the concept to
+    // that exact position instead of the generic catalog lesson text.
+    if (puzzle?.fen) {
+      body.puzzle = {
+        fen: puzzle.fen,
+        sideToMove: puzzle.sideToMove,
+        theme: puzzle.theme,
+        tags: puzzle.tags,
+        solution: puzzle.solution,
+      };
+    }
     const data = await coachRequest('/coach/lesson-summary', {
       method: 'POST',
-      body: JSON.stringify({ title, topic, description }),
+      body: JSON.stringify(body),
     });
     return data.summary || null;
   } catch (error) {

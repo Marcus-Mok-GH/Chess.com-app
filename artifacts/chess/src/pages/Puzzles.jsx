@@ -296,12 +296,19 @@ export default function Puzzles() {
     }
   }
 
+  // The lesson concept card coaches the generated puzzle itself, so it is
+  // re-requested whenever a new position loads (new lesson, next puzzle, or
+  // rating change), not just when the lesson changes.
+  const puzzleFen = puzzle?.fen;
+  const puzzleId = puzzle?.id;
+
   useEffect(() => {
+    if (!puzzleFen) return;
     const requestId = ++lessonSummaryRequestRef.current;
     setLessonConceptLoading(true);
     setLessonConceptSummary(null);
 
-    summarizeLessonConcept(currentLesson.title, currentLesson.topic, currentLesson.description)
+    summarizeLessonConcept(currentLesson.title, currentLesson.topic, currentLesson.description, puzzle)
       .then((summary) => {
         if (requestId === lessonSummaryRequestRef.current && summary) {
           setLessonConceptSummary(summary);
@@ -315,7 +322,7 @@ export default function Puzzles() {
           setLessonConceptLoading(false);
         }
       });
-  }, [currentLesson.id, currentLesson.title, currentLesson.topic, currentLesson.description]);
+  }, [puzzleFen, puzzleId, currentLesson.id, currentLesson.title, currentLesson.topic, currentLesson.description]);
 
   // Sync puzzle loading when currentLessonIndex changes
   useEffect(() => {
@@ -795,7 +802,7 @@ export default function Puzzles() {
               <p className="puzzle-lesson-para">
                 {lessonConceptLoading ? (
                   <>
-                    <span className="puzzles-llm-spinner" /> Condensing this lesson...
+                    <span className="puzzles-llm-spinner" /> Analyzing this puzzle...
                   </>
                 ) : (
                   trimToShortConcept(lessonConceptSummary || currentLesson.description)
