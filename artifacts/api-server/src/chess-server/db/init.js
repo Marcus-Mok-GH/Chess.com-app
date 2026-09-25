@@ -1,7 +1,36 @@
 import { getDirectPool, getPool, shouldClosePool } from './pool.js';
 import { LESSON_CATALOG } from '../lessons/lessonCatalog.js';
 
-export async function initDatabase() {
+// Bump this whenever the schema below changes. Serverless cold starts compare
+// it against the stored value and skip the full DDL transaction entirely when
+// it matches, so routine cold starts never take locks on the users table.
+const SCHEMA_VERSION = '2';
+const SCHEMA_META_KEY = 'schema_version';
+const SCHEMA_META_TABLE = 'schema_meta';
+// Fixed advisory-lock key so concurrent serverless inits serialize instead of
+// racing each other for the same DDL locks.
+const SCHEMA_INIT_ADVISORY_LOCK_KEY = 424242n;
+// A stuck lock holder (e.g. a wedged transaction on a recycled instance) must
+// fail the DDL fast instead of queueing behind it for the function's lifetime.
+const INIT_LOCK_TIMEOUT = '10s';
+
+async function readSchemaVersion(client) {
+  const result = await client.query(
+    'SELECT value FROM ' + SCHEMA_META_TABLE + ' WHERE key = $1 LIMIT 1',
+    [SCHEMA_META_KEY]
+  );
+  return result.rows[0]?.value || null;
+}
+
+async function writeSchemaVersion(client) {
+  await client.query(
+    'INSERT INTO ' + SCHEMA_META_TABLE + ' (key, value) VALUES ($1, $2) ' +
+    'ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value',
+    [SCHEMA_META_KEY, SCHEMA_VERSION]
+  );
+}
+
+export async function initDatabase({ force = false } = {}) {
   const pool = getDirectPool();
   const isDuplicateTypeError = (error) =>
     error?.code === '23505' && error?.constraint === 'pg_type_typname_nsp_index';
@@ -9,9 +38,39 @@ export async function initDatabase() {
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   const client = await pool.connect();
   try {
+    // Session-level: also bounds the advisory-lock wait itself, so a stuck
+    // schema transaction on another instance can never wedge this cold start.
+    await client.query(`SET lock_timeout = '${INIT_LOCK_TIMEOUT}'`);
+    // The version table only ever locks itself; this is safe to run on every
+    // cold start, and reading the version lets warm schema skips happen.
+    await client.query(
+      'CREATE TABLE IF NOT EXISTS ' + SCHEMA_META_TABLE + ' (key TEXT PRIMARY KEY, value TEXT NOT NULL)'
+    );
+
+    if (!force) {
+      const storedVersion = await readSchemaVersion(client);
+      if (storedVersion === SCHEMA_VERSION) {
+        console.log('[DB] Schema already at version', SCHEMA_VERSION, '- skipping DDL warm-up');
+        return;
+      }
+    }
+
     const runInit = async () => {
       await client.query('BEGIN');
       try {
+        // Serialize concurrent schema work across serverless instances.
+        await client.query('SELECT pg_advisory_xact_lock($1::bigint)', [SCHEMA_INIT_ADVISORY_LOCK_KEY]);
+        // Another instance may have finished the migration while we waited
+        // for the advisory lock; re-check before touching DDL.
+        if (!force) {
+          const currentVersion = await readSchemaVersion(client);
+          if (currentVersion === SCHEMA_VERSION) {
+            await client.query('COMMIT');
+            console.log('[DB] Schema already at version', SCHEMA_VERSION, '- migration completed by another instance');
+            return;
+          }
+        }
+
         // Ensure UUID extension is available
         await client.query('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
 
@@ -469,6 +528,7 @@ export async function initDatabase() {
         await client.query('CREATE INDEX IF NOT EXISTS idx_lessons_order ON lessons(sort_order)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_lesson_progress_user ON lesson_progress(user_id)');
 
+        await writeSchemaVersion(client);
         await client.query('COMMIT');
       } catch (error) {
         await client.query('ROLLBACK');
