@@ -44,7 +44,9 @@ export async function query(text, params) {
 
     console.warn(`[DB] Schema issue detected (${error.code}). Re-initializing.`);
     setDatabaseReady(false);
-    const restored = await ensureDatabaseReady(initDatabase);
+    // force: a missing table/column means the stored schema version is wrong,
+    // so re-run the full DDL even if the version check would skip it.
+    const restored = await ensureDatabaseReady(() => initDatabase({ force: true }));
     if (!restored) {
       throw error;
     }
