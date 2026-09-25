@@ -35,7 +35,7 @@ function resultText(result, orientation, isParticipant = true) {
 export default function GameReview() {
   const { gameCode } = useParams();
   const navigate = useNavigate();
-  const { user, isLoggedIn } = useUser();
+  const { user } = useUser();
 
   const [game, setGame] = useState(null);
   const [loadError, setLoadError] = useState('');
@@ -84,12 +84,46 @@ export default function GameReview() {
     return buildReviewPositions(game.move_history);
   }, [game]);
 
+  // Viewer identity, normalized: the account id (DB rows may store it with a
+  // "user_" prefix on active games) plus the display name, lowercased.
+  const viewerIdentity = useMemo(() => {
+    if (!user) return null;
+    const ids = new Set();
+    if (user.id != null) {
+      ids.add(String(user.id));
+      ids.add(`user_${user.id}`);
+    }
+    if (user.username) ids.add(String(user.username).toLowerCase());
+    if (user.name) ids.add(String(user.name).toLowerCase());
+    return ids;
+  }, [user]);
+
+  const matchesViewer = useCallback((playerId, playerName) => {
+    if (!viewerIdentity || viewerIdentity.size === 0) return false;
+    const candidates = [playerId, playerName];
+    return candidates.some((value) => {
+      if (value == null || value === '') return false;
+      const raw = String(value);
+      const normalizedId = raw.replace(/^user_/, '');
+      return viewerIdentity.has(raw) || viewerIdentity.has(normalizedId) ||
+        viewerIdentity.has(raw.toLowerCase());
+    });
+  }, [viewerIdentity]);
+
+  // Participation decides both the board orientation and the result wording:
+  // only a recorded player should see "You won" / a flipped board. Anyone else
+  // (including logged-in users) gets a neutral spectator view.
+  const isParticipant = useMemo(() => {
+    if (!game) return false;
+    return matchesViewer(game.white_player_id, game.white_player_name) ||
+      matchesViewer(game.black_player_id, game.black_player_name);
+  }, [game, matchesViewer]);
+
   const orientation = useMemo(() => {
-    if (!game || !user) return 'white';
-    const me = String(user.username || user.name || '').toLowerCase();
-    if (game.black_player_name && String(game.black_player_name).toLowerCase() === me) return 'black';
+    if (!game || !isParticipant) return 'white';
+    if (matchesViewer(game.black_player_id, game.black_player_name)) return 'black';
     return 'white';
-  }, [game, user]);
+  }, [game, isParticipant, matchesViewer]);
 
   // ── Stockfish analysis (progressive) ─────────────────────────────────────
   useEffect(() => {
@@ -313,7 +347,7 @@ export default function GameReview() {
           <div>
             <h1 className="review-heading">Game Review</h1>
             <p className="review-subtitle">
-              {game.white_player_name || 'White'} vs {game.black_player_name || 'Black'} · {resultText(game.result, orientation, Boolean(isLoggedIn && user))}
+              {game.white_player_name || 'White'} vs {game.black_player_name || 'Black'} · {resultText(game.result, orientation, isParticipant)}
             </p>
           </div>
           <div className="review-meta">
