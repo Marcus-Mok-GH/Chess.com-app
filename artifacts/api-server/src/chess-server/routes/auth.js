@@ -642,7 +642,7 @@ router.post('/update-username', requireSession, async (req, res) => {
     if (check.rows.length > 0) return fail(res, 400, 'Username taken.');
 
     const result = await query(
-      'UPDATE users SET username = $1 WHERE id::TEXT = $2::TEXT RETURNING id, username, elo, games_played, wins, losses, draws, created_at, email',
+      'UPDATE users SET username = $1 WHERE id::TEXT = $2::TEXT RETURNING id, username, elo, games_played, wins, losses, draws, created_at, email, is_banned',
       [trimmed, userId]
     );
 
