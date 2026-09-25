@@ -1,3 +1,2 @@
-### Fixed
-- Game Review: the board now renders at its proper size inside the review layout instead of escaping its container and covering the whole page.
-
+### Added
+- Admin account management: admins can search accounts by username or email and ban (with an optional reason), unban, or permanently delete them from a new Admin page. Banned users are signed out immediately and blocked from signing back in.
