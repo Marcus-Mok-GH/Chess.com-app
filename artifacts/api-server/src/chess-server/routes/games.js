@@ -157,8 +157,13 @@ router.post('/save', async (req, res) => {
     if (!['white', 'black'].includes(playerColor)) return errorResponse(res, 400, 'Invalid player color');
 
     const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) return errorResponse(res, 401, 'Authentication required');
-    const authUserId = await validateSession(authHeader.slice(7).trim());
+    // Prefer the Bearer header, but fall back to the httpOnly session cookie:
+    // browser clients authenticate with the cookie on every credentialed request.
+    const sessionToken = authHeader?.startsWith('Bearer ')
+      ? authHeader.slice(7).trim()
+      : getSessionToken(req);
+    if (!sessionToken) return errorResponse(res, 401, 'Authentication required');
+    const authUserId = await validateSession(sessionToken);
     if (!authUserId) return errorResponse(res, 401, 'Invalid or expired session');
     if (requestedUserId != null && String(requestedUserId) !== String(authUserId)) {
       return errorResponse(res, 403, 'Session identity does not match player');
@@ -226,8 +231,13 @@ router.post('/local/create', async (req, res) => {
     if (!['white', 'black'].includes(playerColor)) return errorResponse(res, 400, 'Invalid player color');
 
     const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) return errorResponse(res, 401, 'Authentication required');
-    const authUserId = await validateSession(authHeader.slice(7).trim());
+    // Prefer the Bearer header, but fall back to the httpOnly session cookie:
+    // browser clients authenticate with the cookie on every credentialed request.
+    const sessionToken = authHeader?.startsWith('Bearer ')
+      ? authHeader.slice(7).trim()
+      : getSessionToken(req);
+    if (!sessionToken) return errorResponse(res, 401, 'Authentication required');
+    const authUserId = await validateSession(sessionToken);
     if (!authUserId) return errorResponse(res, 401, 'Invalid or expired session');
     if (requestedUserId != null && String(requestedUserId) !== String(authUserId)) {
       return errorResponse(res, 403, 'Session identity does not match player');
@@ -275,9 +285,12 @@ router.post('/local/create', async (req, res) => {
 router.get('/local/latest/:username', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) return errorResponse(res, 401, 'Authentication required');
+    const sessionToken = authHeader?.startsWith('Bearer ')
+      ? authHeader.slice(7).trim()
+      : getSessionToken(req);
+    if (!sessionToken) return errorResponse(res, 401, 'Authentication required');
 
-    const authUserId = await validateSession(authHeader.slice(7).trim());
+    const authUserId = await validateSession(sessionToken);
     if (!authUserId) return errorResponse(res, 401, 'Invalid or expired session');
 
     const result = await query(
@@ -305,9 +318,12 @@ router.get('/local/:username/:gameCode', async (req, res) => {
     if (!gameCode) return errorResponse(res, 400, 'Game code is required');
 
     const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) return errorResponse(res, 401, 'Authentication required');
+    const sessionToken = authHeader?.startsWith('Bearer ')
+      ? authHeader.slice(7).trim()
+      : getSessionToken(req);
+    if (!sessionToken) return errorResponse(res, 401, 'Authentication required');
 
-    const authUserId = await validateSession(authHeader.slice(7).trim());
+    const authUserId = await validateSession(sessionToken);
     if (!authUserId) return errorResponse(res, 401, 'Invalid or expired session');
 
     const result = await query(
@@ -662,10 +678,12 @@ router.post('/:gameId/move', async (req, res) => {
     }
 
     const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
+    const token = authHeader?.startsWith('Bearer ')
+      ? authHeader.slice(7).trim()
+      : getSessionToken(req);
+    if (!token) {
       return errorResponse(res, 401, 'Authentication required');
     }
-    const token = authHeader.slice(7).trim();
     const authUserId = await validateSession(token);
     if (!authUserId) {
       return errorResponse(res, 401, 'Invalid or expired session');
@@ -814,9 +832,12 @@ router.post('/:gameId/move', async (req, res) => {
 router.post('/resign-all-live', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) return errorResponse(res, 401, 'Authentication required');
+    const sessionToken = authHeader?.startsWith('Bearer ')
+      ? authHeader.slice(7).trim()
+      : getSessionToken(req);
+    if (!sessionToken) return errorResponse(res, 401, 'Authentication required');
 
-    const authUserId = await validateSession(authHeader.slice(7).trim());
+    const authUserId = await validateSession(sessionToken);
     if (!authUserId) return errorResponse(res, 401, 'Invalid or expired session');
 
     // Matchmaking games are stored as ranked active games. Friendly game-code
@@ -974,8 +995,13 @@ router.post('/:gameId/end', async (req, res) => {
     }
 
     const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) return errorResponse(res, 401, 'Authentication required');
-    const authUserId = await validateSession(authHeader.slice(7).trim());
+    // Prefer the Bearer header, but fall back to the httpOnly session cookie:
+    // browser clients authenticate with the cookie on every credentialed request.
+    const sessionToken = authHeader?.startsWith('Bearer ')
+      ? authHeader.slice(7).trim()
+      : getSessionToken(req);
+    if (!sessionToken) return errorResponse(res, 401, 'Authentication required');
+    const authUserId = await validateSession(sessionToken);
     const requestUid = userIdFromPlayerId(playerId);
     if (authUserId == null || requestUid == null || String(authUserId) != String(requestUid)) {
       return errorResponse(res, 403, 'Session identity does not match player');

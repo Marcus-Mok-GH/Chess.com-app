@@ -10,6 +10,20 @@ vi.mock('../auth.js', () => ({
   validateSession: vi.fn().mockResolvedValue(2),
   createSession: vi.fn(),
   deleteSession: vi.fn(),
+  // Mirrors the real helper: Bearer header first, then the chess_session cookie.
+  getSessionToken: vi.fn((req) => {
+    const authorization = req?.headers?.authorization;
+    if (typeof authorization === 'string' && authorization.startsWith('Bearer ')) {
+      return authorization.slice(7).trim() || null;
+    }
+    const cookieHeader = req?.headers?.cookie;
+    if (typeof cookieHeader !== 'string') return null;
+    for (const part of cookieHeader.split(';')) {
+      const [key, ...valueParts] = part.trim().split('=');
+      if (key === 'chess_session') return valueParts.join('=');
+    }
+    return null;
+  }),
 }));
 
 vi.mock('../services/gameUtils.js', () => ({
@@ -295,6 +309,45 @@ describe('POST /api/games/:gameId/move', () => {
 
     expect(res.status).toBe(401);
     expect(res.body.error).toMatch(/invalid|expired/i);
+  });
+
+  it('accepts the httpOnly session cookie when no Bearer header is present', async () => {
+    const app = buildApp();
+    app.use('/api/games', gameRoutes);
+    const updatedGame = {
+      ...mockActiveGame(),
+      move_count: 2,
+      fen: 'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2',
+      move_history: [
+        { san: 'e4', from: 'e2', to: 'e4' },
+        { san: 'e5', from: 'e7', to: 'e5' },
+      ],
+    };
+    query
+      .mockResolvedValueOnce({ rows: [mockActiveGame()] })
+      .mockResolvedValueOnce({ rows: [updatedGame], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 });
+
+    const res = await loopback(app, 'POST', '/api/games/GAME1/move',
+      { move: { from: 'e7', to: 'e5' }, playerId: 'user_2', expectedMoveCount: 1 },
+      { Cookie: 'chess_session=cookie-token' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(validateSession).toHaveBeenCalledWith('cookie-token');
+  });
+
+  it('rejects a move with neither a Bearer header nor a session cookie', async () => {
+    const app = buildApp();
+    app.use('/api/games', gameRoutes);
+    query.mockResolvedValueOnce({ rows: [mockActiveGame()] });
+
+    const res = await loopback(app, 'POST', '/api/games/GAME1/move',
+      { move: { from: 'e7', to: 'e5' }, playerId: 'user_2', expectedMoveCount: 1 },
+      {});
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toMatch(/authentication/i);
   });
 
   it('validates the Bearer token', async () => {
