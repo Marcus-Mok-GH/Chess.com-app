@@ -39,12 +39,12 @@ class ApiService {
         }
     }
 
-    async updateUsername(username, token) {
+    async updateUsername(username, token = null) {
+        // Authenticate via the httpOnly session cookie by default; the explicit
+        // Bearer token is legacy and only attached when a real one is provided.
         return this.request("/auth/update-username", {
             method: "POST",
-            headers: {
-                "Authorization": `Bearer ${token}`,
-            },
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
             body: JSON.stringify({ username }),
         });
     }

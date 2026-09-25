@@ -7,6 +7,16 @@ vi.mock('../db.js', () => ({
 }));
 
 vi.mock('../auth.js', () => ({
+  // Cookie-only reader used by Bearer-fallback routes.
+  getSessionCookieToken: vi.fn((req) => {
+    const cookieHeader = req?.headers?.cookie;
+    if (typeof cookieHeader !== 'string') return null;
+    for (const part of cookieHeader.split(';')) {
+      const [key, ...valueParts] = part.trim().split('=');
+      if (key === 'chess_session') return valueParts.join('=');
+    }
+    return null;
+  }),
   validateSession: vi.fn(),
   createSession: vi.fn(),
   deleteSession: vi.fn(),
