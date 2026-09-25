@@ -20,6 +20,7 @@ import {
   Swords,
   UserRound,
   UsersRound,
+  ShieldCheck,
 } from 'lucide-react'
 import './App.css'
 
@@ -41,6 +42,7 @@ const Openings = lazy(() => import('./pages/Openings'))
 const Friends = lazy(() => import('./pages/Friends'))
 const Clubs = lazy(() => import('./pages/Clubs'))
 const More = lazy(() => import('./pages/More'))
+const Admin = lazy(() => import('./pages/Admin'))
 const NotFound = lazy(() => import('./pages/not-found'))
 
 function getTitle(path) {
@@ -58,6 +60,7 @@ function getTitle(path) {
   if (path === '/friends') return 'Friends'
   if (path === '/clubs') return 'Clubs'
   if (path === '/more') return 'More'
+  if (path === '/admin') return 'Admin'
   return 'PlayChess'
 }
 
@@ -122,6 +125,12 @@ function AppHeader({ isGameRoute = false }) {
               <span className="sidebar-icon"><Library size={17} /></span>
               <span className="sidebar-label">Archive</span>
             </Link>
+            {user?.isAdmin && (
+              <Link to="/admin" className={`sidebar-item ${currentPath === '/admin' ? 'active' : ''}`}>
+                <span className="sidebar-icon"><ShieldCheck size={17} /></span>
+                <span className="sidebar-label">Admin</span>
+              </Link>
+            )}
           </div>
 
           <div className="sidebar-footer">
@@ -373,6 +382,7 @@ export default function App({ Router = BrowserRouter, routerProps = {} } = {}) {
                   <Route path="/friends" element={<Suspense fallback={<RouteFallback />}><Friends /></Suspense>} />
                   <Route path="/clubs" element={<Suspense fallback={<RouteFallback />}><Clubs /></Suspense>} />
                   <Route path="/more" element={<More />} />
+                  <Route path="/admin" element={<Suspense fallback={<RouteFallback />}><Admin /></Suspense>} />
                 </Route>
                 <Route path="*" element={<Suspense fallback={<RouteFallback />}><NotFound /></Suspense>} />
               </Routes>

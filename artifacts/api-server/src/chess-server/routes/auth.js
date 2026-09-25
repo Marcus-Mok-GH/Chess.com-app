@@ -29,6 +29,7 @@ import {
   SESSION_COOKIE_NAME,
 } from '../auth.js';
 import { createRateLimiter, normalizedEmail, requestIp } from '../middleware/rateLimit.js';
+import { isIntegrityReviewer } from '../services/antiCheatService.js';
 import { sendOtpEmail } from '../mailer.js';
 
 const router = express.Router();
@@ -158,6 +159,8 @@ function shapeUser(row) {
     draws: row.draws ?? 0,
     createdAt: row.created_at,
     needsUsername: String(row.username || '').startsWith('player_'),
+    isBanned: Boolean(row.is_banned),
+    isAdmin: isIntegrityReviewer(row.id),
   };
 }
 
@@ -166,7 +169,7 @@ async function upsertUserFromNeonAuth(neonUser) {
   const email = typeof neonUser.email === 'string' ? neonUser.email.trim() : '';
   const defaultUsername = `player_${crypto.randomBytes(4).toString('hex')}`;
   const username = neonUser.name || neonUser.username || defaultUsername;
-  const userColumns = 'id, username, elo, games_played, wins, losses, draws, created_at, email';
+  const userColumns = 'id, username, elo, games_played, wins, losses, draws, created_at, email, is_banned';
 
   // Neon Auth can issue a new user id while the app already has a local row
   // for the same email. Resolve by email first so the unique email constraint
@@ -316,7 +319,7 @@ async function sendLocalOtp(email) {
 }
 
 async function findOrCreateLocalUser(email) {
-  const columns = 'id, username, elo, games_played, wins, losses, draws, created_at, email';
+  const columns = 'id, username, elo, games_played, wins, losses, draws, created_at, email, is_banned';
   const existing = await query(
     `SELECT ${columns} FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1`,
     [email]
@@ -373,6 +376,10 @@ async function tryLocalSignIn(email, otp, req, res) {
     await query('UPDATE verifications SET consumed_at = NOW() WHERE id = $1', [verification.id]);
     const localUser = await findOrCreateLocalUser(email);
     if (!localUser) throw new Error('User record was not created.');
+    if (localUser.is_banned) {
+      fail(res, 403, 'This account has been banned. If you believe this is a mistake, contact support.');
+      return true;
+    }
     const token = await createSession(localUser.id, {
       ipAddress: req.ip || null,
       userAgent: req.headers['user-agent'] || null,
@@ -511,6 +518,10 @@ router.post('/sign-in/email-otp', otpRateLimit, otpAttemptLimit, async (req, res
 
     if (!localUser) {
       return fail(res, 500, 'Failed to sync user. Please try again.');
+    }
+
+    if (localUser.is_banned) {
+      return fail(res, 403, 'This account has been banned. If you believe this is a mistake, contact support.');
     }
 
     let token;

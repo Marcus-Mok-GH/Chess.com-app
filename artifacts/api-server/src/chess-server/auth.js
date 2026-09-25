@@ -80,13 +80,19 @@ export async function validateSession(token) {
 
   const tokenHash = hashToken(token);
   const result = await query(
-    'SELECT user_id, expires_at FROM sessions WHERE token = $1',
+    `SELECT s.user_id, s.expires_at, u.is_banned
+       FROM sessions s
+       JOIN users u ON u.id = s.user_id
+      WHERE s.token = $1`,
     [tokenHash]
   );
 
   if (result.rows.length === 0) return null;
 
-  const { user_id, expires_at } = result.rows[0];
+  const { user_id, expires_at, is_banned } = result.rows[0];
+
+  // Banned accounts are treated as signed out on every request.
+  if (is_banned) return null;
 
   if (new Date() > new Date(expires_at)) {
     await query('DELETE FROM sessions WHERE token = $1', [tokenHash]);

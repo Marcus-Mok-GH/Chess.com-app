@@ -191,6 +191,29 @@ class ApiService {
         }).finally(() => clearTimeout(timeoutId));
     }
 
+    async adminSearchUsers(query) {
+        return this.request(`/admin/users?q=${encodeURIComponent(query)}`);
+    }
+
+    async adminBanUser(userId, reason) {
+        return this.request(`/admin/users/${encodeURIComponent(userId)}/ban`, {
+            method: "POST",
+            body: JSON.stringify({ reason }),
+        });
+    }
+
+    async adminUnbanUser(userId) {
+        return this.request(`/admin/users/${encodeURIComponent(userId)}/unban`, {
+            method: "POST",
+        });
+    }
+
+    async adminDeleteUser(userId) {
+        return this.request(`/admin/users/${encodeURIComponent(userId)}`, {
+            method: "DELETE",
+        });
+    }
+
     async reportFairPlay({ gameId, reason, details, token }) {
         const headers = {};
         if (token) headers["Authorization"] = "Bearer " + token;

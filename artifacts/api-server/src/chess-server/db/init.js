@@ -28,6 +28,9 @@ export async function initDatabase() {
             wins INTEGER DEFAULT 0,
             losses INTEGER DEFAULT 0,
             draws INTEGER DEFAULT 0,
+            is_banned BOOLEAN DEFAULT FALSE,
+            banned_at TIMESTAMP,
+            banned_reason TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           )
@@ -37,6 +40,9 @@ export async function initDatabase() {
         await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)');
         await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE');
         await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS image TEXT');
+        await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN DEFAULT FALSE');
+        await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS banned_at TIMESTAMP');
+        await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS banned_reason TEXT');
         
         // Games table
         await client.query(`
