@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './PollinationsCoachPrompt.css';
 
-export default function PollinationsCoachPrompt({ mode = 'connect', onConnected }) {
+export default function PollinationsCoachPrompt({ mode = 'connect', onConnected, bannerError = null }) {
   const [isConnecting, setIsConnecting] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState(bannerError);
   const navigate = useNavigate();
 
   useEffect(() => {

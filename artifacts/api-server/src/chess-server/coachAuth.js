@@ -39,21 +39,34 @@ function decryptToken(payload) {
   return Buffer.concat([decipher.update(Buffer.from(ciphertextRaw, 'base64url')), decipher.final()]).toString('utf8');
 }
 
-function getRequestOrigin() {
+function getRequestOrigin(req) {
   const configured = String(process.env.APP_URL || '').trim();
-  if (!configured) throw new Error('APP_URL must be configured for coach redirects.');
-  const origin = new URL(configured);
-  if (!['http:', 'https:'].includes(origin.protocol)) throw new Error('APP_URL must use http or https.');
-  return origin.origin;
+  if (configured) {
+    try {
+      const origin = new URL(configured);
+      if (['http:', 'https:'].includes(origin.protocol)) return origin.origin;
+    } catch { /* misconfigured APP_URL: fall back to the request origin */ }
+  }
+  // Derive the origin from the incoming request (Vercel fronts this function
+  // with a proxy that sets x-forwarded-*), so coach redirects work even when
+  // APP_URL is not set. APP_URL stays authoritative when configured.
+  const headers = req?.headers || {};
+  const host = headers['x-forwarded-host'] || headers.host;
+  if (host) {
+    const proto = headers['x-forwarded-proto']
+      || (/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host) ? 'http' : 'https');
+    return `${proto}://${host}`;
+  }
+  throw new Error('APP_URL must be configured for coach redirects.');
 }
 
 export function coachAppRedirect(req, suffix = '') {
-  const appUrl = getRequestOrigin();
+  const appUrl = getRequestOrigin(req);
   return `${appUrl}/play${suffix}`;
 }
 
 function getRedirectUri(req) {
-  return (process.env.POLLINATIONS_REDIRECT_URI || `${getRequestOrigin()}/api/coach/callback`).replace(/\/$/, '');
+  return (process.env.POLLINATIONS_REDIRECT_URI || `${getRequestOrigin(req)}/api/coach/callback`).replace(/\/$/, '');
 }
 
 async function discover() {

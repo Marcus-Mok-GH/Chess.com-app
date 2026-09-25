@@ -187,7 +187,14 @@ router.get('/callback', async (req, res) => {
     return res.redirect(coachAppRedirect(req, '?coach_connected=1'));
   } catch (error) {
     console.error('[Coach] Callback error:', error);
-    return res.redirect(coachAppRedirect(req, `?coach_error=${encodeURIComponent(error.message)}`));
+    try {
+      return res.redirect(coachAppRedirect(req, `?coach_error=${encodeURIComponent(error.message)}`));
+    } catch (redirectError) {
+      // The user already approved Pollinations; don't strand them on a 500 page
+      // when no redirect origin can be derived at all.
+      console.error('[Coach] Callback redirect failed:', redirectError);
+      return res.status(500).json({ error: { message: 'AI coach callback failed: set APP_URL on the server so we can redirect you back.' } });
+    }
   }
 });
 
