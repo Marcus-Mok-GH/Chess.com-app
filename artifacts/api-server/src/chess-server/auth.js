@@ -26,6 +26,15 @@ export function getSessionToken(req) {
   return getSessionTokenFromHeaders(req?.headers || {});
 }
 
+/**
+ * The httpOnly session cookie alone, ignoring any Authorization header.
+ * Used by routes that prefer a Bearer token but fall back to the cookie
+ * when the presented Bearer fails to validate.
+ */
+export function getSessionCookieToken(req) {
+  return getCookieValue(req?.headers?.cookie, SESSION_COOKIE_NAME);
+}
+
 export function sessionCookieOptions() {
   return {
     httpOnly: true,

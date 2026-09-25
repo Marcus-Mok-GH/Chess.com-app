@@ -236,6 +236,36 @@ describe("UserContext.requestOtp – 6-digit code message (PR #1.1.65)", () => {
         expect(neonAuth.emailOtp.sendVerificationOtp).not.toHaveBeenCalled();
     });
 
+    it("removes a stale localStorage token mirror after cookie session validation", async () => {
+        // Simulate a browser that previously mirrored a truncated/stale token
+        // (the pre-fix bug: /auth/session returns only a prefix as session.id).
+        localStorage.setItem("chess_user_data", JSON.stringify({
+            id: "u-1", username: "alice", email: "a@b.c", elo: 1200,
+        }));
+        localStorage.setItem("chess_user_cache_epoch", String(Date.now()));
+        localStorage.setItem("chess_user_token", "abc12345");
+
+        neonAuth.getSession.mockResolvedValue({
+            data: {
+                session: { id: "abc12345", userId: "u-1" },
+                user: { id: "u-1", username: "alice", email: "a@b.c", elo: 1200 },
+            },
+        });
+
+        let capturedContext;
+        renderWithUserContext((ctx) => {
+            capturedContext = ctx;
+        });
+
+        await act(async () => {
+            await new Promise((r) => setTimeout(r, 0));
+        });
+
+        expect(capturedContext.user?.username).toBe("alice");
+        // The garbage mirror must be REMOVED, never overwritten with the prefix.
+        expect(localStorage.getItem("chess_user_token")).toBeNull();
+    });
+
     describe("logout", () => {
         it("clears local state even if remote signOut fails", async () => {
             // Mock failure

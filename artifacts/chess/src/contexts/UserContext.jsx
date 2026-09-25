@@ -68,6 +68,15 @@ export function UserProvider({ children }) {
             try {
                 localStorage.setItem(SESSION_TOKEN_KEY, sessionToken);
             } catch {}
+        } else {
+            // The real session token lives in the httpOnly cookie; /auth/session
+            // only returns a truncated prefix as `session.id`. Never mirror that
+            // prefix (or any stale token) — it corrupts Bearer-style callers.
+            // Clear it so they fall back to the cookie on every request.
+            setToken(null);
+            try {
+                localStorage.removeItem(SESSION_TOKEN_KEY);
+            } catch {}
         }
     }, []);
 
@@ -207,7 +216,7 @@ export function UserProvider({ children }) {
                 };
                 if (isMounted) {
                     setUser(userData);
-                    persistUser(userData, session.token || session.id);
+                    persistUser(userData, session.token || null);
                     setIsAwaitingVerification(false);
                     try {
                         localStorage.removeItem(PENDING_OTP_KEY);
@@ -313,7 +322,7 @@ export function UserProvider({ children }) {
                 };
 
                 setUser(userData);
-                persistUser(userData, session.token || session.id);
+                persistUser(userData, session.token || null);
                 setIsAwaitingVerification(false);
                 localStorage.removeItem(PENDING_OTP_KEY);
                 return { success: true, userData };
@@ -326,9 +335,10 @@ export function UserProvider({ children }) {
 
     const updateUsername = useCallback(
         async (newUsername) => {
-            if (!token) return { error: "Session lost. Please log in again." };
+            if (!user) return { error: "Session lost. Please log in again." };
             try {
-                const response = await api.updateUsername(newUsername, token);
+                // The httpOnly session cookie authenticates this request.
+                const response = await api.updateUsername(newUsername);
                 if (response.success && response.user) {
                     const updatedUser = {
                         ...user,
@@ -347,7 +357,7 @@ export function UserProvider({ children }) {
                 return { error: error.message };
             }
         },
-        [user, token, persistUser],
+        [user, persistUser],
     );
 
     const logout = useCallback(async () => {

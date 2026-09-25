@@ -6,7 +6,7 @@ import { Chess } from 'chess.js';
 import { errorResponse, handleRouteError } from '../middleware/errors.js';
 import { userIdFromPlayerId } from '../services/gameUtils.js';
 import { getGameService } from '../services/gameService.js';
-import { getSessionToken, validateSession } from '../auth.js';
+import { getSessionCookieToken, getSessionToken, validateSession } from '../auth.js';
 import { getIntegrityReviews, isIntegrityReviewer, scheduleGameAnalysis, recordIntegrityDecision } from '../services/antiCheatService.js';
 import { getOnlineGameKv } from '../kv/onlineGameKv.js';
 import { getDrawOfferKv, DRAW_OFFER_STORAGE_ERROR } from '../kv/drawOfferKv.js';
@@ -159,11 +159,17 @@ router.post('/save', async (req, res) => {
     const authHeader = req.headers.authorization;
     // Prefer the Bearer header, but fall back to the httpOnly session cookie:
     // browser clients authenticate with the cookie on every credentialed request.
-    const sessionToken = authHeader?.startsWith('Bearer ')
+    // Some clients mirror a stale/truncated session id as a Bearer token; a
+    // failed Bearer must not lock the player out when the cookie is valid.
+    const bearerToken = authHeader?.startsWith('Bearer ')
       ? authHeader.slice(7).trim()
-      : getSessionToken(req);
-    if (!sessionToken) return errorResponse(res, 401, 'Authentication required');
-    const authUserId = await validateSession(sessionToken);
+      : null;
+    const cookieToken = getSessionCookieToken(req);
+    if (!bearerToken && !cookieToken) return errorResponse(res, 401, 'Authentication required');
+    let authUserId = bearerToken ? await validateSession(bearerToken) : null;
+    if (authUserId == null && cookieToken && cookieToken !== bearerToken) {
+      authUserId = await validateSession(cookieToken);
+    }
     if (!authUserId) return errorResponse(res, 401, 'Invalid or expired session');
     if (requestedUserId != null && String(requestedUserId) !== String(authUserId)) {
       return errorResponse(res, 403, 'Session identity does not match player');
@@ -233,11 +239,17 @@ router.post('/local/create', async (req, res) => {
     const authHeader = req.headers.authorization;
     // Prefer the Bearer header, but fall back to the httpOnly session cookie:
     // browser clients authenticate with the cookie on every credentialed request.
-    const sessionToken = authHeader?.startsWith('Bearer ')
+    // Some clients mirror a stale/truncated session id as a Bearer token; a
+    // failed Bearer must not lock the player out when the cookie is valid.
+    const bearerToken = authHeader?.startsWith('Bearer ')
       ? authHeader.slice(7).trim()
-      : getSessionToken(req);
-    if (!sessionToken) return errorResponse(res, 401, 'Authentication required');
-    const authUserId = await validateSession(sessionToken);
+      : null;
+    const cookieToken = getSessionCookieToken(req);
+    if (!bearerToken && !cookieToken) return errorResponse(res, 401, 'Authentication required');
+    let authUserId = bearerToken ? await validateSession(bearerToken) : null;
+    if (authUserId == null && cookieToken && cookieToken !== bearerToken) {
+      authUserId = await validateSession(cookieToken);
+    }
     if (!authUserId) return errorResponse(res, 401, 'Invalid or expired session');
     if (requestedUserId != null && String(requestedUserId) !== String(authUserId)) {
       return errorResponse(res, 403, 'Session identity does not match player');
@@ -678,13 +690,20 @@ router.post('/:gameId/move', async (req, res) => {
     }
 
     const authHeader = req.headers.authorization;
-    const token = authHeader?.startsWith('Bearer ')
+    // Prefer the Bearer header, but fall back to the httpOnly session cookie.
+    // Some clients mirror a stale/truncated session id as a Bearer token; a
+    // failed Bearer must not lock the player out when the cookie is valid.
+    const bearerToken = authHeader?.startsWith('Bearer ')
       ? authHeader.slice(7).trim()
-      : getSessionToken(req);
-    if (!token) {
+      : null;
+    const cookieToken = getSessionCookieToken(req);
+    if (!bearerToken && !cookieToken) {
       return errorResponse(res, 401, 'Authentication required');
     }
-    const authUserId = await validateSession(token);
+    let authUserId = bearerToken ? await validateSession(bearerToken) : null;
+    if (authUserId == null && cookieToken && cookieToken !== bearerToken) {
+      authUserId = await validateSession(cookieToken);
+    }
     if (!authUserId) {
       return errorResponse(res, 401, 'Invalid or expired session');
     }
@@ -883,8 +902,9 @@ router.post('/:gameId/draw-offer', async (req, res) => {
     if (!gameId || !playerId) return errorResponse(res, 400, 'Valid game ID and player ID are required');
 
     const authUserId = await validateSession(getSessionToken(req));
+    if (authUserId == null) return errorResponse(res, 401, 'Invalid or expired session');
     const requestUid = userIdFromPlayerId(playerId);
-    if (authUserId == null || requestUid == null || String(authUserId) !== String(requestUid)) {
+    if (requestUid == null || String(authUserId) !== String(requestUid)) {
       return errorResponse(res, 403, 'Session identity does not match player');
     }
 
@@ -946,8 +966,9 @@ router.post('/:gameId/draw-respond', async (req, res) => {
     if (typeof accept !== 'boolean') return errorResponse(res, 400, 'Draw response must be a boolean');
 
     const authUserId = await validateSession(getSessionToken(req));
+    if (authUserId == null) return errorResponse(res, 401, 'Invalid or expired session');
     const requestUid = userIdFromPlayerId(playerId);
-    if (authUserId == null || requestUid == null || String(authUserId) !== String(requestUid)) {
+    if (requestUid == null || String(authUserId) !== String(requestUid)) {
       return errorResponse(res, 403, 'Session identity does not match player');
     }
 
@@ -997,13 +1018,22 @@ router.post('/:gameId/end', async (req, res) => {
     const authHeader = req.headers.authorization;
     // Prefer the Bearer header, but fall back to the httpOnly session cookie:
     // browser clients authenticate with the cookie on every credentialed request.
-    const sessionToken = authHeader?.startsWith('Bearer ')
+    // Some clients mirror a stale/truncated session id as a Bearer token; a
+    // failed Bearer must not lock the player out when the cookie is valid.
+    const bearerToken = authHeader?.startsWith('Bearer ')
       ? authHeader.slice(7).trim()
-      : getSessionToken(req);
-    if (!sessionToken) return errorResponse(res, 401, 'Authentication required');
-    const authUserId = await validateSession(sessionToken);
+      : null;
+    const cookieToken = getSessionCookieToken(req);
+    if (!bearerToken && !cookieToken) return errorResponse(res, 401, 'Authentication required');
+    let authUserId = bearerToken ? await validateSession(bearerToken) : null;
+    if (authUserId == null && cookieToken && cookieToken !== bearerToken) {
+      authUserId = await validateSession(cookieToken);
+    }
+    if (authUserId == null) {
+      return errorResponse(res, 401, 'Invalid or expired session');
+    }
     const requestUid = userIdFromPlayerId(playerId);
-    if (authUserId == null || requestUid == null || String(authUserId) != String(requestUid)) {
+    if (requestUid == null || String(authUserId) != String(requestUid)) {
       return errorResponse(res, 403, 'Session identity does not match player');
     }
     if (reason === 'draw' || reason === 'agreement') {

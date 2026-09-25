@@ -1,2 +1,3 @@
 ### Added
+- Fixed "Session identity does not match player" errors on resign/move/local-save: clients had mirrored a truncated session id from `/auth/session` into the localStorage Bearer token, which then failed validation while a valid cookie was present. The server now falls back to the httpOnly cookie when a presented Bearer token fails, expired sessions return 401 instead of the misleading 403, and the client no longer mirrors the truncated prefix.
 - Admin account management: admins can search accounts by username or email and ban (with an optional reason), unban, or permanently delete them from a new Admin page. Banned users are signed out immediately and blocked from signing back in.
