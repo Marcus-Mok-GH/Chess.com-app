@@ -17,8 +17,12 @@ vi.mock('../components/ChessBoard', () => ({
   default: () => <div data-testid="review-board" />,
 }));
 
+const { mockReviewUser } = vi.hoisted(() => ({
+  mockReviewUser: { username: 'whitey', id: 'u1' },
+}));
+
 vi.mock('../contexts/UserContext', () => ({
-  useUser: () => ({ user: { username: 'whitey', id: 'u1' }, isOnline: true }),
+  useUser: () => ({ user: mockReviewUser, isLoggedIn: true, isOnline: true }),
 }));
 
 const { mockApi } = vi.hoisted(() => ({ mockApi: { getGameByCode: vi.fn(), getEngineEvaluations: vi.fn() } }));
@@ -64,6 +68,8 @@ function renderPage() {
 describe('GameReview page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockReviewUser.username = 'whitey';
+    mockReviewUser.id = 'u1';
     mockApi.getGameByCode.mockResolvedValue(GAME);
     mockApi.getEngineEvaluations.mockResolvedValue(ENGINE_RESPONSE);
     mockAnalyzeGame.mockResolvedValue({
@@ -126,4 +132,17 @@ describe('GameReview page', () => {
       expect(screen.getByText('Game not found.')).toBeTruthy();
     });
   });
+  it('shows neutral result wording to a logged-in non-participant', async () => {
+    mockReviewUser.username = 'onlooker';
+    mockReviewUser.id = 'u9';
+
+    renderPage();
+    await screen.findByText('Game Review');
+    await waitFor(() => {
+      expect(screen.getByText(/whitey vs blacky/)).toBeTruthy();
+    });
+    expect(screen.getByText(/White wins/)).toBeTruthy();
+    expect(screen.queryByText('You won')).toBeNull();
+  });
+
 });

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Building2, Plus, Users, LogIn, LogOut, Loader2 } from 'lucide-react'
 import { useUser } from '../contexts/UserContext'
 import api from '../services/api'
+import AccountRequired from '../components/AccountRequired'
 import './Clubs.css'
 
 export default function Clubs() {
@@ -51,7 +52,13 @@ export default function Clubs() {
   }
 
   if (isLoading) return <div className="clubs-page"><div className="clubs-container clubs-loading">Loading…</div></div>
-  if (!isLoggedIn || !user) return <div className="clubs-page"><div className="clubs-container"><div className="clubs-empty card-surface"><Building2 size={40} /><h2>Log in to explore clubs</h2><button onClick={() => navigate('/login')}>Log In</button></div></div></div>
+  if (!isLoggedIn || !user) return <div className="clubs-page"><div className="clubs-container">
+    <header className="clubs-header"><div className="clubs-eyebrow"><Building2 size={14} /> Social</div><h1>Clubs</h1><p>Find players who share your chess interests.</p></header>
+    <AccountRequired
+      title="Clubs are for members"
+      message="Creating, joining, and browsing clubs is tied to your account. Log in to get started."
+    />
+  </div></div>
 
   return (
     <div className="clubs-page"><div className="clubs-container">
