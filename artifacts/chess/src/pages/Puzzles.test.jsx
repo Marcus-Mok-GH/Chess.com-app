@@ -2,7 +2,6 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { UserProvider } from '../contexts/UserContext';
 import Puzzles from './Puzzles';
 import { LESSON_CATALOG } from '../engine/lessons/lessonCatalog';
 
@@ -53,6 +52,18 @@ vi.mock('../engine/coach/coachAI', () => ({
   summarizeLessonConcept: vi.fn(),
 }));
 
+const { mockUserState } = vi.hoisted(() => ({
+  mockUserState: {
+    isLoggedIn: true,
+    user: { id: 'u1', username: 'tester' },
+    token: 'tok',
+  },
+}));
+
+vi.mock('../contexts/UserContext', () => ({
+  useUser: () => mockUserState,
+}));
+
 vi.mock('../services/api', () => ({
   default: {
     getPuzzleStats: vi.fn(() => Promise.resolve({ success: true, stats: null })),
@@ -76,13 +87,15 @@ async function waitForPuzzleOnBoard() {
 
 function renderPuzzles(initialEntries = ['/puzzles']) {
   return render(
-    <UserProvider>
-      <MemoryRouter initialEntries={initialEntries}>
-        <Puzzles />
-      </MemoryRouter>
-    </UserProvider>
+    <MemoryRouter initialEntries={initialEntries}>
+      <Puzzles />
+    </MemoryRouter>
   );
 }
+
+beforeEach(() => {
+  mockUserState.isLoggedIn = true;
+});
 
 describe('Puzzles page with Lesson Scheme & LLM commentary', () => {
   beforeEach(() => {
@@ -273,6 +286,17 @@ describe('Puzzles page with Lesson Scheme & LLM commentary', () => {
         rating: 480,
       });
     }, { timeout: 3000 });
+  });
+
+  it('shows an account notice instead of session stats for guests', async () => {
+    mockUserState.isLoggedIn = false;
+
+    renderPuzzles();
+
+    await waitForPuzzleOnBoard();
+    expect(await screen.findByText('Track your progress')).toBeTruthy();
+    expect(screen.getByTestId('chessboard')).toBeTruthy(); // board still renders
+    expect(screen.queryByText('Solved')).toBeNull(); // no stat labels for guests
   });
 
 });

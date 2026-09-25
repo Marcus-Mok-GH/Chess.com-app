@@ -4,6 +4,7 @@ import { useUser } from '../contexts/UserContext'
 import { Wifi, WifiOff, Play, ArrowUpRight } from 'lucide-react'
 import api from '../services/api'
 import DailyPuzzleStreak from '../components/DailyPuzzleStreak'
+import AccountRequired from '../components/AccountRequired'
 import './Home.css'
 
 export default function Home() {
@@ -11,12 +12,6 @@ export default function Home() {
   const { user, isLoggedIn, isLoading, isOnline } = useUser()
   const [greeting, setGreeting] = useState('')
   const [incompleteGame, setIncompleteGame] = useState(null)
-
-  useEffect(() => {
-    if (!isLoading && !isLoggedIn) {
-      navigate('/', { replace: true })
-    }
-  }, [isLoggedIn, isLoading, navigate])
 
   useEffect(() => {
     if (!user?.username || !isOnline) {
@@ -56,9 +51,7 @@ export default function Home() {
     )
   }
 
-  if (!user) return null
-
-  const winRate = user.gamesPlayed > 0
+  const winRate = user?.gamesPlayed > 0
     ? ((user.wins / user.gamesPlayed) * 100).toFixed(1)
     : 0
 
@@ -81,7 +74,11 @@ export default function Home() {
             )}
           </div>
           <h1 className="welcome-title">
-            {greeting}, <span className="username-highlight">{user.username}</span>
+            {isLoggedIn && user ? (
+              <>{greeting}, <span className="username-highlight">{user.username}</span></>
+            ) : (
+              'Welcome to PlayChess'
+            )}
           </h1>
           <p className="welcome-subtitle">Ready for your next game?</p>
         </section>
@@ -92,47 +89,56 @@ export default function Home() {
         </section>
 
         {/* Stats Overview */}
-        <section className="stats-overview">
-          <div className="stat-card card-surface">
-            <div className="stat-content">
-              <div className="stat-label">Rating</div>
-              <div className="stat-value">{user.elo}</div>
+        {isLoggedIn && user ? (
+          <section className="stats-overview">
+            <div className="stat-card card-surface">
+              <div className="stat-content">
+                <div className="stat-label">Rating</div>
+                <div className="stat-value">{user.elo}</div>
+              </div>
             </div>
-          </div>
 
-          <div className="stat-card card-surface">
-            <div className="stat-content">
-              <div className="stat-label">Rated Games</div>
-              <div className="stat-value">{user.gamesPlayed || 0}</div>
+            <div className="stat-card card-surface">
+              <div className="stat-content">
+                <div className="stat-label">Rated Games</div>
+                <div className="stat-value">{user.gamesPlayed || 0}</div>
+              </div>
             </div>
-          </div>
 
-          <div className="stat-card card-surface">
-            <div className="stat-content">
-              <div className="stat-label">Win Rate</div>
-              <div className="stat-value">{winRate}%</div>
+            <div className="stat-card card-surface">
+              <div className="stat-content">
+                <div className="stat-label">Win Rate</div>
+                <div className="stat-value">{winRate}%</div>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        ) : (
+          <AccountRequired
+            title="Your stats live in your account"
+            message="Rating, games played, and win rate are tied to your account. Log in to see them here."
+          />
+        )}
 
         {/* Detailed Stats */}
-        <section className="detailed-stats">
-          <h2 className="section-title">Your Statistics</h2>
-          <div className="stats-grid">
-            <div className="stat-item card-surface win-stat">
-              <span className="stat-number">{user.wins || 0}</span>
-              <span className="stat-text">Wins</span>
+        {isLoggedIn && user && (
+          <section className="detailed-stats">
+            <h2 className="section-title">Your Statistics</h2>
+            <div className="stats-grid">
+              <div className="stat-item card-surface win-stat">
+                <span className="stat-number">{user.wins || 0}</span>
+                <span className="stat-text">Wins</span>
+              </div>
+              <div className="stat-item card-surface draw-stat">
+                <span className="stat-number">{user.draws || 0}</span>
+                <span className="stat-text">Draws</span>
+              </div>
+              <div className="stat-item card-surface loss-stat">
+                <span className="stat-number">{user.losses || 0}</span>
+                <span className="stat-text">Losses</span>
+              </div>
             </div>
-            <div className="stat-item card-surface draw-stat">
-              <span className="stat-number">{user.draws || 0}</span>
-              <span className="stat-text">Draws</span>
-            </div>
-            <div className="stat-item card-surface loss-stat">
-              <span className="stat-number">{user.losses || 0}</span>
-              <span className="stat-text">Losses</span>
-            </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {incompleteGame && (
           <section className="resume-game-section">
@@ -223,7 +229,7 @@ export default function Home() {
           </div>
         </section>
 
-        {user.createdAt && (
+        {isLoggedIn && user?.createdAt && (
           <section className="member-info">
             <p className="member-text">
               Member since {new Date(user.createdAt).toLocaleDateString('en-US', {

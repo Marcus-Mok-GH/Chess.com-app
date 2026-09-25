@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 import api from '../services/api';
+import AccountRequired from '../components/AccountRequired';
 import EloProgressChart from '../components/EloProgressChart';
 import WinRateChart from '../components/WinRateChart';
 import './GameHistory.css';
@@ -26,7 +27,7 @@ function getResultText(result) {
 }
 
 export default function GameHistory() {
-  const { user, isOnline } = useUser();
+  const { user, isOnline, isLoggedIn } = useUser();
   const navigate = useNavigate();
   const [games, setGames] = useState([]);
   const [eloHistory, setEloHistory] = useState([]);
@@ -57,6 +58,22 @@ export default function GameHistory() {
 
     loadGameData();
   }, [user, isOnline]);
+
+  if (!isLoggedIn) {
+    return (
+      <div className="game-history-page">
+        <div className="game-history-container">
+          <div className="game-history-header">
+            <h1>Game History</h1>
+          </div>
+          <AccountRequired
+            title="Your archive is tied to your account"
+            message="Game history and rating charts are stored per account. Log in to browse your games and reviews."
+          />
+        </div>
+      </div>
+    );
+  }
 
   if (!isOnline) {
     return (

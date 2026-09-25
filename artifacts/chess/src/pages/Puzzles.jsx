@@ -5,6 +5,8 @@ import ChessBoard from "../components/ChessBoard";
 import DailyPuzzleStreak from "../components/DailyPuzzleStreak";
 import { generatePuzzleForThemesAsync } from "../engine/puzzles/puzzleWorkerClient";
 import api from "../services/api";
+import { useUser } from "../contexts/UserContext";
+import AccountRequired from "../components/AccountRequired";
 import { LESSON_CATALOG } from "../engine/lessons/lessonCatalog";
 import { explainCoachMove, summarizeLessonConcept } from "../engine/coach/coachAI";
 import {
@@ -111,6 +113,7 @@ function trimToShortConcept(text, maxWords = SHORT_CONCEPT_MAX_WORDS) {
 }
 
 export default function Puzzles() {
+  const { isLoggedIn } = useUser();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -699,6 +702,7 @@ export default function Puzzles() {
           </div>
 
           <aside className="puzzles-side">
+            {isLoggedIn ? (
             <div className="puzzle-side-card puzzle-status-card">
               <div className="status-row">
                 <div className="status-stat">
@@ -726,6 +730,12 @@ export default function Puzzles() {
                 </div>
               )}
             </div>
+            ) : (
+              <AccountRequired
+                title="Track your progress"
+                message="Solved count, streak, and rating are saved to your account. Log in to keep them."
+              />
+            )}
 
             <div className="puzzle-side-card puzzle-actions-card">
               <button

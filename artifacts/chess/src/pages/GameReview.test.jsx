@@ -18,7 +18,7 @@ vi.mock('../components/ChessBoard', () => ({
 }));
 
 vi.mock('../contexts/UserContext', () => ({
-  useUser: () => ({ user: { username: 'whitey', id: 'u1' }, isOnline: true }),
+  useUser: () => ({ user: { username: 'whitey', id: 'u1' }, isLoggedIn: true, isOnline: true }),
 }));
 
 const { mockApi } = vi.hoisted(() => ({ mockApi: { getGameByCode: vi.fn(), getEngineEvaluations: vi.fn() } }));

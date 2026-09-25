@@ -6,7 +6,6 @@ import { FeedbackPanel } from './components/FeedbackPanel'
 import ErrorBoundary from './components/ErrorBoundary'
 import SetUsernameModal from './components/SetUsernameModal'
 import PollinationsCoachPrompt from './components/PollinationsCoachPrompt'
-import ProtectedRoute from './components/ProtectedRoute'
 import api from './services/api'
 import { usePuter } from './hooks/usePuter'
 import {
@@ -340,22 +339,22 @@ export default function App({ Router = BrowserRouter, routerProps = {} } = {}) {
                 <Route path="/signup" element={<Navigate to="/login?mode=signup" replace />} />
                 <Route path="/verify-email" element={<Suspense fallback={<RouteFallback />}><VerifyEmail /></Suspense>} />
                 <Route element={<AppShell />}>
-                  <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+                  <Route path="/home" element={<Home />} />
                   <Route path="/play" element={<Play />} />
                   <Route path="/online" element={<OnlinePlay />} />
                   <Route path="/online/:gameId" element={<OnlinePlay />} />
                   <Route path="/game/:gameId" element={<Game />} />
-                  <Route path="/history" element={<ProtectedRoute loginRequiredFor="Game Archive"><GameHistory /></ProtectedRoute>} />
-                  <Route path="/review/:gameCode" element={<ProtectedRoute loginRequiredFor="Game Review"><Suspense fallback={<RouteFallback />}><GameReview /></Suspense></ProtectedRoute>} />
+                  <Route path="/history" element={<GameHistory />} />
+                  <Route path="/review/:gameCode" element={<Suspense fallback={<RouteFallback />}><GameReview /></Suspense>} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/terms" element={<Suspense fallback={<RouteFallback />}><Terms /></Suspense>} />
                   <Route path="/privacy" element={<Suspense fallback={<RouteFallback />}><Privacy /></Suspense>} />
                   <Route path="/changelog" element={<Changelog />} />
-                  <Route path="/puzzles" element={<ProtectedRoute loginRequiredFor="Puzzles"><Suspense fallback={<RouteFallback />}><Puzzles /></Suspense></ProtectedRoute>} />
+                  <Route path="/puzzles" element={<Suspense fallback={<RouteFallback />}><Puzzles /></Suspense>} />
                   <Route path="/openings" element={<Suspense fallback={<RouteFallback />}><Openings /></Suspense>} />
                   <Route path="/lessons" element={<LessonsRedirect />} />
                   <Route path="/friends" element={<Suspense fallback={<RouteFallback />}><Friends /></Suspense>} />
-                  <Route path="/clubs" element={<ProtectedRoute loginRequiredFor="Clubs"><Suspense fallback={<RouteFallback />}><Clubs /></Suspense></ProtectedRoute>} />
+                  <Route path="/clubs" element={<Suspense fallback={<RouteFallback />}><Clubs /></Suspense>} />
                   <Route path="/more" element={<More />} />
                 </Route>
                 <Route path="*" element={<Suspense fallback={<RouteFallback />}><NotFound /></Suspense>} />

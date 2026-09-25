@@ -25,9 +25,9 @@ function formatDate(dateString) {
   });
 }
 
-function resultText(result, orientation) {
-  if (result === 'white') return orientation === 'white' ? 'You won' : 'You lost';
-  if (result === 'black') return orientation === 'black' ? 'You won' : 'You lost';
+function resultText(result, orientation, isParticipant = true) {
+  if (result === 'white') return isParticipant ? (orientation === 'white' ? 'You won' : 'You lost') : 'White wins';
+  if (result === 'black') return isParticipant ? (orientation === 'black' ? 'You won' : 'You lost') : 'Black wins';
   if (result === 'draw') return 'Draw';
   return result || 'Unknown';
 }
@@ -35,7 +35,7 @@ function resultText(result, orientation) {
 export default function GameReview() {
   const { gameCode } = useParams();
   const navigate = useNavigate();
-  const { user } = useUser();
+  const { user, isLoggedIn } = useUser();
 
   const [game, setGame] = useState(null);
   const [loadError, setLoadError] = useState('');
@@ -313,7 +313,7 @@ export default function GameReview() {
           <div>
             <h1 className="review-heading">Game Review</h1>
             <p className="review-subtitle">
-              {game.white_player_name || 'White'} vs {game.black_player_name || 'Black'} · {resultText(game.result, orientation)}
+              {game.white_player_name || 'White'} vs {game.black_player_name || 'Black'} · {resultText(game.result, orientation, Boolean(isLoggedIn && user))}
             </p>
           </div>
           <div className="review-meta">
