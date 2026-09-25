@@ -125,6 +125,7 @@
 .review-board-wrap {
   display: flex;
   gap: 0.75rem;
+  max-width: 640px;
 }
 
 .review-eval-bar {
@@ -164,7 +165,12 @@
   pointer-events: none;
 }
 
+/* The ChessBoard component renders an absolutely positioned wrapper sized
+   to 100% of this box, so it must be a positioned, square container or the
+   board escapes and renders at the viewport size. */
 .review-board {
+  position: relative;
+  aspect-ratio: 1 / 1;
   flex: 1;
   min-width: 0;
 }
@@ -411,6 +417,10 @@
   .review-layout {
     grid-template-columns: 1fr;
     gap: 1.25rem;
+  }
+
+  .review-board-wrap {
+    max-width: 100%;
   }
 
   .review-moves {
