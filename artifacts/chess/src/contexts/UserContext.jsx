@@ -11,6 +11,9 @@ import { neonAuth } from "../services/neonAuth";
 
 const SESSION_USER_KEY = "chess_user_session";
 const SESSION_USER_DATA_KEY = "chess_user_data";
+// Key the online game components (useGameCore, GameUI, coachAI) read the
+// session token from for Authorization headers.
+const SESSION_TOKEN_KEY = "chess_user_token";
 const PENDING_OTP_KEY = "chess_pending_otp";
 const AUTH_REQUEST_ID_KEY = "chess_auth_request_id";
 
@@ -58,8 +61,13 @@ export function UserProvider({ children }) {
             localStorage.setItem(SESSION_CACHE_EPOCH_KEY, String(Date.now()));
         } catch {}
         if (sessionToken) {
-            // Keep the token in memory for authenticated API calls.
+            // Keep the token in memory for authenticated API calls, and mirror
+            // it to localStorage so out-of-tree readers (online game moves,
+            // coach AI) can attach the Authorization header.
             setToken(sessionToken);
+            try {
+                localStorage.setItem(SESSION_TOKEN_KEY, sessionToken);
+            } catch {}
         }
     }, []);
 
@@ -139,6 +147,7 @@ export function UserProvider({ children }) {
                             try {
                                 localStorage.removeItem(SESSION_USER_KEY);
                                 localStorage.removeItem(SESSION_USER_DATA_KEY);
+                                localStorage.removeItem(SESSION_TOKEN_KEY);
                                 localStorage.removeItem(
                                     SESSION_CACHE_EPOCH_KEY,
                                 );
@@ -171,6 +180,7 @@ export function UserProvider({ children }) {
                         try {
                             localStorage.removeItem(SESSION_USER_KEY);
                             localStorage.removeItem(SESSION_USER_DATA_KEY);
+                            localStorage.removeItem(SESSION_TOKEN_KEY);
                             localStorage.removeItem(SESSION_CACHE_EPOCH_KEY);
                         } catch {}
                     }
@@ -215,6 +225,7 @@ export function UserProvider({ children }) {
                     try {
                         localStorage.removeItem(SESSION_USER_KEY);
                         localStorage.removeItem(SESSION_USER_DATA_KEY);
+                        localStorage.removeItem(SESSION_TOKEN_KEY);
                         localStorage.removeItem(SESSION_CACHE_EPOCH_KEY);
                     } catch {}
                 }
@@ -344,6 +355,7 @@ export function UserProvider({ children }) {
         [
             SESSION_USER_KEY,
             SESSION_USER_DATA_KEY,
+            SESSION_TOKEN_KEY,
             PENDING_OTP_KEY,
             AUTH_REQUEST_ID_KEY,
             SESSION_CACHE_EPOCH_KEY,

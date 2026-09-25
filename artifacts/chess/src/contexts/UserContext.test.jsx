@@ -243,6 +243,7 @@ describe("UserContext.requestOtp – 6-digit code message (PR #1.1.65)", () => {
 
             // Setup some session data in localStorage
             localStorage.setItem("chess_user_session", "testuser");
+            localStorage.setItem("chess_user_token", "tok");
 
             let capturedContext;
             renderWithUserContext((ctx) => {
@@ -286,6 +287,7 @@ describe("UserContext.requestOtp – 6-digit code message (PR #1.1.65)", () => {
             // Local state should be cleared
             expect(capturedContext.user).toBeNull();
             expect(localStorage.getItem("chess_user_session")).toBeNull();
+            expect(localStorage.getItem("chess_user_token")).toBeNull();
             expect(window.location.pathname).toBe("/");
 
             vi.unstubAllGlobals();
@@ -295,6 +297,7 @@ describe("UserContext.requestOtp – 6-digit code message (PR #1.1.65)", () => {
             neonAuth.signOut.mockResolvedValue();
 
             localStorage.setItem("chess_user_session", "testuser");
+            localStorage.setItem("chess_user_token", "tok");
 
             let capturedContext;
             renderWithUserContext((ctx) => {
@@ -327,6 +330,7 @@ describe("UserContext.requestOtp – 6-digit code message (PR #1.1.65)", () => {
 
             expect(capturedContext.user).toBeNull();
             expect(localStorage.getItem("chess_user_session")).toBeNull();
+            expect(localStorage.getItem("chess_user_token")).toBeNull();
             expect(window.location.pathname).toBe("/");
 
             vi.unstubAllGlobals();
