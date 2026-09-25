@@ -124,7 +124,8 @@ router.post('/users/:id/ban', async (req, res) => {
     // Kick every active session immediately.
     await query('DELETE FROM sessions WHERE user_id = $1', [id]);
 
-    return res.json({ success: true, user: shapeAdminUser(updated.rows[0]) });
+    const banned = updated.rows[0] || user;
+    return res.json({ success: true, user: shapeAdminUser(banned) });
   } catch (error) {
     return handleRouteError(res, error, 'Failed to ban user');
   }
@@ -150,7 +151,8 @@ router.post('/users/:id/unban', async (req, res) => {
       [id]
     );
 
-    return res.json({ success: true, user: shapeAdminUser(updated.rows[0]) });
+    const unbanned = updated.rows[0] || user;
+    return res.json({ success: true, user: shapeAdminUser(unbanned) });
   } catch (error) {
     return handleRouteError(res, error, 'Failed to unban user');
   }
