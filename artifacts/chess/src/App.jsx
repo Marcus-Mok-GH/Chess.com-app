@@ -238,7 +238,24 @@ export function PollinationsCoachGate() {
   const { user, token, isLoggedIn, isLoading } = useUser();
   const [showPrompt, setShowPrompt] = useState(false);
   const [mode, setMode] = useState('connect');
+  const [coachError, setCoachError] = useState(null);
   const [checked, setChecked] = useState(false);
+
+  // The Pollinations OAuth callback redirects back with ?coach_error=...
+  // Show it in the connect prompt so a failed connection is not silently lost.
+  useEffect(() => {
+    if (window.location.search.includes('coach_error=')) {
+      const url = new URL(window.location.href);
+      const coachErrorParam = url.searchParams.get('coach_error');
+      url.searchParams.delete('coach_error');
+      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+      if (coachErrorParam) {
+        setCoachError(`Pollinations connection failed: ${coachErrorParam}`);
+        setMode('connect');
+        setShowPrompt(true);
+      }
+    }
+  }, []);
 
   const localKey = isLoggedIn && user?.username ? `pollinationsCoachPromptSeen:${user.username}` : 'pollinationsCoachPromptSeen';
 
@@ -295,7 +312,7 @@ export function PollinationsCoachGate() {
   if (!showPrompt) return null;
 
   return (
-    <PollinationsCoachPrompt mode={mode} onConnected={markPromptSeen} />
+    <PollinationsCoachPrompt mode={mode} onConnected={markPromptSeen} bannerError={coachError} />
   );
 }
 
