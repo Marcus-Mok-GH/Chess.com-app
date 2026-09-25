@@ -123,6 +123,7 @@ describe('Puzzles page with Lesson Scheme & LLM commentary', () => {
       LESSON_CATALOG[0].title,
       LESSON_CATALOG[0].topic,
       LESSON_CATALOG[0].description,
+      expect.objectContaining({ fen: MOCK_PUZZLE_FEN, solution: 'Na5' }),
     );
   });
 
@@ -132,6 +133,7 @@ describe('Puzzles page with Lesson Scheme & LLM commentary', () => {
     );
 
     renderPuzzles();
+    await waitForPuzzleOnBoard();
 
     await waitFor(() => {
       expect(screen.getByText('Develop your pieces toward the center and castle quickly.')).toBeTruthy();
@@ -147,6 +149,7 @@ describe('Puzzles page with Lesson Scheme & LLM commentary', () => {
     );
 
     renderPuzzles();
+    await waitForPuzzleOnBoard();
 
     await waitFor(() => {
       expect(screen.getByText(/Watch for pins, e\.g\., against the queen\./)).toBeTruthy();
