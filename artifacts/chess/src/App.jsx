@@ -177,7 +177,7 @@ function AppHeader({ isGameRoute = false }) {
       </header>
 
       {/* Bottom Mobile Navigation */}
-      <nav className="bottom-nav" aria-label="Mobile navigation">
+      <nav className={`bottom-nav ${user?.isAdmin ? "bottom-nav-with-admin" : ""}`} aria-label="Mobile navigation">
         <Link
           to="/home"
           className={`nav-item ${currentPath === '/home' ? 'active' : ''}`}
@@ -202,6 +202,16 @@ function AppHeader({ isGameRoute = false }) {
           <span className="nav-icon" aria-hidden="true"><Globe2 /></span>
           <span>Online</span>
         </Link>
+        {user?.isAdmin && (
+          <Link
+            to="/admin"
+            className={`nav-item ${currentPath === '/admin' ? 'active' : ''}`}
+            aria-current={currentPath === '/admin' ? 'page' : undefined}
+          >
+            <span className="nav-icon" aria-hidden="true"><ShieldCheck /></span>
+            <span>Admin</span>
+          </Link>
+        )}
         <Link
           to="/more"
           className={`nav-item ${currentPath === '/more' ? 'active' : ''}`}

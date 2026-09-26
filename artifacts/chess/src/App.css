@@ -329,6 +329,11 @@ main {
     z-index: 100;
   }
 
+  /* Five items when the Admin entry is present (admin accounts). */
+  .bottom-nav.bottom-nav-with-admin {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
   .nav-item {
     display: flex;
     flex-direction: column;
