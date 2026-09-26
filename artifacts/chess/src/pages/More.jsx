@@ -1,8 +1,18 @@
 import { Link } from 'react-router-dom'
-import { BookOpen, Library, Puzzle, Settings2, UsersRound, UserRound } from 'lucide-react'
+import { BookOpen, Library, Puzzle, Settings2, ShieldCheck, UsersRound, UserRound } from 'lucide-react'
+import { useUser } from '../contexts/UserContext';
 import './More.css'
 
-const optionGroups = [
+// Mobile users never see the desktop sidebar, so the admin-only /admin route
+// is surfaced here for admins (mirrors the sidebar link on desktop).
+const adminOption = {
+  to: '/admin',
+  icon: ShieldCheck,
+  title: 'Admin',
+  description: 'Manage accounts and fair-play reviews',
+};
+
+const staticOptionGroups = [
   {
     title: 'Learn & improve',
     options: [
@@ -27,6 +37,11 @@ const optionGroups = [
 ]
 
 export default function More() {
+  const { user } = useUser();
+  const optionGroups = user?.isAdmin
+    ? [...staticOptionGroups, { title: 'Admin', options: [adminOption] }]
+    : staticOptionGroups;
+
   return (
     <section className="more-page" aria-labelledby="more-page-title">
       <div className="more-container">
