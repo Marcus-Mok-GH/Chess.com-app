@@ -266,6 +266,33 @@ describe("UserContext.requestOtp – 6-digit code message (PR #1.1.65)", () => {
         expect(localStorage.getItem("chess_user_token")).toBeNull();
     });
 
+    it("propagates isAdmin from the server session onto the context user", async () => {
+        // Regression: the backend session response includes isAdmin, but the
+        // UserContext mapping dropped it, so admins never saw the Admin page.
+        neonAuth.getSession.mockResolvedValue({
+            data: {
+                session: { id: "sess-1", userId: "u-admin" },
+                user: {
+                    id: "u-admin", username: "root", email: "root@example.com",
+                    elo: 2500, isAdmin: true,
+                },
+            },
+        });
+
+        let capturedContext;
+        renderWithUserContext((ctx) => {
+            capturedContext = ctx;
+        });
+
+        await act(async () => {
+            await new Promise((r) => setTimeout(r, 0));
+        });
+
+        expect(capturedContext.user?.isAdmin).toBe(true);
+        // Non-admin flags stay false, never truthy garbage.
+        expect(capturedContext.user?.needsUsername).toBe(false);
+    });
+
     describe("logout", () => {
         it("clears local state even if remote signOut fails", async () => {
             // Mock failure

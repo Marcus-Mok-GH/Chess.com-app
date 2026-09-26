@@ -213,6 +213,7 @@ export function UserProvider({ children }) {
                     draws: serverUser.draws || 0,
                     createdAt: serverUser.createdAt,
                     needsUsername: !!serverUser.needsUsername,
+                    isAdmin: !!serverUser.isAdmin,
                 };
                 if (isMounted) {
                     setUser(userData);
@@ -319,6 +320,7 @@ export function UserProvider({ children }) {
                     draws: serverUser.draws || 0,
                     createdAt: serverUser.createdAt,
                     needsUsername: !!serverUser.needsUsername,
+                    isAdmin: !!serverUser.isAdmin,
                 };
 
                 setUser(userData);

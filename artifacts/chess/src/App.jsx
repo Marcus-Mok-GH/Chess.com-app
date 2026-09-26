@@ -64,6 +64,15 @@ function getTitle(path) {
   return 'PlayChess'
 }
 
+function RequireAdmin({ children }) {
+  const { user, isLoading } = useUser()
+  // While the session is still loading we can't tell admins from guests;
+  // render the route fallback instead of bouncing a real admin to home.
+  if (isLoading) return <RouteFallback />
+  if (!user?.isAdmin) return <Navigate to="/" replace />
+  return children
+}
+
 function LessonsRedirect() {
   const location = useLocation()
   return <Navigate to={`/puzzles${location.search}`} replace />
@@ -382,7 +391,7 @@ export default function App({ Router = BrowserRouter, routerProps = {} } = {}) {
                   <Route path="/friends" element={<Suspense fallback={<RouteFallback />}><Friends /></Suspense>} />
                   <Route path="/clubs" element={<Suspense fallback={<RouteFallback />}><Clubs /></Suspense>} />
                   <Route path="/more" element={<More />} />
-                  <Route path="/admin" element={<Suspense fallback={<RouteFallback />}><Admin /></Suspense>} />
+                  <Route path="/admin" element={<Suspense fallback={<RouteFallback />}><RequireAdmin><Admin /></RequireAdmin></Suspense>} />
                 </Route>
                 <Route path="*" element={<Suspense fallback={<RouteFallback />}><NotFound /></Suspense>} />
               </Routes>
