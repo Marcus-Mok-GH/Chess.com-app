@@ -67,14 +67,22 @@ describe("Admin page search", () => {
         mockUseUser.mockReturnValue({ user: makeUser() });
     });
 
-    it("does not search for queries under 2 characters", async () => {
+    it("loads the full account list on mount", async () => {
+        api.adminSearchUsers.mockResolvedValue({ users: [makeAccount()] });
+        renderAdmin();
+        await waitFor(() => expect(api.adminSearchUsers).toHaveBeenCalledWith(""));
+        expect(await screen.findByText("bobby")).toBeTruthy();
+    });
+
+    it("does not run a text search for single-character queries", async () => {
         api.adminSearchUsers.mockResolvedValue({ users: [] });
         renderAdmin();
+        await waitFor(() => expect(api.adminSearchUsers).toHaveBeenCalledWith(""));
         fireEvent.change(screen.getByLabelText(/search accounts/i), {
             target: { value: "b" },
         });
-        await waitFor(() => new Promise((r) => setTimeout(r, 0)));
-        expect(api.adminSearchUsers).not.toHaveBeenCalled();
+        await waitFor(() => new Promise((r) => setTimeout(r, 500)));
+        expect(api.adminSearchUsers).not.toHaveBeenCalledWith("b");
     });
 
     it("shows results as the admin types (debounced)", async () => {

@@ -111,10 +111,22 @@ describe('admin routes authorization', () => {
 });
 
 describe('GET /api/admin/users', () => {
-  it('requires at least 2 characters', async () => {
+  it('requires at least 2 characters for non-empty queries', async () => {
     validateSession.mockResolvedValue(ADMIN_ID);
     const res = await loopback(buildApp(), 'GET', '/api/admin/users?q=a');
     expect(res.status).toBe(400);
+  });
+
+  it('lists all users when the query is empty', async () => {
+    validateSession.mockResolvedValue(ADMIN_ID);
+    selectReturns([
+      { id: USER_ID, username: 'bobby', email: 'bobby@example.com', elo: 1200, games_played: 0, wins: 0, losses: 0, draws: 0, is_banned: false, banned_at: null, banned_reason: null, created_at: new Date().toISOString() },
+    ]);
+    const res = await loopback(buildApp(), 'GET', '/api/admin/users');
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.users).toHaveLength(1);
+    expect(res.body.users[0].username).toBe('bobby');
   });
 
   it('returns shaped users and flags admins', async () => {

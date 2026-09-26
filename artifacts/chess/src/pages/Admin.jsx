@@ -18,16 +18,17 @@ export default function Admin() {
     const isAdmin = Boolean(user?.isAdmin);
 
     const runSearch = useCallback(async (q) => {
-        if (q.trim().length < 2) {
+        const trimmed = q.trim();
+        if (trimmed.length === 1) {
             setResults([]);
-            setMessage(null);
+            setMessage("Type at least 2 characters to search.");
             return;
         }
         setIsSearching(true);
         try {
-            const data = await api.adminSearchUsers(q.trim());
+            const data = await api.adminSearchUsers(trimmed);
             setResults(data.users || []);
-            if (!data.users?.length) setMessage(`No accounts matched "${q.trim()}".`);
+            if (!data.users?.length) setMessage(trimmed ? `No accounts matched "${trimmed}".` : "No accounts yet.");
             else setMessage(null);
         } catch (error) {
             setMessage(error.message || "Search failed.");
@@ -35,6 +36,12 @@ export default function Admin() {
             setIsSearching(false);
         }
     }, []);
+
+    // Load the full account list as soon as the panel opens for an admin,
+    // so an empty search box shows every user instead of a blank list.
+    useEffect(() => {
+        if (isAdmin) runSearch("");
+    }, [isAdmin, runSearch]);
 
     // Debounced search as the admin types.
     const onQueryChange = (value) => {
