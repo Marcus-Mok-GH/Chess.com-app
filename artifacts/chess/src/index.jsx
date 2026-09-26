@@ -21,11 +21,25 @@ window.addEventListener('error', (event) => {
 
 if ('serviceWorker' in navigator) {
   if (import.meta.env.PROD) {
-    // Production: unregister old service workers
-    navigator.serviceWorker.ready.then(registration => {
-      registration.unregister();
-      console.log('Service worker unregistered for production');
-    });
+    // Production: unregister old service workers and purge their caches.
+    // The old worker cached the app shell and served it stale-first, so
+    // after a deploy browsers could render HTML whose fingerprinted asset
+    // links 404 (a completely unstyled page). Removing the Cache Storage
+    // entries ensures the stale shell can never be served again.
+    navigator.serviceWorker.ready
+      .then(registration => registration.unregister())
+      .then(() => {
+        if (typeof caches !== 'undefined' && window.caches?.keys) {
+          return window.caches.keys().then(names =>
+            Promise.all(names.map(name => window.caches.delete(name)))
+          );
+        }
+        return undefined;
+      })
+      .then(() => {
+        console.log('Service worker unregistered, caches purged');
+      })
+      .catch(() => {});
   }
 }
 
