@@ -125,6 +125,44 @@ function extractJson(content) {
   return null;
 }
 
+/**
+ * Salvage complete objects from a truncated JSON array. When the model runs
+ * out of tokens mid-review the array is cut open; instead of discarding every
+ * comment we collect the objects that did finish so the player still gets
+ * partial coach feedback.
+ */
+function repairTruncatedArray(content) {
+  if (typeof content !== 'string') return null;
+  const start = content.indexOf('[');
+  if (start === -1) return null;
+  const items = [];
+  let depth = 0;
+  let objStart = -1;
+  let inString = false;
+  let escaped = false;
+  for (let i = start + 1; i < content.length; i += 1) {
+    const ch = content[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === '\\') escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') { inString = true; continue; }
+    if (ch === '{') {
+      if (depth === 0) objStart = i;
+      depth += 1;
+    } else if (ch === '}') {
+      depth -= 1;
+      if (depth === 0 && objStart !== -1) {
+        try { items.push(JSON.parse(content.slice(objStart, i + 1))); } catch { /* skip malformed object */ }
+        objStart = -1;
+      }
+    } else if (ch === ']' && depth === 0) break;
+  }
+  return items.length ? items : null;
+}
+
 function parsePgTextArrayLiteral(value) {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
@@ -327,28 +365,67 @@ router.post('/analyze', async (req, res) => {
       return entry?.san || '';
     }).filter(Boolean);
     const moves = sanMoves.map((san, index) => `${index % 2 === 0 ? `${Math.floor(index / 2) + 1}. ` : ''}${san}`).join(' ');
-    const analyzeMessages = [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: `Review every move in this game.\n\nMoves: ${moves}\nResult: ${result || 'Unknown'}\n\nReturn ONLY valid JSON: an array with one object per move containing ply, moveNumber, color, san, and review. Keep each review under 30 words. No markdown.` },
-    ];
-    const analyzeOptions = { maxTokens: Math.min(2000, Math.max(600, 120 + sanMoves.length * 30)) };
-    let response;
-    try {
-      response = await callCoach(analyzeMessages, { userId, ...analyzeOptions });
-    } catch (coachErr) {
-      response = await callCoachFree(analyzeMessages, analyzeOptions);
+    if (!sanMoves.length) return errorResponse(res, 400, 'Missing required field: moveHistory (array)');
+
+    // One request per chunk of moves. A single request for the whole game gets
+    // truncated by the max_tokens cap mid-JSON, which used to make every coach
+    // comment disappear ("Coach comments are unavailable").
+    const CHUNK_SIZE = 20;
+    const collected = [];
+    let lastContent = '';
+    let firstError = null;
+    for (let start = 0; start < sanMoves.length; start += CHUNK_SIZE) {
+      const slice = sanMoves.slice(start, start + CHUNK_SIZE);
+      const analyzeMessages = [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: `Review every move in this game.\n\nMoves: ${moves}\nResult: ${result || 'Unknown'}\n\nProvide reviews ONLY for these moves (game plies ${start + 1} to ${start + slice.length}): ${slice.join(' ')}.\n\nReturn ONLY valid JSON: an array with one object per reviewed move containing ply, moveNumber, color, san, and review. Use the true game ply numbers (${start + 1} to ${start + slice.length}). Keep each review under 25 words. No markdown.` },
+      ];
+      const analyzeOptions = { maxTokens: Math.min(4000, Math.max(800, 200 + slice.length * 90)), temperature: 0.7 };
+      try {
+        let response;
+        try {
+          response = await callCoach(analyzeMessages, { userId, ...analyzeOptions });
+        } catch (coachErr) {
+          response = await callCoachFree(analyzeMessages, analyzeOptions);
+        }
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content || '';
+        if (content) lastContent = content;
+        let parsed = extractJson(content);
+        let chunkMoves = Array.isArray(parsed?.moves) ? parsed.moves : Array.isArray(parsed) ? parsed : null;
+        if (!chunkMoves) {
+          // extractJson's object-slice can grab the FIRST complete object out of
+          // a truncated array; prefer a real (repaired) array when one exists.
+          parsed = repairTruncatedArray(content);
+          if (parsed) chunkMoves = parsed;
+        }
+        if (chunkMoves) collected.push(...chunkMoves);
+        else if (!content) throw new Error('Coach API returned an empty review.');
+      } catch (chunkError) {
+        firstError = firstError || chunkError;
+        break;
+      }
     }
-    const data = await response.json();
-    const parsed = extractJson(data.choices?.[0]?.message?.content || '');
-    const rawMoves = Array.isArray(parsed?.moves) ? parsed.moves : Array.isArray(parsed) ? parsed : null;
-    if (!rawMoves) return res.json({ analysis: data.choices?.[0]?.message?.content || '' });
-    return res.json({ analysis: { format: 'move_review', moves: rawMoves.map((entry, index) => ({
-      ply: Number.isFinite(entry?.ply) ? entry.ply : index + 1,
-      moveNumber: Number.isFinite(entry?.moveNumber) ? entry.moveNumber : Math.floor(index / 2) + 1,
-      color: entry?.color === 'black' || index % 2 === 1 ? 'black' : 'white',
-      san: entry?.san || sanMoves[index] || '',
-      review: entry?.review || entry?.comment || entry?.analysis || '',
-    })) } });
+    if (!collected.length) {
+      if (firstError?.status === 402) throw firstError;
+      return res.json({ analysis: lastContent || '' });
+    }
+    const byPly = new Map();
+    collected.forEach((entry) => {
+      const ply = Number(entry?.ply);
+      if (Number.isFinite(ply) && !byPly.has(ply)) byPly.set(ply, entry);
+    });
+    const ordered = sanMoves.map((san, index) => {
+      const entry = byPly.get(index + 1) || null;
+      return {
+        ply: index + 1,
+        moveNumber: Math.floor(index / 2) + 1,
+        color: index % 2 === 0 ? 'white' : 'black',
+        san: entry?.san || san,
+        review: entry?.review || entry?.comment || entry?.analysis || '',
+      };
+    }).filter((entry) => entry.review);
+    return res.json({ analysis: { format: 'move_review', moves: ordered } });
   } catch (error) {
     if (error?.status === 402) return res.status(402).json({ error: error.message, code: 'POLLINATIONS_AUTH_REQUIRED' });
     return handleRouteError(res, error, 'Failed to analyze game');
