@@ -13,6 +13,10 @@ export default function Admin() {
     const [confirmDelete, setConfirmDelete] = useState(null);
     const [banTarget, setBanTarget] = useState(null);
     const [banReason, setBanReason] = useState("");
+    const [analyticsTarget, setAnalyticsTarget] = useState(null);
+    const [analytics, setAnalytics] = useState(null);
+    const [eloInput, setEloInput] = useState("");
+    const [eloBusy, setEloBusy] = useState(false);
     const searchTimeout = useRef(null);
 
     const isAdmin = Boolean(user?.isAdmin);
@@ -105,6 +109,40 @@ export default function Admin() {
         }
     };
 
+    const handleViewAnalytics = async (target) => {
+        setAnalyticsTarget(target);
+        setAnalytics(null);
+        try {
+            const data = await api.adminGetUserAnalytics(target.id);
+            setAnalytics(data);
+            setEloInput(String(data.user?.elo ?? ""));
+        } catch (error) {
+            setAnalytics({ error: error.message || "Failed to load analytics." });
+        }
+    };
+
+    const handleSaveElo = async () => {
+        if (!analyticsTarget) return;
+        const parsed = Number(eloInput);
+        if (!Number.isInteger(parsed) || parsed < 100 || parsed > 4000) {
+            setAnalytics((prev) => ({ ...prev, eloError: "Elo must be a whole number between 100 and 4000." }));
+            return;
+        }
+        setEloBusy(true);
+        try {
+            const data = await api.adminSetUserElo(analyticsTarget.id, parsed);
+            setAnalytics((prev) => ({ ...prev, user: data.user, eloError: null }));
+            setResults((prev) =>
+                prev.map((u) => (u.id === analyticsTarget.id ? { ...u, ...data.user } : u)),
+            );
+            setMessage(`Set ${data.user?.username || analyticsTarget.username}'s elo to ${data.user.elo}.`);
+        } catch (error) {
+            setAnalytics((prev) => ({ ...prev, eloError: error.message || "Elo update failed." }));
+        } finally {
+            setEloBusy(false);
+        }
+    };
+
     if (!isAdmin) {
         return (
             <div className="admin-page page-container">
@@ -147,6 +185,13 @@ export default function Admin() {
                                 )}
                             </div>
                             <div className="admin-row-actions">
+                                <button
+                                    className="admin-btn"
+                                    disabled={busyUserId === u.id}
+                                    onClick={() => handleViewAnalytics(u)}
+                                >
+                                    Analytics
+                                </button>
                                 {u.isBanned ? (
                                     <button
                                         className="admin-btn admin-btn-unban"
@@ -178,6 +223,97 @@ export default function Admin() {
             )}
 
             {isSearching && results.length === 0 && <p className="admin-message">Searching…</p>}
+
+            {analyticsTarget && (
+                <div className="admin-modal" role="dialog" aria-modal="true" aria-label={`Analytics for ${analyticsTarget.username}`}>
+                    <div className="admin-modal-content admin-analytics-modal">
+                        <h2>{analyticsTarget.username}</h2>
+                        {!analytics && <p className="admin-modal-note">Loading analytics…</p>}
+                        {analytics?.error && <p className="admin-modal-note">{analytics.error}</p>}
+                        {analytics && !analytics.error && (
+                            <>
+                                <div className="admin-analytics-stats">
+                                    <div className="admin-stat">
+                                        <span className="admin-stat-label">Elo</span>
+                                        <div className="admin-elo-edit">
+                                            <input
+                                                type="number"
+                                                min={100}
+                                                max={4000}
+                                                step={1}
+                                                value={eloInput}
+                                                onChange={(e) => setEloInput(e.target.value)}
+                                                aria-label="Elo rating"
+                                                disabled={eloBusy}
+                                            />
+                                            <button
+                                                className="admin-btn"
+                                                onClick={handleSaveElo}
+                                                disabled={eloBusy || Number(eloInput) === analytics.user.elo}
+                                            >
+                                                Save
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {analytics.eloError && (
+                                        <p className="admin-modal-note admin-elo-error">{analytics.eloError}</p>
+                                    )}
+                                    <div className="admin-stat">
+                                        <span className="admin-stat-label">Games</span>
+                                        <span className="admin-stat-value">{analytics.stats.totalGames}</span>
+                                    </div>
+                                    <div className="admin-stat">
+                                        <span className="admin-stat-label">W / L / D</span>
+                                        <span className="admin-stat-value">
+                                            {analytics.stats.wins} / {analytics.stats.losses} / {analytics.stats.draws}
+                                        </span>
+                                    </div>
+                                    <div className="admin-stat">
+                                        <span className="admin-stat-label">Win rate</span>
+                                        <span className="admin-stat-value">{analytics.stats.winRate}%</span>
+                                    </div>
+                                    <div className="admin-stat">
+                                        <span className="admin-stat-label">Joined</span>
+                                        <span className="admin-stat-value">
+                                            {analytics.user.createdAt
+                                                ? new Date(analytics.user.createdAt).toLocaleDateString()
+                                                : "unknown"}
+                                        </span>
+                                    </div>
+                                </div>
+                                <h3 className="admin-analytics-heading">
+                                    Recent games ({analytics.recentGames.length})
+                                </h3>
+                                {analytics.recentGames.length === 0 && (
+                                    <p className="admin-modal-note">No games played yet.</p>
+                                )}
+                                {analytics.recentGames.length > 0 && (
+                                    <ul className="admin-games-list">
+                                        {analytics.recentGames.map((g) => (
+                                            <li key={g.gameId} className="admin-game-row">
+                                                <span className={`admin-game-result admin-game-result-${g.result}`}>
+                                                    {g.result}
+                                                </span>
+                                                <span className="admin-game-opp">
+                                                    vs {g.opponent || "guest"} <i>({g.color})</i>
+                                                </span>
+                                                <span className="admin-game-meta">
+                                                    {g.mode || "local"} · {g.playedAt ? new Date(g.playedAt).toLocaleDateString() : ""}
+                                                </span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </>
+                        )}
+                        <div className="admin-modal-actions">
+                            <button className="admin-btn" onClick={() => setAnalyticsTarget(null)}>
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {banTarget && (
                 <div className="admin-modal" role="dialog" aria-modal="true" aria-label="Ban account">

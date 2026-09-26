@@ -4,10 +4,12 @@
  * Admins are the user ids listed in CHESS_REVIEW_ADMIN_IDS (the same gate as
  * the integrity review endpoints). Endpoints:
  *
- *   GET    /api/admin/users?q=<search>   search accounts by username or email
- *   POST   /api/admin/users/:id/ban      ban an account (kicks active sessions)
- *   POST   /api/admin/users/:id/unban    restore a banned account
- *   DELETE /api/admin/users/:id          permanently delete an account
+ *   GET    /api/admin/users?q=<search>       search accounts by username or email
+ *   GET    /api/admin/users/:id/analytics     per-user analytics: elo, W/L/D, game history
+ *   PATCH  /api/admin/users/:id/elo           set a user's elo rating
+ *   POST   /api/admin/users/:id/ban           ban an account (kicks active sessions)
+ *   POST   /api/admin/users/:id/unban         restore a banned account
+ *   DELETE /api/admin/users/:id               permanently delete an account
  *
  * Guards: an admin can never ban or delete their own account or
  * another admin account.
@@ -105,6 +107,119 @@ router.get('/users', async (req, res) => {
     return res.json({ success: true, users: result.rows.map(shapeAdminUser) });
   } catch (error) {
     return handleRouteError(res, error, 'Failed to search users');
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/admin/users/:id/analytics
+// ---------------------------------------------------------------------------
+const RECENT_GAMES_LIMIT = 50;
+
+router.get('/users/:id/analytics', async (req, res) => {
+  try {
+    const id = String(req.params.id || '').trim();
+    if (!validateUserId(id)) return errorResponse(res, 400, 'Invalid user id');
+
+    const user = await loadUser(id);
+    if (!user) return errorResponse(res, 404, 'User not found');
+
+    const totals = await query(
+      `SELECT
+         COUNT(*) AS total,
+         COUNT(*) FILTER (
+           WHERE (white_player_id = $1 AND result = 'white')
+              OR (black_player_id = $1 AND result = 'black')
+         ) AS wins,
+         COUNT(*) FILTER (
+           WHERE (white_player_id = $1 AND result = 'black')
+              OR (black_player_id = $1 AND result = 'white')
+         ) AS losses,
+         COUNT(*) FILTER (
+           WHERE result = 'draw' AND (white_player_id = $1 OR black_player_id = $1)
+         ) AS draws
+       FROM games
+      WHERE white_player_id = $1 OR black_player_id = $1`,
+      [id]
+    );
+    const recent = await query(
+      `SELECT game_code, white_player_id, black_player_id, white_player_name,
+              black_player_name, result, game_mode, status, created_at
+         FROM games
+        WHERE white_player_id = $1 OR black_player_id = $1
+        ORDER BY created_at DESC
+        LIMIT ${RECENT_GAMES_LIMIT}`,
+      [id]
+    );
+
+    const row = totals.rows[0] || {};
+    const total = Number(row.total || 0);
+    const wins = Number(row.wins || 0);
+    const losses = Number(row.losses || 0);
+    const draws = Number(row.draws || 0);
+
+    const recentGames = recent.rows.map((g) => {
+      const isWhite = String(g.white_player_id) === id;
+      const won = g.result === (isWhite ? 'white' : 'black');
+      const drawn = g.result === 'draw' || g.result === 'drawn';
+      return {
+        gameId: g.game_code,
+        color: isWhite ? 'white' : 'black',
+        opponent: isWhite ? g.black_player_name : g.white_player_name,
+        result: won ? 'win' : drawn ? 'draw' : 'loss',
+        rawResult: g.result,
+        mode: g.game_mode,
+        status: g.status,
+        playedAt: g.created_at,
+      };
+    });
+
+    return res.json({
+      success: true,
+      user: shapeAdminUser(user),
+      stats: {
+        totalGames: total,
+        wins,
+        losses,
+        draws,
+        winRate: total > 0 ? Math.round((wins / total) * 100) : 0,
+      },
+      recentGames,
+    });
+  } catch (error) {
+    return handleRouteError(res, error, 'Failed to load user analytics');
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /api/admin/users/:id/elo  { elo: number }
+// ---------------------------------------------------------------------------
+const MIN_ELO = 100;
+const MAX_ELO = 4000;
+
+router.patch('/users/:id/elo', async (req, res) => {
+  try {
+    const id = String(req.params.id || '').trim();
+    if (!validateUserId(id)) return errorResponse(res, 400, 'Invalid user id');
+
+    const user = await loadUser(id);
+    if (!user) return errorResponse(res, 404, 'User not found');
+
+    const elo = Number(req.body?.elo);
+    if (!Number.isInteger(elo) || elo < MIN_ELO || elo > MAX_ELO) {
+      return errorResponse(res, 400, `Elo must be a whole number between ${MIN_ELO} and ${MAX_ELO}.`);
+    }
+
+    const updated = await query(
+      `UPDATE users
+          SET elo = $2, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+        RETURNING ${ADMIN_COLUMNS}`,
+      [id, elo]
+    );
+    const shaped = shapeAdminUser(updated.rows[0] || { ...user, elo });
+    return res.json({ success: true, user: shaped, previousElo: user.elo ?? 1200 });
+  } catch (error) {
+    return handleRouteError(res, error, 'Failed to update elo');
   }
 });
 

@@ -197,3 +197,118 @@
     justify-content: flex-end;
   }
 }
+
+/* Analytics modal */
+.admin-analytics-modal {
+  max-width: 440px;
+}
+
+.admin-analytics-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.admin-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.5rem 0.6rem;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+}
+
+.admin-stat-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
+.admin-stat-value {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.admin-elo-edit {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.admin-elo-edit input {
+  width: 90px;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.2));
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.25);
+  color: inherit;
+  font-size: 0.9rem;
+}
+
+.admin-elo-error {
+  color: #ff8080;
+  grid-column: 1 / -1;
+}
+
+.admin-analytics-heading {
+  margin: 0.5rem 0 0.4rem;
+  font-size: 0.9rem;
+}
+
+.admin-games-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-game-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.82rem;
+}
+
+.admin-game-result {
+  width: 44px;
+  text-align: center;
+  border-radius: 6px;
+  padding: 0.1rem 0;
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.admin-game-result-win { background: rgba(80, 200, 120, 0.25); color: #7be6a0; }
+.admin-game-result-loss { background: rgba(230, 90, 90, 0.25); color: #ff9090; }
+.admin-game-result-draw { background: rgba(200, 200, 200, 0.2); color: #ccc; }
+
+.admin-game-opp {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-game-meta {
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .admin-analytics-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-analytics-modal {
+    max-height: 85vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
