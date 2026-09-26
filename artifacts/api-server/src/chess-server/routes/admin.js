@@ -78,17 +78,30 @@ async function loadUser(id) {
 router.get('/users', async (req, res) => {
   try {
     const q = String(req.query.q || '').trim();
-    if (q.length < 2) return errorResponse(res, 400, 'Enter at least 2 characters to search.');
-    // Default ILIKE escape character is the backslash.
-    const pattern = `%${q.replace(/[\\%_]/g, (m) => '\\' + m)}%`;
-    const result = await query(
-      `SELECT ${ADMIN_COLUMNS}
-         FROM users
-        WHERE username ILIKE $1 OR email ILIKE $1
-        ORDER BY is_banned DESC, username ASC
-        LIMIT ${SEARCH_LIMIT}`,
-      [pattern]
-    );
+    let result;
+    if (q === '') {
+      // Empty search: list every account (banned first, then alphabetical),
+      // so the admin panel shows the full roster when the box is untouched.
+      result = await query(
+        `SELECT ${ADMIN_COLUMNS}
+           FROM users
+          ORDER BY is_banned DESC, username ASC
+          LIMIT ${SEARCH_LIMIT}`,
+        []
+      );
+    } else {
+      if (q.length < 2) return errorResponse(res, 400, 'Enter at least 2 characters to search.');
+      // Default ILIKE escape character is the backslash.
+      const pattern = `%${q.replace(/[\\%_]/g, (m) => '\\' + m)}%`;
+      result = await query(
+        `SELECT ${ADMIN_COLUMNS}
+           FROM users
+          WHERE username ILIKE $1 OR email ILIKE $1
+          ORDER BY is_banned DESC, username ASC
+          LIMIT ${SEARCH_LIMIT}`,
+        [pattern]
+      );
+    }
     return res.json({ success: true, users: result.rows.map(shapeAdminUser) });
   } catch (error) {
     return handleRouteError(res, error, 'Failed to search users');
