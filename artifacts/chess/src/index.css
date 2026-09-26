@@ -429,3 +429,38 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ===== Online Game ===== */
+
+/* Quick-reactions row (GOOD / CLAP / THINK / WOW / PARTY / SWEAT) */
+.reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.reactions button {
+  flex: 1 1 22%;
+  min-width: 0;
+  padding: 6px 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border: 1px solid var(--border-color, #444);
+  border-radius: 8px;
+  background: var(--surface-2, #262421);
+  color: var(--text-primary, #eee);
+  cursor: pointer;
+  transition: transform 0.1s ease, background 0.15s ease;
+}
+
+.reactions button:hover {
+  background: var(--surface-3, #32302d);
+  transform: scale(1.05);
+}
+
+.reactions button:active {
+  transform: scale(0.95);
+}

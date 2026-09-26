@@ -1,13 +1,11 @@
-const CACHE_NAME = 'chess-app-v2';
+const CACHE_NAME = 'chess-app-v3';
 
-// Assets to cache immediately on install.
-// IMPORTANT: Do NOT cache Vite /src/* module paths. In dev they are served by Vite,
-// in prod they don't exist (bundled assets are fingerprinted).
-//
-// Keep this list minimal and stable.
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
+// Immutable, fingerprinted assets (hashed filenames) can be cached
+// aggressively. The app shell ('/', '/index.html') is intentionally NOT
+// cached: it references fingerprinted assets whose hashes change on every
+// deploy, and a stale cached shell serves HTML that links to dead asset
+// URLs (the "unstyled page" bug).
+const OFFLINE_FALLBACKS = [
   '/favicon.svg',
   // Legacy paths
   '/pieces/wK.svg',
@@ -35,17 +33,16 @@ const STATIC_ASSETS = [
   '/custom-pieces/bR.svg',
   '/custom-pieces/bB.svg',
   '/custom-pieces/bN.svg',
-  '/custom-pieces/bP.svg',
 ];
 
-// Install event - cache static assets
+// Install event - cache immutable static assets
 self.addEventListener('install', (event) => {
   console.log('[ServiceWorker] Installing...');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
         console.log('[ServiceWorker] Caching static assets');
-        return cache.addAll(STATIC_ASSETS);
+        return cache.addAll(OFFLINE_FALLBACKS);
       })
       .then(() => {
         console.log('[ServiceWorker] Static assets cached');
@@ -77,7 +74,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event - serve from cache or network
+// Fetch event
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -97,11 +94,39 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Navigations (page loads) MUST be network-first: the HTML references
+  // fingerprinted assets for the current deployment. Serving a cached,
+  // outdated HTML shell makes every one of its asset links 404 and the
+  // page renders completely unstyled.
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .catch(() => {
+          // Offline: fall back to whatever shell we may have from a
+          // previous visit, or a minimal error page.
+          return caches
+            .match(request)
+            .then((cached) => cached || caches.match('/index.html'))
+            .then((cached) => cached || Response.error());
+        })
+    );
+    return;
+  }
+
+  // Static assets: cache-first with background refresh (stale-while-
+  // revalidate). Fingerprinted /assets/* files are immutable, so a cache
+  // hit is always valid. Non-fingerprinted files (sounds, images) get
+  // refreshed in the background.
+  const isFingerprinted = url.pathname.startsWith('/assets/');
+
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
-      // Return cached response if available
+      if (cachedResponse && isFingerprinted) {
+        return cachedResponse;
+      }
+
       if (cachedResponse) {
-        // Fetch in background to update cache
+        // Refresh non-fingerprinted assets in the background
         fetch(request)
           .then((networkResponse) => {
             if (networkResponse.ok) {
@@ -113,7 +138,7 @@ self.addEventListener('fetch', (event) => {
           .catch(() => {
             // Network failed, but we have cached version - that's fine
           });
-        
+
         return cachedResponse;
       }
 
@@ -134,14 +159,8 @@ self.addEventListener('fetch', (event) => {
         })
         .catch((error) => {
           console.error('[ServiceWorker] Fetch failed:', error);
-          
-          // For navigation requests, return the cached index.html
-          if (request.mode === 'navigate') {
-            return caches.match('/index.html');
-          }
-
           throw error;
-        });
+        })
     })
   );
 });
