@@ -289,3 +289,90 @@ describe('DELETE /api/admin/users/:id', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('GET /api/admin/users/:id/analytics', () => {
+  const USER_ROW = {
+    id: USER_ID, username: 'bobby', email: 'bobby@example.com', elo: 1350,
+    games_played: 3, wins: 1, losses: 1, draws: 1, is_banned: false,
+    banned_at: null, banned_reason: null, created_at: new Date().toISOString(),
+  };
+
+  function analyticsMocks() {
+    query.mockImplementation(async (sql) => {
+      if (/ORDER BY created_at DESC/i.test(sql)) {
+        return {
+          rows: [{
+            game_code: 'ABC123', white_player_id: USER_ID, black_player_id: 'x',
+            white_player_name: 'bobby', black_player_name: 'magnus',
+            result: 'white', game_mode: 'online', status: 'finished',
+            created_at: new Date().toISOString(),
+          }],
+        };
+      }
+      if (/FROM games\s+WHERE white_player_id/i.test(sql.replace(/\n/g, ' '))) {
+        return { rows: [{ total: '3', wins: '1', losses: '1', draws: '1' }] };
+      }
+      if (/FROM users WHERE id/i.test(sql)) return { rows: [USER_ROW] };
+      return { rows: [] };
+    });
+  }
+
+  it('returns stats and recent game history', async () => {
+    validateSession.mockResolvedValue(ADMIN_ID);
+    analyticsMocks();
+    const res = await loopback(buildApp(), 'GET', `/api/admin/users/${USER_ID}/analytics`);
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.user.username).toBe('bobby');
+    expect(res.body.stats).toMatchObject({ totalGames: 3, wins: 1, losses: 1, draws: 1, winRate: 33 });
+    expect(res.body.recentGames).toHaveLength(1);
+    expect(res.body.recentGames[0]).toMatchObject({ gameId: 'ABC123', color: 'white', opponent: 'magnus', result: 'win' });
+  });
+
+  it('404s for an unknown user', async () => {
+    validateSession.mockResolvedValue(ADMIN_ID);
+    query.mockResolvedValue({ rows: [] });
+    const res = await loopback(buildApp(), 'GET', `/api/admin/users/${USER_ID}/analytics`);
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('PATCH /api/admin/users/:id/elo', () => {
+  const USER_ROW = {
+    id: USER_ID, username: 'bobby', email: 'bobby@example.com', elo: 1200,
+    games_played: 0, wins: 0, losses: 0, draws: 0, is_banned: false,
+    banned_at: null, banned_reason: null, created_at: new Date().toISOString(),
+  };
+
+  it('updates the elo and returns the previous value', async () => {
+    validateSession.mockResolvedValue(ADMIN_ID);
+    query.mockImplementation(async (sql) => {
+      if (/FROM users WHERE id/i.test(sql)) return { rows: [USER_ROW] };
+      if (/UPDATE users/i.test(sql)) return { rows: [{ ...USER_ROW, elo: 1800 }] };
+      return { rows: [] };
+    });
+    const res = await loopback(buildApp(), 'PATCH', `/api/admin/users/${USER_ID}/elo`, { elo: 1800 });
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.user.elo).toBe(1800);
+    expect(res.body.previousElo).toBe(1200);
+  });
+
+  it('rejects out-of-range and non-integer elo', async () => {
+    validateSession.mockResolvedValue(ADMIN_ID);
+    query.mockImplementation(async (sql) => /FROM users WHERE id/i.test(sql) ? { rows: [USER_ROW] } : { rows: [] });
+    const low = await loopback(buildApp(), 'PATCH', `/api/admin/users/${USER_ID}/elo`, { elo: 50 });
+    const high = await loopback(buildApp(), 'PATCH', `/api/admin/users/${USER_ID}/elo`, { elo: 9999 });
+    const frac = await loopback(buildApp(), 'PATCH', `/api/admin/users/${USER_ID}/elo`, { elo: 1200.5 });
+    expect(low.status).toBe(400);
+    expect(high.status).toBe(400);
+    expect(frac.status).toBe(400);
+  });
+
+  it('404s for an unknown user', async () => {
+    validateSession.mockResolvedValue(ADMIN_ID);
+    query.mockResolvedValue({ rows: [] });
+    const res = await loopback(buildApp(), 'PATCH', `/api/admin/users/${USER_ID}/elo`, { elo: 1500 });
+    expect(res.status).toBe(404);
+  });
+});

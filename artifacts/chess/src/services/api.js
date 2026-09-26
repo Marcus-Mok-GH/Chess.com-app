@@ -208,6 +208,17 @@ class ApiService {
         });
     }
 
+    async adminGetUserAnalytics(userId) {
+        return this.request(`/admin/users/${encodeURIComponent(userId)}/analytics`);
+    }
+
+    async adminSetUserElo(userId, elo) {
+        return this.request(`/admin/users/${encodeURIComponent(userId)}/elo`, {
+            method: "PATCH",
+            body: JSON.stringify({ elo }),
+        });
+    }
+
     async adminDeleteUser(userId) {
         return this.request(`/admin/users/${encodeURIComponent(userId)}`, {
             method: "DELETE",
