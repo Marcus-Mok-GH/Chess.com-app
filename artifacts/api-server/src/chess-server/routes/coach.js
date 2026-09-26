@@ -163,6 +163,20 @@ function repairTruncatedArray(content) {
   return items.length ? items : null;
 }
 
+/**
+ * Some Pollinations models prepend an internal reasoning trace to the message
+ * (for example  or <thinking>...</thinking>). Strip both
+ * closed blocks and a truncated block that never closed before the text
+ * reaches the player.
+ */
+function stripThinkingBlocks(content) {
+  if (typeof content !== 'string') return '';
+  return content
+    .replace(/<think(?:ing)?\s*>[\s\S]*?<\/think(?:ing)?>/gi, '')
+    .replace(/<think(?:ing)?\s*>[\s\S]*$/i, '')
+    .trim();
+}
+
 function parsePgTextArrayLiteral(value) {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
@@ -283,7 +297,7 @@ router.post('/feedback', async (req, res) => {
       response = await callCoachFree(feedbackMessages, {});
     }
     const data = await response.json();
-    return res.json({ feedback: data.choices?.[0]?.message?.content || '' });
+    return res.json({ feedback: stripThinkingBlocks(data.choices?.[0]?.message?.content || '') });
   } catch (error) {
     if (error?.status === 402) return res.status(402).json({ error: error.message, code: 'POLLINATIONS_AUTH_REQUIRED' });
     return handleRouteError(res, error, 'Failed to get coaching feedback');
@@ -310,7 +324,7 @@ router.post('/explain', async (req, res) => {
       response = await callCoachFree(explainMessages, {});
     }
     const data = await response.json();
-    return res.json({ explanation: data.choices?.[0]?.message?.content || '' });
+    return res.json({ explanation: stripThinkingBlocks(data.choices?.[0]?.message?.content || '') });
   } catch (error) {
     if (error?.status === 402) return res.status(402).json({ error: error.message, code: 'POLLINATIONS_AUTH_REQUIRED' });
     return handleRouteError(res, error, 'Failed to get move explanation');
@@ -335,7 +349,7 @@ router.post('/lesson-summary', async (req, res) => {
       response = await callCoachFree(summaryMessages, { maxTokens: 80, temperature: 0.3 });
     }
     const data = await response.json();
-    return res.json({ summary: trimLessonSummary(data.choices?.[0]?.message?.content) });
+    return res.json({ summary: trimLessonSummary(stripThinkingBlocks(data.choices?.[0]?.message?.content || '')) });
   } catch (error) {
     if (error?.status === 402) return res.status(402).json({ error: error.message, code: 'POLLINATIONS_AUTH_REQUIRED' });
     return handleRouteError(res, error, 'Failed to summarize lesson concept');
@@ -389,7 +403,7 @@ router.post('/analyze', async (req, res) => {
           response = await callCoachFree(analyzeMessages, analyzeOptions);
         }
         const data = await response.json();
-        const content = data.choices?.[0]?.message?.content || '';
+        const content = stripThinkingBlocks(data.choices?.[0]?.message?.content || '');
         if (content) lastContent = content;
         let parsed = extractJson(content);
         let chunkMoves = Array.isArray(parsed?.moves) ? parsed.moves : Array.isArray(parsed) ? parsed : null;

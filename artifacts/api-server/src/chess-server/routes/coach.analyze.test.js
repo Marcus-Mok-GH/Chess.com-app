@@ -122,6 +122,36 @@ describe('POST /api/coach/analyze', () => {
     expect(res.body.analysis.moves[24].review).toBe('Move 25 reviewed.');
   });
 
+  it('strips closed thinking blocks before parsing reviews', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => coachResponse(
+        '\n[{"ply":1,"moveNumber":1,"color":"white","san":"e4","review":"Strong classical start."}]'
+      ),
+    });
+    const res = await loopback(buildApp(), '/api/coach/analyze', 'POST', {
+      moveHistory: [{ san: 'e4' }],
+      result: 'white',
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.analysis.moves[0].review).toBe('Strong classical start.');
+  });
+
+  it('strips unclosed thinking traces so reasoning never reaches the player', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => coachResponse(
+        '<thinking>The student played e4 and the best reply is e5, let me think longer about every option. Black to move, center is unstable,'
+      ),
+    });
+    const res = await loopback(buildApp(), '/api/coach/analyze', 'POST', {
+      moveHistory: [{ san: 'e4' }],
+      result: 'white',
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.analysis).toBe('');
+  });
+
   it('falls back to the raw content when nothing can be parsed', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
