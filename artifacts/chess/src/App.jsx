@@ -10,11 +10,12 @@ import api from './services/api'
 import { usePuter } from './hooks/usePuter'
 import {
   BookOpen,
+  Building2,
   Crown,
   DoorOpen,
   Globe2,
+  History,
   House,
-  Library,
   MoreHorizontal,
   Puzzle,
   Swords,
@@ -127,11 +128,11 @@ function AppHeader({ isGameRoute = false }) {
               <span className="sidebar-label">Friends</span>
             </Link>
             <Link to="/clubs" className={`sidebar-item ${currentPath === '/clubs' ? 'active' : ''}`}>
-              <span className="sidebar-icon"><Library size={17} /></span>
+              <span className="sidebar-icon"><Building2 size={17} /></span>
               <span className="sidebar-label">Clubs</span>
             </Link>
             <Link to="/history" className={`sidebar-item ${currentPath === '/history' ? 'active' : ''}`}>
-              <span className="sidebar-icon"><Library size={17} /></span>
+              <span className="sidebar-icon"><History size={17} /></span>
               <span className="sidebar-label">Archive</span>
             </Link>
             {user?.isAdmin && (
