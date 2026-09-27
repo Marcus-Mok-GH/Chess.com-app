@@ -16,6 +16,22 @@ const PIECE_IMAGES = {
   bP: '/custom-pieces/bP.svg',
 };
 
+// Performance Optimization (Bolt ⚡):
+// Define static custom piece components outside render to avoid allocating
+// new React component functions and object references on every component instantiation or re-render.
+// Passing a stable object reference as `pieces` prevents unnecessary options re-computations and board re-renders.
+const CUSTOM_PIECES = Object.entries(PIECE_IMAGES).reduce((acc, [piece, src]) => {
+  acc[piece] = ({ svgStyle }) => (
+    <img
+      src={src}
+      alt={piece}
+      style={{ ...svgStyle, display: 'block', pointerEvents: 'none' }}
+      draggable={false}
+    />
+  );
+  return acc;
+}, {});
+
 const themeColors = {
   green: { light: '#ebecd0', dark: '#779556' },
   brown: { light: '#f0d9b5', dark: '#b58863' },
@@ -42,26 +58,12 @@ export default function ChessBoard({
     return 'start';
   }, [position]);
 
-  const customPieces = useMemo(() => {
-    return Object.entries(PIECE_IMAGES).reduce((acc, [piece, src]) => {
-      acc[piece] = ({ svgStyle }) => (
-        <img
-          src={src}
-          alt={piece}
-          style={{ ...svgStyle, display: 'block', pointerEvents: 'none' }}
-          draggable={false}
-        />
-      );
-      return acc;
-    }, {});
-  }, []);
-
   const chessboardOptions = useMemo(() => ({
     position: currentFen,
     boardOrientation,
     showNotation: showCoordinates,
     animationDurationInMs: 300,
-    pieces: customPieces,
+    pieces: CUSTOM_PIECES,
     squareStyles: customSquareStyles,
     darkSquareStyle: { backgroundColor: colors.dark },
     lightSquareStyle: { backgroundColor: colors.light },
@@ -89,7 +91,6 @@ export default function ChessBoard({
     currentFen,
     boardOrientation,
     showCoordinates,
-    customPieces,
     customSquareStyles,
     colors,
     onSquareClick,
