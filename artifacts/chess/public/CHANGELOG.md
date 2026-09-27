@@ -1,3 +1,7 @@
+[2026-09-27] - Document the ChessBoard component
+
+- Added JSDoc for the board's position input, interaction callbacks, display options, defaults, and rendered result to address docstring coverage for the piece-rendering optimization.
+
 [2026-09-23] - Fix the four pre-existing test failures (suite now 216/216)
 
 - `matchmakingPolling.test.js`: updated the stale `joinMatchmaking` assertion from a bare-boolean expectation to the actual result-object contract (`{ success, playerId }`) that `useMatchmaking` has consumed since the HTTP-polling migration; the service was correct, the test asserted an old return shape.
