@@ -39,6 +39,20 @@ const themeColors = {
   purple: { light: '#efdcf5', dark: '#8877b7' },
 };
 
+/**
+ * Renders a themed chessboard with shared custom piece images and move callbacks.
+ *
+ * @param {Object} props - Board configuration and interaction handlers.
+ * @param {string|Object} [props.position] - FEN string or object with a fen() method; defaults to the starting position.
+ * @param {Function} [props.onSquareClick] - Receives the clicked square.
+ * @param {Function} [props.onPieceDrop] - Receives source and target squares; must return a synchronous truthy value to accept a move.
+ * @param {Function} [props.canDragPiece] - Receives piece type and square; defaults to allowing dragging when absent or returning null/undefined.
+ * @param {'white'|'black'} [props.boardOrientation='white'] - Side displayed at the bottom.
+ * @param {Object} [props.customSquareStyles={}] - Styles keyed by square name.
+ * @param {boolean} [props.showCoordinates=true] - Whether to display board coordinates.
+ * @param {'green'|'brown'|'blue'|'purple'} [props.boardTheme='green'] - Board palette; unknown values use green colors.
+ * @returns {import('react').ReactElement} The board inside its styled wrapper.
+ */
 export default function ChessBoard({
   position,
   onSquareClick,
