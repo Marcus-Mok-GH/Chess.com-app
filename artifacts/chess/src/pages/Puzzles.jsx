@@ -8,7 +8,7 @@ import api from "../services/api";
 import { useUser } from "../contexts/UserContext";
 import AccountRequired from "../components/AccountRequired";
 import { LESSON_CATALOG } from "../engine/lessons/lessonCatalog";
-import { explainCoachMove, summarizeLessonConcept } from "../engine/coach/coachAI";
+import { explainCoachMove, getLessonConcept } from "../engine/coach/coachAI";
 import {
   Puzzle,
   Check,
@@ -60,6 +60,67 @@ function difficultyProgress(rating) {
 // Lesson concepts live in a small sidebar card that users skim, so both the
 // AI summary and the local fallback are capped at 1-2 short sentences.
 const SHORT_CONCEPT_MAX_WORDS = 22;
+
+const PIECE_VALUES_FALLBACK = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+function countMaterial(chess, color) {
+  let total = 0;
+  for (const row of chess.board()) {
+    for (const piece of row) {
+      if (piece && piece.color === color) total += PIECE_VALUES_FALLBACK[piece.type] ?? 0;
+    }
+  }
+  return total;
+}
+
+/**
+ * Builds the concept text shown in the sidebar card from the SPECIFIC puzzle
+ * the generator produced — not from the lesson's static prose. Reads concrete
+ * facts of the position (material balance, check, available captures) plus the
+ * generator's position-specific hint, so the guidance matches the board
+ * without naming the solution move.
+ */
+function buildPuzzleConceptFallback(puzzle) {
+  if (!puzzle?.fen) return "";
+  const side = puzzle.sideToMove === "black" ? "Black" : "White";
+  const parts = [`${side} to move.`];
+
+  try {
+    const chess = new Chess(puzzle.fen);
+    const mover = chess.turn();
+    const opponent = mover === "w" ? "b" : "w";
+
+    // Material context: capture tactics usually appear when the mover is down
+    // material or an enemy piece can be won.
+    if (countMaterial(chess, opponent) > countMaterial(chess, mover)) {
+      parts.push(`${side} is down material and needs a tactic to fight back.`);
+    }
+
+    // Best available capture value for the side to move.
+    let bestCapture = null;
+    for (const move of chess.moves({ verbose: true })) {
+      const value = PIECE_VALUES_FALLBACK[move.captured] ?? 0;
+      if (value > 0 && (!bestCapture || value > bestCapture)) bestCapture = value;
+    }
+    if (bestCapture !== null && bestCapture >= 3) {
+      parts.push("A valuable enemy piece can be captured — check it is not defended first.");
+    }
+
+    if (chess.isCheck()) {
+      parts.push(`${side} is in check and must deal with the threat first.`);
+    }
+  } catch {
+    // Position could not be parsed; the theme/hint lines below still apply.
+  }
+
+  if (parts.length === 1 && puzzle.hint) {
+    parts.push(puzzle.hint);
+  }
+  if (parts.length === 1 && puzzle.theme) {
+    parts.push(`This position calls for the "${puzzle.theme}" idea.`);
+  }
+
+  return trimToShortConcept(parts.join(" "));
+}
 
 /**
  * Splits text into sentences. A period only counts as a sentence boundary
@@ -145,12 +206,11 @@ export default function Puzzles() {
   const [llmDescription, setLlmDescription] = useState(null);
   const [llmLoading, setLlmLoading] = useState(false);
   const [llmError, setLlmError] = useState(null);
-  const [lessonConceptSummary, setLessonConceptSummary] = useState(null);
-  const [lessonConceptLoading, setLessonConceptLoading] = useState(false);
+  const [lessonConcept, setLessonConcept] = useState(null);
 
   const generationRequestRef = useRef(0);
   const explanationRequestRef = useRef(0);
-  const lessonSummaryRequestRef = useRef(0);
+  const lessonConceptRequestRef = useRef(0);
   const timerIds = useRef([]);
   const wrongMoveOverlayTimerRef = useRef(null);
   // Set once this session has progressed past its starting stats, so a slow
@@ -296,27 +356,6 @@ export default function Puzzles() {
     }
   }
 
-  useEffect(() => {
-    const requestId = ++lessonSummaryRequestRef.current;
-    setLessonConceptLoading(true);
-    setLessonConceptSummary(null);
-
-    summarizeLessonConcept(currentLesson.title, currentLesson.topic, currentLesson.description)
-      .then((summary) => {
-        if (requestId === lessonSummaryRequestRef.current && summary) {
-          setLessonConceptSummary(summary);
-        }
-      })
-      .catch(() => {
-        // The short local fallback keeps the card useful when AI is unavailable.
-      })
-      .finally(() => {
-        if (requestId === lessonSummaryRequestRef.current) {
-          setLessonConceptLoading(false);
-        }
-      });
-  }, [currentLesson.id, currentLesson.title, currentLesson.topic, currentLesson.description]);
-
   // Sync puzzle loading when currentLessonIndex changes
   useEffect(() => {
     loadPuzzleForLesson(currentLessonIndex);
@@ -329,6 +368,33 @@ export default function Puzzles() {
       }
     };
   }, [currentLessonIndex]);
+
+  // The Lesson Concept card describes THIS generated puzzle, not the lesson's
+  // static prose. The AI coach (Pollinations) names the motif for the exact
+  // position; a local position-aware fallback keeps the card useful when the
+  // coach is disconnected or errors.
+  useEffect(() => {
+    if (!puzzle) return;
+    const requestId = ++lessonConceptRequestRef.current;
+    setLessonConcept(buildPuzzleConceptFallback(puzzle));
+
+    getLessonConcept({
+      fen: puzzle.fen,
+      sideToMove: puzzle.sideToMove,
+      theme: puzzle.theme,
+      hint: puzzle.hint,
+      lessonTitle: puzzle.lessonTitle || currentLesson.title,
+      lessonTopic: puzzle.lessonTopic || currentLesson.topic,
+    })
+      .then((concept) => {
+        if (requestId === lessonConceptRequestRef.current && concept) {
+          setLessonConcept(concept);
+        }
+      })
+      .catch(() => {
+        // Keep the position-aware fallback; the AI coach is user-optional.
+      });
+  }, [puzzle?.id, puzzle?.fen]);
 
   function clearCoachExplanation() {
     explanationRequestRef.current += 1;
@@ -793,13 +859,7 @@ export default function Puzzles() {
                 <GraduationCap size={14} /> Lesson Concept
               </div>
               <p className="puzzle-lesson-para">
-                {lessonConceptLoading ? (
-                  <>
-                    <span className="puzzles-llm-spinner" /> Condensing this lesson...
-                  </>
-                ) : (
-                  trimToShortConcept(lessonConceptSummary || currentLesson.description)
-                )}
+                {trimToShortConcept(lessonConcept || buildPuzzleConceptFallback(puzzle))}
               </p>
             </div>
 
