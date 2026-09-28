@@ -258,10 +258,13 @@ beforeEach(() => {
     fireEvent.click(screen.getByRole('button', { name: /skip/i }));
 
     await waitFor(() => {
+      // The payload must match the PUT /api/puzzles/stats/user contract
+      // exactly (currentStreak, not streak) or the server rejects the save
+      // and the rating never persists.
       expect(api.savePuzzleStats).toHaveBeenCalledWith({
         solvedCount: 0,
         attemptedCount: 1,
-        streak: 0,
+        currentStreak: 0,
         bestStreak: 0,
         rating: 400,
       });
@@ -282,11 +285,45 @@ beforeEach(() => {
       expect(api.savePuzzleStats).toHaveBeenCalledWith({
         solvedCount: 1,
         attemptedCount: 1,
-        streak: 1,
+        currentStreak: 1,
         bestStreak: 1,
         rating: 480,
       });
     }, { timeout: 3000 });
+  });
+
+  it('applies the account rating after signing in while the page stays open', async () => {
+    mockUserState.isLoggedIn = false;
+    const { rerender } = renderPuzzles();
+
+    await waitForPuzzleOnBoard();
+    // Guests never hit the stats API and stay at session-only defaults.
+    expect(api.getPuzzleStats).not.toHaveBeenCalled();
+    expect(screen.getByText('400')).toBeTruthy();
+
+    api.getPuzzleStats.mockResolvedValue({
+      success: true,
+      stats: {
+        solvedCount: 5,
+        attemptedCount: 8,
+        currentStreak: 2,
+        bestStreak: 4,
+        rating: 1120,
+      },
+    });
+    mockUserState.isLoggedIn = true;
+    rerender(
+      <MemoryRouter initialEntries={['/puzzles']}>
+        <Puzzles />
+      </MemoryRouter>
+    );
+
+    // The persisted DB rating replaces the session defaults so the first
+    // solve saves on top of the account's real Elo, not 400.
+    await waitFor(() => {
+      expect(screen.getByText('5')).toBeTruthy();
+      expect(screen.getByText('1120')).toBeTruthy();
+    });
   });
 
   it('shows an account notice instead of session stats for guests', async () => {
