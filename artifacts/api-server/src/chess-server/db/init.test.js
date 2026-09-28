@@ -111,6 +111,25 @@ describe('initDatabase schema version fast path', () => {
     expect(texts.some((t) => t.includes('CREATE TABLE IF NOT EXISTS users'))).toBe(true);
   });
 
+  it('creates the per-user puzzle stats table (with rating) on every full DDL run', async () => {
+    // The puzzles page persists solved/streak/rating through puzzle_stats;
+    // the schema bootstrap must always define it or Elo silently stops
+    // persisting (the query self-heal would recreate it only on failure).
+    await initDatabase();
+
+    const texts = queries.map((q) => q.text);
+    const puzzleStatsTable = texts.find((t) => t.includes('CREATE TABLE IF NOT EXISTS puzzle_stats'));
+    expect(puzzleStatsTable).toBeTruthy();
+    expect(puzzleStatsTable).toContain('user_id VARCHAR(100) PRIMARY KEY');
+    expect(puzzleStatsTable).toContain('rating INTEGER NOT NULL DEFAULT 400');
+    // Pre-existing installs get backfilled columns even if their table
+    // predates them.
+    expect(texts.some((t) => t.includes('ALTER TABLE puzzle_stats ADD COLUMN IF NOT EXISTS rating'))).toBe(true);
+    // The lesson scheme tables the puzzles page reads alongside stats.
+    expect(texts.some((t) => t.includes('CREATE TABLE IF NOT EXISTS lessons'))).toBe(true);
+    expect(texts.some((t) => t.includes('CREATE TABLE IF NOT EXISTS lesson_progress'))).toBe(true);
+  });
+
   it('rolls back and releases the client when DDL fails', async () => {
     client.query = vi.fn(async (text, params) => {
       queries.push({ text, params });
