@@ -49,7 +49,7 @@ vi.mock('../engine/puzzles/puzzleGenerator', async (importOriginal) => {
 
 vi.mock('../engine/coach/coachAI', () => ({
   explainCoachMove: vi.fn(),
-  summarizeLessonConcept: vi.fn(),
+  getLessonConcept: vi.fn(),
 }));
 
 const { mockUserState } = vi.hoisted(() => ({
@@ -71,7 +71,7 @@ vi.mock('../services/api', () => ({
   },
 }));
 
-import { explainCoachMove, summarizeLessonConcept } from '../engine/coach/coachAI';
+import { explainCoachMove, getLessonConcept } from '../engine/coach/coachAI';
 import api from '../services/api';
 
 const MOCK_PUZZLE_FEN =
@@ -98,11 +98,13 @@ beforeEach(() => {
 });
 
 describe('Puzzles page with Lesson Scheme & LLM commentary', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    explainCoachMove.mockResolvedValue('The knight move attacks the exposed black queen.');
-    summarizeLessonConcept.mockResolvedValue('Develop your pieces, control the center, and keep your king safe.');
-  });
+beforeEach(() => {
+  vi.clearAllMocks();
+  explainCoachMove.mockResolvedValue('The knight move attacks the exposed black queen.');
+  getLessonConcept.mockResolvedValue(
+    'Black can win a piece here: look for the tactic this exact position allows.'
+  );
+});
 
   it('renders the lesson scheme header and current lesson title', async () => {
     renderPuzzles();
@@ -113,45 +115,44 @@ describe('Puzzles page with Lesson Scheme & LLM commentary', () => {
     });
   });
 
-  it('renders a concise AI lesson concept', async () => {
+  it('renders a concise AI lesson concept for the generated puzzle', async () => {
     renderPuzzles();
 
+    await waitForPuzzleOnBoard();
     await waitFor(() => {
-      expect(screen.getByText('Develop your pieces, control the center, and keep your king safe.')).toBeTruthy();
+      expect(
+        screen.getByText('Black can win a piece here: look for the tactic this exact position allows.')
+      ).toBeTruthy();
     });
-    expect(summarizeLessonConcept).toHaveBeenCalledWith(
-      LESSON_CATALOG[0].title,
-      LESSON_CATALOG[0].topic,
-      LESSON_CATALOG[0].description,
+    // The concept is requested for the SPECIFIC generated puzzle (its FEN,
+    // side to move, and theme), not for the lesson's static description.
+    expect(getLessonConcept).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fen: MOCK_PUZZLE_FEN,
+        sideToMove: 'white',
+        lessonTitle: LESSON_CATALOG[0].title,
+      })
+    );
+    expect(getLessonConcept).not.toHaveBeenCalledWith(
+      expect.objectContaining({ description: expect.anything() })
     );
   });
 
-  it('trims a long AI lesson concept to one or two short sentences', async () => {
-    summarizeLessonConcept.mockResolvedValue(
-      'Develop your pieces toward the center and castle quickly. Avoid moving the same piece twice or bringing the queen out too early because chasing it costs time. A simple opening routine like 1. e4 e5 2. Nf3 Nc6 3. Bc4 keeps every move useful.'
-    );
+  it('shows a position-aware fallback concept when the AI coach fails', async () => {
+    getLessonConcept.mockRejectedValue(new Error('Connect your Pollinations account.'));
 
     renderPuzzles();
 
+    await waitForPuzzleOnBoard();
     await waitFor(() => {
-      expect(screen.getByText('Develop your pieces toward the center and castle quickly.')).toBeTruthy();
+      const card = screen.getByText('Lesson Concept').closest('.puzzle-side-card');
+      expect(card).toBeTruthy();
+      // Fallback is built from the concrete generated position (its own FEN),
+      // so it must mention the side that is actually on move.
+      expect(card.textContent).toMatch(/White|Black/);
+      expect(card.textContent.length).toBeGreaterThan(20);
     });
-    // The second and third sentences are cut: users skim this card.
-    expect(screen.queryByText(/chasing it costs time/)).toBeNull();
-    expect(screen.queryByText(/1\. e4 e5/)).toBeNull();
-  });
-
-  it('keeps abbreviations such as e.g. intact in the lesson concept', async () => {
-    summarizeLessonConcept.mockResolvedValue(
-      'Watch for pins, e.g., against the queen. Develop your pieces toward the center and castle quickly.'
-    );
-
-    renderPuzzles();
-
-    await waitFor(() => {
-      expect(screen.getByText(/Watch for pins, e\.g\., against the queen\./)).toBeTruthy();
-    });
-    expect(screen.queryByText(/^Watch for pins, e\.$/)).toBeNull();
+    expect(getLessonConcept).toHaveBeenCalledTimes(1);
   });
 
   it('explains an incorrect move without revealing the answer and offers retry', async () => {

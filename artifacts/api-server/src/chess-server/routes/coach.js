@@ -331,28 +331,27 @@ router.post('/explain', async (req, res) => {
   }
 });
 
-router.post('/lesson-summary', async (req, res) => {
+router.post('/lesson-concept', async (req, res) => {
   try {
     const userId = await requireCoachUser(req, res);
     if (!userId) return;
-    const { title, topic, description } = req.body;
-    const lessonText = Array.isArray(description) ? description.join('\n') : String(description || '');
-    if (!title || !lessonText) return errorResponse(res, 400, 'Missing required fields: title, description');
-    const summaryMessages = [
+    const { fen, sideToMove, theme, hint, lessonTitle, lessonTopic } = req.body;
+    if (!fen || !lessonTitle) return errorResponse(res, 400, 'Missing required fields: fen, lessonTitle');
+    const conceptMessages = [
       { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: `Condense this chess lesson concept into exactly 1 or 2 short sentences, 22 words maximum total. Keep only the core teaching point a beginner needs. Do not include a move sequence, example position details, or puzzle answer. Return only the summary text.\nLesson: ${title}\nTopic: ${topic || 'Chess'}\nContent:\n${lessonText}` },
+      { role: 'user', content: `A student is about to solve this specific chess puzzle. Describe the concrete idea of THIS position in 1 or 2 short sentences, 22 words maximum total. Name the side to move and the tactical motif this exact position contains (for example an undefended piece, a back-rank weakness, a mating net, or a promotion race). Do NOT reveal or suggest the winning move or any specific squares; the student must still find it. Return only the concept text.\nPuzzle from lesson: ${lessonTitle}\nTopic: ${lessonTopic || 'Chess'}\nPosition (FEN): ${fen}\nSide to move: ${sideToMove || 'unknown'}\nPuzzle theme: ${theme || 'tactics'}\nPuzzle hint (context only, do not copy verbatim): ${hint || 'none'}` },
     ];
     let response;
     try {
-      response = await callCoach(summaryMessages, { userId, maxTokens: 80, temperature: 0.3 });
+      response = await callCoach(conceptMessages, { userId, maxTokens: 80, temperature: 0.3 });
     } catch (coachErr) {
-      response = await callCoachFree(summaryMessages, { maxTokens: 80, temperature: 0.3 });
+      response = await callCoachFree(conceptMessages, { maxTokens: 80, temperature: 0.3 });
     }
     const data = await response.json();
-    return res.json({ summary: trimLessonSummary(stripThinkingBlocks(data.choices?.[0]?.message?.content || '')) });
+    return res.json({ concept: trimLessonSummary(stripThinkingBlocks(data.choices?.[0]?.message?.content || '')) });
   } catch (error) {
     if (error?.status === 402) return res.status(402).json({ error: error.message, code: 'POLLINATIONS_AUTH_REQUIRED' });
-    return handleRouteError(res, error, 'Failed to summarize lesson concept');
+    return handleRouteError(res, error, 'Failed to get puzzle concept');
   }
 });
 

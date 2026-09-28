@@ -1,3 +1,10 @@
+[2026-09-28] - Make the Lesson Concept card specific to the generated puzzle
+
+- The Puzzles page's Lesson Concept card no longer summarizes the static lesson prose; it now describes the actual puzzle on the board. A new `POST /api/coach/lesson-concept` endpoint sends the generated position (FEN), side to move, theme, and the generator's hint to the same AI coach provider (Pollinations, with the connected model and free-model fallback), and asks for the concrete motif of that exact position in 1-2 sentences without revealing the solution. Output is capped server-side with the existing `trimLessonSummary`.
+- Replaced the old `/coach/lesson-summary` endpoint and `summarizeLessonConcept` client call with the puzzle-scoped `getLessonConcept`.
+- When the AI coach is disconnected or errors, the card falls back to a local position-aware concept built from the concrete position facts (side to move, material balance, available captures, check) plus the generator's position-specific hint, so the guidance always matches the puzzle shown instead of restating generic lesson theory.
+- Added `coach.lessonConcept.test.js` (auth, validation, trimming cap, free-model fallback, 402 passthrough) and updated `Puzzles.test.jsx` to assert the concept is requested for the specific generated puzzle. Full Vitest suite passes.
+
 [2026-09-27] - Document the ChessBoard component
 
 - Added JSDoc for the board's position input, interaction callbacks, display options, defaults, and rendered result to address docstring coverage for the piece-rendering optimization.

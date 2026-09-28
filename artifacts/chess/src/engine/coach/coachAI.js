@@ -86,15 +86,21 @@ export async function explainCoachMove(fenBefore, move, fenAfter, onStream = nul
   }
 }
 
-export async function summarizeLessonConcept(title, topic, description) {
+/**
+ * Ask the AI coach to describe the concrete idea behind a SPECIFIC generated
+ * puzzle (position, side to move, theme) rather than restating the lesson's
+ * static prose. Returned text is already capped server-side; the caller still
+ * applies its local trim as a final guarantee.
+ */
+export async function getLessonConcept({ fen, sideToMove, theme, hint, lessonTitle, lessonTopic }) {
   try {
-    const data = await coachRequest('/coach/lesson-summary', {
+    const data = await coachRequest('/coach/lesson-concept', {
       method: 'POST',
-      body: JSON.stringify({ title, topic, description }),
+      body: JSON.stringify({ fen, sideToMove, theme, hint, lessonTitle, lessonTopic }),
     });
-    return data.summary || null;
+    return data.concept || null;
   } catch (error) {
-    if (!isNetworkError(error)) console.error('[CoachAI] Lesson summary error:', error);
+    if (!isNetworkError(error)) console.error('[CoachAI] Lesson concept error:', error);
     throw error;
   }
 }
