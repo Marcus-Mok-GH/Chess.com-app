@@ -1,3 +1,9 @@
+[2026-09-28] - Fix the api-server typecheck failing on the CORS config import
+
+- Fixed the pre-existing `pnpm run typecheck` failure in the api-server: `src/app.ts` reported `TS7016: Could not find a declaration file for module './chess-server/config/cors.js'`. The package compiles with `allowJs` disabled and `noImplicitAny` on, and the plain-JavaScript CORS config had no type declarations next to it, so its one static import in the TypeScript entrypoint could not be typed. Every other JavaScript route import in that file is a dynamic `await import(... as any)`, which is why this single line was the only error.
+- Added `chess-server/config/cors.d.ts`, declaring the module's `corsOptions` export as the `CorsOptions` type from the already-installed `@types/cors`. This types the import properly instead of casting it away, and changes no runtime behavior.
+- Verified: root `pnpm run typecheck` now passes for all three projects (api-server, chess, scripts), the full Vitest suite passes (23 files, 226 tests), and `pnpm run build` completes end to end for the first time — it previously aborted at the typecheck step before ever reaching the api-server bundle and the frontend build.
+
 [2026-09-28] - Make the Lesson Concept card specific to the generated puzzle
 
 - The Puzzles page's Lesson Concept card no longer summarizes the static lesson prose; it now describes the actual puzzle on the board. A new `POST /api/coach/lesson-concept` endpoint sends the generated position (FEN), side to move, theme, and the generator's hint to the same AI coach provider (Pollinations, with the connected model and free-model fallback), and asks for the concrete motif of that exact position in 1-2 sentences without revealing the solution. Output is capped server-side with the existing `trimLessonSummary`.
