@@ -225,8 +225,25 @@ export default function Puzzles() {
 
   // Load the user's saved puzzle stats from the database so Solved, Streak,
   // Best, and the rating survive reloads and devices. Guests (or offline
-  // sessions) simply keep session-only stats, as before.
+  // sessions) simply keep session-only stats, as before. The effect follows
+  // the login state so signing in through the header modal picks up the
+  // account's saved rating before the first save could overwrite it with
+  // session-only defaults.
   useEffect(() => {
+    if (!isLoggedIn) {
+      // Signed out: drop any session-only counters so they can never be
+      // saved over the account's persisted stats after the next sign-in.
+      setSolvedCount(0);
+      setAttemptedCount(0);
+      setStreak(0);
+      setBestStreak(0);
+      setPuzzleRating(PUZZLE_RATING_START);
+      statsTouchedRef.current = false;
+      return;
+    }
+    // A fresh sign-in makes the account row the source of truth, even if
+    // session-only stats were touched while logged out.
+    statsTouchedRef.current = false;
     let cancelled = false;
     api
       .getPuzzleStats()
@@ -251,8 +268,7 @@ export default function Puzzles() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isLoggedIn]);
 
   function persistPuzzleStats(stats) {
     api
@@ -462,7 +478,10 @@ export default function Puzzles() {
     persistPuzzleStats({
       solvedCount: nextSolved,
       attemptedCount: nextAttempted,
-      streak: nextStreak,
+      // Must match the server contract (PUT /api/puzzles/stats/user expects
+      // currentStreak); a stray key makes the save fail validation and the
+      // rating never reaches the database.
+      currentStreak: nextStreak,
       bestStreak: nextBestStreak,
       rating: nextRating,
     });
