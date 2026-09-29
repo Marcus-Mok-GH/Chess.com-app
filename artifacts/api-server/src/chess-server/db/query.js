@@ -24,6 +24,20 @@ async function ensureReadyForQuery() {
   }
 }
 
+// 42P01 = undefined_table, 42703 = undefined_column. Either one means this
+// deployment's schema is behind the code (usually a database that predates a
+// new column), so the correct response is to create the missing schema rather
+// than surfacing a 500 to the user.
+const isSchemaMissing = (error) =>
+  error?.code === '42P01' || error?.code === '42703';
+
+async function repairSchema() {
+  setDatabaseReady(false);
+  // force: a missing table/column means the stored schema version is wrong,
+  // so re-run the full DDL even if the version check would skip it.
+  return ensureDatabaseReady(() => initDatabase({ force: true }));
+}
+
 export async function query(text, params) {
   await ensureReadyForQuery();
 
@@ -37,16 +51,12 @@ export async function query(text, params) {
   try {
     res = await pool.query(text, params);
   } catch (error) {
-    const needsInit = error?.code === '42P01' || error?.code === '42703';
-    if (!needsInit) {
+    if (!isSchemaMissing(error)) {
       throw error;
     }
 
     console.warn(`[DB] Schema issue detected (${error.code}). Re-initializing.`);
-    setDatabaseReady(false);
-    // force: a missing table/column means the stored schema version is wrong,
-    // so re-run the full DDL even if the version check would skip it.
-    const restored = await ensureDatabaseReady(() => initDatabase({ force: true }));
+    const restored = await repairSchema();
     if (!restored) {
       throw error;
     }
@@ -61,17 +71,8 @@ export async function query(text, params) {
 }
 
 
-export async function withTransaction(callback) {
-  if (typeof callback !== 'function') {
-    throw new TypeError('withTransaction requires a callback');
-  }
-
-  await ensureReadyForQuery();
+async function runTransaction(callback) {
   const pool = getPool();
-  if (!pool) {
-    throw new Error('Database pool not initialized. Check DATABASE_URL.');
-  }
-
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -87,6 +88,37 @@ export async function withTransaction(callback) {
     throw error;
   } finally {
     client.release();
+  }
+}
+
+export async function withTransaction(callback) {
+  if (typeof callback !== 'function') {
+    throw new TypeError('withTransaction requires a callback');
+  }
+
+  await ensureReadyForQuery();
+  if (!getPool()) {
+    throw new Error('Database pool not initialized. Check DATABASE_URL.');
+  }
+
+  try {
+    return await runTransaction(callback);
+  } catch (error) {
+    // Transactions are the paths that create and join games, so a schema that
+    // predates a new column would otherwise fail them outright (the plain
+    // query self-heal below does not cover work done inside a transaction).
+    // The failed attempt has already rolled back, so retrying from a clean
+    // transaction is safe — every caller is pure database work.
+    if (!isSchemaMissing(error)) {
+      throw error;
+    }
+
+    console.warn(`[DB] Schema issue detected in transaction (${error.code}). Re-initializing.`);
+    const restored = await repairSchema();
+    if (!restored) {
+      throw error;
+    }
+    return runTransaction(callback);
   }
 }
 

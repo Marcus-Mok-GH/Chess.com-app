@@ -4,7 +4,12 @@ import { LESSON_CATALOG } from '../lessons/lessonCatalog.js';
 // Bump this whenever the schema below changes. Serverless cold starts compare
 // it against the stored value and skip the full DDL transaction entirely when
 // it matches, so routine cold starts never take locks on the users table.
-const SCHEMA_VERSION = '2';
+//
+// A stale version is not fatal: any query that hits a missing table or column
+// forces a full DDL run (see db/query.js), so a deployment that lands before
+// its migration still repairs itself instead of crashing. Bumping this is
+// what makes that repair happen up front rather than on the first failure.
+export const SCHEMA_VERSION = '3';
 const SCHEMA_META_KEY = 'schema_version';
 const SCHEMA_META_TABLE = 'schema_meta';
 // Fixed advisory-lock key so concurrent serverless inits serialize instead of
