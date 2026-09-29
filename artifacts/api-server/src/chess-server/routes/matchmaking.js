@@ -5,6 +5,7 @@ import { processMatchmakingOnce } from '../services/matchmakingService.js';
 import { handleRouteError } from '../middleware/errors.js';
 import { requireSession } from '../auth.js';
 import { normalizeTimeControl } from '../services/chessClock.js';
+import { ratingForControl } from '../services/ratingPools.js';
 
 const router = express.Router();
 
@@ -20,19 +21,58 @@ const MATCHMAKING_CONFIG = {
   LOG_QUEUE_SIZE: true
 };
 
-// Get queue status
+// Queue rows are isolated into one pool per time control. This expression
+// mirrors normalizeTimeControl (unknown/NULL is untimed) so a legacy row can
+// never fall outside every pool.
+const QUEUE_POOL_EXPR = "COALESCE(NULLIF(time_control, ''), 'unlimited')";
+
+// The pool a request is asking about, or null for the whole queue.
+function requestedPool(req) {
+  const raw = req.query?.timeControl;
+  return typeof raw === 'string' && raw ? normalizeTimeControl(raw) : null;
+}
+
+// Live (heartbeating) player counts per time-control pool.
+async function getQueuePoolCounts() {
+  const result = await query(`
+    SELECT
+      COUNT(*) FILTER (WHERE ${QUEUE_POOL_EXPR} = 'unlimited') AS unlimited,
+      COUNT(*) FILTER (WHERE ${QUEUE_POOL_EXPR} = 'rapid') AS rapid,
+      COUNT(*) AS total
+    FROM matchmaking_queue
+    WHERE last_heartbeat > NOW() - INTERVAL '45 seconds'
+  `);
+  const row = result.rows[0] || {};
+  const toInt = (value) => parseInt(value, 10) || 0;
+  return {
+    unlimited: toInt(row.unlimited),
+    rapid: toInt(row.rapid),
+    total: toInt(row.total),
+  };
+}
+
+// Get queue status — overall, or scoped to ?timeControl=<rapid|unlimited>.
 router.get('/status', async (req, res) => {
   try {
-    const result = await query('SELECT COUNT(*) as count FROM matchmaking_queue');
-    res.json({ playersInQueue: parseInt(result.rows[0].count, 10) });
+    const pools = await getQueuePoolCounts();
+    const pool = requestedPool(req);
+    res.json({
+      // The caller's pool when one is named, otherwise the whole live queue.
+      playersInQueue: pool ? pools[pool] : pools.total,
+      timeControl: pool,
+      total: pools.total,
+      pools: { unlimited: pools.unlimited, rapid: pools.rapid },
+    });
   } catch (error) {
     handleRouteError(res, error, 'Failed to get queue status');
   }
 });
 
-// Get queue details (enhanced with active players only)
+// Get queue details (enhanced with active players only), scoped to a pool
+// with ?timeControl=<rapid|unlimited>.
 router.get('/details', async (req, res) => {
   try {
+    const pool = requestedPool(req);
     const result = await query(`
       SELECT
         COUNT(*) as total,
@@ -42,10 +82,12 @@ router.get('/details', async (req, res) => {
         COUNT(*) FILTER (WHERE elo >= 2000) as above_2000
       FROM matchmaking_queue
       WHERE last_heartbeat > NOW() - INTERVAL '45 seconds'
-    `);
+        AND ($1::text IS NULL OR ${QUEUE_POOL_EXPR} = $1)
+    `, [pool]);
 
     res.json({
       total: parseInt(result.rows[0].total, 10),
+      timeControl: pool,
       distribution: {
         below_1000: parseInt(result.rows[0].below_1000, 10),
         range_1000_1500: parseInt(result.rows[0].range_1000_1500, 10),
@@ -64,7 +106,7 @@ router.post('/join', requireSession, async (req, res) => {
   try {
     const { isRanked, timeControl } = req.body || {};
     const playerId = String(req.userId);
-    const playerResult = await query('SELECT id, username, elo FROM users WHERE id = $1', [playerId]);
+    const playerResult = await query('SELECT id, username, elo, rapid_elo FROM users WHERE id = $1', [playerId]);
     if (playerResult.rowCount === 0) {
       return res.status(401).json({ success: false, message: 'User account not found' });
     }
@@ -78,12 +120,13 @@ router.post('/join', requireSession, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Player name must be between 2 and 50 characters' });
     }
 
-    const numericElo = Number(player.elo);
-    const serverElo = Number.isFinite(numericElo) && numericElo >= 0 && numericElo <= 4000 ? numericElo : 1200;
     const isRankedValue = typeof isRanked === 'boolean' ? isRanked : true;
     // Unknown values fall back to an untimed game rather than silently
     // dropping a player into a clock they did not ask for.
     const timeControlValue = normalizeTimeControl(timeControl);
+    // Seed the queue entry from the rating for the pool being played, so a
+    // player's rapid and untimed ratings stay independent.
+    const serverElo = ratingForControl(player, timeControlValue);
 
     // Lock the account while checking active games and entering the queue.
     // This closes the race where two tabs submit /join at the same time.
@@ -155,6 +198,11 @@ router.get('/check-match', requireSession, async (req, res) => {
     );
     
     const stillInQueue = queueCheck.rowCount > 0;
+    // Report the size of the pool the player is actually in, not the aggregate
+    // queue across every time control.
+    const pool = stillInQueue
+      ? normalizeTimeControl(queueCheck.rows[0].time_control)
+      : null;
 
     // Check if player is in an active game
     const activeGame = await query(
@@ -173,7 +221,8 @@ router.get('/check-match', requireSession, async (req, res) => {
       res.json({ 
         matchFound: false,
         stillInQueue,
-        queueSize: await getQueueSize()
+        timeControl: pool,
+        queueSize: await getQueueSize(pool)
       });
       return;
     }
@@ -214,10 +263,20 @@ router.get('/check-match', requireSession, async (req, res) => {
   }
 });
 
-// Helper function to get queue size
-async function getQueueSize() {
+// Helper function to get queue size, optionally scoped to one pool.
+async function getQueueSize(timeControl = null) {
   try {
-    const result = await query('SELECT COUNT(*) as count FROM matchmaking_queue WHERE last_heartbeat > NOW() - INTERVAL \'45 seconds\'');
+    const result = timeControl
+      ? await query(
+          `SELECT COUNT(*) as count FROM matchmaking_queue
+           WHERE last_heartbeat > NOW() - INTERVAL '45 seconds'
+             AND ${QUEUE_POOL_EXPR} = $1`,
+          [timeControl]
+        )
+      : await query(
+          `SELECT COUNT(*) as count FROM matchmaking_queue
+           WHERE last_heartbeat > NOW() - INTERVAL '45 seconds'`
+        );
     return parseInt(result.rows[0].count, 10);
   } catch {
     return 0;

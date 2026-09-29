@@ -83,4 +83,42 @@ describe('MatchmakingService time-control pairing', () => {
 
     expect(createMatch).not.toHaveBeenCalled();
   });
+
+  it('processes each time control as its own pool', async () => {
+    const queue = [
+      queuePlayer({ id: 1, player_id: 'user_1', time_control: 'rapid' }),
+      queuePlayer({ id: 2, player_id: 'user_2', time_control: 'rapid', elo: 1210 }),
+      queuePlayer({ id: 3, player_id: 'user_3', time_control: 'unlimited' }),
+      queuePlayer({ id: 4, player_id: 'user_4', time_control: 'unlimited', elo: 1190 }),
+    ];
+    // The pool-scoped read returns only the rows for the requested control.
+    query.mockImplementation(async (sql, params) => {
+      if (typeof sql === 'string' && sql.includes('SELECT * FROM matchmaking_queue')) {
+        const pool = params?.[0];
+        return { rows: queue.filter((p) => p.time_control === pool), rowCount: 0 };
+      }
+      return { rows: [], rowCount: 0 };
+    });
+
+    const service = new MatchmakingService({ enableLoop: false });
+    const createMatch = vi.spyOn(service, 'createMatch').mockResolvedValue(true);
+
+    await service.processMatchmaking();
+
+    // One pair in each pool, and never a pair that spans controls.
+    expect(createMatch).toHaveBeenCalledTimes(2);
+    for (const [a, b] of createMatch.mock.calls) {
+      expect(a.time_control).toBe(b.time_control);
+    }
+    expect(createMatch.mock.calls.map(([a]) => a.time_control).sort()).toEqual([
+      'rapid',
+      'unlimited',
+    ]);
+
+    // A pool-scoped read was issued once per known control.
+    const reads = query.mock.calls.filter(
+      ([sql]) => typeof sql === 'string' && sql.includes('SELECT * FROM matchmaking_queue')
+    );
+    expect(reads.map(([, params]) => params[0]).sort()).toEqual(['rapid', 'unlimited']);
+  });
 });

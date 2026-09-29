@@ -63,8 +63,12 @@ class ApiService {
         });
     }
 
-    async getLeaderboard(limit = 10) {
-        return this.request(`/users/leaderboard/top?limit=${limit}`);
+    // Rows carry both per-control ratings; `timeControl` picks the ranked pool.
+    async getLeaderboard(limit = 10, timeControl = null) {
+        const pool = timeControl
+            ? `&timeControl=${encodeURIComponent(timeControl)}`
+            : "";
+        return this.request(`/users/leaderboard/top?limit=${limit}${pool}`);
     }
 
     async getEloHistory(username, limit = 100) {
@@ -73,8 +77,13 @@ class ApiService {
         );
     }
 
-    async getQueueStatus() {
-        return this.request("/matchmaking/status");
+    // Queue size for the caller's time-control pool (or the whole queue when
+    // no control is given).
+    async getQueueStatus(timeControl = null) {
+        const query = timeControl
+            ? `?timeControl=${encodeURIComponent(timeControl)}`
+            : "";
+        return this.request(`/matchmaking/status${query}`);
     }
 
     async getPublicStats() {

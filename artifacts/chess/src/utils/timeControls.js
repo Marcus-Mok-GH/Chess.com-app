@@ -23,6 +23,17 @@ export const TIME_CONTROLS = [
 
 export const DEFAULT_TIME_CONTROL = 'unlimited';
 
+/**
+ * The rating a user plays a given control with. Each control has its own pool,
+ * so Rapid reads `rapidElo` while everything else reads the untimed `elo`.
+ * Falls back to the default rating for signed-out users.
+ */
+export function controlRating(user, timeControl) {
+  if (!user) return 1200;
+  if (timeControl === 'rapid') return user.rapidElo ?? user.elo ?? 1200;
+  return user.elo ?? 1200;
+}
+
 /** Initial remaining time for a control, or null when untimed. */
 export function initialClockMs(timeControl) {
   return timeControl === 'rapid' ? RAPID_MS : null;

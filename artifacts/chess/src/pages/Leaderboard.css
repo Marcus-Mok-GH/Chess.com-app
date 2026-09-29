@@ -1,0 +1,180 @@
+/* ── Leaderboard page ─────────────────────── */
+.leaderboard-page {
+  min-height: 100svh;
+  padding: 2.5rem 2rem 6rem;
+  background: var(--bg-page);
+  background-image:
+    radial-gradient(ellipse 60% 40% at 50% 0%, rgba(129, 182, 76, 0.06), transparent 60%);
+  color: var(--text-primary);
+}
+.leaderboard-container {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.leaderboard-header { margin-bottom: 1.5rem; }
+.leaderboard-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: rgba(129, 182, 76, 0.1);
+  border: 1px solid rgba(129, 182, 76, 0.2);
+  border-radius: var(--radius-full);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--primary-hover);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.leaderboard-title {
+  margin: 0.75rem 0 0.25rem;
+  font-size: clamp(1.6rem, 3vw, 2.1rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.leaderboard-subtitle {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+/* ── Pool toggle ──────────────────────────── */
+.leaderboard-pool-toggle {
+  display: inline-flex;
+  gap: 0.4rem;
+  padding: 0.3rem;
+  margin-bottom: 1.25rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+}
+.leaderboard-pool-btn {
+  padding: 0.45rem 1.1rem;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.leaderboard-pool-btn:hover { color: var(--text-primary); }
+.leaderboard-pool-btn.selected {
+  background: var(--primary);
+  color: #10150c;
+}
+
+/* ── Board ────────────────────────────────── */
+.leaderboard-card { padding: 1.25rem; }
+.leaderboard-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+.leaderboard-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.leaderboard-refresh:hover { color: var(--primary); border-color: var(--primary); }
+
+.leaderboard-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.25rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+.leaderboard-error { color: #ff7676; font-size: 0.85rem; margin: 0.5rem 0; }
+
+.leaderboard-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 2rem 1fr auto auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-page);
+  border: 1px solid transparent;
+}
+.leaderboard-row.is-self {
+  border-color: rgba(129, 182, 76, 0.4);
+  background: rgba(129, 182, 76, 0.08);
+}
+.leaderboard-rank {
+  font-weight: 800;
+  color: var(--text-secondary);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.leaderboard-player {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  color: #fff;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.leaderboard-you {
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+  background: rgba(129, 182, 76, 0.15);
+  color: var(--primary-hover);
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.leaderboard-rating {
+  font-weight: 800;
+  color: var(--primary-hover);
+  font-variant-numeric: tabular-nums;
+}
+.leaderboard-other {
+  min-width: 3rem;
+  text-align: right;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.leaderboard-note {
+  margin: 1rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.spin { animation: leaderboard-spin 0.8s linear infinite; }
+@keyframes leaderboard-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 600px) {
+  .leaderboard-page { padding: 1.25rem 1rem 6rem; }
+  .leaderboard-row {
+    grid-template-columns: 1.75rem 1fr auto;
+    row-gap: 0.2rem;
+  }
+  .leaderboard-other { grid-column: 3; }
+}

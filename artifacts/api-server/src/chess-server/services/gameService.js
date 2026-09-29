@@ -1,5 +1,6 @@
 import { query } from '../db.js';
 import { userIdFromPlayerId, hasValidEloPair } from './gameUtils.js';
+import { ratingColumnFor } from './ratingPools.js';
 import { getOnlineGameKv } from '../kv/onlineGameKv.js';
 import { scheduleGameAnalysis } from './antiCheatService.js';
 
@@ -202,6 +203,10 @@ export class GameService {
       return;
     }
 
+    // Each time control has its own rating pool, so the result only moves the
+    // column for the control that was actually played.
+    const ratingColumn = ratingColumnFor(game.time_control);
+
     // ELO calculation using standard formula
     const calculateNewElo = (playerElo, opponentElo, score) => {
       const expectedScore = 1 / (1 + Math.pow(10, (opponentElo - playerElo) / 400));
@@ -229,7 +234,7 @@ export class GameService {
       if (whiteUserId) {
         await query(
           `UPDATE users
-           SET elo = $1, games_played = games_played + 1,
+           SET ${ratingColumn} = $1, games_played = games_played + 1,
                wins = wins + $2, losses = losses + $3, draws = draws + $4,
                updated_at = CURRENT_TIMESTAMP
            WHERE id = $5`,
@@ -246,7 +251,7 @@ export class GameService {
       if (blackUserId) {
         await query(
           `UPDATE users
-           SET elo = $1, games_played = games_played + 1,
+           SET ${ratingColumn} = $1, games_played = games_played + 1,
                wins = wins + $2, losses = losses + $3, draws = draws + $4,
                updated_at = CURRENT_TIMESTAMP
            WHERE id = $5`,
@@ -260,7 +265,7 @@ export class GameService {
         );
       }
 
-      console.log(`[Game] ELO updated: white ${game.white_elo} → ${newWhiteElo}, black ${game.black_elo} → ${newBlackElo} (result: ${result})`);
+      console.log(`[Game] ELO updated (${ratingColumn}): white ${game.white_elo} → ${newWhiteElo}, black ${game.black_elo} → ${newBlackElo} (result: ${result})`);
     } catch (error) {
       console.error('[Game] Error updating player ELOs:', error);
     }

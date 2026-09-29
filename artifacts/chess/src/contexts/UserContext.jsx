@@ -207,6 +207,8 @@ export function UserProvider({ children }) {
                     username: serverUser.username || serverUser.name,
                     email: serverUser.email,
                     elo: serverUser.elo || 1200,
+                    rapidElo:
+                        serverUser.rapidElo || serverUser.elo || 1200,
                     gamesPlayed: serverUser.gamesPlayed || 0,
                     wins: serverUser.wins || 0,
                     losses: serverUser.losses || 0,
@@ -314,6 +316,8 @@ export function UserProvider({ children }) {
                     username: serverUser.username || serverUser.name,
                     email: serverUser.email,
                     elo: serverUser.elo || 1200,
+                    rapidElo:
+                        serverUser.rapidElo || serverUser.elo || 1200,
                     gamesPlayed: serverUser.gamesPlayed || 0,
                     wins: serverUser.wins || 0,
                     losses: serverUser.losses || 0,

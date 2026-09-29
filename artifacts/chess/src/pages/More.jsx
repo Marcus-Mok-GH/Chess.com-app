@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { BookOpen, Building2, History, Puzzle, Settings2, ShieldCheck, UsersRound, UserRound } from 'lucide-react'
+import { BookOpen, Building2, History, Puzzle, Settings2, ShieldCheck, Trophy, UsersRound, UserRound } from 'lucide-react'
 import { useUser } from '../contexts/UserContext';
 import './More.css'
 
@@ -25,6 +25,7 @@ const staticOptionGroups = [
     options: [
       { to: '/friends', icon: UsersRound, title: 'Friends', description: 'Connect with other players' },
       { to: '/clubs', icon: Building2, title: 'Clubs', description: 'Find a community to join' },
+      { to: '/leaderboard', icon: Trophy, title: 'Leaderboard', description: 'See the top Rapid and Unlimited ratings' },
     ],
   },
   {

@@ -7,6 +7,7 @@ import {
   formatClock,
   timeControlLabel,
   isLowTime,
+  controlRating,
 } from './timeControls';
 
 describe('timeControls', () => {
@@ -61,5 +62,18 @@ describe('isLowTime', () => {
     expect(isLowTime(30_001)).toBe(false);
     expect(isLowTime(null)).toBe(false);
     expect(isLowTime(undefined)).toBe(false);
+  });
+});
+
+describe('controlRating', () => {
+  it('reads the rating for the selected control pool', () => {
+    const user = { elo: 1300, rapidElo: 1500 };
+    expect(controlRating(user, 'rapid')).toBe(1500);
+    expect(controlRating(user, 'unlimited')).toBe(1300);
+  });
+
+  it('falls back to the untimed rating, then the default', () => {
+    expect(controlRating({ elo: 1300 }, 'rapid')).toBe(1300);
+    expect(controlRating(undefined, 'rapid')).toBe(1200);
   });
 });

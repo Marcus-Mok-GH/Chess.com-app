@@ -2,22 +2,32 @@ import express from 'express';
 import { query } from '../db.js';
 import { errorResponse, handleRouteError } from '../middleware/errors.js';
 import { authenticatedUserId } from '../coachAuth.js';
+import { normalizeTimeControl } from '../services/chessClock.js';
+import { ratingColumnFor } from '../services/ratingPools.js';
 
 const router = express.Router();
 
 // Legacy username login was removed; authentication uses the email/OTP flow.
 
-// Get leaderboard  (literal path — must come before :username routes)
+// Get leaderboard  (literal path — must come before :username routes).
+// Each row carries both per-control ratings; `?timeControl=` picks which pool
+// the ranking is sorted by (defaults to untimed).
 router.get('/leaderboard/top', async (req, res) => {
   try {
     const limit = Math.max(1, Math.min(parseInt(req.query.limit) || 10, 100));
+    const timeControl = normalizeTimeControl(req.query.timeControl);
+    // ratingColumnFor is a fixed whitelist, so interpolating it is safe.
+    const ratingColumn = ratingColumnFor(timeControl);
     const result = await query(
-      'SELECT username, elo, games_played, wins, losses, draws FROM users ORDER BY elo DESC LIMIT $1',
+      `SELECT username, elo, rapid_elo, games_played, wins, losses, draws
+       FROM users ORDER BY ${ratingColumn} DESC LIMIT $1`,
       [limit]
     );
     res.json({
+      timeControl,
       leaderboard: result.rows.map((row, index) => ({
-        rank: index + 1, username: row.username, elo: row.elo,
+        rank: index + 1, username: row.username,
+        elo: row.elo, rapidElo: row.rapid_elo,
         gamesPlayed: row.games_played, wins: row.wins, losses: row.losses, draws: row.draws,
       })),
     });
@@ -74,12 +84,13 @@ router.get('/:username', async (req, res) => {
   try {
     const { username } = req.params;
     const result = await query(
-      'SELECT id, username, elo, games_played, wins, losses, draws, created_at FROM users WHERE LOWER(username) = LOWER($1)',
+      'SELECT id, username, elo, rapid_elo, games_played, wins, losses, draws, created_at FROM users WHERE LOWER(username) = LOWER($1)',
       [username]
     );
     if (result.rows.length === 0) return errorResponse(res, 404, 'User not found');
     const user = result.rows[0];
     res.json({ id: user.id, username: user.username, elo: user.elo,
+      rapidElo: user.rapid_elo,
       gamesPlayed: user.games_played, wins: user.wins, losses: user.losses,
       draws: user.draws, createdAt: user.created_at });
   } catch (error) {
