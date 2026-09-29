@@ -14,7 +14,7 @@ export default function GameUI({
   boardOrientation, customSquareStyles, settings, animatingPieces,
   removeAnimation, showVictory, gameId, opponentStatus, eloChange,
   moveError, getStatusMessage, drawOffered, handleRespondDraw,
-  REACTIONS, handleSendReaction, moveHistory, gameStatus,
+  handleSendReaction, reactionBursts = [], moveHistory, gameStatus,
   capturedPieces, chatMessages, handleSendMessage, playerId,
   handleOfferDraw, handleResign, onLeave, canLeave, chatEnabled
 }) {
@@ -78,6 +78,16 @@ export default function GameUI({
               onComplete={() => removeAnimation(anim.id)}
             />
           ))}
+          {reactionBursts.map((burst) => (
+            <div
+              key={burst.id}
+              className={`reaction-burst${burst.mine ? ' mine' : ''}`}
+              style={{ left: `${burst.offsetPct}%` }}
+              aria-hidden="true"
+            >
+              {burst.emoji}
+            </div>
+          ))}
           {showVictory && <div className="victory-burst">Checkmate!</div>}
         </div>
         <PlayerBar
@@ -125,12 +135,14 @@ export default function GameUI({
         <MoveHistory history={moveHistory} />
         <div className="chat-container">
           <div className="chat-messages">
-            {chatMessages.map((msg, i) => (
-              <div key={i} className={"chat-message " + (msg.playerId === playerId ? "mine" : "theirs")}>
-                <span className="chat-sender">{msg.playerId === playerId ? 'You' : 'Opponent'}:</span>
-                <span className="chat-text">{displayChatBody(msg.message)}</span>
-              </div>
-            ))}
+            {chatMessages
+              .filter((msg) => !reactionEmoji(msg.message))
+              .map((msg, i) => (
+                <div key={msg.id ?? i} className={"chat-message " + (msg.playerId === playerId ? "mine" : "theirs")}>
+                  <span className="chat-sender">{msg.playerId === playerId ? 'You' : 'Opponent'}:</span>
+                  <span className="chat-text">{displayChatBody(msg.message)}</span>
+                </div>
+              ))}
             <div ref={chatEndRef} />
           </div>
           {chatEnabled && (

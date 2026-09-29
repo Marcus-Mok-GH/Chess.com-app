@@ -17,6 +17,13 @@ import haptics from "../utils/haptics";
 import { findKingSquare } from "./ChessGame/utils";
 import { useGameCore } from "./OnlineChessGame/hooks/useGameCore";
 import GameUI from "./OnlineChessGame/subcomponents/GameUI";
+import {
+    REACTION_BURST_MS,
+    findNewReactionMessages,
+    makeBurst,
+    pruneBursts,
+} from "./OnlineChessGame/reactionBursts";
+import { reactionEmoji } from "./OnlineChessGame/onlineReactions";
 
 export default function OnlineChessGame({
     gameId,
@@ -47,6 +54,8 @@ export default function OnlineChessGame({
     } = useGameCore(gameId, playerId, playerColor, settings);
 
     const [chatMessages, setChatMessages] = useState([]);
+    const [reactionBursts, setReactionBursts] = useState([]);
+    const chatMessagesRef = useRef([]);
     const [selectedSquare, setSelectedSquare] = useState(null);
     const [possibleMoves, setPossibleMoves] = useState([]);
     const [animatingPieces, setAnimatingPieces] = useState([]);
@@ -80,6 +89,18 @@ export default function OnlineChessGame({
     const chatTickRef = useRef(0);
     const presenceTickRef = useRef(0);
     const boardOrientation = playerColor || "white";
+
+    // Expire floating reaction bursts without waiting for the next chat poll.
+    const pruneIntervalRef = useRef(null);
+    useEffect(() => {
+        pruneIntervalRef.current = setInterval(() => {
+            setReactionBursts((prev) => {
+                const next = pruneBursts(prev);
+                return next.length === prev.length ? prev : next;
+            });
+        }, 400);
+        return () => clearInterval(pruneIntervalRef.current);
+    }, []);
 
     useEffect(() => {
         if (!gameId || !playerId) return;
@@ -265,12 +286,39 @@ export default function OnlineChessGame({
                                     : data.white_player_id
                                 : null;
                         const msgs = (chatData?.messages || []).map((m) => ({
+                            id: m.id,
                             playerId:
                                 String(m.userId) === String(myUid)
                                     ? playerId
                                     : oppId,
                             message: m.body,
                         }));
+                        // Float a burst over the board for every reaction
+                        // that is new since the last poll (opponent's and own
+                        // reactions echoed back by the poll).
+                        const fresh = findNewReactionMessages(
+                            chatMessagesRef.current,
+                            msgs,
+                        );
+                        if (fresh.length > 0) {
+                            setReactionBursts((prev) =>
+                                [
+                                    ...prev,
+                                    ...fresh.map((m) =>
+                                        makeBurst(
+                                            m,
+                                            reactionEmoji(m.message),
+                                            {
+                                                mine:
+                                                    String(m.playerId) ===
+                                                    String(playerId),
+                                            },
+                                        ),
+                                    ),
+                                ].slice(-12),
+                            );
+                        }
+                        chatMessagesRef.current = msgs;
                         setChatMessages(msgs);
                     } catch {
                         /* transient */
@@ -543,6 +591,7 @@ export default function OnlineChessGame({
                     )
                 }
                 showVictory={showVictory}
+                reactionBursts={reactionBursts}
                 gameId={gameId}
                 opponentStatus={opponentStatus}
                 eloChange={eloChange}
@@ -561,10 +610,21 @@ export default function OnlineChessGame({
                     api.sendMessage(room, r)
                         .then((res) => {
                             if (res?.message) {
-                                setChatMessages((prev) => [
-                                    ...prev,
-                                    { playerId, message: r },
-                                ]);
+                                const entry = { playerId, message: r };
+                                setChatMessages((prev) => [...prev, entry]);
+                                chatMessagesRef.current = [
+                                    ...chatMessagesRef.current,
+                                    entry,
+                                ];
+                                // Own reaction bursts immediately — no poll wait.
+                                setReactionBursts((prev) =>
+                                    [
+                                        ...prev,
+                                        makeBurst(entry, reactionEmoji(r), {
+                                            mine: true,
+                                        }),
+                                    ].slice(-12),
+                                );
                             }
                         })
                         .catch(() => {});

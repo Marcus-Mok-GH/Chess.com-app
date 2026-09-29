@@ -1,3 +1,8 @@
+[2026-09-29] - Reactions float over the board instead of filling the chat
+
+- Quick reactions now appear as emoji bursts that pop up over the board and float away (1.8s ease-out animation, horizontally randomized around the center so simultaneous reactions don't stack, own reactions get a subtle green glow), instead of showing up as chat lines like typed messages. Reaction messages are removed from the chat transcript entirely; real chat text is untouched. Own reactions burst immediately on tap; the opponent's arrive through the existing chat poll, with new-message detection by server message id (falling back to sender+body+timestamp) so repeated polls never re-burst old reactions. Bursts cap at 12 concurrent and expire on a 400ms prune timer independent of the poll. Respects `prefers-reduced-motion` with a static top-of-board display.
+- Added `OnlineChessGame/reactionBursts.js` (pure detection/construction/pruning helpers, 9 unit tests registered in the root test script). Full Vitest suite passes (27 files, 254 tests); chess frontend typecheck is clean.
+
 [2026-09-29] - Quick reactions are emoji, not bare words
 
 - The online game's quick-reaction row rendered raw uppercase words (GOOD / CLAP / THINK / WOW / PARTY / SWEAT) as buttons, and tapping one sent the literal word through chat — so opponents saw apparent gibberish like "SWEAT" appear in the game UI and chat. Buttons are now chess.com-style emoji (👍 👏 🤔 😮 🎉 😅) with accessible labels, and incoming chat messages that are exactly a reaction word render as their emoji; normal chat text is untouched. The wire format (plain word over the chat endpoint) is unchanged, so this is a display-layer fix with no server impact.
