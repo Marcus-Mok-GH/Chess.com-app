@@ -619,25 +619,24 @@ export default function OnlinePlay() {
                                 <span aria-hidden="true">♚</span> Black
                             </button>
                         </div>
-                        <div
-                            className="online-time-choice"
-                            role="group"
-                            aria-label="Choose the time control"
-                        >
-                            {TIME_CONTROLS.map((option) => (
-                                <button
-                                    key={option.id}
-                                    type="button"
-                                    className={`online-time-btn${selectedTimeControl === option.id ? " selected" : ""}`}
-                                    onClick={() => setSelectedTimeControl(option.id)}
-                                    aria-pressed={selectedTimeControl === option.id}
-                                    title={option.description}
-                                >
-                                    <span className="online-time-name">{option.label}</span>
-                                    <span className="online-time-detail">{option.description}</span>
-                                </button>
-                            ))}
-                        </div>
+                        <label className="time-control-select">
+                            <span className="time-control-select-label">
+                                Time control
+                            </span>
+                            <select
+                                aria-label="Time control"
+                                value={selectedTimeControl}
+                                onChange={(event) =>
+                                    setSelectedTimeControl(event.target.value)
+                                }
+                            >
+                                {TIME_CONTROLS.map((option) => (
+                                    <option key={option.id} value={option.id}>
+                                        {option.label} — {option.description}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
                         <button
                             className="btn btn-primary"
                             onClick={handleCreateGame}

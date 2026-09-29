@@ -338,58 +338,45 @@
   margin: 1rem 0;
 }
 
-/* Auto-fit so the two or three time-control options stay on one row when
-   there is room, and wrap onto extra rows on narrow screens. */
-.time-control-choice,
-.online-time-choice {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 0.5rem;
+/* Time-control dropdown — a labeled select so every control (Unlimited,
+   Rapid 10+0, Rapid 10+3) lives in one compact field. Each option reads
+   "<label> — <description>" so the chosen control stays self-explanatory. */
+.time-control-select {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
   margin-bottom: 1rem;
 }
 
-.time-control-option,
-.online-time-btn {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
+.time-control-select-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+}
+
+.time-control-select select {
+  width: 100%;
   padding: 0.7rem 0.85rem;
-  text-align: left;
   background: var(--bg-surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  color: var(--text-dim);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 700;
   cursor: pointer;
   transition: var(--transition-smooth);
-  min-height: 56px;
 }
 
-.time-control-option:hover,
-.online-time-btn:hover {
+.time-control-select select:hover {
   border-color: var(--border-hover);
   background: var(--bg-surface-3);
 }
 
-.time-control-option.selected,
-.online-time-btn.selected {
-  border-color: var(--primary);
-  background: rgba(129, 182, 76, 0.1);
-  color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(129, 182, 76, 0.1);
-}
-
-.time-control-name,
-.online-time-name {
-  font-size: 0.9rem;
-  font-weight: 800;
-}
-
-.time-control-detail,
-.online-time-detail {
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--text-dim);
-  line-height: 1.3;
+.time-control-select select:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .online-color-choice {

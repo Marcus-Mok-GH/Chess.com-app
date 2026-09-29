@@ -1,3 +1,8 @@
+[2026-09-29] - Time-control picker is now a dropdown
+
+- The time-control choice on both the ranked mode-select screen and the friendly-game lobby is now a single labeled dropdown instead of a row of buttons. With three controls (Unlimited, Rapid 10+0, Rapid 10+3) a select reads cleaner and keeps the panel compact on narrow screens; each option shows the control's name and its short description so no information is lost.
+- Frontend-only change: one shared `time-control-select` style replaces the old per-screen button styles, and the lobby tests drive the dropdown.
+
 [2026-09-29] - Rapid 10+3 time control (shares the Rapid rating)
 
 - Added **Rapid 10+3** — ten minutes with a three-second Fischer increment per move — as a third time control next to Rapid (10+0) and Unlimited, available for both ranked matchmaking and friendly games. Both Rapid variants feed the same `rapid_elo` rating pool, so results from either move the Rapid rating only.

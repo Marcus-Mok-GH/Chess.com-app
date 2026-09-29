@@ -25,21 +25,20 @@ export default function LobbyUI({
 
         <h2 className="mode-title">Choose Game Mode</h2>
 
-        <div className="time-control-choice" role="group" aria-label="Time control">
-          {TIME_CONTROLS.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              className={`time-control-option ${timeControl === option.id ? 'selected' : ''}`}
-              onClick={() => onSelectTimeControl?.(option.id)}
-              aria-pressed={timeControl === option.id}
-              title={option.description}
-            >
-              <span className="time-control-name">{option.label}</span>
-              <span className="time-control-detail">{option.description}</span>
-            </button>
-          ))}
-        </div>
+        <label className="time-control-select">
+          <span className="time-control-select-label">Time control</span>
+          <select
+            aria-label="Time control"
+            value={timeControl}
+            onChange={(event) => onSelectTimeControl?.(event.target.value)}
+          >
+            {TIME_CONTROLS.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label} — {option.description}
+              </option>
+            ))}
+          </select>
+        </label>
 
         {error && unableToConnect && (
           <div className="error-message error-message-important">
