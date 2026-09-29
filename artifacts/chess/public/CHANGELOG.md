@@ -1,3 +1,10 @@
+[2026-09-29] - Verification code screen gets its own styling
+
+- The "Check your email" screen reused Login.css but four classes it used — `login-success`, `login-secondary-actions`, `login-link-btn`, and `login-divider-dot` — had no CSS anywhere, so the resend/cancel actions rendered as raw browser-default buttons and the "New code sent!" message rendered as unstyled text. All four are now styled: a green success banner mirroring the error banner, centered link-style buttons with hover/focus-visible/disabled states, and a dimmed separator dot.
+- The code input is now a proper OTP field: large centered digits with wide letter-spacing and tabular figures, a green caret, and a softer placeholder; the mobile rule that forced `font-size: 1rem` on all text inputs now excludes it, and the field shrinks slightly on small screens.
+- The page header now matches the login screen — the SVG knight logo instead of plain "PlayChess" text, an eyebrow label, and a divider — and the subtitle falls back to "your email" when no pending email is known. Error and success messages now carry `role="alert"`/`role="status"` for screen readers.
+- Full Vitest suite passes (34 files, 308 tests); chess frontend typecheck is clean.
+
 [2026-09-29] - Self-healing schema for new columns, and a version bump that ships them
 
 - **The Rapid schema would not have reached existing databases.** `initDatabase` skips its whole DDL transaction when the stored `schema_meta` version matches the code's, and the stored version was already `'2'` in production — so the new clock columns would never have been created there, and the first create/join/move would have hit `column "time_control" does not exist`. The schema version is now `'3'` (exported so tests can't pin a stale literal), which makes the next cold start or server boot run the additive `ADD COLUMN IF NOT EXISTS` pass automatically.
