@@ -18,8 +18,6 @@ import { findKingSquare } from "./ChessGame/utils";
 import { useGameCore } from "./OnlineChessGame/hooks/useGameCore";
 import GameUI from "./OnlineChessGame/subcomponents/GameUI";
 
-const REACTIONS = ["GOOD", "CLAP", "THINK", "WOW", "PARTY", "SWEAT"];
-
 export default function OnlineChessGame({
     gameId,
     playerId,
@@ -557,7 +555,6 @@ export default function OnlineChessGame({
                         setMoveError(e.message),
                     );
                 }}
-                REACTIONS={REACTIONS}
                 handleSendReaction={(r) => {
                     if (!user) return;
                     const room = gameId.toLowerCase();

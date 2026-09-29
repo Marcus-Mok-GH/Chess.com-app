@@ -6,6 +6,7 @@ import AnimatedPiece from '../../AnimatedPiece';
 import ChessPieceIcon from '../../ChessPieceIcon';
 import MoveHistory from '../../MoveHistory';
 import { isOnlineGameActive } from '../onlineGameStatus';
+import { REACTIONS, reactionEmoji, displayChatBody } from '../onlineReactions';
 import api from '../../../services/api';
 
 export default function GameUI({
@@ -104,8 +105,20 @@ export default function GameUI({
         )}
 
         {chatEnabled && (
-          <div className="reactions">
-            {REACTIONS.map(r => <button key={r} onClick={() => handleSendReaction(r)}>{r}</button>)}
+          <div className="reactions" role="group" aria-label="Quick reactions">
+            {REACTIONS.map((r) => (
+              <button
+                key={r.word}
+                type="button"
+                onClick={() => handleSendReaction(r.word)}
+                title={r.label}
+                aria-label={r.label}
+              >
+                <span aria-hidden="true" className="reaction-emoji">
+                  {r.emoji}
+                </span>
+              </button>
+            ))}
           </div>
         )}
 
@@ -115,7 +128,7 @@ export default function GameUI({
             {chatMessages.map((msg, i) => (
               <div key={i} className={"chat-message " + (msg.playerId === playerId ? "mine" : "theirs")}>
                 <span className="chat-sender">{msg.playerId === playerId ? 'You' : 'Opponent'}:</span>
-                <span className="chat-text">{msg.message}</span>
+                <span className="chat-text">{displayChatBody(msg.message)}</span>
               </div>
             ))}
             <div ref={chatEndRef} />

@@ -1,3 +1,8 @@
+[2026-09-29] - Quick reactions are emoji, not bare words
+
+- The online game's quick-reaction row rendered raw uppercase words (GOOD / CLAP / THINK / WOW / PARTY / SWEAT) as buttons, and tapping one sent the literal word through chat — so opponents saw apparent gibberish like "SWEAT" appear in the game UI and chat. Buttons are now chess.com-style emoji (👍 👏 🤔 😮 🎉 😅) with accessible labels, and incoming chat messages that are exactly a reaction word render as their emoji; normal chat text is untouched. The wire format (plain word over the chat endpoint) is unchanged, so this is a display-layer fix with no server impact.
+- Added `OnlineChessGame/onlineReactions.js` (word→emoji map + `displayChatBody` converter, case-insensitive, prose-safe) with unit tests registered in the root test script. Full Vitest suite passes (27 files, 254 tests); chess frontend typecheck is clean.
+
 [2026-09-29] - Hint highlights the piece to move on the puzzle board
 
 - The puzzle Hint button now also highlights the solution piece on the board: the `from` square of the puzzle's solution move gets a gold outline alongside the existing text hint card, so solvers get a visual nudge without being shown the destination. The highlight is computed by probing the solution on the live position (never trusting a raw solution string), clears on solve/reset/new puzzle along with the text hint, and yields to the solved-state last-move outline and the solver's selected-square outline.
