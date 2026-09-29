@@ -1,3 +1,8 @@
+[2026-09-29] - Hint highlights the piece to move on the puzzle board
+
+- The puzzle Hint button now also highlights the solution piece on the board: the `from` square of the puzzle's solution move gets a gold outline alongside the existing text hint card, so solvers get a visual nudge without being shown the destination. The highlight is computed by probing the solution on the live position (never trusting a raw solution string), clears on solve/reset/new puzzle along with the text hint, and yields to the solved-state last-move outline and the solver's selected-square outline.
+- The ChessBoard test mock now exposes `customSquareStyles`, and a new Puzzles page test asserts the square (c6 for the mock's Na5) is highlighted only after Hint is clicked. Full Vitest suite passes (26 files, 249 tests); chess frontend typecheck is clean.
+
 [2026-09-29] - Random color option for friendly online games
 
 - The friendly-game lobby now has a White / Random / Black color picker for the game creator, who was previously hardcoded to white with no choice. Random resolves to a concrete color (50/50) at creation time on the client, so the existing server seat-assignment contract (create accepts only `white`/`black`) is unchanged — no API or schema change.

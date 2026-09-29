@@ -638,8 +638,35 @@ export default function Puzzles() {
     };
   }
 
-  const boardStyles =
-    solved ? lastMoveSquares(game) : selectedSquareStyles();
+  /**
+   * Highlights the square of the piece the solver is supposed to move — the
+   * `from` square of the puzzle's solution — so the Hint button gives a
+   * visual nudge on the board alongside the text hint card.
+   */
+  function hintSquare() {
+    if (!showHint || !puzzle || !position) return null;
+    try {
+      const probe = loadFen(position);
+      const move = probe.move(puzzle.solution);
+      return move?.from || null;
+    } catch {
+      return null;
+    }
+  }
+
+  function hintSquareStyles() {
+    const from = hintSquare();
+    if (!from) return {};
+    return {
+      [from]: {
+        boxShadow: "inset 0 0 0 4px rgba(255, 215, 0, 0.7)",
+      },
+    };
+  }
+
+  const boardStyles = solved
+    ? lastMoveSquares(game)
+    : { ...hintSquareStyles(), ...selectedSquareStyles() };
 
   return (
     <div className="puzzles-page">

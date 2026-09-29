@@ -6,8 +6,12 @@ import Puzzles from './Puzzles';
 import { LESSON_CATALOG } from '../engine/lessons/lessonCatalog';
 
 vi.mock('../components/ChessBoard', () => ({
-  default: ({ onPieceDrop, onSquareClick, position }) => (
-    <div data-testid="chessboard" data-position={position}>
+  default: ({ onPieceDrop, onSquareClick, position, customSquareStyles }) => (
+    <div
+      data-testid="chessboard"
+      data-position={position}
+      data-square-styles={JSON.stringify(customSquareStyles || {})}
+    >
       <button data-testid="sq-c3" onClick={() => onSquareClick && onSquareClick('c3')}>
         c3
       </button>
@@ -246,6 +250,28 @@ beforeEach(() => {
       expect(screen.getByText('3')).toBeTruthy();
       expect(screen.getByText('9')).toBeTruthy();
     });
+  });
+
+  it('highlights the solution piece square on the board when Hint is clicked', async () => {
+    renderPuzzles();
+
+    await waitForPuzzleOnBoard();
+
+    const board = screen.getByTestId('chessboard');
+    const stylesBefore = JSON.parse(board.getAttribute('data-square-styles'));
+    expect(Object.keys(stylesBefore)).toHaveLength(0);
+
+    // The mock puzzle's solution (Na5) resolves from square c6.
+    fireEvent.click(screen.getByRole('button', { name: /hint/i }));
+
+    await waitFor(() => {
+      const styles = JSON.parse(board.getAttribute('data-square-styles'));
+      expect(Object.keys(styles)).toContain('c6');
+      expect(styles.c6.boxShadow).toBeTruthy();
+    });
+
+    // The text hint card is still shown alongside the board highlight.
+    expect(screen.getByText('Look for a forcing knight capture.')).toBeTruthy();
   });
 
   it('persists stats to the API when a puzzle is skipped', async () => {
