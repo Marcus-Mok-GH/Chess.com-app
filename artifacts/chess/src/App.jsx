@@ -13,7 +13,6 @@ import {
   Building2,
   Crown,
   DoorOpen,
-  Globe2,
   History,
   House,
   MoreHorizontal,
@@ -114,10 +113,6 @@ function AppHeader({ isGameRoute = false }) {
               <span className="sidebar-icon"><Swords size={17} /></span>
               <span className="sidebar-label">Play</span>
             </Link>
-            <Link to="/online" className={`sidebar-item ${currentPath === '/online' ? 'active' : ''}`}>
-              <span className="sidebar-icon"><Globe2 size={17} /></span>
-              <span className="sidebar-label">Online Play</span>
-            </Link>
             <Link to="/puzzles" className={`sidebar-item ${currentPath === '/puzzles' || currentPath === '/lessons' ? 'active' : ''}`}>
               <span className="sidebar-icon"><Puzzle size={17} /></span>
               <span className="sidebar-label">Puzzles</span>
@@ -201,14 +196,6 @@ function AppHeader({ isGameRoute = false }) {
         >
           <span className="nav-icon" aria-hidden="true"><Swords /></span>
           <span>Play</span>
-        </Link>
-        <Link
-          to="/online"
-          className={`nav-item ${currentPath === '/online' ? 'active' : ''}`}
-          aria-current={currentPath === '/online' ? 'page' : undefined}
-        >
-          <span className="nav-icon" aria-hidden="true"><Globe2 /></span>
-          <span>Online</span>
         </Link>
         {user?.isAdmin && (
           <Link

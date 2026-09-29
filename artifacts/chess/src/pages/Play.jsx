@@ -5,6 +5,7 @@ import ChessGame from '../components/ChessGame';
 import { useSettings } from '../contexts/SettingsContext';
 import { useUser } from '../contexts/UserContext';
 import GameBottomBar from '../components/GameBottomBar';
+import PlayModeSelect from '../components/PlayModeSelect';
 import PlaySetup from '../components/PlaySetup';
 import { BOTS, createCustomBot } from '../engine/bots/bots';
 import { generateGameId } from '../engine/game/gameId';
@@ -57,6 +58,9 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
   }, [initialSetup, resumedFromStorage]);
 
   const [phase, setPhase] = useState(effectiveGameId ? 'game' : 'setup');
+  // null → show the Bots / Online choice; 'bots' → the computer setup screen.
+  // Games resumed from a link skip the choice so New Game returns to bot setup.
+  const [playMode, setPlayMode] = useState(effectiveGameId ? 'bots' : null);
   const [playerColor, setPlayerColor] = useState(mergedSetup?.playerColor || 'w');
   const [customElo, setCustomElo] = useState(mergedSetup?.customElo ?? 1000);
   const [selectedBot, setSelectedBot] = useState(
@@ -186,16 +190,24 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
   return (
     <div className="play-page">
       {phase === 'setup' ? (
-        <PlaySetup
-          selectedBot={selectedBot}
-          onSelectBot={setSelectedBot}
-          customElo={customElo}
-          onCustomEloChange={setCustomElo}
-          playerColor={playerColor}
-          onSelectColor={setPlayerColor}
-          onStart={handleStart}
-          isLoggedIn={isLoggedIn}
-        />
+        playMode === 'bots' ? (
+          <PlaySetup
+            selectedBot={selectedBot}
+            onSelectBot={setSelectedBot}
+            customElo={customElo}
+            onCustomEloChange={setCustomElo}
+            playerColor={playerColor}
+            onSelectColor={setPlayerColor}
+            onStart={handleStart}
+            isLoggedIn={isLoggedIn}
+          />
+        ) : (
+          <PlayModeSelect
+            onSelectBots={() => setPlayMode('bots')}
+            onSelectOnline={() => navigate('/online')}
+            onlineDisabled={!isOnline}
+          />
+        )
       ) : (
         <>
           <ChessGame
