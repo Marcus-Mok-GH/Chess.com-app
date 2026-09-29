@@ -168,6 +168,40 @@ describe('POST /api/games/:gameId/move with a rapid clock', () => {
     expect(blackMs).toBe(RAPID_MS);
   });
 
+  it('credits the 10+3 increment to the mover inside the same update', async () => {
+    const app = buildApp();
+    app.use('/api/games', gameRoutes);
+    await actAs(1);
+
+    // White has used ~5 seconds on a 10+3 clock.
+    query
+      .mockResolvedValueOnce({
+        rows: [
+          rapidGame({
+            time_control: 'rapid_10_3',
+            clock_running_since: new Date(Date.now() - 5_000),
+          }),
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [{ status: 'playing' }] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const res = await loopback(app, 'POST', '/api/games/GAME1/move', {
+      move: { from: 'e2', to: 'e4' },
+      playerId: 'user_1',
+      expectedMoveCount: 0,
+    });
+
+    expect(res.status).toBe(200);
+    const [, params] = activeGameUpdate();
+    const whiteMs = params[4];
+    const blackMs = params[5];
+    // ~5s consumed, then the 3s Fischer increment is added back to White.
+    expect(whiteMs).toBeLessThanOrEqual(RAPID_MS - 5_000 + 3_000);
+    expect(whiteMs).toBeGreaterThan(RAPID_MS - 5_000 + 3_000 - 2_000);
+    expect(blackMs).toBe(RAPID_MS);
+  });
+
   it('ends the game with the opponent winning when the mover has flagged', async () => {
     const app = buildApp();
     app.use('/api/games', gameRoutes);

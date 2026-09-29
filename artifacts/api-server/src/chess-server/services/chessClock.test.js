@@ -1,8 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
   RAPID_MS,
+  RAPID_INCREMENT_MS,
   normalizeTimeControl,
+  isTimedControl,
   initialClockMs,
+  incrementMsFor,
   evaluateClock,
   applyMoveToClock,
   sideToMoveFromFen,
@@ -29,6 +32,7 @@ function rapidRow(overrides = {}) {
 describe('normalizeTimeControl', () => {
   it('accepts known controls', () => {
     expect(normalizeTimeControl('rapid')).toBe('rapid');
+    expect(normalizeTimeControl('rapid_10_3')).toBe('rapid_10_3');
     expect(normalizeTimeControl('unlimited')).toBe('unlimited');
   });
 
@@ -40,11 +44,25 @@ describe('normalizeTimeControl', () => {
   });
 });
 
-describe('initialClockMs', () => {
-  it('starts rapid at ten minutes and untimed at null', () => {
+describe('initialClockMs / isTimedControl / incrementMsFor', () => {
+  it('starts every rapid variant at ten minutes and untimed at null', () => {
     expect(initialClockMs('rapid')).toBe(10 * 60 * 1000);
+    expect(initialClockMs('rapid_10_3')).toBe(10 * 60 * 1000);
     expect(initialClockMs('unlimited')).toBeNull();
     expect(initialClockMs(undefined)).toBeNull();
+  });
+
+  it('treats both rapid variants as timed', () => {
+    expect(isTimedControl('rapid')).toBe(true);
+    expect(isTimedControl('rapid_10_3')).toBe(true);
+    expect(isTimedControl('unlimited')).toBe(false);
+    expect(isTimedControl(undefined)).toBe(false);
+  });
+
+  it('gives only rapid 10+3 a per-move increment', () => {
+    expect(incrementMsFor('rapid_10_3')).toBe(RAPID_INCREMENT_MS);
+    expect(incrementMsFor('rapid')).toBe(0);
+    expect(incrementMsFor('unlimited')).toBe(0);
   });
 });
 
@@ -127,6 +145,35 @@ describe('applyMoveToClock', () => {
     expect(result.whiteMs).toBe(RAPID_MS - 5_000);
     expect(result.blackMs).toBe(RAPID_MS);
     expect(result.runningSince).toEqual(new Date(1000 + 5_000));
+  });
+
+  it('adds the Fischer increment to the mover only (rapid 10+3)', () => {
+    const result = applyMoveToClock(
+      rapidRow({ time_control: 'rapid_10_3' }),
+      'white',
+      1000 + 5_000,
+    );
+    expect(result.whiteMs).toBe(RAPID_MS - 5_000 + RAPID_INCREMENT_MS);
+    expect(result.blackMs).toBe(RAPID_MS);
+  });
+
+  it('credits the increment to the side that moved (black)', () => {
+    const result = applyMoveToClock(
+      rapidRow({ time_control: 'rapid_10_3', fen: BLACK_TO_MOVE_FEN }),
+      'black',
+      1000 + 2_000,
+    );
+    expect(result.blackMs).toBe(RAPID_MS - 2_000 + RAPID_INCREMENT_MS);
+    expect(result.whiteMs).toBe(RAPID_MS);
+  });
+
+  it('still flags the mover before an increment can apply', () => {
+    const result = applyMoveToClock(
+      rapidRow({ time_control: 'rapid_10_3' }),
+      'white',
+      1000 + RAPID_MS + 1,
+    );
+    expect(result).toEqual({ flagged: 'white' });
   });
 
   it('refuses the move and reports the flag when the mover ran out', () => {

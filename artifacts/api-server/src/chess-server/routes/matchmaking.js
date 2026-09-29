@@ -4,7 +4,7 @@ import { findActiveGameForAccount, lockAccounts } from '../services/activeGameGu
 import { processMatchmakingOnce } from '../services/matchmakingService.js';
 import { handleRouteError } from '../middleware/errors.js';
 import { requireSession } from '../auth.js';
-import { normalizeTimeControl } from '../services/chessClock.js';
+import { TIME_CONTROL_IDS, normalizeTimeControl } from '../services/chessClock.js';
 import { ratingForControl } from '../services/ratingPools.js';
 
 const router = express.Router();
@@ -26,6 +26,12 @@ const MATCHMAKING_CONFIG = {
 // never fall outside every pool.
 const QUEUE_POOL_EXPR = "COALESCE(NULLIF(time_control, ''), 'unlimited')";
 
+// One live count column per time-control pool. The ids are the fixed
+// TIME_CONTROL_IDS constant, so interpolating them into the query is safe.
+const POOL_COUNT_COLUMNS = TIME_CONTROL_IDS.map(
+  (id) => `COUNT(*) FILTER (WHERE ${QUEUE_POOL_EXPR} = '${id}') AS "${id}"`
+).join(',\n      ');
+
 // The pool a request is asking about, or null for the whole queue.
 function requestedPool(req) {
   const raw = req.query?.timeControl;
@@ -36,22 +42,19 @@ function requestedPool(req) {
 async function getQueuePoolCounts() {
   const result = await query(`
     SELECT
-      COUNT(*) FILTER (WHERE ${QUEUE_POOL_EXPR} = 'unlimited') AS unlimited,
-      COUNT(*) FILTER (WHERE ${QUEUE_POOL_EXPR} = 'rapid') AS rapid,
+      ${POOL_COUNT_COLUMNS},
       COUNT(*) AS total
     FROM matchmaking_queue
     WHERE last_heartbeat > NOW() - INTERVAL '45 seconds'
   `);
   const row = result.rows[0] || {};
   const toInt = (value) => parseInt(value, 10) || 0;
-  return {
-    unlimited: toInt(row.unlimited),
-    rapid: toInt(row.rapid),
-    total: toInt(row.total),
-  };
+  const counts = { total: toInt(row.total) };
+  for (const id of TIME_CONTROL_IDS) counts[id] = toInt(row[id]);
+  return counts;
 }
 
-// Get queue status — overall, or scoped to ?timeControl=<rapid|unlimited>.
+// Get queue status — overall, or scoped to ?timeControl=<one of TIME_CONTROL_IDS>.
 router.get('/status', async (req, res) => {
   try {
     const pools = await getQueuePoolCounts();
@@ -61,7 +64,7 @@ router.get('/status', async (req, res) => {
       playersInQueue: pool ? pools[pool] : pools.total,
       timeControl: pool,
       total: pools.total,
-      pools: { unlimited: pools.unlimited, rapid: pools.rapid },
+      pools: Object.fromEntries(TIME_CONTROL_IDS.map((id) => [id, pools[id]])),
     });
   } catch (error) {
     handleRouteError(res, error, 'Failed to get queue status');
@@ -69,7 +72,7 @@ router.get('/status', async (req, res) => {
 });
 
 // Get queue details (enhanced with active players only), scoped to a pool
-// with ?timeControl=<rapid|unlimited>.
+// with ?timeControl=<one of TIME_CONTROL_IDS>.
 router.get('/details', async (req, res) => {
   try {
     const pool = requestedPool(req);

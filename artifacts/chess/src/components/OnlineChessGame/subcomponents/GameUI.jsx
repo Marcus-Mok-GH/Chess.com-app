@@ -6,6 +6,11 @@ import AnimatedPiece from '../../AnimatedPiece';
 import ChessPieceIcon from '../../ChessPieceIcon';
 import MoveHistory from '../../MoveHistory';
 import { isOnlineGameActive } from '../onlineGameStatus';
+import {
+  isTimedControl,
+  timeControlLabel,
+  timeControlDescription,
+} from '../../../utils/timeControls';
 import { REACTIONS, reactionEmoji, displayChatBody } from '../onlineReactions';
 import api from '../../../services/api';
 
@@ -113,7 +118,11 @@ export default function GameUI({
       <div className="sidebar">
         <div className="online-game-info">
           <div>Game Code: {gameId}</div>
-          {timeControl === 'rapid' && <div>Rapid · 10 min each</div>}
+          {isTimedControl(timeControl) && (
+            <div>
+              {timeControlLabel(timeControl)} · {timeControlDescription(timeControl)}
+            </div>
+          )}
           <div className={`status-${opponentStatus}`}>Opponent {opponentStatus}</div>
           {eloChange !== null && <div>Rating: {eloChange > 0 ? '+' : ''}{eloChange}</div>}
         </div>

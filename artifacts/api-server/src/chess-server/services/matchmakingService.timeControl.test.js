@@ -119,6 +119,36 @@ describe('MatchmakingService time-control pairing', () => {
     const reads = query.mock.calls.filter(
       ([sql]) => typeof sql === 'string' && sql.includes('SELECT * FROM matchmaking_queue')
     );
-    expect(reads.map(([, params]) => params[0]).sort()).toEqual(['rapid', 'unlimited']);
+    expect(reads.map(([, params]) => params[0]).sort()).toEqual([
+      'rapid',
+      'rapid_10_3',
+      'unlimited',
+    ]);
+  });
+
+  it('keeps rapid 10+0 and rapid 10+3 in separate pools', async () => {
+    const queue = [
+      queuePlayer({ id: 1, player_id: 'user_1', time_control: 'rapid' }),
+      queuePlayer({ id: 2, player_id: 'user_2', time_control: 'rapid_10_3', elo: 1220 }),
+      queuePlayer({ id: 3, player_id: 'user_3', time_control: 'rapid_10_3', elo: 1180 }),
+    ];
+    // The pool-scoped read returns only the rows for the requested control.
+    query.mockImplementation(async (sql, params) => {
+      if (typeof sql === 'string' && sql.includes('SELECT * FROM matchmaking_queue')) {
+        const pool = params?.[0];
+        return { rows: queue.filter((p) => p.time_control === pool), rowCount: 0 };
+      }
+      return { rows: [], rowCount: 0 };
+    });
+
+    const service = new MatchmakingService({ enableLoop: false });
+    const createMatch = vi.spyOn(service, 'createMatch').mockResolvedValue(true);
+
+    await service.processMatchmaking();
+
+    // Only the two 10+3 players pair; the lone 10+0 player never crosses over.
+    expect(createMatch).toHaveBeenCalledTimes(1);
+    expect(createMatch.mock.calls[0][0].time_control).toBe('rapid_10_3');
+    expect(createMatch.mock.calls[0][1].time_control).toBe('rapid_10_3');
   });
 });

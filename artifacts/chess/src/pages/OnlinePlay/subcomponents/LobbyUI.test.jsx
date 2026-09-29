@@ -14,19 +14,20 @@ const defaultProps = {
 };
 
 describe('LobbyUI time control', () => {
-  it('offers both unlimited and rapid', () => {
+  it('offers unlimited, rapid, and rapid 10+3', () => {
     render(<LobbyUI {...defaultProps} />);
-    expect(screen.getByRole('button', { name: /unlimited/i })).toBeDefined();
-    expect(screen.getByRole('button', { name: /rapid/i })).toBeDefined();
+    expect(screen.getByTitle('No clock — take as long as you like')).toBeDefined();
+    expect(screen.getByTitle('10 minutes each')).toBeDefined();
+    expect(screen.getByTitle('10 min + 3s per move')).toBeDefined();
   });
 
   it('marks the current selection as pressed', () => {
     render(<LobbyUI {...defaultProps} timeControl="rapid" />);
-    const rapid = screen.getByRole('button', { name: /rapid/i });
+    const rapid = screen.getByTitle('10 minutes each');
     expect(rapid.getAttribute('aria-pressed')).toBe('true');
     expect(rapid.className).toContain('selected');
     expect(
-      screen.getByRole('button', { name: /unlimited/i }).getAttribute('aria-pressed'),
+      screen.getByTitle('10 min + 3s per move').getAttribute('aria-pressed'),
     ).toBe('false');
   });
 
@@ -35,15 +36,16 @@ describe('LobbyUI time control', () => {
     render(
       <LobbyUI {...defaultProps} onSelectTimeControl={onSelectTimeControl} />,
     );
-    fireEvent.click(screen.getByRole('button', { name: /rapid/i }));
-    expect(onSelectTimeControl).toHaveBeenCalledWith('rapid');
+    fireEvent.click(screen.getByTitle('10 min + 3s per move'));
+    expect(onSelectTimeControl).toHaveBeenCalledWith('rapid_10_3');
   });
 
   it('describes the controls for screen readers and tooltips', () => {
     render(<LobbyUI {...defaultProps} />);
     expect(screen.getByRole('group', { name: /time control/i })).toBeDefined();
-    expect(
-      screen.getByRole('button', { name: /rapid/i }).getAttribute('title'),
-    ).toBe('10 minutes each');
+    expect(screen.getByTitle('10 minutes each').textContent).toContain('Rapid');
+    expect(screen.getByTitle('10 min + 3s per move').textContent).toContain(
+      'Rapid 10+3',
+    );
   });
 });
