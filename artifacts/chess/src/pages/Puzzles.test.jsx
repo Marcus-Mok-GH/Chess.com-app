@@ -52,12 +52,27 @@ vi.mock('../engine/coach/coachAI', () => ({
   summarizeLessonConcept: vi.fn(),
 }));
 
-const { mockUserState } = vi.hoisted(() => ({
+// The page generates puzzles through the worker client; tests can keep a
+// generation in flight to observe mid-generation UI states.
+vi.mock('../engine/puzzles/puzzleWorkerClient', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    generatePuzzleForThemesAsync: vi.fn((...args) =>
+      puzzleGenerationGate.enabled
+        ? new Promise(() => {})
+        : actual.generatePuzzleForThemesAsync(...args)
+    ),
+  };
+});
+
+const { mockUserState, puzzleGenerationGate } = vi.hoisted(() => ({
   mockUserState: {
     isLoggedIn: true,
     user: { id: 'u1', username: 'tester' },
     token: 'tok',
   },
+  puzzleGenerationGate: { enabled: false },
 }));
 
 vi.mock('../contexts/UserContext', () => ({
@@ -125,6 +140,33 @@ describe('Puzzles page with Lesson Scheme & LLM commentary', () => {
       LESSON_CATALOG[0].description,
       expect.objectContaining({ fen: MOCK_PUZZLE_FEN, solution: 'Na5' }),
     );
+  });
+
+  it('does not linger on the previous puzzle concept while the next puzzle generates', async () => {
+    summarizeLessonConcept.mockResolvedValueOnce('Concept for the first puzzle.');
+
+    renderPuzzles();
+    await waitFor(() => {
+      expect(screen.getByText('Concept for the first puzzle.')).toBeTruthy();
+    });
+
+    // Keep the concept for the second puzzle pending so the card cannot
+    // paper over a stale summary with a fresh one.
+    summarizeLessonConcept.mockImplementationOnce(() => new Promise(() => {}));
+    // Hold the second puzzle in mid-generation: this is exactly the window
+    // where a stale concept would linger.
+    puzzleGenerationGate.enabled = true;
+
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(`Lesson Scheme · 2 of ${LESSON_CATALOG.length}`)).toBeTruthy();
+    });
+    expect(screen.queryByText('Concept for the first puzzle.')).toBeNull();
+    puzzleGenerationGate.enabled = false;
+    // The old position's concept must be gone the moment a new puzzle starts
+    // generating, falling back to the generic lesson text instead.
+    expect(screen.queryByText('Concept for the first puzzle.')).toBeNull();
   });
 
   it('trims a long AI lesson concept to one or two short sentences', async () => {
