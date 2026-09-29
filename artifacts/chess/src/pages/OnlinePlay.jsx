@@ -17,6 +17,7 @@ import { playMatchFoundSound } from "../utils/sound";
 
 import { useMatchmaking } from "./OnlinePlay/hooks/useMatchmaking";
 import LobbyUI from "./OnlinePlay/subcomponents/LobbyUI";
+import { resolveOnlinePlayerColor } from "../utils/playerColor";
 import "./OnlinePlay.css";
 
 import { resolveOnlinePlayerSeat } from "./OnlinePlay/seatResolution";
@@ -56,7 +57,7 @@ export default function OnlinePlay() {
         }
     });
     const [joinCode, setJoinCode] = useState("");
-    const [selectedColor, setSelectedColor] = useState("white");
+    const [selectedColor, setSelectedColor] = useState("random");
     const [playerElo, setPlayerElo] = useState(() => user?.elo || 1200);
     const [showLoginModal, setShowLoginModal] = useState(false);
     const [pendingMode, setPendingMode] = useState(null);
@@ -387,10 +388,13 @@ export default function OnlinePlay() {
         pendingCreateRef.current = true;
         setIsCreating(true);
         try {
+            // 'random' resolves to a concrete color here because the server
+            // assigns the creator's seat from the submitted playerColor.
+            const resolvedColor = resolveOnlinePlayerColor(selectedColor);
             const res = await api.createOnlineGame({
                 playerId: `user_${user.id}`,
                 playerName: user.username,
-                playerColor: selectedColor,
+                playerColor: resolvedColor,
                 playerElo: user.elo,
             });
             setGameId(res.gameCode);
@@ -563,6 +567,36 @@ export default function OnlinePlay() {
                 <div className="lobby-container">
                     <div className="lobby-content">
                         <h2>Friendly Game</h2>
+                        <div
+                            className="online-color-choice"
+                            role="group"
+                            aria-label="Choose your color"
+                        >
+                            <button
+                                type="button"
+                                className={`online-color-btn${selectedColor === "white" ? " selected" : ""}`}
+                                onClick={() => setSelectedColor("white")}
+                                aria-pressed={selectedColor === "white"}
+                            >
+                                <span aria-hidden="true">♔</span> White
+                            </button>
+                            <button
+                                type="button"
+                                className={`online-color-btn${selectedColor === "random" ? " selected" : ""}`}
+                                onClick={() => setSelectedColor("random")}
+                                aria-pressed={selectedColor === "random"}
+                            >
+                                <span aria-hidden="true">🎲</span> Random
+                            </button>
+                            <button
+                                type="button"
+                                className={`online-color-btn${selectedColor === "black" ? " selected" : ""}`}
+                                onClick={() => setSelectedColor("black")}
+                                aria-pressed={selectedColor === "black"}
+                            >
+                                <span aria-hidden="true">♚</span> Black
+                            </button>
+                        </div>
                         <button
                             className="btn btn-primary"
                             onClick={handleCreateGame}

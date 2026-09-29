@@ -1,3 +1,8 @@
+[2026-09-29] - Random color option for friendly online games
+
+- The friendly-game lobby now has a White / Random / Black color picker for the game creator, who was previously hardcoded to white with no choice. Random resolves to a concrete color (50/50) at creation time on the client, so the existing server seat-assignment contract (create accepts only `white`/`black`) is unchanged — no API or schema change.
+- Added `resolveOnlinePlayerColor` to `utils/playerColor.js` with unit tests covering passthrough, the 50/50 roll, and fallback behavior (10 tests total in the file). Full Vitest suite passes (26 files, 248 tests) and the chess frontend typecheck is clean.
+
 [2026-09-29] - Random color picker for bot games
 
 - The bot-game setup screen now offers a Random color option alongside White and Black: when selected, the player's color is rolled 50/50 at game start (a fresh roll on every "New Game"), and the board orientation, saved game, and server record all use the resolved color. The choice stays symbolic until start, so nothing about the pending selection leaks into the persisted snapshot, and the seeded color only affects board orientation and seat assignment, not the engine.
