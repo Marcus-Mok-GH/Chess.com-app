@@ -1,1 +1,2 @@
 - [Stockfish WASM engine setup](stockfish-engine.md) — Emscripten captures `print` at init time; must use child_process worker with print pre-set before FACTORY()(engine)
+- [Project import boundary](project-import-boundary.md) — preserve platform-owned tooling directories when syncing an existing Replit repository into a project
