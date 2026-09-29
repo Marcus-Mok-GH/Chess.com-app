@@ -290,9 +290,17 @@ describe('initDatabase schema version fast path', () => {
     expect(referenced.size).toBeGreaterThan(10);
     // The scan must cover the TypeScript entry points too (app.ts/index.ts), or
     // SQL there would silently bypass this guard.
-    expect(
-      collectSourceFiles(sourceRoot).some((file) => file.endsWith('.ts'))
-    ).toBe(true);
+    const scanned = collectSourceFiles(sourceRoot);
+    expect(scanned.some((file) => file.endsWith('.ts'))).toBe(true);
+    // ...and it must reach the server's top-level entry points, not just
+    // chess-server/. If the scan root were ever narrowed, a table queried only
+    // from app.ts/index.ts/vercel.ts would be created nowhere and fail at
+    // runtime; this keeps that from passing silently.
+    for (const entry of ['app.ts', 'index.ts', 'vercel.ts']) {
+      expect(
+        scanned.some((file) => path.relative(sourceRoot, file) === entry),
+      ).toBe(true);
+    }
 
     await initDatabase();
     const ddl = queries.map((q) => q.text).join('\n');
@@ -394,6 +402,52 @@ describe('initDatabase schema version fast path', () => {
 
     // Keep the extractor honest: if this drops, the scan stopped finding FKs.
     expect(references).toBeGreaterThan(5);
+    expect(problems.sort()).toEqual([]);
+  });
+
+  it('creates every table before the same DDL alters or indexes it, so a fresh database bootstraps', async () => {
+    // The whole DDL runs inside one transaction. On an empty database (a new
+    // environment or first deploy) an `ALTER TABLE` / `CREATE INDEX ... ON`
+    // that names a table this DDL never creates — or that sits above its own
+    // `CREATE TABLE` — throws 42P01 and aborts the transaction, so *nothing*
+    // is created and the stored version is never written. The per-query
+    // self-heal then replays the same doomed sequence: a boot-time outage for
+    // every endpoint rather than one bad request. The FROM/INTO/JOIN/UPDATE
+    // guard above cannot see these statements at all, so this pins their
+    // targets and their order.
+    await initDatabase();
+
+    const created = new Map(); // table -> index of the statement that created it
+    const problems = [];
+    let mutations = 0;
+
+    queries.forEach(({ text }, index) => {
+      const create = text.match(/CREATE TABLE IF NOT EXISTS\s+([a-z_][a-z0-9_]*)/i);
+      if (create) created.set(create[1].toLowerCase(), index);
+
+      const targets = [];
+      for (const pattern of [
+        /\bALTER TABLE\s+([a-z_][a-z0-9_]*)/i,
+        /\bCREATE\s+(?:UNIQUE\s+)?INDEX[\s\S]*?\bON\s+([a-z_][a-z0-9_]*)/i,
+        /\bDROP TABLE(?:\s+IF EXISTS)?\s+([a-z_][a-z0-9_]*)/i,
+        /\bTRUNCATE(?:\s+TABLE)?\s+([a-z_][a-z0-9_]*)/i,
+      ]) {
+        const match = text.match(pattern);
+        if (match) targets.push(match[1]);
+      }
+
+      for (const target of targets) {
+        mutations += 1;
+        const createdIndex = created.get(target.toLowerCase());
+        if (createdIndex === undefined) problems.push(`${target} (never created)`);
+        else if (createdIndex > index) problems.push(`${target} (created later)`);
+      }
+    });
+
+    // Keep the extractor honest: if these drop, the scan stopped matching DDL.
+    expect(mutations).toBeGreaterThan(30);
+    expect(created.size).toBeGreaterThan(20);
+    expect(created.has('users')).toBe(true);
     expect(problems.sort()).toEqual([]);
   });
 

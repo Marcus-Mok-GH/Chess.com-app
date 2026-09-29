@@ -10,6 +10,7 @@ describe('ratingColumnFor', () => {
     expect(ratingColumnFor('rapid')).toBe('rapid_elo');
     expect(ratingColumnFor('rapid_10_3')).toBe('rapid_elo');
     expect(ratingColumnFor('classical')).toBe('classical_elo');
+    expect(ratingColumnFor('classical_30_5')).toBe('classical_elo');
     expect(ratingColumnFor('unlimited')).toBe('elo');
     expect(ratingColumnFor(undefined)).toBe('elo');
     expect(ratingColumnFor('blitz')).toBe('elo');
@@ -23,6 +24,7 @@ describe('ratingForControl', () => {
     expect(ratingForControl(user, 'rapid')).toBe(1500);
     expect(ratingForControl(user, 'rapid_10_3')).toBe(1500);
     expect(ratingForControl(user, 'classical')).toBe(1400);
+    expect(ratingForControl(user, 'classical_30_5')).toBe(1400);
   });
 
   it('falls back to the default for missing or invalid values', () => {

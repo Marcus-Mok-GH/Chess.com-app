@@ -3,6 +3,7 @@ import {
   RAPID_MS,
   CLASSICAL_MS,
   RAPID_INCREMENT_MS,
+  CLASSICAL_INCREMENT_MS,
   TIME_CONTROLS,
   RATING_POOLS,
   DEFAULT_TIME_CONTROL,
@@ -24,6 +25,7 @@ describe('timeControls', () => {
       'rapid',
       'rapid_10_3',
       'classical',
+      'classical_30_5',
     ]);
     expect(DEFAULT_TIME_CONTROL).toBe('unlimited');
   });
@@ -32,21 +34,24 @@ describe('timeControls', () => {
     expect(initialClockMs('rapid')).toBe(RAPID_MS);
     expect(initialClockMs('rapid_10_3')).toBe(RAPID_MS);
     expect(initialClockMs('classical')).toBe(CLASSICAL_MS);
+    expect(initialClockMs('classical_30_5')).toBe(CLASSICAL_MS);
     expect(initialClockMs('unlimited')).toBeNull();
     expect(initialClockMs(undefined)).toBeNull();
   });
 
-  it('applies a three-second increment only to rapid 10+3', () => {
+  it('applies the increment only to the increment variants', () => {
     expect(incrementMsFor('rapid_10_3')).toBe(RAPID_INCREMENT_MS);
+    expect(incrementMsFor('classical_30_5')).toBe(CLASSICAL_INCREMENT_MS);
     expect(incrementMsFor('rapid')).toBe(0);
     expect(incrementMsFor('classical')).toBe(0);
     expect(incrementMsFor('unlimited')).toBe(0);
   });
 
-  it('treats every rapid variant and classical as timed', () => {
+  it('treats every variant and classical as timed', () => {
     expect(isTimedControl('rapid')).toBe(true);
     expect(isTimedControl('rapid_10_3')).toBe(true);
     expect(isTimedControl('classical')).toBe(true);
+    expect(isTimedControl('classical_30_5')).toBe(true);
     expect(isTimedControl('unlimited')).toBe(false);
     expect(isTimedControl(undefined)).toBe(false);
   });
@@ -55,6 +60,7 @@ describe('timeControls', () => {
     expect(timeControlLabel('rapid')).toBe('Rapid');
     expect(timeControlLabel('rapid_10_3')).toBe('Rapid 10+3');
     expect(timeControlLabel('classical')).toBe('Classical');
+    expect(timeControlLabel('classical_30_5')).toBe('Classical 30+5');
     expect(timeControlLabel('unlimited')).toBe('Unlimited');
     expect(timeControlLabel('blitz')).toBe('Unlimited');
   });
@@ -62,6 +68,7 @@ describe('timeControls', () => {
   it('describes controls, without inventing one for unknown ids', () => {
     expect(timeControlDescription('rapid_10_3')).toBe('10 min + 3s per move');
     expect(timeControlDescription('classical')).toBe('30 minutes each');
+    expect(timeControlDescription('classical_30_5')).toBe('30 min + 5s per move');
     expect(timeControlDescription('blitz')).toBeNull();
   });
 
@@ -115,6 +122,7 @@ describe('ratingPoolForControl', () => {
     expect(ratingPoolForControl('rapid')).toBe('rapid');
     expect(ratingPoolForControl('rapid_10_3')).toBe('rapid');
     expect(ratingPoolForControl('classical')).toBe('classical');
+    expect(ratingPoolForControl('classical_30_5')).toBe('classical');
     expect(ratingPoolForControl('unlimited')).toBe('unlimited');
     expect(ratingPoolForControl(undefined)).toBe('unlimited');
   });
@@ -126,6 +134,7 @@ describe('controlRating', () => {
     expect(controlRating(user, 'rapid')).toBe(1500);
     expect(controlRating(user, 'rapid_10_3')).toBe(1500);
     expect(controlRating(user, 'classical')).toBe(1400);
+    expect(controlRating(user, 'classical_30_5')).toBe(1400);
     expect(controlRating(user, 'unlimited')).toBe(1300);
   });
 

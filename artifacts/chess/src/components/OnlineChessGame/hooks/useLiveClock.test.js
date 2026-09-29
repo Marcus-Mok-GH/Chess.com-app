@@ -49,6 +49,21 @@ describe('useLiveClock', () => {
     expect(result.current.whiteMs).toBeLessThanOrEqual(597_000);
   });
 
+  it('counts down classical 30+5 games too', () => {
+    const { result } = renderHook(() =>
+      useLiveClock(
+        rapidClock({ timeControl: 'classical_30_5', whiteMs: 1_800_000, blackMs: 1_800_000 }),
+      ),
+    );
+    expect(result.current.limited).toBe(true);
+
+    act(() => {
+      vi.advanceTimersByTime(3_000);
+    });
+
+    expect(result.current.whiteMs).toBeLessThanOrEqual(1_797_000);
+  });
+
   it('counts down the side to move as time passes', () => {
     const { result } = renderHook(() => useLiveClock(rapidClock()));
 

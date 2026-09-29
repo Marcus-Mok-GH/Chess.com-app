@@ -3,6 +3,7 @@ import {
   RAPID_MS,
   CLASSICAL_MS,
   RAPID_INCREMENT_MS,
+  CLASSICAL_INCREMENT_MS,
   normalizeTimeControl,
   isTimedControl,
   initialClockMs,
@@ -35,6 +36,7 @@ describe('normalizeTimeControl', () => {
     expect(normalizeTimeControl('rapid')).toBe('rapid');
     expect(normalizeTimeControl('rapid_10_3')).toBe('rapid_10_3');
     expect(normalizeTimeControl('classical')).toBe('classical');
+    expect(normalizeTimeControl('classical_30_5')).toBe('classical_30_5');
     expect(normalizeTimeControl('unlimited')).toBe('unlimited');
   });
 
@@ -52,21 +54,24 @@ describe('initialClockMs / isTimedControl / incrementMsFor', () => {
     expect(initialClockMs('rapid_10_3')).toBe(10 * 60 * 1000);
     expect(initialClockMs('classical')).toBe(30 * 60 * 1000);
     expect(initialClockMs('classical')).toBe(CLASSICAL_MS);
+    expect(initialClockMs('classical_30_5')).toBe(CLASSICAL_MS);
     expect(initialClockMs('unlimited')).toBeNull();
     expect(initialClockMs(undefined)).toBeNull();
     expect(initialClockMs('blitz')).toBeNull();
   });
 
-  it('treats both rapid variants and classical as timed', () => {
+  it('treats every variant and classical as timed', () => {
     expect(isTimedControl('rapid')).toBe(true);
     expect(isTimedControl('rapid_10_3')).toBe(true);
     expect(isTimedControl('classical')).toBe(true);
+    expect(isTimedControl('classical_30_5')).toBe(true);
     expect(isTimedControl('unlimited')).toBe(false);
     expect(isTimedControl(undefined)).toBe(false);
   });
 
-  it('gives only rapid 10+3 a per-move increment', () => {
+  it('gives only the increment variants a per-move increment', () => {
     expect(incrementMsFor('rapid_10_3')).toBe(RAPID_INCREMENT_MS);
+    expect(incrementMsFor('classical_30_5')).toBe(CLASSICAL_INCREMENT_MS);
     expect(incrementMsFor('rapid')).toBe(0);
     expect(incrementMsFor('classical')).toBe(0);
     expect(incrementMsFor('unlimited')).toBe(0);
@@ -162,6 +167,16 @@ describe('applyMoveToClock', () => {
     );
     expect(result.whiteMs).toBe(RAPID_MS - 5_000 + RAPID_INCREMENT_MS);
     expect(result.blackMs).toBe(RAPID_MS);
+  });
+
+  it('adds the five-second increment to a classical 30+5 mover', () => {
+    const result = applyMoveToClock(
+      rapidRow({ time_control: 'classical_30_5', white_time_ms: CLASSICAL_MS, black_time_ms: CLASSICAL_MS }),
+      'white',
+      1000 + 5_000,
+    );
+    expect(result.whiteMs).toBe(CLASSICAL_MS - 5_000 + CLASSICAL_INCREMENT_MS);
+    expect(result.blackMs).toBe(CLASSICAL_MS);
   });
 
   it('credits the increment to the side that moved (black)', () => {
