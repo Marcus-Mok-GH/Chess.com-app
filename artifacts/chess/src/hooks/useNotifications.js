@@ -30,6 +30,7 @@ function emit() {
 
 async function refresh() {
     if (!state.userId || state.loading) return;
+    const requestedFor = state.userId;
     state = { ...state, loading: true };
     emit();
 
@@ -44,6 +45,11 @@ async function refresh() {
     } catch (error) {
         next = { error: error?.message || 'Failed to load notifications' };
     }
+    // The account changed while this was in flight, so this response belongs
+    // to the previous session. Dropping it whole (rather than merging) keeps
+    // one account's inbox from surfacing under another, and leaves the new
+    // account's own in-flight fetch owning `loading`.
+    if (state.userId !== requestedFor) return;
     state = { ...state, ...next, loaded: true, loading: false };
     emit();
 }
@@ -75,13 +81,19 @@ function applyReadUpdate(idOrNull, unreadCount) {
 
 export async function markAllNotificationsRead() {
     if (!state.userId) return;
+    const requestedFor = state.userId;
     const data = await api.markNotificationsRead({ all: true });
+    // Same stale-session guard as refresh: this count describes the previous
+    // account's inbox, so it must not overwrite the current one's.
+    if (state.userId !== requestedFor) return;
     applyReadUpdate(null, data?.unreadCount);
 }
 
 export async function markNotificationRead(id) {
     if (!state.userId || id == null) return;
+    const requestedFor = state.userId;
     const data = await api.markNotificationsRead({ ids: [id] });
+    if (state.userId !== requestedFor) return;
     applyReadUpdate(id, data?.unreadCount);
 }
 
