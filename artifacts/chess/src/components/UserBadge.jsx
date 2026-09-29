@@ -72,6 +72,12 @@ export default function UserBadge() {
                 <span className="elo-label">Rapid:</span>
                 <span className="elo-value">{user.rapidElo ?? user.elo}</span>
               </span>
+              <span className="dropdown-elo">
+                <span className="elo-label">Classical:</span>
+                <span className="elo-value">
+                  {user.classicalElo ?? user.elo}
+                </span>
+              </span>
             </div>
             <div className="dropdown-divider" role="separator" />
             <div className="dropdown-stats">

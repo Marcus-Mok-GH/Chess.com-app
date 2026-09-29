@@ -2,7 +2,7 @@
  * Server-authoritative clock for timed online games.
  *
  * Storage model (active_games):
- *   time_control        'unlimited' | 'rapid' | 'rapid_10_3'
+ *   time_control        'unlimited' | 'rapid' | 'rapid_10_3' | 'classical'
  *   white_time_ms       remaining ms for White *as of* clock_running_since
  *   black_time_ms       remaining ms for Black *as of* clock_running_since
  *   clock_running_since when the side to move started thinking (null before
@@ -15,14 +15,24 @@
  * state stays correct with no scheduler — which matters on serverless hosts.
  */
 
-export const RAPID_MS = 10 * 60 * 1000; // 10 minutes per player
-// Fischer increment added to the mover's clock after each move. Rapid 10+0 has
-// no increment; Rapid 10+3 adds three seconds per move.
+export const RAPID_MS = 10 * 60 * 1000; // Rapid is 10 minutes per player
+// Classical is a flat 30 minutes per player. Kept separate from Rapid so the
+// two categories can diverge without touching each other's games.
+export const CLASSICAL_MS = 30 * 60 * 1000;
+// Fischer increment added to the mover's clock after each move. Only Rapid
+// 10+3 uses one; everything else is a flat clock.
 export const RAPID_INCREMENT_MS = 3 * 1000;
 
-// Every control that runs a clock. Pools are isolated per id (10+0 and 10+3
-// queue separately) but share one rating pool via ratingPools.js.
-export const TIMED_TIME_CONTROL_IDS = ['rapid', 'rapid_10_3'];
+// Starting clock for each timed control. Untimed controls are absent.
+const INITIAL_CLOCK_MS_BY_CONTROL = {
+  rapid: RAPID_MS,
+  rapid_10_3: RAPID_MS,
+  classical: CLASSICAL_MS,
+};
+
+// Every control that runs a clock. Pools are isolated per id, while 10+0 and
+// 10+3 share one rating pool via ratingPools.js.
+export const TIMED_TIME_CONTROL_IDS = ['rapid', 'rapid_10_3', 'classical'];
 
 export const TIME_CONTROL_IDS = ['unlimited', ...TIMED_TIME_CONTROL_IDS];
 
@@ -44,7 +54,7 @@ export function isTimedControl(value) {
 
 /** Starting remaining time for a time control, or null when untimed. */
 export function initialClockMs(timeControl) {
-  return isTimedControl(timeControl) ? RAPID_MS : null;
+  return INITIAL_CLOCK_MS_BY_CONTROL[normalizeTimeControl(timeControl)] ?? null;
 }
 
 /** Per-move increment for a time control (0 when untimed / no increment). */

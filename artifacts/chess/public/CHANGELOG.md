@@ -1,3 +1,10 @@
+[2026-09-29] - Classical mode (30 min) with its own rating
+
+- Added **Classical** as a fourth time control — a flat thirty minutes per player — selectable for ranked matchmaking and friendly games. Classical gets its own rating pool (`users.classical_elo`, default 1200) instead of sharing Rapid or Unlimited, so the schema version bumps to 5 and the new column rides the additive `ADD COLUMN IF NOT EXISTS` self-heal pass.
+- Ranked matchmaking keeps Classical in its own queue (each time control is its own pool, so different controls never pair), and the queue-status endpoint now reports a `classical` count. The clock starts at thirty minutes with no increment.
+- The Classical rating appears wherever the others do: the leaderboard's pool dropdown gains Classical and each row lists the selected pool plus the player's other two ratings, and the Home stats grid, account dropdown, and Settings account section all show it.
+- Added/updated tests across `chessClock`, `ratingPools`, the leaderboard route, the matchmaking pool tests, `timeControls`, and the leaderboard/lobby UI. Full Vitest suite passes (41 files, 355 tests); all packages typecheck.
+
 [2026-09-29] - Schema-completeness guard now scans TypeScript too
 
 - The `db/init.test.js` guard that fails when the API queries a table `initDatabase` does not create now scans TypeScript (`.ts`/`.tsx`) as well as JavaScript. The server's real entry points (`app.ts`, `index.ts`, `vercel.ts`, `routes/*.ts`) were outside the scan, so SQL added there could have introduced a table production never creates — the one way to slip past the guarantee that every queried table is created automatically on boot/cold start. No tables or columns changed; this only widens the check.

@@ -6,9 +6,10 @@ import {
 } from './ratingPools.js';
 
 describe('ratingColumnFor', () => {
-  it('maps both rapid variants to rapid_elo and everything else to elo', () => {
+  it('maps each control to its own rating column', () => {
     expect(ratingColumnFor('rapid')).toBe('rapid_elo');
     expect(ratingColumnFor('rapid_10_3')).toBe('rapid_elo');
+    expect(ratingColumnFor('classical')).toBe('classical_elo');
     expect(ratingColumnFor('unlimited')).toBe('elo');
     expect(ratingColumnFor(undefined)).toBe('elo');
     expect(ratingColumnFor('blitz')).toBe('elo');
@@ -17,10 +18,11 @@ describe('ratingColumnFor', () => {
 
 describe('ratingForControl', () => {
   it('reads the rating from the column for that control', () => {
-    const user = { elo: 1300, rapid_elo: 1500 };
+    const user = { elo: 1300, rapid_elo: 1500, classical_elo: 1400 };
     expect(ratingForControl(user, 'unlimited')).toBe(1300);
     expect(ratingForControl(user, 'rapid')).toBe(1500);
     expect(ratingForControl(user, 'rapid_10_3')).toBe(1500);
+    expect(ratingForControl(user, 'classical')).toBe(1400);
   });
 
   it('falls back to the default for missing or invalid values', () => {

@@ -179,19 +179,22 @@ describe('initDatabase schema version fast path', () => {
     ).toBe(true);
   });
 
-  it('defines the per-time-control rating column on every full DDL run', async () => {
-    // Rapid and unlimited keep independent ratings. If this column is ever
-    // dropped, rapid results would silently stop persisting.
+  it('defines the per-time-control rating columns on every full DDL run', async () => {
+    // Rapid, classical, and unlimited keep independent ratings. If either
+    // pool column were dropped, results would silently stop persisting.
     await initDatabase();
 
     const texts = queries.map((q) => q.text);
     const usersTable = texts.find((t) => t.includes('CREATE TABLE IF NOT EXISTS users'));
     expect(usersTable).toBeTruthy();
     expect(usersTable).toContain('rapid_elo INTEGER DEFAULT 1200');
+    expect(usersTable).toContain('classical_elo INTEGER DEFAULT 1200');
     // Pre-existing installs are backfilled.
-    expect(
-      texts.some((t) => t.includes('ALTER TABLE users ADD COLUMN IF NOT EXISTS rapid_elo')),
-    ).toBe(true);
+    for (const column of ['rapid_elo', 'classical_elo']) {
+      expect(
+        texts.some((t) => t.includes(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ${column}`)),
+      ).toBe(true);
+    }
   });
 
   it('bumps the schema version so existing databases actually receive new DDL', async () => {

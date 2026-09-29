@@ -35,9 +35,14 @@ export default function Leaderboard() {
     const activeControl =
         RATING_POOLS.find((control) => control.id === timeControl) ||
         RATING_POOLS[0];
-    // On the rapid board the ranked column is rapid and the secondary is
-    // untimed, and vice versa.
-    const isRapid = timeControl === "rapid";
+    // Read a row's rating for a given pool. Rapid 10+0 and 10+3 share the
+    // rapid pool, so the pool id is what matters rather than the control.
+    const ratingFor = (row, poolId) => {
+        if (poolId === "rapid") return row.rapidElo;
+        if (poolId === "classical") return row.classicalElo;
+        return row.elo;
+    };
+    const otherPools = RATING_POOLS.filter((pool) => pool.id !== timeControl);
 
     return (
         <div className="leaderboard-page">
@@ -49,9 +54,9 @@ export default function Leaderboard() {
                     </div>
                     <h1 className="leaderboard-title">Leaderboard</h1>
                     <p className="leaderboard-subtitle">
-                        Top players by rating. Rapid and Unlimited each have
-                        their own rating pool. Both Rapid variants (10+0 and
-                        10+3) share the Rapid rating.
+                        Top players by rating. Unlimited, Rapid, and
+                        Classical each have their own rating pool. Both Rapid
+                        variants (10+0 and 10+3) share the Rapid rating.
                     </p>
                 </header>
 
@@ -104,8 +109,7 @@ export default function Leaderboard() {
                                 const isSelf =
                                     user?.username &&
                                     row.username === user.username;
-                                const ranked = isRapid ? row.rapidElo : row.elo;
-                                const other = isRapid ? row.elo : row.rapidElo;
+                                const ranked = ratingFor(row, timeControl);
                                 return (
                                     <li
                                         key={row.username}
@@ -132,13 +136,23 @@ export default function Leaderboard() {
                                         </span>
                                         <span
                                             className="leaderboard-other"
-                                            title={`${
-                                                isRapid
-                                                    ? "Unlimited"
-                                                    : "Rapid"
-                                            } rating`}
+                                            title={otherPools
+                                                .map(
+                                                    (pool) =>
+                                                        `${pool.label} rating`,
+                                                )
+                                                .join(", ")}
                                         >
-                                            {other ?? "—"}
+                                            {otherPools.map((pool) => (
+                                                <span
+                                                    key={pool.id}
+                                                    className="leaderboard-other-item"
+                                                >
+                                                    {pool.label}{" "}
+                                                    {ratingFor(row, pool.id) ??
+                                                        "—"}
+                                                </span>
+                                            ))}
                                         </span>
                                     </li>
                                 );
@@ -149,8 +163,7 @@ export default function Leaderboard() {
 
                 <p className="leaderboard-note">
                     Left column is the {activeControl.label} rating; the second
-                    is{" "}
-                    {isRapid ? "Unlimited" : "Rapid"}.
+                    lists each player's other pool ratings.
                 </p>
             </div>
         </div>

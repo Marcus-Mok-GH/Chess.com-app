@@ -17,25 +17,40 @@ beforeEach(() => {
     api.getLeaderboard.mockResolvedValue({
         timeControl: "unlimited",
         leaderboard: [
-            { rank: 1, username: "alice", elo: 1300, rapidElo: 1500, gamesPlayed: 10 },
-            { rank: 2, username: "me", elo: 1200, rapidElo: 1400, gamesPlayed: 3 },
+            {
+                rank: 1,
+                username: "alice",
+                elo: 1300,
+                rapidElo: 1500,
+                classicalElo: 1100,
+                gamesPlayed: 10,
+            },
+            {
+                rank: 2,
+                username: "me",
+                elo: 1200,
+                rapidElo: 1400,
+                classicalElo: 1250,
+                gamesPlayed: 3,
+            },
         ],
     });
 });
 
 describe("Leaderboard", () => {
-    it("shows both pool ratings and marks the signed-in player", async () => {
+    it("shows every pool rating and marks the signed-in player", async () => {
         render(<Leaderboard />);
 
         await waitFor(() => expect(screen.getByText("alice")).toBeDefined());
 
-        // Unlimited column plus the secondary rapid rating for the same row.
+        // Selected-pool column plus the other two pools for the same row.
         expect(screen.getByText("1300")).toBeDefined();
-        expect(screen.getByText("1500")).toBeDefined();
+        expect(screen.getByText(/Rapid 1500/)).toBeDefined();
+        expect(screen.getByText(/Classical 1100/)).toBeDefined();
         expect(screen.getByText("you")).toBeDefined();
     });
 
-    it("offers both pools and refetches the board for the selected one", async () => {
+    it("offers every pool and refetches the board for the selected one", async () => {
         render(<Leaderboard />);
 
         await waitFor(() =>
@@ -47,12 +62,12 @@ describe("Leaderboard", () => {
         });
         expect(
             Array.from(poolSelect.options).map((option) => option.value),
-        ).toEqual(["unlimited", "rapid"]);
+        ).toEqual(["unlimited", "rapid", "classical"]);
 
-        fireEvent.change(poolSelect, { target: { value: "rapid" } });
+        fireEvent.change(poolSelect, { target: { value: "classical" } });
 
         await waitFor(() =>
-            expect(api.getLeaderboard).toHaveBeenCalledWith(50, "rapid"),
+            expect(api.getLeaderboard).toHaveBeenCalledWith(50, "classical"),
         );
     });
 
