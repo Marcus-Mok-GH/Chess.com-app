@@ -19,6 +19,7 @@ import {
   MoreHorizontal,
   Puzzle,
   Swords,
+  Trophy,
   UserRound,
   UsersRound,
   ShieldCheck,
@@ -42,6 +43,7 @@ const Puzzles = lazy(() => import('./pages/Puzzles'))
 const Openings = lazy(() => import('./pages/Openings'))
 const Friends = lazy(() => import('./pages/Friends'))
 const Clubs = lazy(() => import('./pages/Clubs'))
+const Leaderboard = lazy(() => import('./pages/Leaderboard'))
 const More = lazy(() => import('./pages/More'))
 const Admin = lazy(() => import('./pages/Admin'))
 const NotFound = lazy(() => import('./pages/not-found'))
@@ -60,6 +62,7 @@ function getTitle(path) {
   if (path === '/openings') return 'Openings'
   if (path === '/friends') return 'Friends'
   if (path === '/clubs') return 'Clubs'
+  if (path === '/leaderboard') return 'Leaderboard'
   if (path === '/more') return 'More'
   if (path === '/admin') return 'Admin'
   return 'PlayChess'
@@ -130,6 +133,10 @@ function AppHeader({ isGameRoute = false }) {
             <Link to="/clubs" className={`sidebar-item ${currentPath === '/clubs' ? 'active' : ''}`}>
               <span className="sidebar-icon"><Building2 size={17} /></span>
               <span className="sidebar-label">Clubs</span>
+            </Link>
+            <Link to="/leaderboard" className={`sidebar-item ${currentPath === '/leaderboard' ? 'active' : ''}`}>
+              <span className="sidebar-icon"><Trophy size={17} /></span>
+              <span className="sidebar-label">Leaderboard</span>
             </Link>
             <Link to="/history" className={`sidebar-item ${currentPath === '/history' ? 'active' : ''}`}>
               <span className="sidebar-icon"><History size={17} /></span>
@@ -401,6 +408,7 @@ export default function App({ Router = BrowserRouter, routerProps = {} } = {}) {
                   <Route path="/lessons" element={<LessonsRedirect />} />
                   <Route path="/friends" element={<Suspense fallback={<RouteFallback />}><Friends /></Suspense>} />
                   <Route path="/clubs" element={<Suspense fallback={<RouteFallback />}><Clubs /></Suspense>} />
+                  <Route path="/leaderboard" element={<Suspense fallback={<RouteFallback />}><Leaderboard /></Suspense>} />
                   <Route path="/more" element={<More />} />
                   <Route path="/admin" element={<Suspense fallback={<RouteFallback />}><RequireAdmin><Admin /></RequireAdmin></Suspense>} />
                 </Route>

@@ -439,8 +439,14 @@ export default function Settings() {
                 <span className="account-value">{user.username}</span>
               </div>
               <div className="account-row">
-                <span className="account-label">Rated Rating</span>
+                <span className="account-label">Unlimited Rating</span>
                 <span className="account-value account-value-elo">{user.elo}</span>
+              </div>
+              <div className="account-row">
+                <span className="account-label">Rapid Rating</span>
+                <span className="account-value account-value-elo">
+                  {user.rapidElo ?? user.elo}
+                </span>
               </div>
               <div className="account-row">
                 <span className="account-label">Rated Games</span>

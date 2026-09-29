@@ -18,7 +18,9 @@ export default function LobbyUI({
       <div className="lobby-content mode-select-content">
         <div className="elo-display">
           <span className="elo-label">{isLoggedIn ? user.username : 'Your Rating'}</span>
-          <span className="elo-value">{isLoggedIn ? user.elo : playerElo}</span>
+          {/* Rating for the selected time control's pool (falls back to the
+              untimed rating / default for signed-out players). */}
+          <span className="elo-value">{playerElo}</span>
         </div>
 
         <h2 className="mode-title">Choose Game Mode</h2>

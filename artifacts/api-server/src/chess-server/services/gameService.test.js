@@ -71,6 +71,50 @@ describe('GameService.updatePlayerElos', () => {
 
     expect(query).not.toHaveBeenCalled();
   });
+
+  it('moves only the rapid pool for a rapid game', async () => {
+    const service = new GameService();
+    query.mockResolvedValue({ rows: [], rowCount: 1 });
+
+    const game = {
+      white_player_id: 'user_10',
+      black_player_id: 'user_12',
+      white_elo: 1200,
+      black_elo: 1400,
+      game_mode: 'ranked',
+      time_control: 'rapid',
+    };
+
+    await service.updatePlayerElos(game, 'draw');
+
+    expect(query).toHaveBeenCalledTimes(2);
+    for (const [sql] of query.mock.calls) {
+      expect(sql).toMatch(/SET rapid_elo = \$1/);
+      expect(sql).not.toMatch(/SET elo = \$1/);
+    }
+  });
+
+  it('moves only the untimed pool for an untimed game', async () => {
+    const service = new GameService();
+    query.mockResolvedValue({ rows: [], rowCount: 1 });
+
+    const game = {
+      white_player_id: 'user_10',
+      black_player_id: 'user_12',
+      white_elo: 1200,
+      black_elo: 1400,
+      game_mode: 'ranked',
+      time_control: 'unlimited',
+    };
+
+    await service.updatePlayerElos(game, 'white');
+
+    expect(query).toHaveBeenCalledTimes(2);
+    for (const [sql] of query.mock.calls) {
+      expect(sql).toMatch(/SET elo = \$1/);
+      expect(sql).not.toMatch(/SET rapid_elo = \$1/);
+    }
+  });
 });
 
 describe('GameService.endGame', () => {

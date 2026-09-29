@@ -1,3 +1,35 @@
+[2026-09-29] - Make the pull-request rule a standing instruction in replit.md
+
+- replit.md stated the "PR for complex changes" workflow only as a low-key bullet under User preferences, where it read as optional. It is now a top-level **"Instructions — apply every time this file is read"** section that explicitly requires a pull request for complex changes (including complicated backend changes) and forbids pushing those directly to `main`; the old User preferences bullet now points to it.
+
+[2026-09-29] - Guard against database tables production never creates
+
+- Added a schema-completeness guard to `db/init.test.js`: it scans every non-test server source file for SQL table references and fails if any queried table is not created by `initDatabase`'s DDL. The runtime self-heal can only recreate tables the DDL already knows about, so a query against an unlisted table would 500 in production — this turns that into a build-time failure instead.
+- Audited the current schema: the DDL creates all 22 tables the API queries (plus `schema_meta`), so no missing table was found; the guard prevents the next one.
+- Documented the guarantee in `replit.md` — how tables are created automatically on boot/cold start and by the query-layer self-heal, and that adding a table is the pair of a `CREATE TABLE` in `db/init.js` and a `SCHEMA_VERSION` bump.
+- Full Vitest suite passes; both packages typecheck.
+
+[2026-09-29] - Both ratings on the profile, and a real leaderboard
+
+- Added a Leaderboard page (`/leaderboard`, linked from the sidebar and the mobile More menu) with an Unlimited/Rapid toggle. Each row shows the ranked pool's rating plus the other pool's, and the signed-in player is highlighted. This is the first leaderboard UI — `GET /users/leaderboard/top` existed but nothing rendered it.
+- The endpoint now returns both ratings per row and sorts by `?timeControl=rapid|unlimited` (default untimed), reusing the same whitelisted column mapping as the rating updates; the profile endpoint (`GET /users/:username`) returns `rapidElo` as well.
+- Profile surfaces show both pools: the Home stats grid gains a Rapid Rating card (the old "Rating" card is now "Unlimited Rating" and the grid uses auto-fit so four cards wrap cleanly), the account dropdown lists Unlimited and Rapid, and Settings' Account section shows both.
+- Added `routes/users.leaderboard.test.js` (default/rapid ordering, unknown-control normalization, profile ratings) and `pages/Leaderboard.test.jsx` (both ratings rendered, self highlight, pool refetch, error state). Full Vitest suite passes (40 files, 335 tests); both packages typecheck.
+
+[2026-09-29] - Rapid and Unlimited keep separate Elo ratings
+
+- Each time control now has its own rating pool. `users.elo` stays the untimed/unlimited rating and a new `users.rapid_elo` column (default 1200) holds the rapid rating, added by the `CREATE TABLE` and a backfilling `ADD COLUMN IF NOT EXISTS`; `SCHEMA_VERSION` bumps to `4` so existing databases actually receive it. A new `services/ratingPools.js` is the single mapping from a control to its column (`rapid` → `rapid_elo`, everything else → `elo`, with unknown/missing normalized to untimed).
+- Ranked results move only the pool that was played: `gameService.updatePlayerElos` now targets the control's column, so a rapid win never touches the untimed rating and vice versa. Ranked matchmaking seeds each queue entry from the rating for the requested control, so the two pools match within their own ratings instead of a shared number.
+- The auth session/user payload now carries `rapidElo`, the lobby shows the rating for the control you have selected (it previously always showed the untimed rating), and friendly create/join send that per-control rating so the displayed seat rating matches the pool.
+- Added `services/ratingPools.test.js` (column mapping, fallback, clamping), rapid/untimed column-routing cases in `gameService.test.js`, a `rapid_elo` schema-guard test in `init.test.js`, and `controlRating` cases in `timeControls.test.js`. Full Vitest suite passes (38 files, 328 tests); both packages typecheck.
+
+[2026-09-29] - Rapid and Unlimited matchmaking each get their own queue pool
+
+- Ranked matchmaking no longer runs one combined queue that is filtered at pairing time. `processMatchmaking` now reads, pairs, and drains each time-control pool independently (untimed first, then rapid), so a busy pool can never consume another pool's players or starve it of a processing pass. The per-player time-control guard stays as a defensive second layer.
+- Queue status is pool-scoped end to end: `GET /api/matchmaking/status` and `GET /api/matchmaking/details` accept `?timeControl=rapid|unlimited` and return that pool's count alongside a `pools` breakdown, and `GET /api/matchmaking/check-match` now reports the caller's own pool size instead of the aggregate queue. The SQL predicate and the app-side filter both mirror `normalizeTimeControl`, so legacy or unknown control values still count as untimed.
+- The waiting screen shows `Players in <control> pool: N`, kept fresh by a new 4s queue-status poll scoped to the selected control. This replaces the dead `queue_details` path, which called a non-existent `api.getQueueDetails` and so always left the count at `--`.
+- Added `routes/matchmaking.pools.test.js` (status/details scoping and unknown-control normalization) and a service test proving each pool is read and paired independently. Full Vitest suite passes (37 files, 319 tests); both packages typecheck.
+
 [2026-09-29] - Verification code screen gets its own styling
 
 - The "Check your email" screen reused Login.css but four classes it used — `login-success`, `login-secondary-actions`, `login-link-btn`, and `login-divider-dot` — had no CSS anywhere, so the resend/cancel actions rendered as raw browser-default buttons and the "New code sent!" message rendered as unstyled text. All four are now styled: a green success banner mirroring the error banner, centered link-style buttons with hover/focus-visible/disabled states, and a dimmed separator dot.

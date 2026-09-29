@@ -18,7 +18,12 @@ import { playMatchFoundSound } from "../utils/sound";
 import { useMatchmaking } from "./OnlinePlay/hooks/useMatchmaking";
 import LobbyUI from "./OnlinePlay/subcomponents/LobbyUI";
 import { resolveOnlinePlayerColor } from "../utils/playerColor";
-import { TIME_CONTROLS, DEFAULT_TIME_CONTROL } from "../utils/timeControls";
+import {
+    TIME_CONTROLS,
+    DEFAULT_TIME_CONTROL,
+    timeControlLabel,
+    controlRating,
+} from "../utils/timeControls";
 import "./OnlinePlay.css";
 
 import { resolveOnlinePlayerSeat } from "./OnlinePlay/seatResolution";
@@ -286,7 +291,10 @@ export default function OnlinePlay() {
         };
 
         const handleQueueDetails = (data) => {
-            if (data?.total !== undefined) setPlayersInQueue(data.total);
+            // The server scopes this to the player's time-control pool.
+            if (data?.playersInQueue !== undefined)
+                setPlayersInQueue(data.playersInQueue);
+            else if (data?.total !== undefined) setPlayersInQueue(data.total);
         };
 
         pollingService.on("match_found", handleMatchFound);
@@ -399,7 +407,7 @@ export default function OnlinePlay() {
                 playerId: `user_${user.id}`,
                 playerName: user.username,
                 playerColor: resolvedColor,
-                playerElo: user.elo,
+                playerElo: controlRating(user, selectedTimeControl),
                 timeControl: selectedTimeControl,
             });
             setGameId(res.gameCode);
@@ -433,7 +441,7 @@ export default function OnlinePlay() {
                 gameCode: code,
                 playerId: `user_${user.id}`,
                 playerName: user.username,
-                playerElo: user.elo,
+                playerElo: controlRating(user, selectedTimeControl),
             });
             setGameId(res.gameCode);
             const id = `user_${user.id}`;
@@ -541,7 +549,11 @@ export default function OnlinePlay() {
                 <LobbyUI
                     isLoggedIn={isLoggedIn}
                     user={user}
-                    playerElo={playerElo}
+                    playerElo={
+                        isLoggedIn
+                            ? controlRating(user, selectedTimeControl)
+                            : playerElo
+                    }
                     error={error}
                     handleSelectMode={handleSelectMode}
                     navigate={navigate}
@@ -557,7 +569,10 @@ export default function OnlinePlay() {
                             Searching... {Math.floor(searchTime / 60)}:
                             {(searchTime % 60).toString().padStart(2, "0")}
                         </p>
-                        <p>Players Online: {playersInQueue}</p>
+                        <p>
+                            Players in {timeControlLabel(selectedTimeControl)}{" "}
+                            pool: {playersInQueue}
+                        </p>
                         <button
                             className="btn btn-ghost"
                             onClick={() => {

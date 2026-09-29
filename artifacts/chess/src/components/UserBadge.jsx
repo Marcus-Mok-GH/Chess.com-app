@@ -65,8 +65,12 @@ export default function UserBadge() {
             <div className="dropdown-header">
               <span className="dropdown-username">{user.username}</span>
               <span className="dropdown-elo">
-                <span className="elo-label">Rated:</span>
+                <span className="elo-label">Unlimited:</span>
                 <span className="elo-value">{user.elo}</span>
+              </span>
+              <span className="dropdown-elo">
+                <span className="elo-label">Rapid:</span>
+                <span className="elo-value">{user.rapidElo ?? user.elo}</span>
               </span>
             </div>
             <div className="dropdown-divider" role="separator" />

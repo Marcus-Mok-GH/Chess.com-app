@@ -93,8 +93,15 @@ export default function Home() {
           <section className="stats-overview">
             <div className="stat-card card-surface">
               <div className="stat-content">
-                <div className="stat-label">Rating</div>
+                <div className="stat-label">Unlimited Rating</div>
                 <div className="stat-value">{user.elo}</div>
+              </div>
+            </div>
+
+            <div className="stat-card card-surface">
+              <div className="stat-content">
+                <div className="stat-label">Rapid Rating</div>
+                <div className="stat-value">{user.rapidElo ?? user.elo}</div>
               </div>
             </div>
 

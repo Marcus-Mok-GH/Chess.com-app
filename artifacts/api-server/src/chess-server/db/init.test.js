@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { readdirSync, readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 vi.mock('./pool.js', () => ({
   getDirectPool: vi.fn(),
@@ -30,6 +33,19 @@ function clientResultFor(text) {
     return { rows: client.schemaVersion ? [{ value: client.schemaVersion }] : [] };
   }
   return { rows: [] };
+}
+
+// Every non-test .js file under the API server source (the DDL must cover the
+// tables all of them query).
+function collectSourceFiles(dir) {
+  const files = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name === 'node_modules' || entry.name === 'dist') continue;
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) files.push(...collectSourceFiles(full));
+    else if (entry.name.endsWith('.js') && !entry.name.endsWith('.test.js')) files.push(full);
+  }
+  return files;
 }
 
 beforeEach(() => {
@@ -157,11 +173,70 @@ describe('initDatabase schema version fast path', () => {
     ).toBe(true);
   });
 
+  it('defines the per-time-control rating column on every full DDL run', async () => {
+    // Rapid and unlimited keep independent ratings. If this column is ever
+    // dropped, rapid results would silently stop persisting.
+    await initDatabase();
+
+    const texts = queries.map((q) => q.text);
+    const usersTable = texts.find((t) => t.includes('CREATE TABLE IF NOT EXISTS users'));
+    expect(usersTable).toBeTruthy();
+    expect(usersTable).toContain('rapid_elo INTEGER DEFAULT 1200');
+    // Pre-existing installs are backfilled.
+    expect(
+      texts.some((t) => t.includes('ALTER TABLE users ADD COLUMN IF NOT EXISTS rapid_elo')),
+    ).toBe(true);
+  });
+
   it('bumps the schema version so existing databases actually receive new DDL', async () => {
     // A stored version equal to the code's version skips DDL entirely, so any
     // schema addition MUST come with a bump or production never gets it
     // (relying on the per-query self-heal means a guaranteed first failure).
     expect(Number(SCHEMA_VERSION)).toBeGreaterThan(2);
+  });
+
+  it('creates every table the server queries, so a missing table cannot 500 in production', async () => {
+    // The schema self-heal in query.js can only repair tables this DDL knows
+    // about, so a query against a table that was never added here would crash
+    // production. Extract table names from SQL string literals (SQL keywords
+    // are uppercase in this codebase) so prose comments are ignored.
+    const sourceRoot = path.resolve(
+      path.dirname(fileURLToPath(import.meta.url)),
+      '..',
+      '..'
+    );
+    const stringRe = /`(?:[^`\\]|\\.)*`|'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"/g;
+    const tableRe = /\b(FROM|INTO|JOIN|UPDATE)\s+([a-z_][a-z0-9_]*)/g;
+
+    const referenced = new Set();
+    for (const file of collectSourceFiles(sourceRoot)) {
+      const text = readFileSync(file, 'utf8');
+      let literalMatch;
+      stringRe.lastIndex = 0;
+      while ((literalMatch = stringRe.exec(text)) !== null) {
+        const literal = literalMatch[0];
+        if (!/\b(SELECT|INSERT|UPDATE|DELETE|JOIN|FROM)\b/.test(literal)) continue;
+        let tableMatch;
+        tableRe.lastIndex = 0;
+        while ((tableMatch = tableRe.exec(literal)) !== null) {
+          referenced.add(tableMatch[2].toLowerCase());
+        }
+      }
+    }
+
+    // Keep the extractor honest: if this drops, the regex stopped matching SQL.
+    expect(referenced.size).toBeGreaterThan(10);
+
+    await initDatabase();
+    const ddl = queries.map((q) => q.text).join('\n');
+    const created = new Set(
+      [...ddl.matchAll(/CREATE TABLE IF NOT EXISTS\s+([a-z_][a-z0-9_]*)/gi)].map((m) =>
+        m[1].toLowerCase()
+      )
+    );
+
+    const missing = [...referenced].filter((table) => !created.has(table)).sort();
+    expect(missing).toEqual([]);
   });
 
   it('rolls back and releases the client when DDL fails', async () => {

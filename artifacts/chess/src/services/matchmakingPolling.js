@@ -8,6 +8,9 @@ class MatchmakingPollingService {
     this.listeners = new Map();
     this.isPolling = false;
     this.currentPlayerId = null;
+    // The time-control pool this player joined, used to scope queue-size reads.
+    this.currentTimeControl = null;
+    this.queueStatusInterval = null;
     
     // Enhanced polling configuration
     this.pollingConfig = {
@@ -15,6 +18,7 @@ class MatchmakingPollingService {
       maxInterval: 8000,       // Max interval for backoff (8s)
       backoffFactor: 1.5,      // Exponential backoff factor
       heartbeatInterval: 15000, // Heartbeat every 15s
+      queueStatusInterval: 4000, // Queue-size refresh (4s)
       maxRetries: 5,          // Max retry attempts on failures
       retryDelay: 2000         // Delay between retries
     };
@@ -79,6 +83,7 @@ class MatchmakingPollingService {
         this.currentPlayerId = serverPlayerId;
         this.startPolling(serverPlayerId);
         this.startHeartbeat(serverPlayerId);
+        this.startQueueStatusPolling(timeControl);
         return { success: true, playerId: serverPlayerId };
       } else {
         const message = data.message || data.error?.message || 'Failed to join matchmaking queue';
@@ -222,6 +227,7 @@ class MatchmakingPollingService {
       clearTimeout(this.heartbeatInterval);
       this.heartbeatInterval = null;
     }
+    this.stopQueueStatusPolling();
     this.isPolling = false;
     this.isPaused = false;
     this.retryCount = 0;
@@ -244,6 +250,40 @@ class MatchmakingPollingService {
     // Restart polling if we have a current player
     if (this.currentPlayerId && this.isPolling) {
       this.startPolling(this.currentPlayerId);
+      this.startQueueStatusPolling(this.currentTimeControl);
+    }
+  }
+
+  // Poll the size of the caller's time-control pool so the waiting screen can
+  // show how many players are queued for the same control — a player in the
+  // rapid pool never sees the unlimited pool's numbers.
+  startQueueStatusPolling(timeControl) {
+    this.stopQueueStatusPolling();
+    this.currentTimeControl = timeControl || null;
+
+    const tick = async () => {
+      try {
+        const data = await api.getQueueStatus(this.currentTimeControl);
+        this.emit('queue_details', data);
+      } catch (error) {
+        // Transient failure — the next tick retries.
+      }
+
+      if (this.isPolling && !this.isPaused) {
+        this.queueStatusInterval = setTimeout(
+          tick,
+          this.pollingConfig.queueStatusInterval
+        );
+      }
+    };
+
+    tick();
+  }
+
+  stopQueueStatusPolling() {
+    if (this.queueStatusInterval) {
+      clearTimeout(this.queueStatusInterval);
+      this.queueStatusInterval = null;
     }
   }
 
@@ -282,10 +322,10 @@ class MatchmakingPollingService {
     heartbeatLoop();
   }
 
-  // Get queue details
+  // Get queue details for the current pool
   async getQueueDetails() {
     try {
-      const data = await api.getQueueDetails();
+      const data = await api.getQueueStatus(this.currentTimeControl);
       this.emit('queue_details', data);
     } catch (error) {
       console.error('[MatchmakingPolling] Error getting queue details:', error);
@@ -300,6 +340,7 @@ class MatchmakingPollingService {
     this.stopPolling();
     this.listeners.clear();
     this.currentPlayerId = null;
+    this.currentTimeControl = null;
   }
   
   // Get current status
