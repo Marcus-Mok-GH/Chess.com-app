@@ -5,6 +5,7 @@ import ChessGame from '../components/ChessGame';
 import { useSettings } from '../contexts/SettingsContext';
 import { useUser } from '../contexts/UserContext';
 import GameBottomBar from '../components/GameBottomBar';
+import PlayModeSelect from '../components/PlayModeSelect';
 import PlaySetup from '../components/PlaySetup';
 import { BOTS, createCustomBot } from '../engine/bots/bots';
 import { generateGameId } from '../engine/game/gameId';
@@ -26,6 +27,15 @@ function botFromSetup(setup) {
   return BOTS.find((b) => b.id === 'nelson') || BOTS[0];
 }
 
+/**
+ * Play tab page. Starts on the Bots vs Online choice (PlayModeSelect); once
+ * Bots is picked — or a local game is resumed from a link — it runs the
+ * existing computer setup (PlaySetup) and local game flow.
+ *
+ * @param {object} [props]
+ * @param {string|null} [props.initialGameId] - Resume this local game directly.
+ * @param {object|null} [props.initialSetup] - Bot/color state for a resumed game.
+ */
 export default function Play({ initialGameId = null, initialSetup = null }) {
   const navigate = useNavigate();
   const { settings } = useSettings();
@@ -57,6 +67,9 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
   }, [initialSetup, resumedFromStorage]);
 
   const [phase, setPhase] = useState(effectiveGameId ? 'game' : 'setup');
+  // null → show the Bots / Online choice; 'bots' → the computer setup screen.
+  // Games resumed from a link skip the choice so New Game returns to bot setup.
+  const [playMode, setPlayMode] = useState(effectiveGameId ? 'bots' : null);
   const [playerColor, setPlayerColor] = useState(mergedSetup?.playerColor || 'w');
   const [customElo, setCustomElo] = useState(mergedSetup?.customElo ?? 1000);
   const [selectedBot, setSelectedBot] = useState(
@@ -186,16 +199,24 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
   return (
     <div className="play-page">
       {phase === 'setup' ? (
-        <PlaySetup
-          selectedBot={selectedBot}
-          onSelectBot={setSelectedBot}
-          customElo={customElo}
-          onCustomEloChange={setCustomElo}
-          playerColor={playerColor}
-          onSelectColor={setPlayerColor}
-          onStart={handleStart}
-          isLoggedIn={isLoggedIn}
-        />
+        playMode === 'bots' ? (
+          <PlaySetup
+            selectedBot={selectedBot}
+            onSelectBot={setSelectedBot}
+            customElo={customElo}
+            onCustomEloChange={setCustomElo}
+            playerColor={playerColor}
+            onSelectColor={setPlayerColor}
+            onStart={handleStart}
+            isLoggedIn={isLoggedIn}
+          />
+        ) : (
+          <PlayModeSelect
+            onSelectBots={() => setPlayMode('bots')}
+            onSelectOnline={() => navigate('/online')}
+            onlineDisabled={!isOnline}
+          />
+        )
       ) : (
         <>
           <ChessGame

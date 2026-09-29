@@ -1,3 +1,16 @@
+[2026-09-29] - Workspace constraints listed in replit.md and agents.md
+
+- `replit.md` and `agents.md` each gained a consolidated, numbered "Workspace constraints" section so the rules that apply to every change are visible in one place instead of being scattered across sections: complex changes ship as a PR (never a direct push to `main`), no attribution trailers in commits or PRs, the mandatory dated changelog update, pnpm-only installs, registering new test files in the root `package.json` test list, `SCHEMA_VERSION` bumps and `initDatabase` DDL for database changes, no hand-editing of the Orval-generated client packages, the `minimumReleaseAge: 1440` supply-chain pin, shared `login-*` styles from `Login.css`, and the required `DATABASE_URL` env var.
+- `replit.md`'s list points at the existing detail sections (Instructions, User preferences, Gotchas); `agents.md` now carries the full list alongside its changelog rules so agents see every constraint in the file they load as instructions.
+
+[2026-09-29] - Play tab opens with a Bots vs Online choice
+
+- The Play tab now starts on a two-option screen: **Bots** — the existing computer-opponent setup, reached after one tap — and **Online**, which jumps to the online lobby at `/online`. A game opened mid-play (including resumed `/game/:id?mode=local` links) still goes straight to the board, and the in-game "New" button returns directly to the bot setup instead of the choice screen.
+- The Online entry was removed from navigation at every screen size: the mobile bottom navigation is now Home, Play, More (plus Admin for admin accounts) with its grid shrank from 4 to 3 columns (5 → 4 with the Admin item), and the desktop sidebar no longer lists "Online Play" either. The Home "Play online" card and the landing-page CTAs still link to online play.
+- The two option cards stay side-by-side on every breakpoint (the mobile rule now only tightens padding/gap instead of stacking them), and the Online option is disabled with an "Offline" badge while the device is offline, matching the Home page's Play online card. The Bots option stays available.
+- Added `components/PlayModeSelect.jsx` (+ its styles) and `PlayModeSelect.test.jsx`, registered in the root test script.
+- Follow-up from CodeRabbit's review of PR #244: added JSDoc for the functions the diff touched (`PlayModeSelect`, `Play`, `AppHeader`) to clear its docstring-coverage warning; typecheck and tests re-verified (9/9).
+
 [2026-09-29] - Make the pull-request rule a standing instruction in replit.md
 
 - replit.md stated the "PR for complex changes" workflow only as a low-key bullet under User preferences, where it read as optional. It is now a top-level **"Instructions — apply every time this file is read"** section that explicitly requires a pull request for complex changes (including complicated backend changes) and forbids pushing those directly to `main`; the old User preferences bullet now points to it.

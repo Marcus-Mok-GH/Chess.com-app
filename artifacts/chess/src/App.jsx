@@ -13,7 +13,6 @@ import {
   Building2,
   Crown,
   DoorOpen,
-  Globe2,
   History,
   House,
   MoreHorizontal,
@@ -82,6 +81,14 @@ function LessonsRedirect() {
   return <Navigate to={`/puzzles${location.search}`} replace />
 }
 
+/**
+ * App chrome around the routed pages: desktop sidebar, mobile header, and the
+ * mobile bottom navigation. Hidden entirely on game routes so boards get the
+ * full screen. Online play is reached through the Play tab, not from here.
+ *
+ * @param {object} [props]
+ * @param {boolean} [props.isGameRoute] - Suppress the chrome for full-screen games.
+ */
 function AppHeader({ isGameRoute = false }) {
   const location = useLocation()
   const { isOnline, isLoggedIn, user, logout } = useUser()
@@ -113,10 +120,6 @@ function AppHeader({ isGameRoute = false }) {
             <Link to="/play" className={`sidebar-item ${currentPath === '/play' ? 'active' : ''}`}>
               <span className="sidebar-icon"><Swords size={17} /></span>
               <span className="sidebar-label">Play</span>
-            </Link>
-            <Link to="/online" className={`sidebar-item ${currentPath === '/online' ? 'active' : ''}`}>
-              <span className="sidebar-icon"><Globe2 size={17} /></span>
-              <span className="sidebar-label">Online Play</span>
             </Link>
             <Link to="/puzzles" className={`sidebar-item ${currentPath === '/puzzles' || currentPath === '/lessons' ? 'active' : ''}`}>
               <span className="sidebar-icon"><Puzzle size={17} /></span>
@@ -201,14 +204,6 @@ function AppHeader({ isGameRoute = false }) {
         >
           <span className="nav-icon" aria-hidden="true"><Swords /></span>
           <span>Play</span>
-        </Link>
-        <Link
-          to="/online"
-          className={`nav-item ${currentPath === '/online' ? 'active' : ''}`}
-          aria-current={currentPath === '/online' ? 'page' : undefined}
-        >
-          <span className="nav-icon" aria-hidden="true"><Globe2 /></span>
-          <span>Online</span>
         </Link>
         {user?.isAdmin && (
           <Link
