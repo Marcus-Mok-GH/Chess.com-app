@@ -1,7 +1,16 @@
 import { Link } from 'react-router-dom'
 import { BookOpen, Building2, History, Puzzle, Settings2, ShieldCheck, Trophy, UsersRound, UserRound } from 'lucide-react'
 import { useUser } from '../contexts/UserContext';
+import { RATING_POOLS } from '../utils/timeControls';
 import './More.css'
+
+// Built from RATING_POOLS so this entry can never drift from the pools the
+// leaderboard actually offers (Unlimited, Rapid, Classical).
+const ratingPoolLabels = RATING_POOLS.map((pool) => pool.label)
+const ratingPoolList =
+  ratingPoolLabels.length > 1
+    ? `${ratingPoolLabels.slice(0, -1).join(', ')}, and ${ratingPoolLabels.at(-1)}`
+    : ratingPoolLabels[0] ?? ''
 
 // Mobile users never see the desktop sidebar, so the admin-only /admin route
 // is surfaced here for admins (mirrors the sidebar link on desktop).
@@ -25,7 +34,7 @@ const staticOptionGroups = [
     options: [
       { to: '/friends', icon: UsersRound, title: 'Friends', description: 'Connect with other players' },
       { to: '/clubs', icon: Building2, title: 'Clubs', description: 'Find a community to join' },
-      { to: '/leaderboard', icon: Trophy, title: 'Leaderboard', description: 'See the top Rapid and Unlimited ratings' },
+      { to: '/leaderboard', icon: Trophy, title: 'Leaderboard', description: `See the top ${ratingPoolList} ratings` },
     ],
   },
   {

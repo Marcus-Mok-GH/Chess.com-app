@@ -1,3 +1,8 @@
+[2026-09-29] - Leaderboard menu entry now names every rating pool
+
+- The More menu's Leaderboard entry still advertised only "Rapid and Unlimited ratings", so the Classical pool was easy to miss from the menu. The description is now built from `RATING_POOLS`, so it reads "See the top Unlimited, Rapid, and Classical ratings" and can never drift from the pools the leaderboard actually offers again.
+- No change to the leaderboard itself: the pool dropdown, per-pool ordering, and the per-row ratings already covered Classical.
+
 [2026-09-29] - Classical mode (30 min) with its own rating
 
 - Added **Classical** as a fourth time control — a flat thirty minutes per player — selectable for ranked matchmaking and friendly games. Classical gets its own rating pool (`users.classical_elo`, default 1200) instead of sharing Rapid or Unlimited, so the schema version bumps to 5 and the new column rides the additive `ADD COLUMN IF NOT EXISTS` self-heal pass.
