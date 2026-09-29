@@ -81,6 +81,14 @@ function LessonsRedirect() {
   return <Navigate to={`/puzzles${location.search}`} replace />
 }
 
+/**
+ * App chrome around the routed pages: desktop sidebar, mobile header, and the
+ * mobile bottom navigation. Hidden entirely on game routes so boards get the
+ * full screen. Online play is reached through the Play tab, not from here.
+ *
+ * @param {object} [props]
+ * @param {boolean} [props.isGameRoute] - Suppress the chrome for full-screen games.
+ */
 function AppHeader({ isGameRoute = false }) {
   const location = useLocation()
   const { isOnline, isLoggedIn, user, logout } = useUser()

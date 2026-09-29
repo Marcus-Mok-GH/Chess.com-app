@@ -2,6 +2,16 @@ import { Bot, Globe2 } from 'lucide-react';
 
 import './PlayModeSelect.css';
 
+/**
+ * Entry screen for the Play tab: offers the two ways to play — Bots (local
+ * games against the computer) and Online (the `/online` lobby).
+ *
+ * @param {object} props
+ * @param {() => void} props.onSelectBots - Continue to the bot setup screen.
+ * @param {() => void} props.onSelectOnline - Navigate to the online lobby.
+ * @param {boolean} [props.onlineDisabled] - Disable the Online option while
+ *   the device is offline (shows an "Offline" badge instead).
+ */
 export default function PlayModeSelect({
   onSelectBots,
   onSelectOnline,

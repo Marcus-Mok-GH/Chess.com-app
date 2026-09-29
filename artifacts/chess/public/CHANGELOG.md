@@ -9,6 +9,7 @@
 - The Online entry was removed from navigation at every screen size: the mobile bottom navigation is now Home, Play, More (plus Admin for admin accounts) with its grid shrank from 4 to 3 columns (5 → 4 with the Admin item), and the desktop sidebar no longer lists "Online Play" either. The Home "Play online" card and the landing-page CTAs still link to online play.
 - The two option cards stay side-by-side on every breakpoint (the mobile rule now only tightens padding/gap instead of stacking them), and the Online option is disabled with an "Offline" badge while the device is offline, matching the Home page's Play online card. The Bots option stays available.
 - Added `components/PlayModeSelect.jsx` (+ its styles) and `PlayModeSelect.test.jsx`, registered in the root test script.
+- Follow-up from CodeRabbit's review of PR #244: added JSDoc for the functions the diff touched (`PlayModeSelect`, `Play`, `AppHeader`) to clear its docstring-coverage warning; typecheck and tests re-verified (9/9).
 
 [2026-09-29] - Make the pull-request rule a standing instruction in replit.md
 

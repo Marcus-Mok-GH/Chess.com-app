@@ -27,6 +27,15 @@ function botFromSetup(setup) {
   return BOTS.find((b) => b.id === 'nelson') || BOTS[0];
 }
 
+/**
+ * Play tab page. Starts on the Bots vs Online choice (PlayModeSelect); once
+ * Bots is picked — or a local game is resumed from a link — it runs the
+ * existing computer setup (PlaySetup) and local game flow.
+ *
+ * @param {object} [props]
+ * @param {string|null} [props.initialGameId] - Resume this local game directly.
+ * @param {object|null} [props.initialSetup] - Bot/color state for a resumed game.
+ */
 export default function Play({ initialGameId = null, initialSetup = null }) {
   const navigate = useNavigate();
   const { settings } = useSettings();
