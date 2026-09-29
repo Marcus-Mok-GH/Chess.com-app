@@ -109,7 +109,7 @@ router.post('/join', requireSession, async (req, res) => {
   try {
     const { isRanked, timeControl } = req.body || {};
     const playerId = String(req.userId);
-    const playerResult = await query('SELECT id, username, elo, rapid_elo, classical_elo FROM users WHERE id = $1', [playerId]);
+    const playerResult = await query('SELECT id, username, elo, rapid_elo, classical_elo, blitz_elo FROM users WHERE id = $1', [playerId]);
     if (playerResult.rowCount === 0) {
       return res.status(401).json({ success: false, message: 'User account not found' });
     }

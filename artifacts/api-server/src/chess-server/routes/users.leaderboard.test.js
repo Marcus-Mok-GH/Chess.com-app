@@ -53,6 +53,7 @@ const ROW = {
   elo: 1300,
   rapid_elo: 1500,
   classical_elo: 1100,
+  blitz_elo: 1250,
   games_played: 10,
   wins: 5,
   losses: 3,
@@ -77,6 +78,7 @@ describe('GET /api/users/leaderboard/top', () => {
       elo: 1300,
       rapidElo: 1500,
       classicalElo: 1100,
+      blitzElo: 1250,
     });
 
     const [sql, params] = query.mock.calls[0];
@@ -110,12 +112,31 @@ describe('GET /api/users/leaderboard/top', () => {
     expect(query.mock.calls[0][0]).toContain('ORDER BY classical_elo DESC');
   });
 
+  it('ranks the blitz pool for both ?timeControl=blitz and blitz_3_2', async () => {
+    query.mockResolvedValue({ rows: [] });
+    const app = buildApp();
+
+    const flat = await get(app, '/api/users/leaderboard/top?timeControl=blitz');
+    expect(flat.body.timeControl).toBe('blitz');
+    expect(query.mock.calls[0][0]).toContain('ORDER BY blitz_elo DESC');
+
+    query.mockClear();
+    query.mockResolvedValue({ rows: [] });
+
+    const increment = await get(
+      app,
+      '/api/users/leaderboard/top?timeControl=blitz_3_2'
+    );
+    expect(increment.body.timeControl).toBe('blitz_3_2');
+    expect(query.mock.calls[0][0]).toContain('ORDER BY blitz_elo DESC');
+  });
+
   it('normalizes an unknown control to the untimed pool', async () => {
     query.mockResolvedValue({ rows: [] });
 
     const res = await get(
       buildApp(),
-      '/api/users/leaderboard/top?timeControl=blitz'
+      '/api/users/leaderboard/top?timeControl=bullet'
     );
 
     expect(res.body.timeControl).toBe('unlimited');
@@ -133,6 +154,7 @@ describe('GET /api/users/:username', () => {
           elo: 1210,
           rapid_elo: 1450,
           classical_elo: 1350,
+          blitz_elo: 1280,
           games_played: 4,
           wins: 2,
           losses: 1,
@@ -148,5 +170,6 @@ describe('GET /api/users/:username', () => {
     expect(res.body.elo).toBe(1210);
     expect(res.body.rapidElo).toBe(1450);
     expect(res.body.classicalElo).toBe(1350);
+    expect(res.body.blitzElo).toBe(1280);
   });
 });

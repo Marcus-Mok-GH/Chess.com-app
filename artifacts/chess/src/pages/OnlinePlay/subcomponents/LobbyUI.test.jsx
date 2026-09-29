@@ -23,7 +23,15 @@ describe('LobbyUI time control', () => {
 
     expect(
       Array.from(timeControlSelect().options).map((option) => option.value),
-    ).toEqual(['unlimited', 'rapid', 'rapid_10_3', 'classical', 'classical_30_5']);
+    ).toEqual([
+      'unlimited',
+      'blitz',
+      'blitz_3_2',
+      'rapid',
+      'rapid_10_3',
+      'classical',
+      'classical_30_5',
+    ]);
   });
 
   it('reflects the currently selected control', () => {
@@ -45,6 +53,18 @@ describe('LobbyUI time control', () => {
 
   it('describes each control for screen readers', () => {
     render(<LobbyUI {...defaultProps} />);
+
+    const blitz = Array.from(timeControlSelect().options).find(
+      (entry) => entry.value === 'blitz',
+    );
+    expect(blitz.textContent).toContain('Blitz');
+    expect(blitz.textContent).toContain('3 minutes each');
+
+    const blitzIncrement = Array.from(timeControlSelect().options).find(
+      (entry) => entry.value === 'blitz_3_2',
+    );
+    expect(blitzIncrement.textContent).toContain('Blitz 3+2');
+    expect(blitzIncrement.textContent).toContain('3 min + 2s per move');
 
     const rapid = Array.from(timeControlSelect().options).find(
       (entry) => entry.value === 'rapid_10_3',

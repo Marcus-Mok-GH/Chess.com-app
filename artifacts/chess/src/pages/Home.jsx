@@ -100,6 +100,13 @@ export default function Home() {
 
             <div className="stat-card card-surface">
               <div className="stat-content">
+                <div className="stat-label">Blitz Rating</div>
+                <div className="stat-value">{user.blitzElo ?? user.elo}</div>
+              </div>
+            </div>
+
+            <div className="stat-card card-surface">
+              <div className="stat-content">
                 <div className="stat-label">Rapid Rating</div>
                 <div className="stat-value">{user.rapidElo ?? user.elo}</div>
               </div>

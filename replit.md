@@ -64,7 +64,7 @@ Consolidated list of the rules that apply to every change in this workspace (det
 
 ## Product
 
-- **Play online**: ranked matchmaking with a chosen time control (Unlimited, Rapid 10+0, Rapid 10+3, Classical 30+0, or Classical 30+5 — each control has its own queue, so different controls never pair; the Rapid variants share one Rapid rating and the Classical variants share one Classical rating), or friendly games where the creator picks the control and seat color (White / Random / Black). Live clocks, resign/draw, emoji reactions floating over the board, in-game chat, Elo updates and post-game analysis for ranked games.
+- **Play online**: ranked matchmaking with a chosen time control (Unlimited, Blitz 3+0, Blitz 3+2, Rapid 10+0, Rapid 10+3, Classical 30+0, or Classical 30+5 — each control has its own queue, so different controls never pair; the Blitz variants share one Blitz rating, the Rapid variants share one Rapid rating, and the Classical variants share one Classical rating), or friendly games where the creator picks the control and seat color (White / Random / Black). Live clocks, resign/draw, emoji reactions floating over the board, in-game chat, Elo updates and post-game analysis for ranked games.
 - **Play bots**: local engine games (Stockfish) with color choice, including a random-color roll at game start.
 - **Train**: puzzles with solution-piece hints, openings explorer, lessons.
 - **Accounts**: passwordless email login — enter email, receive a 6-digit code, verify. Friends list and presence.

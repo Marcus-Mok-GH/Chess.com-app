@@ -5,7 +5,7 @@ import { RATING_POOLS } from '../utils/timeControls';
 import './More.css'
 
 // Built from RATING_POOLS so this entry can never drift from the pools the
-// leaderboard actually offers (Unlimited, Rapid, Classical).
+// leaderboard actually offers (Unlimited, Blitz, Rapid, Classical).
 const ratingPoolLabels = RATING_POOLS.map((pool) => pool.label)
 const ratingPoolList =
   ratingPoolLabels.length > 1

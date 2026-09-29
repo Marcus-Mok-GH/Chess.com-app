@@ -443,6 +443,12 @@ export default function Settings() {
                 <span className="account-value account-value-elo">{user.elo}</span>
               </div>
               <div className="account-row">
+                <span className="account-label">Blitz Rating</span>
+                <span className="account-value account-value-elo">
+                  {user.blitzElo ?? user.elo}
+                </span>
+              </div>
+              <div className="account-row">
                 <span className="account-label">Rapid Rating</span>
                 <span className="account-value account-value-elo">
                   {user.rapidElo ?? user.elo}

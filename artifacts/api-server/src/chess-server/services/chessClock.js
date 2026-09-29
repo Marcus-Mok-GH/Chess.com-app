@@ -2,8 +2,8 @@
  * Server-authoritative clock for timed online games.
  *
  * Storage model (active_games):
- *   time_control        'unlimited' | 'rapid' | 'rapid_10_3' | 'classical'
- *                       | 'classical_30_5'
+ *   time_control        'unlimited' | 'blitz' | 'blitz_3_2' | 'rapid'
+ *                       | 'rapid_10_3' | 'classical' | 'classical_30_5'
  *   white_time_ms       remaining ms for White *as of* clock_running_since
  *   black_time_ms       remaining ms for Black *as of* clock_running_since
  *   clock_running_since when the side to move started thinking (null before
@@ -17,17 +17,23 @@
  */
 
 export const RAPID_MS = 10 * 60 * 1000; // Rapid is 10 minutes per player
-// Classical is a flat 30 minutes per player. Kept separate from Rapid so the
-// two categories can diverge without touching each other's games.
+// Blitz is a flat 3 minutes per player, and Classical is 30. Each category is
+// its own constant so the three can diverge without touching each other's
+// games.
+export const BLITZ_MS = 3 * 60 * 1000;
 export const CLASSICAL_MS = 30 * 60 * 1000;
 // Fischer increment added to the mover's clock after each move. Only the
-// increment variants (Rapid 10+3, Classical 30+5) use one; everything else is
-// a flat clock.
+// increment variants (Blitz 3+2, Rapid 10+3, Classical 30+5) use one;
+// everything else — including flat Blitz 3+0 — is a flat clock.
+export const BLITZ_INCREMENT_MS = 2 * 1000;
 export const RAPID_INCREMENT_MS = 3 * 1000;
 export const CLASSICAL_INCREMENT_MS = 5 * 1000;
 
-// Starting clock for each timed control. Untimed controls are absent.
+// Starting clock for each timed control. Untimed controls are absent. Both
+// Blitz variants start at three minutes, like the Rapid pair start at ten.
 const INITIAL_CLOCK_MS_BY_CONTROL = {
+  blitz: BLITZ_MS,
+  blitz_3_2: BLITZ_MS,
   rapid: RAPID_MS,
   rapid_10_3: RAPID_MS,
   classical: CLASSICAL_MS,
@@ -36,14 +42,17 @@ const INITIAL_CLOCK_MS_BY_CONTROL = {
 
 // Per-move increment for each increment control. Flat controls are absent.
 const INCREMENT_MS_BY_CONTROL = {
+  blitz_3_2: BLITZ_INCREMENT_MS,
   rapid_10_3: RAPID_INCREMENT_MS,
   classical_30_5: CLASSICAL_INCREMENT_MS,
 };
 
-// Every control that runs a clock. Pools are isolated per id, while the
-// variants of a category (10+0/10+3, 30+0/30+5) share one rating pool via
-// ratingPools.js.
+// Every control that runs a clock, fastest first. Pools are isolated per id,
+// while the variants of a category (3+0/3+2, 10+0/10+3, 30+0/30+5) share one
+// rating pool via ratingPools.js.
 export const TIMED_TIME_CONTROL_IDS = [
+  'blitz',
+  'blitz_3_2',
   'rapid',
   'rapid_10_3',
   'classical',
@@ -95,7 +104,7 @@ function elapsedSince(runningSince, now) {
  * Derives the live clock for a game row.
  *
  * @returns {{
- *   timeControl: 'unlimited'|'rapid'|'rapid_10_3'|'classical'|'classical_30_5',
+ *   timeControl: 'unlimited'|'blitz'|'blitz_3_2'|'rapid'|'rapid_10_3'|'classical'|'classical_30_5',
  *   limited: boolean,
  *   sideToMove: 'white'|'black',
  *   whiteMs: number|null,
