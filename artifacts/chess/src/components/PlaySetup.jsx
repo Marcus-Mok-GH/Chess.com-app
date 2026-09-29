@@ -55,6 +55,15 @@ export default function PlaySetup({
               <span className="color-btn-emoji" aria-hidden="true">♚</span>
               Black
             </button>
+            <button
+              type="button"
+              className={`color-btn color-btn-random ${playerColor === 'random' ? 'selected' : ''}`}
+              onClick={() => onSelectColor('random')}
+              aria-pressed={playerColor === 'random'}
+            >
+              <span className="color-btn-emoji" aria-hidden="true">🎲</span>
+              Random
+            </button>
           </div>
         </div>
 

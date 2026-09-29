@@ -8,6 +8,7 @@ import GameBottomBar from '../components/GameBottomBar';
 import PlaySetup from '../components/PlaySetup';
 import { BOTS, createCustomBot } from '../engine/bots/bots';
 import { generateGameId } from '../engine/game/gameId';
+import { resolvePlayerColor } from '../utils/playerColor';
 import api from '../services/api';
 import {
   loadLocalGame,
@@ -69,6 +70,8 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
   );
 
   async function handleStart() {
+    // 'random' resolves to a concrete color at start (rerolled on every New Game)
+    const resolvedColor = resolvePlayerColor(playerColor);
     if (!user) {
       const gameId = activeGameId || generateGameId();
       // Seed localStorage so a mid-game refresh restores setup + empty board
@@ -76,8 +79,8 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
         gameId,
         fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
         moveHistory: [],
-        playerColor,
-        boardOrientation: playerColor === 'w' ? 'white' : 'black',
+        playerColor: resolvedColor,
+        boardOrientation: resolvedColor === 'w' ? 'white' : 'black',
         botId: selectedBot.id,
         botName: selectedBot.id === 'custom' ? `Custom Bot (${customElo})` : selectedBot.name,
         customElo,
@@ -89,7 +92,7 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
         state: {
           selectedBot,
           customElo,
-          playerColor,
+          playerColor: resolvedColor,
         },
       });
 
@@ -111,8 +114,8 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
       gameId,
       fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
       moveHistory: [],
-      playerColor,
-      boardOrientation: playerColor === 'w' ? 'white' : 'black',
+      playerColor: resolvedColor,
+      boardOrientation: resolvedColor === 'w' ? 'white' : 'black',
       botId: selectedBot.id,
       botName,
       customElo,
@@ -127,7 +130,7 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
           username: user.username,
           opponentName: botName,
           opponentElo: botElo,
-          playerColor: playerColor === 'w' ? 'white' : 'black',
+          playerColor: resolvedColor === 'w' ? 'white' : 'black',
         });
       } catch (error) {
         console.error('[Play] Failed to create local game:', error);
@@ -139,7 +142,7 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
       state: {
         selectedBot,
         customElo,
-        playerColor,
+        playerColor: resolvedColor,
       },
     });
 

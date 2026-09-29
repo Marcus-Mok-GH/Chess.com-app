@@ -1,3 +1,8 @@
+[2026-09-29] - Random color picker for bot games
+
+- The bot-game setup screen now offers a Random color option alongside White and Black: when selected, the player's color is rolled 50/50 at game start (a fresh roll on every "New Game"), and the board orientation, saved game, and server record all use the resolved color. The choice stays symbolic until start, so nothing about the pending selection leaks into the persisted snapshot, and the seeded color only affects board orientation and seat assignment, not the engine.
+- Added `utils/playerColor.js` (`resolvePlayerColor`) as the single resolution point, with unit tests covering passthrough for 'w'/'b', a 50/50 roll for 'random', and fallback behavior for unknown values. Added `PlaySetup.test.jsx` covering the three-option picker, selected/aria-pressed state, and Start-button enablement. Registered both in the root test script; full Vitest suite passes (26 files, 243 tests) and the chess frontend typecheck is clean.
+
 [2026-09-28] - Fix the api-server typecheck failing on the CORS config import
 
 - Fixed the pre-existing `pnpm run typecheck` failure in the api-server: `src/app.ts` reported `TS7016: Could not find a declaration file for module './chess-server/config/cors.js'`. The package compiles with `allowJs` disabled and `noImplicitAny` on, and the plain-JavaScript CORS config had no type declarations next to it, so its one static import in the TypeScript entrypoint could not be typed. Every other JavaScript route import in that file is a dynamic `await import(... as any)`, which is why this single line was the only error.

@@ -70,6 +70,15 @@
   gap: 1rem;
 }
 
+.color-btn-random {
+  grid-column: 1 / -1;
+  min-height: 76px;
+}
+
+.color-btn-random .color-btn-emoji {
+  font-size: 1.5rem;
+}
+
 .color-btn {
   padding: 1.5rem 1rem;
   background: var(--bg-surface-2);
@@ -151,6 +160,7 @@
   .play-setup-subtitle { font-size: 0.95rem; }
   .color-choice { grid-template-columns: 1fr; }
   .color-btn { min-height: 80px; padding: 1rem; }
+  .color-btn-random { min-height: 64px; }
   .start-btn { width: 100%; padding: 1rem; font-size: 1rem; }
   .play-setup-actions { flex-direction: column-reverse; }
 }
