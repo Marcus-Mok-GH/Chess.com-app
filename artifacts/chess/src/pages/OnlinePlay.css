@@ -338,45 +338,10 @@
   margin: 1rem 0;
 }
 
-/* Time-control dropdown — a labeled select so every control (Unlimited,
-   Rapid 10+0, Rapid 10+3) lives in one compact field. Each option reads
-   "<label> — <description>" so the chosen control stays self-explanatory. */
-.time-control-select {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
+/* Time-control dropdown. The control itself is the shared `.select-field`
+   component; the lobby just adds the spacing below it. */
+.lobby-content .select-field {
   margin-bottom: 1rem;
-}
-
-.time-control-select-label {
-  font-size: 0.72rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-dim);
-}
-
-.time-control-select select {
-  width: 100%;
-  padding: 0.7rem 0.85rem;
-  background: var(--bg-surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  color: var(--text-primary);
-  font-size: 0.9rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: var(--transition-smooth);
-}
-
-.time-control-select select:hover {
-  border-color: var(--border-hover);
-  background: var(--bg-surface-3);
-}
-
-.time-control-select select:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
 }
 
 .online-color-choice {

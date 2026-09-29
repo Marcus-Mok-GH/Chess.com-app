@@ -619,8 +619,8 @@ export default function OnlinePlay() {
                                 <span aria-hidden="true">♚</span> Black
                             </button>
                         </div>
-                        <label className="time-control-select">
-                            <span className="time-control-select-label">
+                        <label className="select-field">
+                            <span className="select-field-label">
                                 Time control
                             </span>
                             <select

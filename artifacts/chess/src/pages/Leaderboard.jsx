@@ -55,25 +55,20 @@ export default function Leaderboard() {
                     </p>
                 </header>
 
-                <div
-                    className="leaderboard-pool-toggle"
-                    role="group"
-                    aria-label="Rating pool"
-                >
-                    {RATING_POOLS.map((option) => (
-                        <button
-                            key={option.id}
-                            type="button"
-                            className={`leaderboard-pool-btn ${
-                                timeControl === option.id ? "selected" : ""
-                            }`}
-                            onClick={() => setTimeControl(option.id)}
-                            aria-pressed={timeControl === option.id}
-                        >
-                            {option.label}
-                        </button>
-                    ))}
-                </div>
+                <label className="select-field leaderboard-pool-select">
+                    <span className="select-field-label">Rating pool</span>
+                    <select
+                        aria-label="Rating pool"
+                        value={timeControl}
+                        onChange={(event) => setTimeControl(event.target.value)}
+                    >
+                        {RATING_POOLS.map((option) => (
+                            <option key={option.id} value={option.id}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </select>
+                </label>
 
                 <section className="leaderboard-card card-surface">
                     <div className="leaderboard-card-head">

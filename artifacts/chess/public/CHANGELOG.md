@@ -1,3 +1,8 @@
+[2026-09-29] - Rating-pool picker is a dropdown too
+
+- The Leaderboard's Unlimited/Rapid switch is now a dropdown instead of a pill toggle, using the same control as the time pickers. It sits in a capped-width field so a two-option picker does not stretch across the board card, and choosing a pool still reloads the board and relabels the columns.
+- Extracted one shared `select-field` component style in `index.css` and moved the ranked mode-select screen and the friendly-game lobby onto it, so every dropdown on the site looks and behaves the same.
+
 [2026-09-29] - Time-control picker is now a dropdown
 
 - The time-control choice on both the ranked mode-select screen and the friendly-game lobby is now a single labeled dropdown instead of a row of buttons. With three controls (Unlimited, Rapid 10+0, Rapid 10+3) a select reads cleaner and keeps the panel compact on narrow screens; each option shows the control's name and its short description so no information is lost.

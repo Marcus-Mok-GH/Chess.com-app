@@ -270,6 +270,41 @@
     border-color: rgba(255, 255, 255, 0.1);
   }
 
+  /* Labeled dropdown shared by the time-control and leaderboard pool
+     pickers. Kept generic so every select on the site looks the same. */
+  .select-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .select-field-label {
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+  }
+  .select-field select {
+    width: 100%;
+    padding: 0.7rem 0.85rem;
+    background: var(--bg-surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+  }
+  .select-field select:hover {
+    border-color: var(--border-hover);
+    background: var(--bg-surface-3);
+  }
+  .select-field select:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+
   /* Modern section dividers */
   .divider {
     height: 1px;

@@ -35,14 +35,21 @@ describe("Leaderboard", () => {
         expect(screen.getByText("you")).toBeDefined();
     });
 
-    it("refetches the board for the selected pool", async () => {
+    it("offers both pools and refetches the board for the selected one", async () => {
         render(<Leaderboard />);
 
         await waitFor(() =>
             expect(api.getLeaderboard).toHaveBeenCalledWith(50, "unlimited"),
         );
 
-        fireEvent.click(screen.getByRole("button", { name: /rapid/i }));
+        const poolSelect = screen.getByRole("combobox", {
+            name: /rating pool/i,
+        });
+        expect(
+            Array.from(poolSelect.options).map((option) => option.value),
+        ).toEqual(["unlimited", "rapid"]);
+
+        fireEvent.change(poolSelect, { target: { value: "rapid" } });
 
         await waitFor(() =>
             expect(api.getLeaderboard).toHaveBeenCalledWith(50, "rapid"),

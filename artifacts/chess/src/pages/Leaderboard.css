@@ -39,31 +39,12 @@
   font-size: 0.95rem;
 }
 
-/* ── Pool toggle ──────────────────────────── */
-.leaderboard-pool-toggle {
-  display: inline-flex;
-  gap: 0.4rem;
-  padding: 0.3rem;
+/* ── Rating pool picker ───────────────────── */
+/* Uses the shared `.select-field`; capped width so a two-option picker does
+   not stretch across the whole board card. */
+.leaderboard-pool-select {
+  max-width: 260px;
   margin-bottom: 1.25rem;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-full);
-}
-.leaderboard-pool-btn {
-  padding: 0.45rem 1.1rem;
-  border: 0;
-  border-radius: var(--radius-full);
-  background: transparent;
-  color: var(--text-secondary);
-  font-weight: 700;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: background var(--transition-fast), color var(--transition-fast);
-}
-.leaderboard-pool-btn:hover { color: var(--text-primary); }
-.leaderboard-pool-btn.selected {
-  background: var(--primary);
-  color: #10150c;
 }
 
 /* ── Board ────────────────────────────────── */

@@ -25,8 +25,8 @@ export default function LobbyUI({
 
         <h2 className="mode-title">Choose Game Mode</h2>
 
-        <label className="time-control-select">
-          <span className="time-control-select-label">Time control</span>
+        <label className="select-field">
+          <span className="select-field-label">Time control</span>
           <select
             aria-label="Time control"
             value={timeControl}
