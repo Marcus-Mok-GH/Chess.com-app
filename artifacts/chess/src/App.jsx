@@ -150,7 +150,7 @@ function AppHeader({ isGameRoute = false }) {
                    <span className="username">{user.username}</span>
                    <span className="elo">{user.elo}</span>
                 </div>
-                <button onClick={logout} className="sidebar-logout" title="Logout">
+                <button onClick={logout} className="sidebar-logout" title="Logout" aria-label="Log out">
                   <DoorOpen size={16} />
                 </button>
               </div>
