@@ -16,6 +16,7 @@ import {
 import haptics from "../utils/haptics";
 import { findKingSquare } from "./ChessGame/utils";
 import { useGameCore } from "./OnlineChessGame/hooks/useGameCore";
+import { useLiveClock } from "./OnlineChessGame/hooks/useLiveClock";
 import GameUI from "./OnlineChessGame/subcomponents/GameUI";
 import {
     REACTION_BURST_MS,
@@ -55,6 +56,7 @@ export default function OnlineChessGame({
 
     const [chatMessages, setChatMessages] = useState([]);
     const [reactionBursts, setReactionBursts] = useState([]);
+    const [serverClock, setServerClock] = useState(null);
     const chatMessagesRef = useRef([]);
     const [selectedSquare, setSelectedSquare] = useState(null);
     const [possibleMoves, setPossibleMoves] = useState([]);
@@ -89,6 +91,7 @@ export default function OnlineChessGame({
     const chatTickRef = useRef(0);
     const presenceTickRef = useRef(0);
     const boardOrientation = playerColor || "white";
+    const liveClock = useLiveClock(serverClock);
 
     // Expire floating reaction bursts without waiting for the next chat poll.
     const pruneIntervalRef = useRef(null);
@@ -203,6 +206,17 @@ export default function OnlineChessGame({
                 const data = await api.getGameByCode(gameId);
                 if (cancelled || !data) return;
 
+                // Authoritative clock snapshot for this poll; the hook ticks it
+                // locally until the next one arrives.
+                setServerClock({
+                    timeControl: data.time_control,
+                    status: data.status,
+                    whiteMs: data.white_time_ms ?? null,
+                    blackMs: data.black_time_ms ?? null,
+                    side: data.clock_side ?? null,
+                    receivedAt: Date.now(),
+                });
+
                 const serverHistory = normalizeMoveHistory(data.move_history);
                 const serverMoveCount = Number.isInteger(data.move_count)
                     ? data.move_count
@@ -218,6 +232,9 @@ export default function OnlineChessGame({
                     setGameStatus("ended");
                     setDrawOffered(false);
                     if (data.result) setWinner(data.result);
+                    // The server now records why a game ended (timeout, resignation,
+                    // …) so the result line can name it for both players.
+                    if (data.end_reason) setEndReason(data.end_reason);
                     clearOnlineSession();
 
                     // Elo change: fetch profile after game ends (once)
@@ -557,9 +574,11 @@ export default function OnlineChessGame({
         if (gameStatus === "ended")
             return endReason === "resignation"
                 ? `${winner} wins by resignation`
-                : winner === "draw"
-                  ? "Draw"
-                  : `${winner} wins`;
+                : endReason === "timeout"
+                  ? `${winner} wins on time`
+                  : winner === "draw"
+                    ? "Draw"
+                    : `${winner} wins`;
         if (game.inCheck()) return "Check!";
         return game.turn() === colorCode ? "Your turn" : "Opponent's turn";
     };
@@ -592,6 +611,8 @@ export default function OnlineChessGame({
                 }
                 showVictory={showVictory}
                 reactionBursts={reactionBursts}
+                liveClock={liveClock}
+                timeControl={serverClock?.timeControl || null}
                 gameId={gameId}
                 opponentStatus={opponentStatus}
                 eloChange={eloChange}

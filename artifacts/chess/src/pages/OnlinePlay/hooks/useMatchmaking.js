@@ -54,7 +54,7 @@ export function useMatchmaking(user, isLoggedIn, settings) {
         }
     }, [clearMatchmakingTimers]);
 
-    const startMatchmaking = useCallback(async () => {
+    const startMatchmaking = useCallback(async (timeControl = "unlimited") => {
         const gen = ++generationRef.current;
         lastJoinGenRef.current = gen;
         setMatchmakingTransport("polling");
@@ -79,6 +79,7 @@ export function useMatchmaking(user, isLoggedIn, settings) {
             currentName,
             currentElo,
             true,
+            timeControl,
         );
         // If generation changed while we were awaiting, user already cancelled.
         // The server keys matchmaking_queue rows on the authenticated user (one

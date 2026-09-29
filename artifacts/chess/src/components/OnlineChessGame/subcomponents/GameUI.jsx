@@ -16,8 +16,19 @@ export default function GameUI({
   moveError, getStatusMessage, drawOffered, handleRespondDraw,
   handleSendReaction, reactionBursts = [], moveHistory, gameStatus,
   capturedPieces, chatMessages, handleSendMessage, playerId,
-  handleOfferDraw, handleResign, onLeave, canLeave, chatEnabled
+  handleOfferDraw, handleResign, onLeave, canLeave, chatEnabled,
+  liveClock = null, timeControl = null,
 }) {
+  // Only timed games show clocks, and each player bar shows the clock for the
+  // color it represents (the bars swap with the board orientation).
+  const clockFor = (playerColor) => {
+    if (!liveClock?.limited) return { clockMs: null, clockActive: false };
+    const isWhite = playerColor === 'w';
+    return {
+      clockMs: isWhite ? liveClock.whiteMs : liveClock.blackMs,
+      clockActive: gameStatus === 'playing' && liveClock.side === (isWhite ? 'white' : 'black'),
+    };
+  };
 
   const [chatInput, setChatInput] = React.useState('');
   const [reportReason, setReportReason] = React.useState('engine_assistance');
@@ -55,6 +66,7 @@ export default function GameUI({
           {...topPlayer}
           isActive={game.turn() === (boardOrientation === 'white' ? 'b' : 'w')}
           capturedPieces={capturedPieces[topPlayer.color === 'w' ? 'b' : 'w']}
+          {...clockFor(topPlayer.color)}
         />
         <div className="board-wrapper">
           <ChessBoard
@@ -94,12 +106,14 @@ export default function GameUI({
           {...bottomPlayer}
           isActive={game.turn() === (boardOrientation === 'white' ? 'w' : 'b')}
           capturedPieces={capturedPieces[bottomPlayer.color === 'w' ? 'b' : 'w']}
+          {...clockFor(bottomPlayer.color)}
         />
       </div>
 
       <div className="sidebar">
         <div className="online-game-info">
           <div>Game Code: {gameId}</div>
+          {timeControl === 'rapid' && <div>Rapid · 10 min each</div>}
           <div className={`status-${opponentStatus}`}>Opponent {opponentStatus}</div>
           {eloChange !== null && <div>Rating: {eloChange > 0 ? '+' : ''}{eloChange}</div>}
         </div>

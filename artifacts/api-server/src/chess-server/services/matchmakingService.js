@@ -1,5 +1,6 @@
 import { query, withTransaction } from '../db.js';
 import { accountIdForPlayer, findActiveGameForAccount, lockAccounts } from './activeGameGuard.js';
+import { initialClockMs, normalizeTimeControl } from './chessClock.js';
 
 const DEFAULT_ELO = 1200;
 const ELO_RANGE_INITIAL = 500; // Increased from 200 for better matching
@@ -111,6 +112,14 @@ class MatchmakingService {
             continue;
           }
 
+          // Timed and untimed games are never paired against each other.
+          const player1Control = normalizeTimeControl(player1.time_control);
+          const player2Control = normalizeTimeControl(player2.time_control);
+          if (player1Control !== player2Control) {
+            console.log(`[Matchmaking]   Skipped ${player2.player_name}: time_control mismatch (${player1Control} vs ${player2Control})`);
+            continue;
+          }
+
           if (eloDiff <= eloRange && eloDiff < bestEloDiff) {
             console.log(`[Matchmaking]   Potential match with ${player2.player_name}: elo diff=${eloDiff} ✓`);
             bestMatch = player2;
@@ -204,6 +213,10 @@ class MatchmakingService {
         }
 
         const isPlayer1White = Math.random() < 0.5;
+        // Matchmaking starts the game immediately, so a timed game's clock
+        // begins running for White as soon as the match row is written.
+        const timeControl = normalizeTimeControl(player1.time_control);
+        const startingMs = initialClockMs(timeControl);
         await client.query(
           `INSERT INTO active_games (
             game_id,
@@ -211,8 +224,9 @@ class MatchmakingService {
             white_socket_id, black_socket_id,
             white_player_name, black_player_name,
             white_elo, black_elo,
-            status, game_mode
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+            status, game_mode,
+            time_control, white_time_ms, black_time_ms, clock_running_since
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
           [
             gameId,
             isPlayer1White ? player1.player_id : player2.player_id,
@@ -224,11 +238,15 @@ class MatchmakingService {
             isPlayer1White ? player1.elo : player2.elo,
             isPlayer1White ? player2.elo : player1.elo,
             'playing',
-            player1.is_ranked ? 'ranked' : 'friendly'
+            player1.is_ranked ? 'ranked' : 'friendly',
+            timeControl,
+            startingMs,
+            startingMs,
+            timeControl === 'rapid' ? new Date() : null
           ]
         );
 
-        console.log(`[Matchmaking] Game ${gameId} inserted into active_games (mode=${player1.is_ranked ? 'ranked' : 'friendly'})`);
+        console.log(`[Matchmaking] Game ${gameId} inserted into active_games (mode=${player1.is_ranked ? 'ranked' : 'friendly'}, time=${timeControl})`);
         console.log(`[Matchmaking]   Match discovered by HTTP polling via GET /api/matchmaking/check-match`);
         return true;
       });
@@ -238,7 +256,7 @@ class MatchmakingService {
     }
   }
 
-  async joinQueue(socketId, playerId, playerName, elo, isRanked = true) {
+  async joinQueue(socketId, playerId, playerName, elo, isRanked = true, timeControl = 'unlimited') {
     try {
       // Remove any existing entry for this socket or player to avoid duplicates on reconnect
       await query(
@@ -248,9 +266,9 @@ class MatchmakingService {
 
       // Add to queue
       await query(
-        `INSERT INTO matchmaking_queue (socket_id, player_id, player_name, elo, is_ranked)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [socketId, playerId, playerName, Number.isFinite(Number(elo)) ? Number(elo) : DEFAULT_ELO, isRanked]
+        `INSERT INTO matchmaking_queue (socket_id, player_id, player_name, elo, is_ranked, time_control)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [socketId, playerId, playerName, Number.isFinite(Number(elo)) ? Number(elo) : DEFAULT_ELO, isRanked, normalizeTimeControl(timeControl)]
       );
 
       console.log(`[Matchmaking] Player ${playerName} (${elo}) joined queue`);

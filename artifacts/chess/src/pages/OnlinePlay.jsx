@@ -18,6 +18,7 @@ import { playMatchFoundSound } from "../utils/sound";
 import { useMatchmaking } from "./OnlinePlay/hooks/useMatchmaking";
 import LobbyUI from "./OnlinePlay/subcomponents/LobbyUI";
 import { resolveOnlinePlayerColor } from "../utils/playerColor";
+import { TIME_CONTROLS, DEFAULT_TIME_CONTROL } from "../utils/timeControls";
 import "./OnlinePlay.css";
 
 import { resolveOnlinePlayerSeat } from "./OnlinePlay/seatResolution";
@@ -58,6 +59,9 @@ export default function OnlinePlay() {
     });
     const [joinCode, setJoinCode] = useState("");
     const [selectedColor, setSelectedColor] = useState("random");
+    const [selectedTimeControl, setSelectedTimeControl] = useState(
+        DEFAULT_TIME_CONTROL,
+    );
     const [playerElo, setPlayerElo] = useState(() => user?.elo || 1200);
     const [showLoginModal, setShowLoginModal] = useState(false);
     const [pendingMode, setPendingMode] = useState(null);
@@ -372,14 +376,14 @@ export default function OnlinePlay() {
             // Clear pending mode once we act on it so stale callbacks can't re-trigger
             setPendingMode(null);
             if (mode === "ranked") {
-                const started = await startMatchmaking();
+                const started = await startMatchmaking(selectedTimeControl);
                 if (started) setView("matchmaking");
             } else {
                 setGameMode(mode);
                 setView("lobby");
             }
         },
-        [isLoggedIn, startMatchmaking],
+        [isLoggedIn, startMatchmaking, selectedTimeControl],
     );
 
     const handleCreateGame = useCallback(async () => {
@@ -396,6 +400,7 @@ export default function OnlinePlay() {
                 playerName: user.username,
                 playerColor: resolvedColor,
                 playerElo: user.elo,
+                timeControl: selectedTimeControl,
             });
             setGameId(res.gameCode);
             const id = `user_${user.id}`;
@@ -414,7 +419,7 @@ export default function OnlinePlay() {
             pendingCreateRef.current = false;
             setIsCreating(false);
         }
-    }, [selectedColor, isLoggedIn, user, setError, persistGameSession]);
+    }, [selectedColor, selectedTimeControl, isLoggedIn, user, setError, persistGameSession]);
 
     const handleJoinGame = useCallback(async () => {
         if (pendingJoinRef.current) return;
@@ -540,6 +545,8 @@ export default function OnlinePlay() {
                     error={error}
                     handleSelectMode={handleSelectMode}
                     navigate={navigate}
+                    timeControl={selectedTimeControl}
+                    onSelectTimeControl={setSelectedTimeControl}
                 />
             )}
             {view === "matchmaking" && (
@@ -596,6 +603,25 @@ export default function OnlinePlay() {
                             >
                                 <span aria-hidden="true">♚</span> Black
                             </button>
+                        </div>
+                        <div
+                            className="online-time-choice"
+                            role="group"
+                            aria-label="Choose the time control"
+                        >
+                            {TIME_CONTROLS.map((option) => (
+                                <button
+                                    key={option.id}
+                                    type="button"
+                                    className={`online-time-btn${selectedTimeControl === option.id ? " selected" : ""}`}
+                                    onClick={() => setSelectedTimeControl(option.id)}
+                                    aria-pressed={selectedTimeControl === option.id}
+                                    title={option.description}
+                                >
+                                    <span className="online-time-name">{option.label}</span>
+                                    <span className="online-time-detail">{option.description}</span>
+                                </button>
+                            ))}
                         </div>
                         <button
                             className="btn btn-primary"
