@@ -85,6 +85,7 @@ describe('GET /api/matchmaking/status pool scoping', () => {
       rapid: 2,
       rapid_10_3: 1,
       classical: 1,
+      classical_30_5: 0,
     });
 
     const rapid = await loopback(

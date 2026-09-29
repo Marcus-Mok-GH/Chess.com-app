@@ -1,3 +1,18 @@
+[2026-09-29] - Schema guard now covers DDL that alters or indexes a table
+
+- Closed the last way a fresh database could fail to bootstrap. The table guard only looked at `FROM`/`INTO`/`JOIN`/`UPDATE`, so an `ALTER TABLE` or `CREATE INDEX ... ON` naming a table the DDL never creates — or one sitting above its own `CREATE TABLE` — was invisible to it. On an empty database that statement throws `42P01`, which aborts the single DDL transaction: *nothing* is created, the schema version is never written, and the per-query self-heal replays the same doomed sequence — every endpoint fails rather than one. A new guard in `db/init.test.js` walks the DDL statement by statement and requires every table it alters, indexes, drops, or truncates to have been created **earlier in the same run**.
+- Verified against a deliberate regression (a dangling `ALTER TABLE ghost_table …`): the guard fails with `ghost_table (never created)`, and it asserts it still finds more than 30 mutating statements and 20+ created tables so a broken extractor cannot pass vacuously.
+- The table guard now also asserts its scan reaches the server's top-level entry points (`src/app.ts`, `src/index.ts`, `src/vercel.ts`), not just `chess-server/`, so narrowing the scan root can't silently drop them from the "every queried table is created" guarantee.
+- Audited the current schema: `initDatabase` creates all 24 tables (23 business tables plus `schema_meta`) in one ordered transaction, every `ALTER TABLE`/`CREATE INDEX` target is created before it is touched, and `db/query.js` still force-repairs and retries on `42P01`/`42703` for both plain queries and transactions. No schema change was needed. Full Vitest suite passes (44 files, 384 tests); all packages typecheck.
+
+[2026-09-29] - Classical 30+5 time control (shares the Classical rating)
+
+- Added **Classical 30+5** — thirty minutes with a five-second Fischer increment per move — as a fifth time control next to Classical (30+0), Rapid (10+0), Rapid 10+3, and Unlimited, selectable for both ranked matchmaking and friendly games. Both Classical variants feed the same `classical_elo` rating pool, so a result in either moves the Classical rating only.
+- `incrementMsFor` now resolves increments from a per-control map instead of a hard-coded `'rapid_10_3'` check on both the server and the client, so the clock picks up the new five-second increment with no branch changes; 30+5 starts at thirty minutes like 30+0.
+- Ranked matchmaking keeps 30+0 and 30+5 in **separate queue pools** (each time-control id is its own pool), the queue-status endpoint reports a `classical_30_5` count, and the anti-cheat rating label for the new pool reads "Classical".
+- The control appears in the time-control dropdown on the ranked mode-select screen and the friendly-game lobby, and the in-game info line shows its label and description. It reuses the `classical_elo` column, so no schema change or version bump was needed.
+- Updated tests across `chessClock`, `ratingPools`, `timeControls`, the matchmaking pool tests, `useLiveClock`, and the lobby UI. Full Vitest suite passes (44 files, 383 tests); all packages typecheck.
+
 [2026-09-29] - Schema guards now cover columns and foreign-key order
 
 - Audited the automatic schema bootstrap end to end. `initDatabase` creates all 23 tables the server queries, the existing guard test confirms no queried table is missing from the DDL, and `db/query.js` still force-re-runs the full DDL and retries on `42P01` (undefined table) / `42703` (undefined column) for both plain queries and transactions. No schema changes were needed — this closes two gaps in what the guards actually verified.

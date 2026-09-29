@@ -4,13 +4,15 @@
  * The ids match the server's `time_control` column so the value can be sent
  * through unchanged. Rapid is 10 + 0 (a flat ten minutes), Rapid 10+3 adds a
  * three-second Fischer increment per move, and Classical is a flat thirty
- * minutes. Rapid 10+0 and 10+3 share the `rapidElo` pool; Classical has its
- * own `classicalElo` pool.
+ * minutes. Classical 30+5 keeps the same thirty minutes but adds a five-second
+ * increment per move. Rapid 10+0/10+3 share the `rapidElo` pool; Classical
+ * 30+0/30+5 share the `classicalElo` pool.
  */
 
 export const RAPID_MS = 10 * 60 * 1000;
 export const CLASSICAL_MS = 30 * 60 * 1000;
 export const RAPID_INCREMENT_MS = 3 * 1000;
+export const CLASSICAL_INCREMENT_MS = 5 * 1000;
 
 // Every control a player can pick. Ranked matchmaking isolates each id into its
 // own queue, but the leaderboard only shows the rating pools (see RATING_POOLS).
@@ -35,15 +37,32 @@ export const TIME_CONTROLS = [
     label: 'Classical',
     description: '30 minutes each',
   },
+  {
+    id: 'classical_30_5',
+    label: 'Classical 30+5',
+    description: '30 min + 5s per move',
+  },
 ];
 
 // The controls that run a clock, and the starting time for each.
-export const TIMED_TIME_CONTROL_IDS = ['rapid', 'rapid_10_3', 'classical'];
+export const TIMED_TIME_CONTROL_IDS = [
+  'rapid',
+  'rapid_10_3',
+  'classical',
+  'classical_30_5',
+];
 
 const INITIAL_CLOCK_MS_BY_CONTROL = {
   rapid: RAPID_MS,
   rapid_10_3: RAPID_MS,
   classical: CLASSICAL_MS,
+  classical_30_5: CLASSICAL_MS,
+};
+
+// Per-move increment for each increment control. Flat controls are absent.
+const INCREMENT_MS_BY_CONTROL = {
+  rapid_10_3: RAPID_INCREMENT_MS,
+  classical_30_5: CLASSICAL_INCREMENT_MS,
 };
 
 // Which rating pool a control feeds, and the user field that holds it.
@@ -51,6 +70,7 @@ const RATING_POOL_BY_CONTROL = {
   rapid: 'rapid',
   rapid_10_3: 'rapid',
   classical: 'classical',
+  classical_30_5: 'classical',
 };
 const RATING_FIELD_BY_POOL = {
   rapid: 'rapidElo',
@@ -98,7 +118,7 @@ export function initialClockMs(timeControl) {
 
 /** Per-move increment for a control (0 when untimed / no increment). */
 export function incrementMsFor(timeControl) {
-  return timeControl === 'rapid_10_3' ? RAPID_INCREMENT_MS : 0;
+  return INCREMENT_MS_BY_CONTROL[timeControl] ?? 0;
 }
 
 /**

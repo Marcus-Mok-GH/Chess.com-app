@@ -159,6 +159,7 @@ const RATING_POOL_LABELS = Object.freeze({
   rapid: 'Rapid',
   rapid_10_3: 'Rapid',
   classical: 'Classical',
+  classical_30_5: 'Classical',
 });
 
 function ratingContext(timeControl) {

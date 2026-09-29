@@ -23,7 +23,7 @@ describe('LobbyUI time control', () => {
 
     expect(
       Array.from(timeControlSelect().options).map((option) => option.value),
-    ).toEqual(['unlimited', 'rapid', 'rapid_10_3', 'classical']);
+    ).toEqual(['unlimited', 'rapid', 'rapid_10_3', 'classical', 'classical_30_5']);
   });
 
   it('reflects the currently selected control', () => {
@@ -46,10 +46,16 @@ describe('LobbyUI time control', () => {
   it('describes each control for screen readers', () => {
     render(<LobbyUI {...defaultProps} />);
 
-    const option = Array.from(timeControlSelect().options).find(
+    const rapid = Array.from(timeControlSelect().options).find(
       (entry) => entry.value === 'rapid_10_3',
     );
-    expect(option.textContent).toContain('Rapid 10+3');
-    expect(option.textContent).toContain('10 min + 3s per move');
+    expect(rapid.textContent).toContain('Rapid 10+3');
+    expect(rapid.textContent).toContain('10 min + 3s per move');
+
+    const classical = Array.from(timeControlSelect().options).find(
+      (entry) => entry.value === 'classical_30_5',
+    );
+    expect(classical.textContent).toContain('Classical 30+5');
+    expect(classical.textContent).toContain('30 min + 5s per move');
   });
 });
