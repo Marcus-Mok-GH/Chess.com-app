@@ -6,6 +6,8 @@ import { Chess } from 'chess.js';
 import { query } from '../db.js';
 import { isStockfishConfigured, runEngine } from './engineWorker.js';
 import { buildTimingMetrics } from './fairPlayTelemetry.js';
+import { CHEAT_CONFIRMED_NOTIFICATION, createNotifications } from './notificationService.js';
+import { normalizeTimeControl } from './chessClock.js';
 
 const MAX_ANALYZED_MOVES = 160;
 const ENGINE_DEPTH = 8;
@@ -150,6 +152,129 @@ export async function getIntegrityReviews({ status = null, limit = 50 } = {}) {
   return (await query('SELECT * FROM game_integrity_reviews ORDER BY suspicious_score DESC, updated_at DESC LIMIT $1', [safeLimit])).rows;
 }
 
+// Human-readable name of the rating pool a game was played in. A missing time
+// control (legacy rows) yields no label rather than pretending it was untimed.
+const RATING_POOL_LABELS = Object.freeze({
+  unlimited: 'Unlimited',
+  rapid: 'Rapid',
+  rapid_10_3: 'Rapid',
+  classical: 'Classical',
+});
+
+function ratingContext(timeControl) {
+  if (timeControl == null || !String(timeControl).trim()) return { normalized: null, label: null };
+  const normalized = normalizeTimeControl(timeControl);
+  return { normalized, label: RATING_POOL_LABELS[normalized] || 'Unlimited' };
+}
+
+// `Number(null)` is 0, which would invent an "Elo 0" for games recorded
+// before ratings were captured. Anything absent stays absent.
+function eloOf(side) {
+  if (side.elo == null || side.elo === '') return null;
+  const value = Number(side.elo);
+  return Number.isFinite(value) ? Math.round(value) : null;
+}
+
+function describeCheater(side, pool) {
+  const name = side.name || 'Your opponent';
+  const elo = eloOf(side);
+  const bits = [];
+  if (pool.label) bits.push(pool.label);
+  if (elo != null) bits.push(`Elo ${elo}`);
+  return bits.length ? `${name} (${bits.join(' · ')})` : name;
+}
+
+/**
+ * Builds the inbox entries for a confirmed fair-play case: one for the
+ * opponent who played the game and one for every other integrity reviewer,
+ * each carrying the rating context and the game the cheating happened on.
+ *
+ * Returns the notifications it created (empty when the game is unknown or no
+ * accused player can be identified — reviewers are only told about a case we
+ * can actually attribute).
+ */
+export async function notifyCheatConfirmed(gameCode, { reviewerId = null } = {}) {
+  const code = String(gameCode || '').trim().toUpperCase();
+  if (!code) return [];
+  const actingReviewer = reviewerId == null ? null : String(reviewerId);
+
+  const result = await query(
+    `SELECT g.game_code, g.white_player_id, g.black_player_id, g.white_player_name, g.black_player_name,
+            g.result, g.time_control, g.white_elo, g.black_elo, r.flagged_players
+       FROM games g
+       LEFT JOIN game_integrity_reviews r ON r.game_code = g.game_code
+      WHERE g.game_code = $1 LIMIT 1`,
+    [code]
+  );
+  const game = result.rows[0];
+  if (!game) return [];
+
+  const sides = [
+    { id: game.white_player_id, name: game.white_player_name, elo: game.white_elo },
+    { id: game.black_player_id, name: game.black_player_name, elo: game.black_elo },
+  ].filter((side) => side.id);
+
+  // Prefer the analysis verdict; fall back to who the players reported so a
+  // manually confirmed case still names an accused player.
+  const accused = new Set((game.flagged_players || []).map(String));
+  let cheaters = sides.filter((side) => accused.has(String(side.id)));
+  if (!cheaters.length) {
+    const reports = await query(
+      'SELECT DISTINCT reported_player_id FROM fair_play_reports WHERE game_code = $1',
+      [code]
+    );
+    const reported = new Set(reports.rows.map((row) => String(row.reported_player_id)));
+    cheaters = sides.filter((side) => reported.has(String(side.id)));
+  }
+  if (!cheaters.length) return [];
+
+  const cheaterIds = new Set(cheaters.map((side) => String(side.id)));
+  const opponents = sides.filter((side) => !cheaterIds.has(String(side.id)));
+  const pool = ratingContext(game.time_control);
+  const summary = cheaters.map((side) => describeCheater(side, pool)).join(' and ');
+  const payload = {
+    gameCode: code,
+    gameResult: game.result || null,
+    timeControl: pool.normalized,
+    ratingLabel: pool.label,
+    cheaters: cheaters.map((side) => ({
+      playerId: String(side.id),
+      name: side.name || null,
+      elo: eloOf(side),
+    })),
+    reviewerId: actingReviewer,
+    link: `/review/${code}`,
+  };
+
+  // Whoever just pressed confirm already knows the outcome, so the notice goes
+  // to the rest of the review team.
+  const admins = [...reviewerIds()].filter((id) => id !== actingReviewer);
+  // An automated or scripted confirmation has no reviewer to name, and
+  // `String(null)` would put a literal "null" in front of an admin.
+  const attribution = actingReviewer ? ` by reviewer ${actingReviewer}` : '';
+
+  const notifications = [
+    ...opponents.map((side) => ({
+      recipientId: String(side.id),
+      type: CHEAT_CONFIRMED_NOTIFICATION,
+      gameCode: code,
+      title: `Cheating confirmed in game ${code}`,
+      body: `A fair-play review confirmed that ${summary} used engine assistance against you in ranked game ${code}.`,
+      payload,
+    })),
+    ...admins.map((id) => ({
+      recipientId: id,
+      type: CHEAT_CONFIRMED_NOTIFICATION,
+      gameCode: code,
+      title: `Fair-play case confirmed — game ${code}`,
+      body: `Game ${code}: ${summary} was confirmed as cheating${attribution}.`,
+      payload,
+    })),
+  ];
+
+  return createNotifications(notifications);
+}
+
 export async function recordIntegrityDecision(gameCode, { decision, reviewerId, note = null } = {}) {
   const allowed = new Set(['confirmed', 'cleared', 'needs_review']);
   if (!gameCode || !allowed.has(decision) || !reviewerId) return null;
@@ -157,5 +282,15 @@ export async function recordIntegrityDecision(gameCode, { decision, reviewerId, 
     'UPDATE game_integrity_reviews SET review_decision = $2, reviewer_id = $3, review_note = $4, reviewed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE game_code = $1 RETURNING *',
     [gameCode, decision, String(reviewerId), note ? String(note).slice(0, 2000) : null]
   );
-  return result.rows[0] || null;
+  const review = result.rows[0] || null;
+  // Notification delivery must never roll back a reviewer's decision: a failed
+  // inbox write is logged, and the decision still stands.
+  if (review && decision === 'confirmed') {
+    try {
+      await notifyCheatConfirmed(gameCode, { reviewerId });
+    } catch (error) {
+      console.error('[AntiCheat] Failed to notify confirmed case:', error.message);
+    }
+  }
+  return review;
 }

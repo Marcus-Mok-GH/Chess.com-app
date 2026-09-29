@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Link, Outlet, useLocation, useNavigate, N
 import { UserProvider, useUser } from './contexts/UserContext'
 import { SettingsProvider } from './contexts/SettingsContext'
 import { FeedbackPanel } from './components/FeedbackPanel'
+import NotificationBell from './components/NotificationBell'
 import ErrorBoundary from './components/ErrorBoundary'
 import SetUsernameModal from './components/SetUsernameModal'
 import PollinationsCoachPrompt from './components/PollinationsCoachPrompt'
@@ -105,12 +106,15 @@ function AppHeader({ isGameRoute = false }) {
       {/* Sidebar for Desktop */}
       <aside className="sidebar-nav">
         <div className="sidebar-content">
-          <Link to="/home" className="sidebar-logo" aria-label="PlayChess home">
-            <span className="logo-mark">
-              <Crown size={17} />
-            </span>
-            <span className="logo-text">PlayChess</span>
-          </Link>
+          <div className="sidebar-brand-row">
+            <Link to="/home" className="sidebar-logo" aria-label="PlayChess home">
+              <span className="logo-mark">
+                <Crown size={17} />
+              </span>
+              <span className="logo-text">PlayChess</span>
+            </Link>
+            <NotificationBell />
+          </div>
 
           <div className="sidebar-links" aria-label="Desktop navigation">
             <Link to="/home" className={`sidebar-item ${currentPath === '/home' ? 'active' : ''}`}>
@@ -185,6 +189,7 @@ function AppHeader({ isGameRoute = false }) {
           <span className="app-logo-text">PlayChess</span>
         </Link>
         <h1 className="page-title">{getTitle(location.pathname)}</h1>
+        <NotificationBell />
       </header>
 
       {/* Bottom Mobile Navigation */}

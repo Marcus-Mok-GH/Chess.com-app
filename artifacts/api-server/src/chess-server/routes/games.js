@@ -937,15 +937,21 @@ router.post('/:gameId/move', async (req, res) => {
         `INSERT INTO games (
           game_code, white_player_id, black_player_id,
           white_player_name, black_player_name,
-          fen, move_history, status, game_mode
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          fen, move_history, status, game_mode,
+          time_control, white_elo, black_elo
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         ON CONFLICT (game_code)
         DO UPDATE SET
           fen = EXCLUDED.fen, move_history = EXCLUDED.move_history,
-          status = EXCLUDED.status, updated_at = CURRENT_TIMESTAMP`,
+          status = EXCLUDED.status,
+          time_control = COALESCE(games.time_control, EXCLUDED.time_control),
+          white_elo = COALESCE(games.white_elo, EXCLUDED.white_elo),
+          black_elo = COALESCE(games.black_elo, EXCLUDED.black_elo),
+          updated_at = CURRENT_TIMESTAMP`,
         [gameId, whiteUserId, blackUserId,
          game.white_player_name, game.black_player_name,
-         chess.fen(), newHistory, game.status, game.game_mode]
+         chess.fen(), newHistory, game.status, game.game_mode,
+         game.time_control ?? null, game.white_elo ?? null, game.black_elo ?? null]
       );
     } catch (snapErr) {
       console.error('[Games] Persist snapshot failed (non-fatal):', snapErr?.message);
@@ -1258,14 +1264,20 @@ router.post('/:gameId/end', async (req, res) => {
     await query(
       `INSERT INTO games (
         game_code, white_player_id, black_player_id, white_player_name, black_player_name,
-        result, fen, move_history, status, game_mode
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'completed', $9)
+        result, fen, move_history, status, game_mode,
+        time_control, white_elo, black_elo
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'completed', $9, $10, $11, $12)
       ON CONFLICT (game_code) DO UPDATE SET
         result = EXCLUDED.result, fen = EXCLUDED.fen, move_history = EXCLUDED.move_history,
-        status = 'completed', updated_at = CURRENT_TIMESTAMP`,
+        status = 'completed',
+        time_control = COALESCE(games.time_control, EXCLUDED.time_control),
+        white_elo = COALESCE(games.white_elo, EXCLUDED.white_elo),
+        black_elo = COALESCE(games.black_elo, EXCLUDED.black_elo),
+        updated_at = CURRENT_TIMESTAMP`,
       [gameId, userIdFromPlayerId(finished.white_player_id), userIdFromPlayerId(finished.black_player_id),
        finished.white_player_name, finished.black_player_name, result, finished.fen,
-       finished.move_history || [], finished.game_mode]
+       finished.move_history || [], finished.game_mode,
+       finished.time_control ?? null, finished.white_elo ?? null, finished.black_elo ?? null]
     );
     await getOnlineGameKv().del(gameId);
     if (finished.game_mode === 'ranked') scheduleGameAnalysis(gameId);
