@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   RAPID_MS,
+  CLASSICAL_MS,
   RAPID_INCREMENT_MS,
   normalizeTimeControl,
   isTimedControl,
@@ -33,6 +34,7 @@ describe('normalizeTimeControl', () => {
   it('accepts known controls', () => {
     expect(normalizeTimeControl('rapid')).toBe('rapid');
     expect(normalizeTimeControl('rapid_10_3')).toBe('rapid_10_3');
+    expect(normalizeTimeControl('classical')).toBe('classical');
     expect(normalizeTimeControl('unlimited')).toBe('unlimited');
   });
 
@@ -45,16 +47,20 @@ describe('normalizeTimeControl', () => {
 });
 
 describe('initialClockMs / isTimedControl / incrementMsFor', () => {
-  it('starts every rapid variant at ten minutes and untimed at null', () => {
+  it('starts the rapid variants at ten minutes and classical at thirty', () => {
     expect(initialClockMs('rapid')).toBe(10 * 60 * 1000);
     expect(initialClockMs('rapid_10_3')).toBe(10 * 60 * 1000);
+    expect(initialClockMs('classical')).toBe(30 * 60 * 1000);
+    expect(initialClockMs('classical')).toBe(CLASSICAL_MS);
     expect(initialClockMs('unlimited')).toBeNull();
     expect(initialClockMs(undefined)).toBeNull();
+    expect(initialClockMs('blitz')).toBeNull();
   });
 
-  it('treats both rapid variants as timed', () => {
+  it('treats both rapid variants and classical as timed', () => {
     expect(isTimedControl('rapid')).toBe(true);
     expect(isTimedControl('rapid_10_3')).toBe(true);
+    expect(isTimedControl('classical')).toBe(true);
     expect(isTimedControl('unlimited')).toBe(false);
     expect(isTimedControl(undefined)).toBe(false);
   });
@@ -62,6 +68,7 @@ describe('initialClockMs / isTimedControl / incrementMsFor', () => {
   it('gives only rapid 10+3 a per-move increment', () => {
     expect(incrementMsFor('rapid_10_3')).toBe(RAPID_INCREMENT_MS);
     expect(incrementMsFor('rapid')).toBe(0);
+    expect(incrementMsFor('classical')).toBe(0);
     expect(incrementMsFor('unlimited')).toBe(0);
   });
 });

@@ -18,12 +18,12 @@ function timeControlSelect() {
 }
 
 describe('LobbyUI time control', () => {
-  it('offers unlimited, rapid, and rapid 10+3 in a single dropdown', () => {
+  it('offers every control in a single dropdown', () => {
     render(<LobbyUI {...defaultProps} />);
 
     expect(
       Array.from(timeControlSelect().options).map((option) => option.value),
-    ).toEqual(['unlimited', 'rapid', 'rapid_10_3']);
+    ).toEqual(['unlimited', 'rapid', 'rapid_10_3', 'classical']);
   });
 
   it('reflects the currently selected control', () => {

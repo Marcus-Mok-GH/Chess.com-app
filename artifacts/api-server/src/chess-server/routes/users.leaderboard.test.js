@@ -52,6 +52,7 @@ const ROW = {
   username: 'alice',
   elo: 1300,
   rapid_elo: 1500,
+  classical_elo: 1100,
   games_played: 10,
   wins: 5,
   losses: 3,
@@ -63,7 +64,7 @@ beforeEach(() => {
 });
 
 describe('GET /api/users/leaderboard/top', () => {
-  it('ranks by the untimed pool by default and returns both ratings', async () => {
+  it('ranks by the untimed pool by default and returns every rating', async () => {
     query.mockResolvedValue({ rows: [ROW] });
 
     const res = await get(buildApp(), '/api/users/leaderboard/top');
@@ -75,6 +76,7 @@ describe('GET /api/users/leaderboard/top', () => {
       username: 'alice',
       elo: 1300,
       rapidElo: 1500,
+      classicalElo: 1100,
     });
 
     const [sql, params] = query.mock.calls[0];
@@ -96,6 +98,18 @@ describe('GET /api/users/leaderboard/top', () => {
     expect(params).toEqual([5]);
   });
 
+  it('ranks the classical pool for ?timeControl=classical', async () => {
+    query.mockResolvedValue({ rows: [] });
+
+    const res = await get(
+      buildApp(),
+      '/api/users/leaderboard/top?timeControl=classical'
+    );
+
+    expect(res.body.timeControl).toBe('classical');
+    expect(query.mock.calls[0][0]).toContain('ORDER BY classical_elo DESC');
+  });
+
   it('normalizes an unknown control to the untimed pool', async () => {
     query.mockResolvedValue({ rows: [] });
 
@@ -110,7 +124,7 @@ describe('GET /api/users/leaderboard/top', () => {
 });
 
 describe('GET /api/users/:username', () => {
-  it('returns both per-control ratings', async () => {
+  it('returns every per-control rating', async () => {
     query.mockResolvedValue({
       rows: [
         {
@@ -118,6 +132,7 @@ describe('GET /api/users/:username', () => {
           username: 'bob',
           elo: 1210,
           rapid_elo: 1450,
+          classical_elo: 1350,
           games_played: 4,
           wins: 2,
           losses: 1,
@@ -132,5 +147,6 @@ describe('GET /api/users/:username', () => {
     expect(res.status).toBe(200);
     expect(res.body.elo).toBe(1210);
     expect(res.body.rapidElo).toBe(1450);
+    expect(res.body.classicalElo).toBe(1350);
   });
 });

@@ -120,6 +120,7 @@ describe('MatchmakingService time-control pairing', () => {
       ([sql]) => typeof sql === 'string' && sql.includes('SELECT * FROM matchmaking_queue')
     );
     expect(reads.map(([, params]) => params[0]).sort()).toEqual([
+      'classical',
       'rapid',
       'rapid_10_3',
       'unlimited',

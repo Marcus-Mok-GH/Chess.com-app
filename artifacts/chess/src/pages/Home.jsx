@@ -107,6 +107,15 @@ export default function Home() {
 
             <div className="stat-card card-surface">
               <div className="stat-content">
+                <div className="stat-label">Classical Rating</div>
+                <div className="stat-value">
+                  {user.classicalElo ?? user.elo}
+                </div>
+              </div>
+            </div>
+
+            <div className="stat-card card-surface">
+              <div className="stat-content">
                 <div className="stat-label">Rated Games</div>
                 <div className="stat-value">{user.gamesPlayed || 0}</div>
               </div>

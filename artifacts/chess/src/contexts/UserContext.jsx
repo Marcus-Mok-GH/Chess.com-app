@@ -209,6 +209,8 @@ export function UserProvider({ children }) {
                     elo: serverUser.elo || 1200,
                     rapidElo:
                         serverUser.rapidElo || serverUser.elo || 1200,
+                    classicalElo:
+                        serverUser.classicalElo || serverUser.elo || 1200,
                     gamesPlayed: serverUser.gamesPlayed || 0,
                     wins: serverUser.wins || 0,
                     losses: serverUser.losses || 0,
@@ -318,6 +320,8 @@ export function UserProvider({ children }) {
                     elo: serverUser.elo || 1200,
                     rapidElo:
                         serverUser.rapidElo || serverUser.elo || 1200,
+                    classicalElo:
+                        serverUser.classicalElo || serverUser.elo || 1200,
                     gamesPlayed: serverUser.gamesPlayed || 0,
                     wins: serverUser.wins || 0,
                     losses: serverUser.losses || 0,
