@@ -34,7 +34,8 @@ _Describe the high-level user-facing capabilities of this app once they exist._
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- PR vs direct push: create a PR for complex changes (including complicated backend changes); simple frontend changes can be pushed directly to `main`.
+- Commit/PR attribution: do NOT add any author, co-author, or generated-by trailers (e.g. no `Co-Authored-By:` lines, no `🤖 Generated with Codebuff` footers) to commits or PR descriptions.
 
 ## Gotchas
 
