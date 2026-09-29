@@ -4,6 +4,7 @@ import { findActiveGameForAccount, lockAccounts } from '../services/activeGameGu
 import { processMatchmakingOnce } from '../services/matchmakingService.js';
 import { handleRouteError } from '../middleware/errors.js';
 import { requireSession } from '../auth.js';
+import { normalizeTimeControl } from '../services/chessClock.js';
 
 const router = express.Router();
 
@@ -61,7 +62,7 @@ router.get('/details', async (req, res) => {
 // Join matchmaking queue (polling-based - primary method)
 router.post('/join', requireSession, async (req, res) => {
   try {
-    const { isRanked } = req.body || {};
+    const { isRanked, timeControl } = req.body || {};
     const playerId = String(req.userId);
     const playerResult = await query('SELECT id, username, elo FROM users WHERE id = $1', [playerId]);
     if (playerResult.rowCount === 0) {
@@ -80,6 +81,9 @@ router.post('/join', requireSession, async (req, res) => {
     const numericElo = Number(player.elo);
     const serverElo = Number.isFinite(numericElo) && numericElo >= 0 && numericElo <= 4000 ? numericElo : 1200;
     const isRankedValue = typeof isRanked === 'boolean' ? isRanked : true;
+    // Unknown values fall back to an untimed game rather than silently
+    // dropping a player into a clock they did not ask for.
+    const timeControlValue = normalizeTimeControl(timeControl);
 
     // Lock the account while checking active games and entering the queue.
     // This closes the race where two tabs submit /join at the same time.
@@ -93,9 +97,9 @@ router.post('/join', requireSession, async (req, res) => {
 
       const socketId = `polling-${playerId}`;
       await client.query(
-        `INSERT INTO matchmaking_queue (socket_id, player_id, player_name, elo, is_ranked)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [socketId, playerId, trimmedName, serverElo, isRankedValue]
+        `INSERT INTO matchmaking_queue (socket_id, player_id, player_name, elo, is_ranked, time_control)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [socketId, playerId, trimmedName, serverElo, isRankedValue, timeControlValue]
       );
       return true;
     });
@@ -116,7 +120,7 @@ router.post('/join', requireSession, async (req, res) => {
     if (MATCHMAKING_CONFIG.LOG_QUEUE_SIZE) {
       const queueSizeResult = await query('SELECT COUNT(*) as count FROM matchmaking_queue');
       const queueSize = parseInt(queueSizeResult.rows[0].count, 10);
-      console.log(`[Matchmaking/HTTP] Player ${trimmedName} (${serverElo}) joined queue (total: ${queueSize})`);
+      console.log(`[Matchmaking/HTTP] Player ${trimmedName} (${serverElo}, ${timeControlValue}) joined queue (total: ${queueSize})`);
     }
     
     res.json({ success: true, message: 'Joined matchmaking queue', playerId });
@@ -155,7 +159,8 @@ router.get('/check-match', requireSession, async (req, res) => {
     // Check if player is in an active game
     const activeGame = await query(
       `SELECT game_id, white_player_id, black_player_id, white_player_name, black_player_name,
-              white_elo, black_elo, status, game_mode
+              white_elo, black_elo, status, game_mode,
+              time_control, white_time_ms, black_time_ms, clock_running_since
        FROM active_games
        WHERE (white_player_id = $1 OR black_player_id = $1)
        AND status IN ('playing', 'waiting')
@@ -201,7 +206,8 @@ router.get('/check-match', requireSession, async (req, res) => {
           elo: game.black_elo
         }
       },
-      gameMode: game.game_mode || 'ranked'
+      gameMode: game.game_mode || 'ranked',
+      timeControl: normalizeTimeControl(game.time_control)
     });
   } catch (error) {
     handleRouteError(res, error, 'Failed to check for match');

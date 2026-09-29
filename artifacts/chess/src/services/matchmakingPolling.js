@@ -54,7 +54,7 @@ class MatchmakingPollingService {
   }
 
   // Join matchmaking queue via HTTP
-  async joinMatchmaking(playerId, playerName, elo, isRanked = true) {
+  async joinMatchmaking(playerId, playerName, elo, isRanked = true, timeControl = 'unlimited') {
     try {
       const response = await fetch(`${API_BASE_URL}/matchmaking/join`, {
         method: 'POST',
@@ -66,7 +66,8 @@ class MatchmakingPollingService {
           playerId,
           playerName,
           elo,
-          isRanked
+          isRanked,
+          timeControl
         }),
       });
 

@@ -35,6 +35,36 @@
   box-shadow: var(--shadow-lg);
 }
 
+/* ── Chess clock (rapid games) ── */
+.player-clock {
+  margin-left: auto;
+  margin-right: 0.5rem;
+  padding: 0.3rem 0.7rem;
+  min-width: 4.5rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--text-dim);
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: var(--transition-fast);
+}
+
+.player-clock.active {
+  color: var(--text-primary);
+  background: var(--bg-surface-3);
+  border-color: var(--border-hover);
+}
+
+.player-clock.active.low {
+  color: #ff8f85;
+  border-color: rgba(231, 76, 60, 0.55);
+  background: rgba(231, 76, 60, 0.12);
+}
+
 /* ── Floating reaction bursts (👍 👏 🤔 …) ── */
 .reaction-burst {
   position: absolute;

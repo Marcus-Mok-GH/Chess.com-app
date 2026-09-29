@@ -11,6 +11,14 @@ import { getIntegrityReviews, isIntegrityReviewer, scheduleGameAnalysis, recordI
 import { getOnlineGameKv } from '../kv/onlineGameKv.js';
 import { getDrawOfferKv, DRAW_OFFER_STORAGE_ERROR } from '../kv/drawOfferKv.js';
 import { sanitizeFairPlaySignals, withFairPlayMetadata } from '../services/fairPlayTelemetry.js';
+import {
+  applyMoveToClock,
+  evaluateClock,
+  initialClockMs,
+  normalizeTimeControl,
+  opponentOf,
+  sideToMoveFromFen,
+} from '../services/chessClock.js';
 
 const router = express.Router();
 
@@ -41,6 +49,33 @@ function replayStoredHistory(moveHistory) {
 // Generate a unique game code
 function generateGameCode() {
   return crypto.randomBytes(4).toString('hex').toUpperCase();
+}
+
+/**
+ * Ends a game whose side to move has flagged on time.
+ *
+ * Goes through gameService.endGame so a timeout is finalized exactly like any
+ * other terminal result: an atomic `WHERE status = 'playing'` transition (at
+ * most one concurrent timeout wins), the completed-game snapshot, KV eviction,
+ * ranked Elo, and post-game analysis. The reason is annotated afterwards
+ * because endGame does not record one.
+ *
+ * Returns the winner color, or null when the game was already finished.
+ */
+async function finishGameOnTimeout(gameId, game, flaggedColor) {
+  const winner = opponentOf(flaggedColor);
+  const ended = await getGameService().endGame(gameId, winner);
+  if (!ended) return null;
+
+  await query(
+    `UPDATE active_games
+     SET end_reason = 'timeout', clock_running_since = NULL, updated_at = CURRENT_TIMESTAMP
+     WHERE game_id = $1`,
+    [gameId]
+  );
+
+  console.log(`[Games] ${gameId} ended on time — ${winner} wins (${flaggedColor} flagged)`);
+  return winner;
 }
 
 // Match a playerId against a game's seats. Prefers the exact seat string so two
@@ -359,9 +394,11 @@ router.get('/local/:username/:gameCode', async (req, res) => {
 router.post('/online/create', async (req, res) => {
   try {
     const { gameCode: requestedGameCode, playerId, playerName,
-            playerColor = 'white', playerElo } = req.body;
+            playerColor = 'white', playerElo, timeControl } = req.body;
     if (!playerId || !playerName) return errorResponse(res, 400, 'Player id and name are required');
     if (!['white', 'black'].includes(playerColor)) return errorResponse(res, 400, 'Invalid player color');
+    const resolvedTimeControl = normalizeTimeControl(timeControl);
+    const startingMs = initialClockMs(resolvedTimeControl);
     if (playerElo != null && (!Number.isFinite(playerElo) || playerElo < 0 || playerElo > 4000)) {
       return errorResponse(res, 400, 'Invalid player ELO');
     }
@@ -376,8 +413,9 @@ router.post('/online/create', async (req, res) => {
       await client.query(
         `INSERT INTO active_games (
           game_id, white_player_id, black_player_id, white_player_name,
-          black_player_name, white_elo, black_elo, status, game_mode
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+          black_player_name, white_elo, black_elo, status, game_mode,
+          time_control, white_time_ms, black_time_ms, clock_running_since
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
         ON CONFLICT (game_id) DO UPDATE SET
           white_player_id = EXCLUDED.white_player_id,
           black_player_id = EXCLUDED.black_player_id,
@@ -385,11 +423,19 @@ router.post('/online/create', async (req, res) => {
           black_player_name = EXCLUDED.black_player_name,
           white_elo = EXCLUDED.white_elo, black_elo = EXCLUDED.black_elo,
           status = EXCLUDED.status, game_mode = EXCLUDED.game_mode,
+          time_control = EXCLUDED.time_control,
+          white_time_ms = EXCLUDED.white_time_ms,
+          black_time_ms = EXCLUDED.black_time_ms,
+          clock_running_since = EXCLUDED.clock_running_since,
+          end_reason = NULL,
           updated_at = CURRENT_TIMESTAMP`,
         [gameCode, isWhite ? playerId : null, isWhite ? null : playerId,
          isWhite ? playerName : null, isWhite ? null : playerName,
          isWhite ? playerElo || null : null, isWhite ? null : playerElo || null,
-         'waiting', 'friendly']
+         'waiting', 'friendly',
+         resolvedTimeControl, startingMs, startingMs,
+         // The clock only starts once an opponent takes the second seat.
+         null]
       );
       return true;
     });
@@ -404,9 +450,11 @@ router.post('/online/create', async (req, res) => {
       white_player_id: isWhite ? playerId : null, black_player_id: isWhite ? null : playerId,
       white_player_name: isWhite ? playerName : null, black_player_name: isWhite ? null : playerName,
       white_elo: isWhite ? playerElo || null : null, black_elo: isWhite ? null : playerElo || null,
+      time_control: resolvedTimeControl, white_time_ms: startingMs, black_time_ms: startingMs,
+      clock_running_since: null,
     });
 
-    res.json({ success: true, gameCode, playerColor });
+    res.json({ success: true, gameCode, playerColor, timeControl: resolvedTimeControl });
   } catch (error) {
     return handleRouteError(res, error, 'Failed to create online game');
   }
@@ -437,6 +485,8 @@ router.post('/online/join', async (req, res) => {
 
       const isWhiteOpen = !game.white_player_id;
       const assignedColor = isWhiteOpen ? 'white' : 'black';
+      // A timed game's clock starts the moment the second seat fills, so the
+      // creator is not charged for the time spent waiting for an opponent.
       const updated = await client.query(
         `UPDATE active_games
          SET white_player_id = COALESCE(white_player_id, $2),
@@ -445,7 +495,12 @@ router.post('/online/join', async (req, res) => {
              black_player_name = COALESCE(black_player_name, $5),
              white_elo = COALESCE(white_elo, $6),
              black_elo = COALESCE(black_elo, $7),
-             status = 'playing', updated_at = CURRENT_TIMESTAMP
+             status = 'playing',
+             clock_running_since = CASE
+               WHEN time_control = 'rapid' THEN CURRENT_TIMESTAMP
+               ELSE NULL
+             END,
+             updated_at = CURRENT_TIMESTAMP
          WHERE game_id = $1 AND status = 'waiting'
            AND ((white_player_id IS NULL AND black_player_id IS NOT NULL)
              OR (white_player_id IS NOT NULL AND black_player_id IS NULL))
@@ -467,6 +522,8 @@ router.post('/online/join', async (req, res) => {
 
     const { game, assignedColor } = joinResult;
     const isWhiteOpen = assignedColor === 'white';
+    const timeControl = normalizeTimeControl(game.time_control);
+    const startingMs = initialClockMs(timeControl);
     await getOnlineGameKv().set(normalizedGameCode, {
       game_id: normalizedGameCode, game_code: normalizedGameCode,
       fen: game.fen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
@@ -478,9 +535,18 @@ router.post('/online/join', async (req, res) => {
       black_player_name: isWhiteOpen ? game.black_player_name : playerName,
       white_elo: isWhiteOpen ? playerElo || null : game.white_elo,
       black_elo: isWhiteOpen ? game.black_elo : playerElo || null,
+      time_control: timeControl,
+      white_time_ms: timeControl === 'rapid' ? (game.white_time_ms ?? startingMs) : null,
+      black_time_ms: timeControl === 'rapid' ? (game.black_time_ms ?? startingMs) : null,
+      clock_running_since: timeControl === 'rapid' ? new Date() : null,
     });
 
-    res.json({ success: true, gameCode: normalizedGameCode, playerColor: assignedColor });
+    res.json({
+      success: true,
+      gameCode: normalizedGameCode,
+      playerColor: assignedColor,
+      timeControl,
+    });
   } catch (error) {
     return handleRouteError(res, error, 'Failed to join online game');
   }
@@ -574,6 +640,9 @@ function normalizeGameResponse(row) {
   const move_history = Array.isArray(row.move_history)
     ? row.move_history
     : [];
+  // Live clock state is derived here so clients never have to reason about
+  // elapsed time themselves: remaining values are as of this response.
+  const clock = evaluateClock(row);
   return {
     game_id: row.game_id || row.game_code || null,
     game_code: row.game_code || row.game_id || null,
@@ -589,6 +658,12 @@ function normalizeGameResponse(row) {
     white_elo: typeof row.white_elo === 'number' ? row.white_elo : null,
     black_elo: typeof row.black_elo === 'number' ? row.black_elo : null,
     result: row.result || null,
+    end_reason: row.end_reason || null,
+    time_control: clock.timeControl,
+    white_time_ms: clock.whiteMs,
+    black_time_ms: clock.blackMs,
+    clock_running_since: clock.runningSince || null,
+    clock_side: clock.limited ? clock.sideToMove : null,
     created_at: row.created_at || null,
   };
 }
@@ -610,15 +685,41 @@ router.get('/by-code/:gameCode', async (req, res) => {
     try {
       const activeResult = await query(
         `SELECT game_id AS game_code, result, fen, move_history,
-                game_mode, status, created_at,
+                game_mode, status, created_at, end_reason,
                 white_player_id, black_player_id,
                 white_player_name, black_player_name,
-                white_elo, black_elo, move_count
+                white_elo, black_elo, move_count,
+                time_control, white_time_ms, black_time_ms, clock_running_since
          FROM active_games WHERE game_id = $1 LIMIT 1`,
         [normalizedCode]
       );
       if (activeResult.rows.length > 0) {
         dbRow = activeResult.rows[0];
+      }
+
+      // Lazy, server-authoritative flag fall: any read of a live timed game
+      // resolves it, so a timeout is finalized even when the flagged player
+      // has disconnected and never sends another move. No scheduler needed,
+      // which keeps this correct on serverless hosts.
+      if (dbRow) {
+        const clock = evaluateClock(dbRow);
+        if (clock.flagged && dbRow.status === 'playing') {
+          const winner = await finishGameOnTimeout(normalizedCode, dbRow, clock.flagged);
+          if (winner) {
+            const settled = await query(
+              `SELECT game_id AS game_code, result, fen, move_history,
+                      game_mode, status, created_at, end_reason,
+                      white_player_id, black_player_id,
+                      white_player_name, black_player_name,
+                      white_elo, black_elo, move_count,
+                      time_control, white_time_ms, black_time_ms, clock_running_since
+               FROM active_games WHERE game_id = $1 LIMIT 1`,
+              [normalizedCode]
+            );
+            dbRow = settled.rows[0] || { ...dbRow, status: 'ended', result: winner, end_reason: 'timeout' };
+            return res.json(normalizeGameResponse(dbRow));
+          }
+        }
       }
     } catch (dbErr) {
       console.error('[Games] active_games query failed (non-fatal):', dbErr?.message);
@@ -747,6 +848,35 @@ router.post('/:gameId/move', async (req, res) => {
       return errorResponse(res, 409, 'Not your turn');
     }
 
+    // Server-authoritative clock: a move that arrives after the mover's time
+    // expired is not applied — the game ends with the opponent winning on
+    // time. This is checked before any board state changes.
+    const clockMove = applyMoveToClock(game, expectedColor);
+    if (clockMove.flagged) {
+      const winner = await finishGameOnTimeout(gameId, game, clockMove.flagged);
+      if (winner) {
+        return res.json({
+          success: false,
+          timedOut: true,
+          status: 'ended',
+          result: winner,
+          endReason: 'timeout',
+        });
+      }
+      // Another request already finished the game — report the ended state.
+      const settled = await query(
+        'SELECT status, result, end_reason FROM active_games WHERE game_id = $1',
+        [gameId]
+      );
+      return res.json({
+        success: false,
+        timedOut: true,
+        status: settled?.rows?.[0]?.status || 'ended',
+        result: settled?.rows?.[0]?.result || null,
+        endReason: settled?.rows?.[0]?.end_reason || 'timeout',
+      });
+    }
+
     const serverMoveCount = Number.isInteger(game.move_count)
       ? game.move_count
       : (Array.isArray(game.move_history) ? game.move_history.length : 0);
@@ -784,10 +914,13 @@ router.post('/:gameId/move', async (req, res) => {
 
     const casResult = await query(
       `UPDATE active_games
-       SET fen = $1, move_history = $2, move_count = move_count + 1, updated_at = CURRENT_TIMESTAMP
+       SET fen = $1, move_history = $2, move_count = move_count + 1,
+           white_time_ms = $5, black_time_ms = $6, clock_running_since = $7,
+           updated_at = CURRENT_TIMESTAMP
        WHERE game_id = $3 AND move_count = $4 AND status = 'playing'
        RETURNING *`,
-      [chess.fen(), newHistory, gameId, serverMoveCount]
+      [chess.fen(), newHistory, gameId, serverMoveCount,
+       clockMove.whiteMs, clockMove.blackMs, clockMove.runningSince]
     );
 
     if (!casResult?.rows?.[0]) {
@@ -833,6 +966,10 @@ router.post('/:gameId/move', async (req, res) => {
       black_player_name: game.black_player_name,
       white_elo: game.white_elo,
       black_elo: game.black_elo,
+      time_control: normalizeTimeControl(game.time_control),
+      white_time_ms: clockMove.whiteMs,
+      black_time_ms: clockMove.blackMs,
+      clock_running_since: clockMove.runningSince,
     });
 
     return res.json({
@@ -840,6 +977,10 @@ router.post('/:gameId/move', async (req, res) => {
       fen: chess.fen(),
       moveCount: serverMoveCount + 1,
       moveHistory: newHistory,
+      time_control: normalizeTimeControl(game.time_control),
+      white_time_ms: clockMove.whiteMs,
+      black_time_ms: clockMove.blackMs,
+      clock_running_since: clockMove.runningSince,
     });
   } catch (error) {
     return handleRouteError(res, error, 'Failed to submit move');
@@ -1011,7 +1152,7 @@ router.post('/:gameId/end', async (req, res) => {
     if (!gameId || !playerId || !['white', 'black', 'draw'].includes(result)) {
       return errorResponse(res, 400, 'Invalid game result payload');
     }
-    if (!['checkmate', 'stalemate', 'draw', 'resignation', 'agreement', 'threefold_repetition', 'fivefold_repetition', 'insufficient_material', 'fifty_moves', 'seventyfive_moves'].includes(reason)) {
+    if (!['checkmate', 'stalemate', 'draw', 'resignation', 'agreement', 'timeout', 'threefold_repetition', 'fivefold_repetition', 'insufficient_material', 'fifty_moves', 'seventyfive_moves'].includes(reason)) {
       return errorResponse(res, 400, 'Invalid game end reason');
     }
 
@@ -1091,11 +1232,22 @@ router.post('/:gameId/end', async (req, res) => {
       const winner = isWhite ? 'black' : 'white';
       if (result !== winner) return errorResponse(res, 422, 'Invalid resignation result');
     }
+    if (reason === 'timeout') {
+      // The clock is server-authoritative: a client may report a timeout, but
+      // only when the server's own clock agrees the side to move has flagged.
+      const clock = evaluateClock(game);
+      const flagged = clock.flagged;
+      if (!clock.limited || !flagged || result !== opponentOf(flagged)) {
+        return errorResponse(res, 422, 'Invalid timeout result');
+      }
+    }
 
     const updated = await query(
-      `UPDATE active_games SET status = 'ended', result = $2, updated_at = CURRENT_TIMESTAMP
+      `UPDATE active_games
+       SET status = 'ended', result = $2, end_reason = $3,
+           clock_running_since = NULL, updated_at = CURRENT_TIMESTAMP
        WHERE game_id = $1 AND status = 'playing' RETURNING *`,
-      [gameId, result]
+      [gameId, result, reason]
     );
     if (!updated?.rows?.[0]) {
       const current = await query('SELECT status, result FROM active_games WHERE game_id = $1', [gameId]);

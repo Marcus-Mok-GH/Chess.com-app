@@ -4,7 +4,12 @@ import { LESSON_CATALOG } from '../lessons/lessonCatalog.js';
 // Bump this whenever the schema below changes. Serverless cold starts compare
 // it against the stored value and skip the full DDL transaction entirely when
 // it matches, so routine cold starts never take locks on the users table.
-const SCHEMA_VERSION = '2';
+//
+// A stale version is not fatal: any query that hits a missing table or column
+// forces a full DDL run (see db/query.js), so a deployment that lands before
+// its migration still repairs itself instead of crashing. Bumping this is
+// what makes that repair happen up front rather than on the first failure.
+export const SCHEMA_VERSION = '3';
 const SCHEMA_META_KEY = 'schema_version';
 const SCHEMA_META_TABLE = 'schema_meta';
 // Fixed advisory-lock key so concurrent serverless inits serialize instead of
@@ -234,6 +239,7 @@ export async function initDatabase({ force = false } = {}) {
             player_name VARCHAR(50) NOT NULL,
             elo INTEGER DEFAULT 1200,
             is_ranked BOOLEAN DEFAULT true,
+            time_control VARCHAR(20) DEFAULT 'unlimited',
             joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             last_heartbeat TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           )
@@ -256,6 +262,11 @@ export async function initDatabase({ force = false } = {}) {
             move_history TEXT[] DEFAULT '{}',
             status VARCHAR(20) DEFAULT 'waiting',
             game_mode VARCHAR(20) DEFAULT 'ranked',
+            time_control VARCHAR(20) DEFAULT 'unlimited',
+            white_time_ms INTEGER,
+            black_time_ms INTEGER,
+            clock_running_since TIMESTAMP,
+            end_reason VARCHAR(30),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           )
@@ -279,6 +290,11 @@ export async function initDatabase({ force = false } = {}) {
         await client.query('ALTER TABLE active_games ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
         await client.query('ALTER TABLE active_games ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
         await client.query("ALTER TABLE active_games ADD COLUMN IF NOT EXISTS move_count INTEGER DEFAULT 0");
+        await client.query("ALTER TABLE active_games ADD COLUMN IF NOT EXISTS time_control VARCHAR(20) DEFAULT 'unlimited'");
+        await client.query('ALTER TABLE active_games ADD COLUMN IF NOT EXISTS white_time_ms INTEGER');
+        await client.query('ALTER TABLE active_games ADD COLUMN IF NOT EXISTS black_time_ms INTEGER');
+        await client.query('ALTER TABLE active_games ADD COLUMN IF NOT EXISTS clock_running_since TIMESTAMP');
+        await client.query('ALTER TABLE active_games ADD COLUMN IF NOT EXISTS end_reason VARCHAR(30)');
 
         await client.query(`
           CREATE TABLE IF NOT EXISTS match_moves (
@@ -507,6 +523,9 @@ export async function initDatabase({ force = false } = {}) {
         await client.query('CREATE INDEX IF NOT EXISTS idx_games_white_player_id ON games(white_player_id)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_games_black_player_id ON games(black_player_id)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id)');
+        // Self-heal queue rows created before selectable time controls existed.
+        await client.query("ALTER TABLE matchmaking_queue ADD COLUMN IF NOT EXISTS time_control VARCHAR(20) DEFAULT 'unlimited'");
+
         await client.query('CREATE INDEX IF NOT EXISTS idx_matchmaking_player_id ON matchmaking_queue(player_id)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_matchmaking_elo ON matchmaking_queue(elo)');
         await client.query('CREATE INDEX IF NOT EXISTS idx_friends_user_id ON friends(user_id)');

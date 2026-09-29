@@ -131,6 +131,17 @@ export function useGameCore(gameId, playerId, playerColor, settings) {
         token: getAuthToken(),
       });
 
+      // The server refuses a move that arrives after the mover's clock ran
+      // out and ends the game instead, so the board must not be updated.
+      if (result.timedOut) {
+        moveInFlightRef.current = false;
+        setGameStatus('ended');
+        setEndReason(result.endReason || 'timeout');
+        if (result.result) setWinner(result.result);
+        clearOnlineSession();
+        return false;
+      }
+
       if (!result.success) throw new Error(result.error || 'Move rejected');
 
       const serverHistory = normalizeMoveHistory(result.moveHistory);

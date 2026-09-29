@@ -135,6 +135,7 @@ class ApiService {
         playerColor,
         playerElo,
         gameCode,
+        timeControl,
     }) {
         return this.request("/games/online/create", {
             method: "POST",
@@ -144,6 +145,7 @@ class ApiService {
                 playerColor,
                 playerElo,
                 gameCode,
+                timeControl,
             }),
         });
     }
