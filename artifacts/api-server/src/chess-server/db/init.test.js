@@ -35,15 +35,21 @@ function clientResultFor(text) {
   return { rows: [] };
 }
 
-// Every non-test .js file under the API server source (the DDL must cover the
-// tables all of them query).
+// Every non-test source file under the API server source (the DDL must cover
+// the tables all of them query). Scans TypeScript as well as JavaScript so a
+// query added to a .ts entry point cannot slip past the completeness check.
 function collectSourceFiles(dir) {
   const files = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (entry.name === 'node_modules' || entry.name === 'dist') continue;
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) files.push(...collectSourceFiles(full));
-    else if (entry.name.endsWith('.js') && !entry.name.endsWith('.test.js')) files.push(full);
+    else if (
+      /\.(js|ts|tsx|mjs|cjs)$/.test(entry.name) &&
+      !/\.test\.[jt]sx?$/.test(entry.name)
+    ) {
+      files.push(full);
+    }
   }
   return files;
 }
@@ -226,6 +232,11 @@ describe('initDatabase schema version fast path', () => {
 
     // Keep the extractor honest: if this drops, the regex stopped matching SQL.
     expect(referenced.size).toBeGreaterThan(10);
+    // The scan must cover the TypeScript entry points too (app.ts/index.ts), or
+    // SQL there would silently bypass this guard.
+    expect(
+      collectSourceFiles(sourceRoot).some((file) => file.endsWith('.ts'))
+    ).toBe(true);
 
     await initDatabase();
     const ddl = queries.map((q) => q.text).join('\n');

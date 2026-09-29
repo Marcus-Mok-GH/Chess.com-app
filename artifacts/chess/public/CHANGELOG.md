@@ -1,3 +1,8 @@
+[2026-09-29] - Schema-completeness guard now scans TypeScript too
+
+- The `db/init.test.js` guard that fails when the API queries a table `initDatabase` does not create now scans TypeScript (`.ts`/`.tsx`) as well as JavaScript. The server's real entry points (`app.ts`, `index.ts`, `vercel.ts`, `routes/*.ts`) were outside the scan, so SQL added there could have introduced a table production never creates — the one way to slip past the guarantee that every queried table is created automatically on boot/cold start. No tables or columns changed; this only widens the check.
+- Audited the current schema: `initDatabase` creates 23 tables (21 business tables plus `schema_meta`), every table the server's SQL references is covered by that DDL, and `db/query.js` still force-repairs the schema and retries on `42P01`/`42703`.
+
 [2026-09-29] - Rating-pool picker is a dropdown too
 
 - The Leaderboard's Unlimited/Rapid switch is now a dropdown instead of a pill toggle, using the same control as the time pickers. It sits in a capped-width field so a two-option picker does not stretch across the board card, and choosing a pool still reloads the board and relabels the columns.
