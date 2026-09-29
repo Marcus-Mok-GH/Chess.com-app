@@ -246,6 +246,20 @@ class ApiService {
         });
     }
 
+    // ── Notification inbox ─────────────────────────────────────────────────────
+    // Identity always comes from the httpOnly session cookie.
+    async getNotifications() {
+        return this.request("/notifications");
+    }
+
+    // `{ all: true }` clears the inbox, otherwise only the listed ids are read.
+    async markNotificationsRead({ all = false, ids = [] } = {}) {
+        return this.request("/notifications/read", {
+            method: "POST",
+            body: JSON.stringify({ all, ids }),
+        });
+    }
+
     async endOnlineGame({ gameId, playerId, result, reason, token }) {
         const headers = {};
         if (token) headers["Authorization"] = `Bearer ${token}`;

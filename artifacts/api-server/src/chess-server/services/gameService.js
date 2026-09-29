@@ -43,8 +43,9 @@ export class GameService {
         `INSERT INTO games (
           game_code, white_player_id, black_player_id,
           white_player_name, black_player_name, result,
-          fen, move_history, status, game_mode
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          fen, move_history, status, game_mode,
+          time_control, white_elo, black_elo
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         ON CONFLICT (game_code)
         DO UPDATE SET
           white_player_id = EXCLUDED.white_player_id,
@@ -56,6 +57,9 @@ export class GameService {
           move_history = EXCLUDED.move_history,
           status = EXCLUDED.status,
           game_mode = EXCLUDED.game_mode,
+          time_control = COALESCE(games.time_control, EXCLUDED.time_control),
+          white_elo = COALESCE(games.white_elo, EXCLUDED.white_elo),
+          black_elo = COALESCE(games.black_elo, EXCLUDED.black_elo),
           updated_at = CURRENT_TIMESTAMP
         RETURNING *`,
         [
@@ -68,7 +72,10 @@ export class GameService {
           game.fen,
           game.move_history || [],
           status,
-          game.game_mode
+          game.game_mode,
+          game.time_control ?? null,
+          game.white_elo ?? null,
+          game.black_elo ?? null
         ]
       );
 

@@ -9,7 +9,7 @@ import { LESSON_CATALOG } from '../lessons/lessonCatalog.js';
 // forces a full DDL run (see db/query.js), so a deployment that lands before
 // its migration still repairs itself instead of crashing. Bumping this is
 // what makes that repair happen up front rather than on the first failure.
-export const SCHEMA_VERSION = '5';
+export const SCHEMA_VERSION = '6';
 const SCHEMA_META_KEY = 'schema_version';
 const SCHEMA_META_TABLE = 'schema_meta';
 // Fixed advisory-lock key so concurrent serverless inits serialize instead of
@@ -126,6 +126,9 @@ export async function initDatabase({ force = false } = {}) {
             fen TEXT,
             move_history TEXT[],
             status VARCHAR(20) DEFAULT 'waiting',
+            time_control VARCHAR(20),
+            white_elo INTEGER,
+            black_elo INTEGER,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           )
@@ -144,6 +147,13 @@ export async function initDatabase({ force = false } = {}) {
         await client.query("ALTER TABLE games ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'waiting'");
         await client.query('ALTER TABLE games ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
         await client.query('ALTER TABLE games ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+        // Rating context of the game as it was played: which pool it belonged
+        // to and the Elo each side sat on. Kept on the durable games row because
+        // active_games is cleaned up within hours, and fair-play notifications
+        // need the rating long after the game ended.
+        await client.query("ALTER TABLE games ADD COLUMN IF NOT EXISTS time_control VARCHAR(20)");
+        await client.query('ALTER TABLE games ADD COLUMN IF NOT EXISTS white_elo INTEGER');
+        await client.query('ALTER TABLE games ADD COLUMN IF NOT EXISTS black_elo INTEGER');
         await client.query('ALTER TABLE games ALTER COLUMN game_code TYPE VARCHAR(20)');
         await client.query('ALTER TABLE games ALTER COLUMN result TYPE VARCHAR(20)');
 
@@ -155,6 +165,26 @@ export async function initDatabase({ force = false } = {}) {
         await client.query('ALTER TABLE game_integrity_reviews ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP');
         await client.query("CREATE TABLE IF NOT EXISTS fair_play_reports (id BIGSERIAL PRIMARY KEY, game_code VARCHAR(20) NOT NULL REFERENCES games(game_code) ON DELETE CASCADE, reporter_id VARCHAR(100) NOT NULL, reported_player_id VARCHAR(100) NOT NULL, reason VARCHAR(40) NOT NULL, details TEXT, status VARCHAR(20) NOT NULL DEFAULT 'open', reviewer_id VARCHAR(100), review_note TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE (game_code, reporter_id))");
         await client.query('CREATE INDEX IF NOT EXISTS idx_fair_play_reports_status_created ON fair_play_reports(status, created_at DESC)');
+
+        // Per-user notification inbox. Rows are created by the server (fair-play
+        // outcomes today) and only ever read/cleared by their recipient.
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS notifications (
+            id BIGSERIAL PRIMARY KEY,
+            recipient_id VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            type VARCHAR(40) NOT NULL DEFAULT 'system',
+            game_code VARCHAR(20) REFERENCES games(game_code) ON DELETE CASCADE,
+            title VARCHAR(200) NOT NULL,
+            body TEXT NOT NULL,
+            payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+            read_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        // One inbox entry per recipient/type/game, so re-confirming a review
+        // updates the original notice instead of stacking duplicates.
+        await client.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_notifications_recipient_type_game ON notifications(recipient_id, type, game_code)');
+        await client.query('CREATE INDEX IF NOT EXISTS idx_notifications_recipient_created ON notifications(recipient_id, created_at DESC)');
 
         // User settings table
         await client.query(`

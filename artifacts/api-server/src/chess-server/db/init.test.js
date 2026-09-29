@@ -54,6 +54,59 @@ function collectSourceFiles(dir) {
   return files;
 }
 
+// Definitions inside a CREATE TABLE body that name a constraint rather than a
+// column, so the leading word must not be mistaken for a column name.
+const TABLE_CONSTRAINT_KEYWORDS = new Set([
+  'primary',
+  'foreign',
+  'unique',
+  'check',
+  'constraint',
+  'exclude',
+  'like',
+]);
+
+/** Splits a parenthesized SQL body on its top-level commas. */
+function splitTopLevel(body) {
+  const parts = [];
+  let depth = 0;
+  let current = '';
+  for (const char of body) {
+    if (char === '(') depth += 1;
+    else if (char === ')') depth -= 1;
+    if (char === ',' && depth === 0) {
+      parts.push(current);
+      current = '';
+      continue;
+    }
+    current += char;
+  }
+  if (current.trim()) parts.push(current);
+  return parts;
+}
+
+/**
+ * Finds each `<pattern>(` in `text` and returns the balanced contents of that
+ * paren. Depth counting is required because column definitions contain their
+ * own parens (`VARCHAR(100)`, `REFERENCES users(id)`).
+ */
+function parenBlocks(text, pattern) {
+  const blocks = [];
+  let match;
+  pattern.lastIndex = 0;
+  while ((match = pattern.exec(text)) !== null) {
+    let depth = 1;
+    let index = pattern.lastIndex;
+    while (index < text.length && depth > 0) {
+      if (text[index] === '(') depth += 1;
+      else if (text[index] === ')') depth -= 1;
+      index += 1;
+    }
+    if (depth === 0) blocks.push({ table: match[1], body: text.slice(pattern.lastIndex, index - 1) });
+  }
+  return blocks;
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   queries = [];
@@ -251,6 +304,97 @@ describe('initDatabase schema version fast path', () => {
 
     const missing = [...referenced].filter((table) => !created.has(table)).sort();
     expect(missing).toEqual([]);
+  });
+
+  it('creates every column the server inserts, so a missing column cannot 500 in production', async () => {
+    // Companion to the table guard above. The 42703 self-heal in query.js
+    // re-runs this DDL, so it can only fix a missing column that the DDL
+    // actually defines; a column that was never added here fails, triggers a
+    // repair that does not add it, and fails again — a permanent 500 rather
+    // than a one-time one. INSERT column lists are checked because they are
+    // unambiguous and are how new columns normally reach the database.
+    const sourceRoot = path.resolve(
+      path.dirname(fileURLToPath(import.meta.url)),
+      '..',
+      '..'
+    );
+
+    await initDatabase();
+    const ddl = queries.map((q) => q.text).join('\n');
+
+    // Columns the DDL defines: CREATE TABLE bodies plus the additive backfill.
+    const defined = new Map();
+    const define = (table, column) => {
+      const key = table.toLowerCase();
+      if (!defined.has(key)) defined.set(key, new Set());
+      defined.get(key).add(column.toLowerCase());
+    };
+    for (const { table, body } of parenBlocks(ddl, /CREATE TABLE IF NOT EXISTS\s+([a-z_][a-z0-9_]*)\s*\(/gi)) {
+      for (const part of splitTopLevel(body)) {
+        const name = part.trim().split(/\s+/)[0]?.toLowerCase();
+        if (name && !TABLE_CONSTRAINT_KEYWORDS.has(name)) define(table, name);
+      }
+    }
+    const alterRe = /ALTER TABLE\s+([a-z_][a-z0-9_]*)\s+ADD COLUMN IF NOT EXISTS\s+([a-z_][a-z0-9_]*)/gi;
+    for (const match of ddl.matchAll(alterRe)) define(match[1], match[2]);
+
+    // Keep the extractor honest: if these drop, the parser stopped working.
+    expect(defined.get('users')?.has('classical_elo')).toBe(true);
+    expect(defined.get('games')?.has('white_elo')).toBe(true);
+
+    // Columns the server actually writes.
+    const missing = [];
+    let inserts = 0;
+    for (const file of collectSourceFiles(sourceRoot)) {
+      const text = readFileSync(file, 'utf8');
+      for (const { table, body } of parenBlocks(text, /INSERT INTO\s+([a-z_][a-z0-9_]*)\s*\(/gi)) {
+        const columns = splitTopLevel(body).map((part) => part.trim());
+        // Anything that is not a plain identifier list (dynamic SQL, an
+        // INSERT ... SELECT) is not a column list we can check.
+        if (!columns.length || !columns.every((name) => /^[a-z_][a-z0-9_]*$/i.test(name))) continue;
+        inserts += 1;
+        const known = defined.get(table.toLowerCase());
+        for (const column of columns) {
+          if (!known?.has(column.toLowerCase())) {
+            missing.push(`${table}.${column} (${path.relative(sourceRoot, file)})`);
+          }
+        }
+      }
+    }
+
+    expect(inserts).toBeGreaterThan(10);
+    expect(missing.sort()).toEqual([]);
+  });
+
+  it('creates every foreign-key target before the table referencing it, so a fresh database bootstraps', async () => {
+    // The whole DDL runs in one transaction. On an empty database (a new
+    // environment, or a first deploy) an inline REFERENCES to a table created
+    // further down aborts that transaction, so nothing is created at all and
+    // the self-heal retries the same doomed order — a total outage rather than
+    // one bad endpoint. Existing databases hide this, because the target table
+    // is already there from a previous run.
+    await initDatabase();
+    const ddl = queries.map((q) => q.text).join('\n');
+
+    const blocks = parenBlocks(ddl, /CREATE TABLE IF NOT EXISTS\s+([a-z_][a-z0-9_]*)\s*\(/gi);
+    const order = blocks.map((block) => block.table.toLowerCase());
+    expect(order).toContain('users');
+
+    const problems = [];
+    let references = 0;
+    blocks.forEach(({ table, body }, index) => {
+      for (const match of body.matchAll(/REFERENCES\s+([a-z_][a-z0-9_]*)/gi)) {
+        references += 1;
+        const target = match[1].toLowerCase();
+        const targetIndex = order.indexOf(target);
+        if (targetIndex === -1) problems.push(`${table} -> ${target} (never created)`);
+        else if (targetIndex > index) problems.push(`${table} -> ${target} (created later)`);
+      }
+    });
+
+    // Keep the extractor honest: if this drops, the scan stopped finding FKs.
+    expect(references).toBeGreaterThan(5);
+    expect(problems.sort()).toEqual([]);
   });
 
   it('rolls back and releases the client when DDL fails', async () => {

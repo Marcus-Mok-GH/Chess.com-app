@@ -17,6 +17,7 @@ import openingRoutes from './routes/openings.js';
 import lessonRoutes from './routes/lessons.js';
 import socialRoutes from './routes/social.js';
 import feedbackRoutes from './routes/feedback.js';
+import notificationRoutes from './routes/notifications.js';
 import adminRoutes from './routes/admin.js';
 import { query } from './db.js';
 import { initDatabase } from './db/init.js';
@@ -74,6 +75,7 @@ app.use('/api/openings', openingRoutes);
 app.use('/api/lessons', lessonRoutes);
 app.use('/api/social', socialRoutes);
 app.use('/api/feedback', feedbackRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Health check
