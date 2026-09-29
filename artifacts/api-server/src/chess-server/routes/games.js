@@ -487,6 +487,7 @@ router.post('/online/join', async (req, res) => {
       const assignedColor = isWhiteOpen ? 'white' : 'black';
       // A timed game's clock starts the moment the second seat fills, so the
       // creator is not charged for the time spent waiting for an opponent.
+      const clockStartsAt = initialClockMs(game.time_control) != null ? new Date() : null;
       const updated = await client.query(
         `UPDATE active_games
          SET white_player_id = COALESCE(white_player_id, $2),
@@ -496,10 +497,7 @@ router.post('/online/join', async (req, res) => {
              white_elo = COALESCE(white_elo, $6),
              black_elo = COALESCE(black_elo, $7),
              status = 'playing',
-             clock_running_since = CASE
-               WHEN time_control = 'rapid' THEN CURRENT_TIMESTAMP
-               ELSE NULL
-             END,
+             clock_running_since = $8,
              updated_at = CURRENT_TIMESTAMP
          WHERE game_id = $1 AND status = 'waiting'
            AND ((white_player_id IS NULL AND black_player_id IS NOT NULL)
@@ -508,7 +506,8 @@ router.post('/online/join', async (req, res) => {
         [normalizedGameCode,
          isWhiteOpen ? playerId : null, isWhiteOpen ? null : playerId,
          isWhiteOpen ? playerName : null, isWhiteOpen ? null : playerName,
-         isWhiteOpen ? playerElo || null : null, isWhiteOpen ? null : playerElo || null]
+         isWhiteOpen ? playerElo || null : null, isWhiteOpen ? null : playerElo || null,
+         clockStartsAt]
       );
       if (!updated.rows[0]) return { error: 'join_conflict' };
       return { game, assignedColor };
@@ -524,6 +523,7 @@ router.post('/online/join', async (req, res) => {
     const isWhiteOpen = assignedColor === 'white';
     const timeControl = normalizeTimeControl(game.time_control);
     const startingMs = initialClockMs(timeControl);
+    const timed = startingMs != null;
     await getOnlineGameKv().set(normalizedGameCode, {
       game_id: normalizedGameCode, game_code: normalizedGameCode,
       fen: game.fen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
@@ -536,9 +536,9 @@ router.post('/online/join', async (req, res) => {
       white_elo: isWhiteOpen ? playerElo || null : game.white_elo,
       black_elo: isWhiteOpen ? game.black_elo : playerElo || null,
       time_control: timeControl,
-      white_time_ms: timeControl === 'rapid' ? (game.white_time_ms ?? startingMs) : null,
-      black_time_ms: timeControl === 'rapid' ? (game.black_time_ms ?? startingMs) : null,
-      clock_running_since: timeControl === 'rapid' ? new Date() : null,
+      white_time_ms: timed ? (game.white_time_ms ?? startingMs) : null,
+      black_time_ms: timed ? (game.black_time_ms ?? startingMs) : null,
+      clock_running_since: timed ? new Date() : null,
     });
 
     res.json({

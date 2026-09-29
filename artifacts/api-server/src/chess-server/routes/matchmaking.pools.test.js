@@ -68,7 +68,7 @@ beforeEach(async () => {
 describe('GET /api/matchmaking/status pool scoping', () => {
   it('returns overall and per-pool counts, and scopes to ?timeControl', async () => {
     query.mockResolvedValue({
-      rows: [{ unlimited: '3', rapid: '2', total: '5' }],
+      rows: [{ unlimited: '3', rapid: '2', rapid_10_3: '1', total: '6' }],
     });
 
     const app = buildApp();
@@ -76,9 +76,9 @@ describe('GET /api/matchmaking/status pool scoping', () => {
 
     const all = await loopback(app, 'GET', '/api/matchmaking/status');
     expect(all.status).toBe(200);
-    expect(all.body.playersInQueue).toBe(5);
+    expect(all.body.playersInQueue).toBe(6);
     expect(all.body.timeControl).toBe(null);
-    expect(all.body.pools).toEqual({ unlimited: 3, rapid: 2 });
+    expect(all.body.pools).toEqual({ unlimited: 3, rapid: 2, rapid_10_3: 1 });
 
     const rapid = await loopback(
       app,
@@ -91,7 +91,7 @@ describe('GET /api/matchmaking/status pool scoping', () => {
 
   it('normalizes an unknown control to the untimed pool', async () => {
     query.mockResolvedValue({
-      rows: [{ unlimited: '4', rapid: '1', total: '5' }],
+      rows: [{ unlimited: '4', rapid: '1', rapid_10_3: '0', total: '5' }],
     });
 
     const app = buildApp();

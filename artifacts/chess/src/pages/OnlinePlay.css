@@ -338,10 +338,12 @@
   margin: 1rem 0;
 }
 
+/* Auto-fit so the two or three time-control options stay on one row when
+   there is room, and wrap onto extra rows on narrow screens. */
 .time-control-choice,
 .online-time-choice {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 0.5rem;
   margin-bottom: 1rem;
 }

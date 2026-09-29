@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { isTimedControl } from '../../../utils/timeControls';
 
 const TICK_MS = 250;
 
@@ -21,7 +22,7 @@ const TICK_MS = 250;
  * }} serverClock Latest clock payload from the server.
  */
 export function useLiveClock(serverClock) {
-  const limited = serverClock?.timeControl === 'rapid';
+  const limited = isTimedControl(serverClock?.timeControl);
   const [tick, setTick] = useState(0);
 
   useEffect(() => {

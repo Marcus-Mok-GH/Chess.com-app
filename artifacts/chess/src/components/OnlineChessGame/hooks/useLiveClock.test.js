@@ -36,6 +36,19 @@ describe('useLiveClock', () => {
     expect(result.current.flagged).toBeNull();
   });
 
+  it('counts down rapid 10+3 games as well', () => {
+    const { result } = renderHook(() =>
+      useLiveClock(rapidClock({ timeControl: 'rapid_10_3' })),
+    );
+    expect(result.current.limited).toBe(true);
+
+    act(() => {
+      vi.advanceTimersByTime(3_000);
+    });
+
+    expect(result.current.whiteMs).toBeLessThanOrEqual(597_000);
+  });
+
   it('counts down the side to move as time passes', () => {
     const { result } = renderHook(() => useLiveClock(rapidClock()));
 

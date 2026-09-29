@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Loader2, RefreshCw, Trophy } from "lucide-react";
 import { useUser } from "../contexts/UserContext";
 import api from "../services/api";
-import { TIME_CONTROLS, DEFAULT_TIME_CONTROL } from "../utils/timeControls";
+import { RATING_POOLS, DEFAULT_TIME_CONTROL } from "../utils/timeControls";
 import "./Leaderboard.css";
 
 const LEADERBOARD_LIMIT = 50;
@@ -33,8 +33,8 @@ export default function Leaderboard() {
     }, [timeControl, load]);
 
     const activeControl =
-        TIME_CONTROLS.find((control) => control.id === timeControl) ||
-        TIME_CONTROLS[0];
+        RATING_POOLS.find((control) => control.id === timeControl) ||
+        RATING_POOLS[0];
     // On the rapid board the ranked column is rapid and the secondary is
     // untimed, and vice versa.
     const isRapid = timeControl === "rapid";
@@ -50,7 +50,8 @@ export default function Leaderboard() {
                     <h1 className="leaderboard-title">Leaderboard</h1>
                     <p className="leaderboard-subtitle">
                         Top players by rating. Rapid and Unlimited each have
-                        their own rating pool.
+                        their own rating pool. Both Rapid variants (10+0 and
+                        10+3) share the Rapid rating.
                     </p>
                 </header>
 
@@ -59,7 +60,7 @@ export default function Leaderboard() {
                     role="group"
                     aria-label="Rating pool"
                 >
-                    {TIME_CONTROLS.map((option) => (
+                    {RATING_POOLS.map((option) => (
                         <button
                             key={option.id}
                             type="button"

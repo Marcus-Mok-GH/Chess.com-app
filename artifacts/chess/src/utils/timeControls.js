@@ -2,12 +2,16 @@
  * Time controls available for online games.
  *
  * The ids match the server's `time_control` column so the value can be sent
- * through unchanged. Rapid is 10 + 0 — a flat ten minutes per player with no
- * increment.
+ * through unchanged. Rapid is 10 + 0 (a flat ten minutes) and Rapid 10+3 is
+ * ten minutes with a three-second Fischer increment per move; both feed the
+ * same `rapidElo` rating pool.
  */
 
 export const RAPID_MS = 10 * 60 * 1000;
+export const RAPID_INCREMENT_MS = 3 * 1000;
 
+// Every control a player can pick. Ranked matchmaking isolates each id into its
+// own queue, but the leaderboard only shows the rating pools (see RATING_POOLS).
 export const TIME_CONTROLS = [
   {
     id: 'unlimited',
@@ -19,24 +23,59 @@ export const TIME_CONTROLS = [
     label: 'Rapid',
     description: '10 minutes each',
   },
+  {
+    id: 'rapid_10_3',
+    label: 'Rapid 10+3',
+    description: '10 min + 3s per move',
+  },
+];
+
+// The controls that run a clock. Both rapid variants share one rating pool.
+export const TIMED_TIME_CONTROL_IDS = ['rapid', 'rapid_10_3'];
+
+// Rating pools shown on the leaderboard, kept separate from the playable
+// controls so the two rapid variants do not duplicate the Rapid board.
+export const RATING_POOLS = [
+  { id: 'unlimited', label: 'Unlimited' },
+  { id: 'rapid', label: 'Rapid' },
 ];
 
 export const DEFAULT_TIME_CONTROL = 'unlimited';
 
+/** True when a control runs a clock (as opposed to unlimited). */
+export function isTimedControl(timeControl) {
+  return TIMED_TIME_CONTROL_IDS.includes(timeControl);
+}
+
 /**
- * The rating a user plays a given control with. Each control has its own pool,
- * so Rapid reads `rapidElo` while everything else reads the untimed `elo`.
- * Falls back to the default rating for signed-out users.
+ * The rating pool a control feeds. Both rapid variants read/write `rapidElo`;
+ * everything else uses the untimed `elo`.
+ */
+export function ratingPoolForControl(timeControl) {
+  return isTimedControl(timeControl) ? 'rapid' : 'unlimited';
+}
+
+/**
+ * The rating a user plays a given control with. Rapid reads `rapidElo` while
+ * everything else reads the untimed `elo`. Falls back to the default rating
+ * for signed-out users.
  */
 export function controlRating(user, timeControl) {
   if (!user) return 1200;
-  if (timeControl === 'rapid') return user.rapidElo ?? user.elo ?? 1200;
+  if (ratingPoolForControl(timeControl) === 'rapid') {
+    return user.rapidElo ?? user.elo ?? 1200;
+  }
   return user.elo ?? 1200;
 }
 
 /** Initial remaining time for a control, or null when untimed. */
 export function initialClockMs(timeControl) {
-  return timeControl === 'rapid' ? RAPID_MS : null;
+  return isTimedControl(timeControl) ? RAPID_MS : null;
+}
+
+/** Per-move increment for a control (0 when untimed / no increment). */
+export function incrementMsFor(timeControl) {
+  return timeControl === 'rapid_10_3' ? RAPID_INCREMENT_MS : 0;
 }
 
 /**
@@ -56,6 +95,12 @@ export function formatClock(ms) {
 export function timeControlLabel(timeControl) {
   const found = TIME_CONTROLS.find((t) => t.id === timeControl);
   return found ? found.label : TIME_CONTROLS[0].label;
+}
+
+/** Human description for a time-control id, or null when unknown. */
+export function timeControlDescription(timeControl) {
+  const found = TIME_CONTROLS.find((t) => t.id === timeControl);
+  return found ? found.description : null;
 }
 
 /**

@@ -1,6 +1,6 @@
 import { query, withTransaction } from '../db.js';
 import { accountIdForPlayer, findActiveGameForAccount, lockAccounts } from './activeGameGuard.js';
-import { TIME_CONTROL_IDS, initialClockMs, normalizeTimeControl } from './chessClock.js';
+import { TIME_CONTROL_IDS, initialClockMs, isTimedControl, normalizeTimeControl } from './chessClock.js';
 
 const DEFAULT_ELO = 1200;
 const ELO_RANGE_INITIAL = 500; // Increased from 200 for better matching
@@ -262,7 +262,7 @@ class MatchmakingService {
             timeControl,
             startingMs,
             startingMs,
-            timeControl === 'rapid' ? new Date() : null
+            isTimedControl(timeControl) ? new Date() : null
           ]
         );
 
