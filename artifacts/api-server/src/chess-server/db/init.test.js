@@ -233,7 +233,7 @@ describe('initDatabase schema version fast path', () => {
   });
 
   it('defines the per-time-control rating columns on every full DDL run', async () => {
-    // Rapid, classical, and unlimited keep independent ratings. If either
+    // Blitz, rapid, classical, and unlimited keep independent ratings. If any
     // pool column were dropped, results would silently stop persisting.
     await initDatabase();
 
@@ -242,8 +242,9 @@ describe('initDatabase schema version fast path', () => {
     expect(usersTable).toBeTruthy();
     expect(usersTable).toContain('rapid_elo INTEGER DEFAULT 1200');
     expect(usersTable).toContain('classical_elo INTEGER DEFAULT 1200');
+    expect(usersTable).toContain('blitz_elo INTEGER DEFAULT 1200');
     // Pre-existing installs are backfilled.
-    for (const column of ['rapid_elo', 'classical_elo']) {
+    for (const column of ['blitz_elo', 'rapid_elo', 'classical_elo']) {
       expect(
         texts.some((t) => t.includes(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ${column}`)),
       ).toBe(true);
@@ -348,6 +349,7 @@ describe('initDatabase schema version fast path', () => {
 
     // Keep the extractor honest: if these drop, the parser stopped working.
     expect(defined.get('users')?.has('classical_elo')).toBe(true);
+    expect(defined.get('users')?.has('blitz_elo')).toBe(true);
     expect(defined.get('games')?.has('white_elo')).toBe(true);
 
     // Columns the server actually writes.

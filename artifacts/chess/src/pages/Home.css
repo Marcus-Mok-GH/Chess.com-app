@@ -49,7 +49,7 @@
 /* ── Stats Overview ───────── */
 .stats-overview {
   display: grid;
-  /* The rating split (unlimited + rapid) makes this four cards. */
+  /* The rating split (unlimited, blitz, rapid, classical) makes this five cards. */
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 1rem;
   margin-bottom: 3.5rem;

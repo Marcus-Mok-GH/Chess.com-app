@@ -23,6 +23,7 @@ beforeEach(() => {
                 elo: 1300,
                 rapidElo: 1500,
                 classicalElo: 1100,
+                blitzElo: 1600,
                 gamesPlayed: 10,
             },
             {
@@ -31,6 +32,7 @@ beforeEach(() => {
                 elo: 1200,
                 rapidElo: 1400,
                 classicalElo: 1250,
+                blitzElo: 1380,
                 gamesPlayed: 3,
             },
         ],
@@ -43,8 +45,9 @@ describe("Leaderboard", () => {
 
         await waitFor(() => expect(screen.getByText("alice")).toBeDefined());
 
-        // Selected-pool column plus the other two pools for the same row.
+        // Selected-pool column plus the other pools for the same row.
         expect(screen.getByText("1300")).toBeDefined();
+        expect(screen.getByText(/Blitz 1600/)).toBeDefined();
         expect(screen.getByText(/Rapid 1500/)).toBeDefined();
         expect(screen.getByText(/Classical 1100/)).toBeDefined();
         expect(screen.getByText("you")).toBeDefined();
@@ -62,7 +65,7 @@ describe("Leaderboard", () => {
         });
         expect(
             Array.from(poolSelect.options).map((option) => option.value),
-        ).toEqual(["unlimited", "rapid", "classical"]);
+        ).toEqual(["unlimited", "blitz", "rapid", "classical"]);
 
         fireEvent.change(poolSelect, { target: { value: "classical" } });
 

@@ -69,7 +69,7 @@ describe('GET /api/matchmaking/status pool scoping', () => {
   it('returns overall and per-pool counts, and scopes to ?timeControl', async () => {
     query.mockResolvedValue({
       rows: [
-        { unlimited: '3', rapid: '2', rapid_10_3: '1', classical: '1', total: '7' },
+        { unlimited: '3', blitz: '1', blitz_3_2: '2', rapid: '2', rapid_10_3: '1', classical: '1', total: '10' },
       ],
     });
 
@@ -78,10 +78,12 @@ describe('GET /api/matchmaking/status pool scoping', () => {
 
     const all = await loopback(app, 'GET', '/api/matchmaking/status');
     expect(all.status).toBe(200);
-    expect(all.body.playersInQueue).toBe(7);
+    expect(all.body.playersInQueue).toBe(10);
     expect(all.body.timeControl).toBe(null);
     expect(all.body.pools).toEqual({
       unlimited: 3,
+      blitz: 1,
+      blitz_3_2: 2,
       rapid: 2,
       rapid_10_3: 1,
       classical: 1,
@@ -110,7 +112,7 @@ describe('GET /api/matchmaking/status pool scoping', () => {
     const res = await loopback(
       app,
       'GET',
-      '/api/matchmaking/status?timeControl=blitz'
+      '/api/matchmaking/status?timeControl=bullet'
     );
 
     expect(res.body.timeControl).toBe('unlimited');
