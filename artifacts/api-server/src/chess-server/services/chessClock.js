@@ -2,8 +2,9 @@
  * Server-authoritative clock for timed online games.
  *
  * Storage model (active_games):
- *   time_control        'unlimited' | 'blitz' | 'blitz_3_2' | 'rapid'
- *                       | 'rapid_10_3' | 'classical' | 'classical_30_5'
+ *   time_control        'unlimited' | 'bullet' | 'blitz' | 'blitz_3_2'
+ *                       | 'rapid' | 'rapid_10_3' | 'classical'
+ *                       | 'classical_30_5'
  *   white_time_ms       remaining ms for White *as of* clock_running_since
  *   black_time_ms       remaining ms for Black *as of* clock_running_since
  *   clock_running_since when the side to move started thinking (null before
@@ -17,9 +18,10 @@
  */
 
 export const RAPID_MS = 10 * 60 * 1000; // Rapid is 10 minutes per player
-// Blitz is a flat 3 minutes per player, and Classical is 30. Each category is
-// its own constant so the three can diverge without touching each other's
-// games.
+// Bullet 1+0 is a flat minute, flat Blitz is 3 minutes, and Classical is 30.
+// Each control is its own constant so they can diverge without touching each
+// other's games.
+export const BULLET_MS = 1 * 60 * 1000;
 export const BLITZ_MS = 3 * 60 * 1000;
 export const CLASSICAL_MS = 30 * 60 * 1000;
 // Fischer increment added to the mover's clock after each move. Only the
@@ -29,9 +31,11 @@ export const BLITZ_INCREMENT_MS = 2 * 1000;
 export const RAPID_INCREMENT_MS = 3 * 1000;
 export const CLASSICAL_INCREMENT_MS = 5 * 1000;
 
-// Starting clock for each timed control. Untimed controls are absent. Both
-// Blitz variants start at three minutes, like the Rapid pair start at ten.
+// Starting clock for each timed control. Untimed controls are absent. Bullet
+// 1+0 starts at one minute, the Blitz controls at three, and the Rapid pair at
+// ten.
 const INITIAL_CLOCK_MS_BY_CONTROL = {
+  bullet: BULLET_MS,
   blitz: BLITZ_MS,
   blitz_3_2: BLITZ_MS,
   rapid: RAPID_MS,
@@ -49,8 +53,9 @@ const INCREMENT_MS_BY_CONTROL = {
 
 // Every control that runs a clock, fastest first. Pools are isolated per id,
 // while the variants of a category (3+0/3+2, 10+0/10+3, 30+0/30+5) share one
-// rating pool via ratingPools.js.
+// rating pool via ratingPools.js; Bullet 1+0 is a category of its own.
 export const TIMED_TIME_CONTROL_IDS = [
+  'bullet',
   'blitz',
   'blitz_3_2',
   'rapid',
@@ -104,7 +109,7 @@ function elapsedSince(runningSince, now) {
  * Derives the live clock for a game row.
  *
  * @returns {{
- *   timeControl: 'unlimited'|'blitz'|'blitz_3_2'|'rapid'|'rapid_10_3'|'classical'|'classical_30_5',
+ *   timeControl: 'unlimited'|'bullet'|'blitz'|'blitz_3_2'|'rapid'|'rapid_10_3'|'classical'|'classical_30_5',
  *   limited: boolean,
  *   sideToMove: 'white'|'black',
  *   whiteMs: number|null,

@@ -7,6 +7,7 @@ import {
 
 describe('ratingColumnFor', () => {
   it('maps each control to its own rating column', () => {
+    expect(ratingColumnFor('bullet')).toBe('bullet_elo');
     expect(ratingColumnFor('blitz')).toBe('blitz_elo');
     expect(ratingColumnFor('blitz_3_2')).toBe('blitz_elo');
     expect(ratingColumnFor('rapid')).toBe('rapid_elo');
@@ -15,14 +16,15 @@ describe('ratingColumnFor', () => {
     expect(ratingColumnFor('classical_30_5')).toBe('classical_elo');
     expect(ratingColumnFor('unlimited')).toBe('elo');
     expect(ratingColumnFor(undefined)).toBe('elo');
-    expect(ratingColumnFor('bullet')).toBe('elo');
+    expect(ratingColumnFor('hyperbullet')).toBe('elo');
   });
 });
 
 describe('ratingForControl', () => {
   it('reads the rating from the column for that control', () => {
-    const user = { elo: 1300, blitz_elo: 1350, rapid_elo: 1500, classical_elo: 1400 };
+    const user = { elo: 1300, bullet_elo: 1400, blitz_elo: 1350, rapid_elo: 1500, classical_elo: 1400 };
     expect(ratingForControl(user, 'unlimited')).toBe(1300);
+    expect(ratingForControl(user, 'bullet')).toBe(1400);
     expect(ratingForControl(user, 'blitz')).toBe(1350);
     expect(ratingForControl(user, 'blitz_3_2')).toBe(1350);
     expect(ratingForControl(user, 'rapid')).toBe(1500);

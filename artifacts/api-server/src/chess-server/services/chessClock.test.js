@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  BULLET_MS,
   BLITZ_MS,
   RAPID_MS,
   CLASSICAL_MS,
@@ -35,6 +36,7 @@ function rapidRow(overrides = {}) {
 
 describe('normalizeTimeControl', () => {
   it('accepts known controls', () => {
+    expect(normalizeTimeControl('bullet')).toBe('bullet');
     expect(normalizeTimeControl('blitz')).toBe('blitz');
     expect(normalizeTimeControl('blitz_3_2')).toBe('blitz_3_2');
     expect(normalizeTimeControl('rapid')).toBe('rapid');
@@ -46,14 +48,16 @@ describe('normalizeTimeControl', () => {
 
   it('falls back to unlimited for unknown or missing values', () => {
     expect(normalizeTimeControl(undefined)).toBe('unlimited');
-    expect(normalizeTimeControl('bullet')).toBe('unlimited');
+    expect(normalizeTimeControl('hyperbullet')).toBe('unlimited');
     expect(normalizeTimeControl(null)).toBe('unlimited');
     expect(normalizeTimeControl(42)).toBe('unlimited');
   });
 });
 
 describe('initialClockMs / isTimedControl / incrementMsFor', () => {
-  it('starts both blitz variants at three minutes, the rapid variants at ten, and classical at thirty', () => {
+  it('starts bullet at one minute, the blitz controls at three, the rapid variants at ten, and classical at thirty', () => {
+    expect(initialClockMs('bullet')).toBe(1 * 60 * 1000);
+    expect(initialClockMs('bullet')).toBe(BULLET_MS);
     expect(initialClockMs('blitz')).toBe(3 * 60 * 1000);
     expect(initialClockMs('blitz')).toBe(BLITZ_MS);
     expect(initialClockMs('blitz_3_2')).toBe(BLITZ_MS);
@@ -64,10 +68,11 @@ describe('initialClockMs / isTimedControl / incrementMsFor', () => {
     expect(initialClockMs('classical_30_5')).toBe(CLASSICAL_MS);
     expect(initialClockMs('unlimited')).toBeNull();
     expect(initialClockMs(undefined)).toBeNull();
-    expect(initialClockMs('bullet')).toBeNull();
+    expect(initialClockMs('hyperbullet')).toBeNull();
   });
 
   it('treats every variant, blitz, and classical as timed', () => {
+    expect(isTimedControl('bullet')).toBe(true);
     expect(isTimedControl('blitz')).toBe(true);
     expect(isTimedControl('blitz_3_2')).toBe(true);
     expect(isTimedControl('rapid')).toBe(true);
@@ -79,6 +84,7 @@ describe('initialClockMs / isTimedControl / incrementMsFor', () => {
   });
 
   it('gives only the increment variants a per-move increment', () => {
+    expect(incrementMsFor('bullet')).toBe(0);
     expect(incrementMsFor('blitz')).toBe(0);
     expect(incrementMsFor('blitz_3_2')).toBe(BLITZ_INCREMENT_MS);
     expect(incrementMsFor('rapid_10_3')).toBe(RAPID_INCREMENT_MS);

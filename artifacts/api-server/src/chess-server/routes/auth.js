@@ -153,6 +153,7 @@ function shapeUser(row) {
     name: row.username,
     email: row.email,
     elo: row.elo ?? 1200,
+    bulletElo: row.bullet_elo ?? 1200,
     rapidElo: row.rapid_elo ?? 1200,
     classicalElo: row.classical_elo ?? 1200,
     blitzElo: row.blitz_elo ?? 1200,
@@ -172,7 +173,7 @@ async function upsertUserFromNeonAuth(neonUser) {
   const email = typeof neonUser.email === 'string' ? neonUser.email.trim() : '';
   const defaultUsername = `player_${crypto.randomBytes(4).toString('hex')}`;
   const username = neonUser.name || neonUser.username || defaultUsername;
-  const userColumns = 'id, username, elo, rapid_elo, classical_elo, blitz_elo, games_played, wins, losses, draws, created_at, email, is_banned';
+  const userColumns = 'id, username, elo, bullet_elo, rapid_elo, classical_elo, blitz_elo, games_played, wins, losses, draws, created_at, email, is_banned';
 
   // Neon Auth can issue a new user id while the app already has a local row
   // for the same email. Resolve by email first so the unique email constraint
@@ -322,7 +323,7 @@ async function sendLocalOtp(email) {
 }
 
 async function findOrCreateLocalUser(email) {
-  const columns = 'id, username, elo, rapid_elo, classical_elo, blitz_elo, games_played, wins, losses, draws, created_at, email, is_banned';
+  const columns = 'id, username, elo, bullet_elo, rapid_elo, classical_elo, blitz_elo, games_played, wins, losses, draws, created_at, email, is_banned';
   const existing = await query(
     `SELECT ${columns} FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1`,
     [email]
@@ -645,7 +646,7 @@ router.post('/update-username', requireSession, async (req, res) => {
     if (check.rows.length > 0) return fail(res, 400, 'Username taken.');
 
     const result = await query(
-      'UPDATE users SET username = $1 WHERE id::TEXT = $2::TEXT RETURNING id, username, elo, rapid_elo, classical_elo, blitz_elo, games_played, wins, losses, draws, created_at, email, is_banned',
+      'UPDATE users SET username = $1 WHERE id::TEXT = $2::TEXT RETURNING id, username, elo, bullet_elo, rapid_elo, classical_elo, blitz_elo, games_played, wins, losses, draws, created_at, email, is_banned',
       [trimmed, userId]
     );
 

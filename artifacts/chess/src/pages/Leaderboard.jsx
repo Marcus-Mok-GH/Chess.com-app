@@ -39,6 +39,7 @@ export default function Leaderboard() {
     // variants share their category's pool, so the pool id is what matters
     // rather than the control.
     const ratingFor = (row, poolId) => {
+        if (poolId === "bullet") return row.bulletElo;
         if (poolId === "blitz") return row.blitzElo;
         if (poolId === "rapid") return row.rapidElo;
         if (poolId === "classical") return row.classicalElo;
@@ -56,11 +57,11 @@ export default function Leaderboard() {
                     </div>
                     <h1 className="leaderboard-title">Leaderboard</h1>
                     <p className="leaderboard-subtitle">
-                        Top players by rating. Unlimited, Blitz, Rapid, and
-                        Classical each have their own rating pool. Both Blitz
-                        variants (3+0 and 3+2) share the Blitz rating, both
-                        Rapid variants (10+0 and 10+3) share the Rapid rating,
-                        and both Classical variants share the Classical
+                        Top players by rating. Unlimited, Bullet, Blitz, Rapid,
+                        and Classical each have their own rating pool. Both
+                        Blitz variants (3+0 and 3+2) share the Blitz rating,
+                        both Rapid variants (10+0 and 10+3) share the Rapid
+                        rating, and both Classical variants share the Classical
                         rating.
                     </p>
                 </header>

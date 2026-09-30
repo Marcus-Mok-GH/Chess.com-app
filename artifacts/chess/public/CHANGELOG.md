@@ -1,3 +1,20 @@
+[2026-09-30] - Schema guard can no longer be bypassed by non-uppercase SQL
+
+- Audited the automatic schema bootstrap and confirmed every table the server queries is created by `initDatabase` (24 tables, all `CREATE TABLE IF NOT EXISTS`, in one ordered transaction), with the runtime paths already covering server startup, the Vercel cold-start warm-up, and the per-query `42P01`/`42703` self-heal. No table was missing.
+- Closed the one way a missing table could still reach production: the completeness guard matched SQL keywords case-sensitively, so a query written in lowercase *or mixed case* (`select id from new_table`, `Select id From new_table`) was skipped entirely — its table would never be checked against the DDL. The literal scan is now a single `scanSqlLiteral` classifier that flags any SQL statement whose keywords are not uppercase, strips `${...}` interpolations so a JS variable named `values` is not misread as a keyword, and ignores prose ("Update failed."). A table can no longer hide from it.
+- Verified against deliberate regressions, end to end through the scanner: a lowercase `FROM`, a mixed-case `From`, and a non-existent table each fail the guard with the offending file and table, then the regressions were reverted.
+- Full Vitest suite passes (44 files, 387 tests); all packages typecheck.
+
+[2026-09-30] - Bullet 1+0 time control with its own Bullet rating
+
+- Added **Bullet** — a flat one minute per player — as the fastest timed control, selectable for ranked matchmaking and friendly games. It leads the time-control dropdown ahead of Blitz (3+0) and Blitz 3+2, and the in-game info line shows its label and description.
+- Bullet gets its **own rating pool**. A new `users.bullet_elo` column (default 1200) holds it, so a bullet result moves the Bullet rating only and never touches Unlimited, Blitz, Rapid, or Classical; the schema version bumps to 8 and the new column rides the additive `ADD COLUMN IF NOT EXISTS` self-heal pass so existing databases receive it on the next boot/cold start.
+- `services/ratingPools.js` gains the `bullet` → `bullet_elo` mapping, which is the single place ranked results are routed, so `gameService`'s Elo update and the matchmaking queue seeding both follow it with no branch changes. The client mirrors it in `utils/timeControls.js` via `bullet` → `bulletElo`, and `controlRating` reads the right pool for the selected control.
+- The control id is `bullet`, naming the category (like `rapid` and `classical`) rather than a `blitz_1_0` variant id, since 1+0 *is* the bullet category. Every path picked it up through the shared constants: the server's `TIMED_TIME_CONTROL_IDS`/`INITIAL_CLOCK_MS_BY_CONTROL`, the `bullet_elo` rating mapping, the `bullet` queue pool (so the queue-status endpoint reports its count alongside the other pools), and the anti-cheat rating label, which reads "Bullet".
+- The Bullet rating appears wherever the others do: the leaderboard's pool dropdown gains a Bullet board (each row still lists the player's other pool ratings), and the Home stats grid, account dropdown, and Settings account section all show it. The More menu's Leaderboard description is built from `RATING_POOLS`, so it now reads "See the top Unlimited, Bullet, Blitz, Rapid, and Classical ratings".
+- It is a **flat** control with no increment, so `incrementMsFor('bullet')` returns 0 and the clock starts at one minute. Because `bullet` is now a real control, the tests that previously used it as the "unknown control" fixture now use `hyperbullet`, which genuinely is not supported.
+- Updated tests across `chessClock`, `ratingPools`, `timeControls`, the matchmaking pool tests, the leaderboard route, `init.test.js`, and the lobby/leaderboard UI. Full Vitest suite passes (44 files, 387 tests); all packages typecheck.
+
 [2026-09-29] - Flat Blitz 3+0 joins the Blitz pool
 
 - Added **Blitz** — a flat three minutes per player, no increment — alongside Blitz 3+2, selectable for ranked matchmaking and friendly games. The two now sit as a matched pair in the time-control dropdown (Blitz, then Blitz 3+2), mirroring Rapid (10+0) and Rapid 10+3.

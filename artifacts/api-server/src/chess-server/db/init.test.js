@@ -107,6 +107,54 @@ function parenBlocks(text, pattern) {
   return blocks;
 }
 
+// --- SQL literal scanner used by the schema-completeness guards ---
+// String literals can be backtick-, single-, or double-quoted.
+const SQL_STRING_RE = /`(?:[^`\\]|\\.)*`|'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"/g;
+// SQL keywords are uppercase in this codebase, which is what keeps this
+// extraction precise: the name after FROM/INTO/JOIN/UPDATE is a lowercase
+// identifier, so an uppercase keyword can never be mistaken for a table.
+const SQL_TABLE_RE = /\b(FROM|INTO|JOIN|UPDATE)\s+([a-z_][a-z0-9_]*)/g;
+const SQL_UPPERCASE_KEYWORD_RE = /\b(SELECT|INSERT|UPDATE|DELETE|JOIN|FROM)\b/;
+const SQL_LOWERCASE_KEYWORD_RE = /\b(from|into|join|update|set|values|where)\b/;
+// A statement that is not written in the uppercase convention still has to be
+// recognized, or it would be skipped and its table never checked. These match
+// SQL shape case-insensitively (so mixed case like `Select ... From ...` is
+// caught) while ignoring prose such as "Update failed.".
+const SQL_VERB_ANY_CASE_RE = /^['"`]\s*(select|insert|update|delete|with)\b/i;
+const SQL_CLAUSE_ANY_CASE_RE = /\b(from|into|join)\b/i;
+const SQL_UPDATE_ANY_CASE_RE = /^['"`]\s*update\s+[a-z_][a-z0-9_]*\s+set\b/i;
+
+/** Removes `${...}` interpolations so a JS variable is not read as SQL. */
+function stripSqlInterpolations(literal) {
+  return literal.replace(/\$\{[^}]*\}/g, ' ');
+}
+
+/**
+ * Classifies a single string literal.
+ *
+ * Returns `{ tables, violation }`:
+ *   - `tables`    table names read from a statement written in the uppercase
+ *                 convention this scanner relies on.
+ *   - `violation` true when the literal is a SQL statement that does NOT
+ *                 follow that convention (any non-uppercase keyword, in any mix
+ *                 of case). Such a statement would hide its table from
+ *                 `tables`, so the guard fails on it instead of skipping it.
+ */
+function scanSqlLiteral(literal) {
+  if (SQL_UPPERCASE_KEYWORD_RE.test(literal)) {
+    const sqlText = stripSqlInterpolations(literal);
+    SQL_TABLE_RE.lastIndex = 0;
+    return {
+      tables: [...sqlText.matchAll(SQL_TABLE_RE)].map((match) => match[2].toLowerCase()),
+      violation: SQL_LOWERCASE_KEYWORD_RE.test(sqlText),
+    };
+  }
+  const looksLikeStatement =
+    SQL_VERB_ANY_CASE_RE.test(literal) &&
+    (SQL_CLAUSE_ANY_CASE_RE.test(literal) || SQL_UPDATE_ANY_CASE_RE.test(literal));
+  return { tables: [], violation: looksLikeStatement };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   queries = [];
@@ -243,8 +291,9 @@ describe('initDatabase schema version fast path', () => {
     expect(usersTable).toContain('rapid_elo INTEGER DEFAULT 1200');
     expect(usersTable).toContain('classical_elo INTEGER DEFAULT 1200');
     expect(usersTable).toContain('blitz_elo INTEGER DEFAULT 1200');
+    expect(usersTable).toContain('bullet_elo INTEGER DEFAULT 1200');
     // Pre-existing installs are backfilled.
-    for (const column of ['blitz_elo', 'rapid_elo', 'classical_elo']) {
+    for (const column of ['bullet_elo', 'blitz_elo', 'rapid_elo', 'classical_elo']) {
       expect(
         texts.some((t) => t.includes(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ${column}`)),
       ).toBe(true);
@@ -268,27 +317,34 @@ describe('initDatabase schema version fast path', () => {
       '..',
       '..'
     );
-    const stringRe = /`(?:[^`\\]|\\.)*`|'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"/g;
-    const tableRe = /\b(FROM|INTO|JOIN|UPDATE)\s+([a-z_][a-z0-9_]*)/g;
-
     const referenced = new Set();
+    const lowercaseSql = [];
     for (const file of collectSourceFiles(sourceRoot)) {
       const text = readFileSync(file, 'utf8');
       let literalMatch;
-      stringRe.lastIndex = 0;
-      while ((literalMatch = stringRe.exec(text)) !== null) {
-        const literal = literalMatch[0];
-        if (!/\b(SELECT|INSERT|UPDATE|DELETE|JOIN|FROM)\b/.test(literal)) continue;
-        let tableMatch;
-        tableRe.lastIndex = 0;
-        while ((tableMatch = tableRe.exec(literal)) !== null) {
-          referenced.add(tableMatch[2].toLowerCase());
+      SQL_STRING_RE.lastIndex = 0;
+      while ((literalMatch = SQL_STRING_RE.exec(text)) !== null) {
+        const { tables, violation } = scanSqlLiteral(literalMatch[0]);
+        for (const table of tables) referenced.add(table);
+        if (violation) {
+          lowercaseSql.push(`${path.relative(sourceRoot, file)}: ${literalMatch[0].slice(0, 60)}`);
         }
       }
     }
 
     // Keep the extractor honest: if this drops, the regex stopped matching SQL.
     expect(referenced.size).toBeGreaterThan(10);
+    // The scanner must flag SQL that is not uppercase — including mixed case —
+    // through the actual scanner, not just one regex. Otherwise a lowercase or
+    // mixed-case query would bypass the table scan and reach production without
+    // a CREATE TABLE. Uppercase the offending query rather than deleting this.
+    expect(scanSqlLiteral("'select id from some_future_table'").violation).toBe(true);
+    expect(scanSqlLiteral("'Select id From some_future_table'").violation).toBe(true);
+    expect(scanSqlLiteral("'Update users Set elo = 1'").violation).toBe(true);
+    const uppercase = scanSqlLiteral("'SELECT id FROM some_future_table'");
+    expect(uppercase.violation).toBe(false);
+    expect(uppercase.tables).toEqual(['some_future_table']);
+    expect(lowercaseSql).toEqual([]);
     // The scan must cover the TypeScript entry points too (app.ts/index.ts), or
     // SQL there would silently bypass this guard.
     const scanned = collectSourceFiles(sourceRoot);
@@ -350,6 +406,7 @@ describe('initDatabase schema version fast path', () => {
     // Keep the extractor honest: if these drop, the parser stopped working.
     expect(defined.get('users')?.has('classical_elo')).toBe(true);
     expect(defined.get('users')?.has('blitz_elo')).toBe(true);
+    expect(defined.get('users')?.has('bullet_elo')).toBe(true);
     expect(defined.get('games')?.has('white_elo')).toBe(true);
 
     // Columns the server actually writes.

@@ -213,6 +213,8 @@ export function UserProvider({ children }) {
                         serverUser.classicalElo || serverUser.elo || 1200,
                     blitzElo:
                         serverUser.blitzElo || serverUser.elo || 1200,
+                    bulletElo:
+                        serverUser.bulletElo || serverUser.elo || 1200,
                     gamesPlayed: serverUser.gamesPlayed || 0,
                     wins: serverUser.wins || 0,
                     losses: serverUser.losses || 0,
@@ -326,6 +328,8 @@ export function UserProvider({ children }) {
                         serverUser.classicalElo || serverUser.elo || 1200,
                     blitzElo:
                         serverUser.blitzElo || serverUser.elo || 1200,
+                    bulletElo:
+                        serverUser.bulletElo || serverUser.elo || 1200,
                     gamesPlayed: serverUser.gamesPlayed || 0,
                     wins: serverUser.wins || 0,
                     losses: serverUser.losses || 0,

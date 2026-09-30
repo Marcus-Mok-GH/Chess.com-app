@@ -69,6 +69,10 @@ export default function UserBadge() {
                 <span className="elo-value">{user.elo}</span>
               </span>
               <span className="dropdown-elo">
+                <span className="elo-label">Bullet:</span>
+                <span className="elo-value">{user.bulletElo ?? user.elo}</span>
+              </span>
+              <span className="dropdown-elo">
                 <span className="elo-label">Blitz:</span>
                 <span className="elo-value">{user.blitzElo ?? user.elo}</span>
               </span>

@@ -2,15 +2,17 @@
  * Time controls available for online games.
  *
  * The ids match the server's `time_control` column so the value can be sent
- * through unchanged. Blitz is a flat three minutes and Blitz 3+2 keeps the
- * same three minutes but adds a two-second Fischer increment per move. Rapid
- * is 10 + 0 (a flat ten minutes), Rapid 10+3 adds a three-second increment per
- * move, and Classical is a flat thirty minutes. Classical 30+5 keeps the same
- * thirty minutes but adds a five-second increment per move. Blitz 3+0/3+2
- * share the `blitzElo` pool; Rapid 10+0/10+3 share the `rapidElo` pool;
- * Classical 30+0/30+5 share the `classicalElo` pool.
+ * through unchanged. Bullet 1+0 is a flat one minute, Blitz (3+0) is a flat
+ * three minutes, and Blitz 3+2 keeps the same three minutes but adds a
+ * two-second Fischer increment per move. Rapid is 10 + 0 (a flat ten minutes),
+ * Rapid 10+3 adds a three-second increment per move, and Classical is a flat
+ * thirty minutes. Classical 30+5 keeps the same thirty minutes but adds a
+ * five-second increment per move. Bullet 1+0 has its own `bulletElo` pool; the
+ * Blitz controls (3+0/3+2) share the `blitzElo` pool; Rapid 10+0/10+3 share
+ * the `rapidElo` pool; Classical 30+0/30+5 share the `classicalElo` pool.
  */
 
+export const BULLET_MS = 1 * 60 * 1000;
 export const BLITZ_MS = 3 * 60 * 1000;
 export const RAPID_MS = 10 * 60 * 1000;
 export const CLASSICAL_MS = 30 * 60 * 1000;
@@ -25,6 +27,11 @@ export const TIME_CONTROLS = [
     id: 'unlimited',
     label: 'Unlimited',
     description: 'No clock — take as long as you like',
+  },
+  {
+    id: 'bullet',
+    label: 'Bullet',
+    description: '1 minute each',
   },
   {
     id: 'blitz',
@@ -60,6 +67,7 @@ export const TIME_CONTROLS = [
 
 // The controls that run a clock, and the starting time for each.
 export const TIMED_TIME_CONTROL_IDS = [
+  'bullet',
   'blitz',
   'blitz_3_2',
   'rapid',
@@ -69,6 +77,7 @@ export const TIMED_TIME_CONTROL_IDS = [
 ];
 
 const INITIAL_CLOCK_MS_BY_CONTROL = {
+  bullet: BULLET_MS,
   blitz: BLITZ_MS,
   blitz_3_2: BLITZ_MS,
   rapid: RAPID_MS,
@@ -86,6 +95,7 @@ const INCREMENT_MS_BY_CONTROL = {
 
 // Which rating pool a control feeds, and the user field that holds it.
 const RATING_POOL_BY_CONTROL = {
+  bullet: 'bullet',
   blitz: 'blitz',
   blitz_3_2: 'blitz',
   rapid: 'rapid',
@@ -94,16 +104,17 @@ const RATING_POOL_BY_CONTROL = {
   classical_30_5: 'classical',
 };
 const RATING_FIELD_BY_POOL = {
+  bullet: 'bulletElo',
   blitz: 'blitzElo',
   rapid: 'rapidElo',
   classical: 'classicalElo',
 };
 
 // Rating pools shown on the leaderboard, kept separate from the playable
-// controls so the two Blitz and two Rapid variants do not duplicate those
-// boards.
+// controls so the Blitz and Rapid variants do not duplicate those boards.
 export const RATING_POOLS = [
   { id: 'unlimited', label: 'Unlimited' },
+  { id: 'bullet', label: 'Bullet' },
   { id: 'blitz', label: 'Blitz' },
   { id: 'rapid', label: 'Rapid' },
   { id: 'classical', label: 'Classical' },
@@ -117,9 +128,9 @@ export function isTimedControl(timeControl) {
 }
 
 /**
- * The rating pool a control feeds. Both Blitz variants share and read/write
- * `blitzElo`, both rapid variants share `rapidElo`, Classical reads
- * `classicalElo`, and everything else uses the untimed `elo`.
+ * The rating pool a control feeds. Bullet 1+0 reads/writes `bulletElo`, every
+ * Blitz control shares `blitzElo`, both rapid variants share `rapidElo`,
+ * Classical reads `classicalElo`, and everything else uses the untimed `elo`.
  */
 export function ratingPoolForControl(timeControl) {
   return RATING_POOL_BY_CONTROL[timeControl] ?? 'unlimited';

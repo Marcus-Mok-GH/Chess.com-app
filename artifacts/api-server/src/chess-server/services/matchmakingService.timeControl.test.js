@@ -122,6 +122,7 @@ describe('MatchmakingService time-control pairing', () => {
     expect(reads.map(([, params]) => params[0]).sort()).toEqual([
       'blitz',
       'blitz_3_2',
+      'bullet',
       'classical',
       'classical_30_5',
       'rapid',

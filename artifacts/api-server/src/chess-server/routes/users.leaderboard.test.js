@@ -51,6 +51,7 @@ function get(app, path) {
 const ROW = {
   username: 'alice',
   elo: 1300,
+  bullet_elo: 1400,
   rapid_elo: 1500,
   classical_elo: 1100,
   blitz_elo: 1250,
@@ -76,6 +77,7 @@ describe('GET /api/users/leaderboard/top', () => {
       rank: 1,
       username: 'alice',
       elo: 1300,
+      bulletElo: 1400,
       rapidElo: 1500,
       classicalElo: 1100,
       blitzElo: 1250,
@@ -112,6 +114,18 @@ describe('GET /api/users/leaderboard/top', () => {
     expect(query.mock.calls[0][0]).toContain('ORDER BY classical_elo DESC');
   });
 
+  it('ranks the bullet pool for ?timeControl=bullet', async () => {
+    query.mockResolvedValue({ rows: [] });
+
+    const res = await get(
+      buildApp(),
+      '/api/users/leaderboard/top?timeControl=bullet'
+    );
+
+    expect(res.body.timeControl).toBe('bullet');
+    expect(query.mock.calls[0][0]).toContain('ORDER BY bullet_elo DESC');
+  });
+
   it('ranks the blitz pool for both ?timeControl=blitz and blitz_3_2', async () => {
     query.mockResolvedValue({ rows: [] });
     const app = buildApp();
@@ -136,7 +150,7 @@ describe('GET /api/users/leaderboard/top', () => {
 
     const res = await get(
       buildApp(),
-      '/api/users/leaderboard/top?timeControl=bullet'
+      '/api/users/leaderboard/top?timeControl=hyperbullet'
     );
 
     expect(res.body.timeControl).toBe('unlimited');
@@ -152,6 +166,7 @@ describe('GET /api/users/:username', () => {
           id: 'u1',
           username: 'bob',
           elo: 1210,
+          bullet_elo: 1320,
           rapid_elo: 1450,
           classical_elo: 1350,
           blitz_elo: 1280,
@@ -168,6 +183,7 @@ describe('GET /api/users/:username', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.elo).toBe(1210);
+    expect(res.body.bulletElo).toBe(1320);
     expect(res.body.rapidElo).toBe(1450);
     expect(res.body.classicalElo).toBe(1350);
     expect(res.body.blitzElo).toBe(1280);
