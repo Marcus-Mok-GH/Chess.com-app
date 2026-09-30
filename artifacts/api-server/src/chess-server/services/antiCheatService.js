@@ -156,6 +156,7 @@ export async function getIntegrityReviews({ status = null, limit = 50 } = {}) {
 // control (legacy rows) yields no label rather than pretending it was untimed.
 const RATING_POOL_LABELS = Object.freeze({
   unlimited: 'Unlimited',
+  bullet: 'Bullet',
   blitz: 'Blitz',
   blitz_3_2: 'Blitz',
   rapid: 'Rapid',

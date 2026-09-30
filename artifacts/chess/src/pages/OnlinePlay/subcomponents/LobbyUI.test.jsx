@@ -25,6 +25,7 @@ describe('LobbyUI time control', () => {
       Array.from(timeControlSelect().options).map((option) => option.value),
     ).toEqual([
       'unlimited',
+      'bullet',
       'blitz',
       'blitz_3_2',
       'rapid',
@@ -59,6 +60,12 @@ describe('LobbyUI time control', () => {
     );
     expect(blitz.textContent).toContain('Blitz');
     expect(blitz.textContent).toContain('3 minutes each');
+
+    const bullet = Array.from(timeControlSelect().options).find(
+      (entry) => entry.value === 'bullet',
+    );
+    expect(bullet.textContent).toContain('Bullet');
+    expect(bullet.textContent).toContain('1 minute each');
 
     const blitzIncrement = Array.from(timeControlSelect().options).find(
       (entry) => entry.value === 'blitz_3_2',

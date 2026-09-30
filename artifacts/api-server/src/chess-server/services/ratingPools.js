@@ -5,16 +5,17 @@ import { normalizeTimeControl } from './chessClock.js';
  *
  * A user's rating is tracked separately for each control, so a result in one
  * pool never moves the other. `users.elo` is the original column and remains
- * the untimed/unlimited rating; `users.blitz_elo` is the blitz pool (shared by
- * the flat 3+0 control and the 3+2 variant),
- * `users.rapid_elo` is the rapid pool (shared by the 10+0 and 10+3 variants)
- * and `users.classical_elo` is the classical pool (shared by the 30+0 and 30+5
- * variants).
+ * the untimed/unlimited rating; `users.bullet_elo` is the bullet pool (the
+ * 1+0 control), `users.blitz_elo` is the blitz pool (shared by the flat 3+0
+ * and 3+2 controls), `users.rapid_elo` is the rapid pool (shared by the 10+0
+ * and 10+3 variants) and `users.classical_elo` is the classical pool (shared
+ * by the 30+0 and 30+5 variants).
  * Unknown or missing controls normalize to unlimited, matching the clock and
  * queue logic.
  */
 export const RATING_COLUMN_BY_CONTROL = Object.freeze({
   unlimited: 'elo',
+  bullet: 'bullet_elo',
   blitz: 'blitz_elo',
   blitz_3_2: 'blitz_elo',
   rapid: 'rapid_elo',

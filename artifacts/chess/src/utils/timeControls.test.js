@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  BULLET_MS,
   BLITZ_MS,
   RAPID_MS,
   CLASSICAL_MS,
@@ -24,6 +25,7 @@ describe('timeControls', () => {
   it('exposes every control with server-matching ids', () => {
     expect(TIME_CONTROLS.map((t) => t.id)).toEqual([
       'unlimited',
+      'bullet',
       'blitz',
       'blitz_3_2',
       'rapid',
@@ -34,7 +36,8 @@ describe('timeControls', () => {
     expect(DEFAULT_TIME_CONTROL).toBe('unlimited');
   });
 
-  it('starts both blitz variants at three minutes, the rapid variants at ten, and classical at thirty', () => {
+  it('starts bullet at one minute, the blitz controls at three, the rapid variants at ten, and classical at thirty', () => {
+    expect(initialClockMs('bullet')).toBe(BULLET_MS);
     expect(initialClockMs('blitz')).toBe(BLITZ_MS);
     expect(initialClockMs('blitz_3_2')).toBe(BLITZ_MS);
     expect(initialClockMs('rapid')).toBe(RAPID_MS);
@@ -46,6 +49,7 @@ describe('timeControls', () => {
   });
 
   it('applies the increment only to the increment variants', () => {
+    expect(incrementMsFor('bullet')).toBe(0);
     expect(incrementMsFor('blitz')).toBe(0);
     expect(incrementMsFor('blitz_3_2')).toBe(BLITZ_INCREMENT_MS);
     expect(incrementMsFor('rapid_10_3')).toBe(RAPID_INCREMENT_MS);
@@ -56,6 +60,7 @@ describe('timeControls', () => {
   });
 
   it('treats every variant, blitz, and classical as timed', () => {
+    expect(isTimedControl('bullet')).toBe(true);
     expect(isTimedControl('blitz')).toBe(true);
     expect(isTimedControl('blitz_3_2')).toBe(true);
     expect(isTimedControl('rapid')).toBe(true);
@@ -67,6 +72,7 @@ describe('timeControls', () => {
   });
 
   it('labels controls with a safe fallback', () => {
+    expect(timeControlLabel('bullet')).toBe('Bullet');
     expect(timeControlLabel('blitz')).toBe('Blitz');
     expect(timeControlLabel('blitz_3_2')).toBe('Blitz 3+2');
     expect(timeControlLabel('rapid')).toBe('Rapid');
@@ -74,21 +80,23 @@ describe('timeControls', () => {
     expect(timeControlLabel('classical')).toBe('Classical');
     expect(timeControlLabel('classical_30_5')).toBe('Classical 30+5');
     expect(timeControlLabel('unlimited')).toBe('Unlimited');
-    expect(timeControlLabel('bullet')).toBe('Unlimited');
+    expect(timeControlLabel('hyperbullet')).toBe('Unlimited');
   });
 
   it('describes controls, without inventing one for unknown ids', () => {
+    expect(timeControlDescription('bullet')).toBe('1 minute each');
     expect(timeControlDescription('blitz')).toBe('3 minutes each');
     expect(timeControlDescription('blitz_3_2')).toBe('3 min + 2s per move');
     expect(timeControlDescription('rapid_10_3')).toBe('10 min + 3s per move');
     expect(timeControlDescription('classical')).toBe('30 minutes each');
     expect(timeControlDescription('classical_30_5')).toBe('30 min + 5s per move');
-    expect(timeControlDescription('bullet')).toBeNull();
+    expect(timeControlDescription('hyperbullet')).toBeNull();
   });
 
   it('lists only the rating pools on the leaderboard', () => {
     expect(RATING_POOLS.map((p) => p.id)).toEqual([
       'unlimited',
+      'bullet',
       'blitz',
       'rapid',
       'classical',
@@ -134,6 +142,7 @@ describe('isLowTime', () => {
 
 describe('ratingPoolForControl', () => {
   it('maps each control to its rating pool', () => {
+    expect(ratingPoolForControl('bullet')).toBe('bullet');
     expect(ratingPoolForControl('blitz')).toBe('blitz');
     expect(ratingPoolForControl('blitz_3_2')).toBe('blitz');
     expect(ratingPoolForControl('rapid')).toBe('rapid');
@@ -147,7 +156,8 @@ describe('ratingPoolForControl', () => {
 
 describe('controlRating', () => {
   it('reads the rating for the selected control pool', () => {
-    const user = { elo: 1300, blitzElo: 1350, rapidElo: 1500, classicalElo: 1400 };
+    const user = { elo: 1300, bulletElo: 1450, blitzElo: 1350, rapidElo: 1500, classicalElo: 1400 };
+    expect(controlRating(user, 'bullet')).toBe(1450);
     expect(controlRating(user, 'blitz')).toBe(1350);
     expect(controlRating(user, 'blitz_3_2')).toBe(1350);
     expect(controlRating(user, 'rapid')).toBe(1500);
@@ -158,6 +168,7 @@ describe('controlRating', () => {
   });
 
   it('falls back to the untimed rating, then the default', () => {
+    expect(controlRating({ elo: 1300 }, 'bullet')).toBe(1300);
     expect(controlRating({ elo: 1300 }, 'blitz_3_2')).toBe(1300);
     expect(controlRating({ elo: 1300 }, 'rapid')).toBe(1300);
     expect(controlRating({ elo: 1300 }, 'classical')).toBe(1300);

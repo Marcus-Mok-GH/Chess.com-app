@@ -9,7 +9,7 @@ import { LESSON_CATALOG } from '../lessons/lessonCatalog.js';
 // forces a full DDL run (see db/query.js), so a deployment that lands before
 // its migration still repairs itself instead of crashing. Bumping this is
 // what makes that repair happen up front rather than on the first failure.
-export const SCHEMA_VERSION = '7';
+export const SCHEMA_VERSION = '8';
 const SCHEMA_META_KEY = 'schema_version';
 const SCHEMA_META_TABLE = 'schema_meta';
 // Fixed advisory-lock key so concurrent serverless inits serialize instead of
@@ -91,6 +91,7 @@ export async function initDatabase({ force = false } = {}) {
             rapid_elo INTEGER DEFAULT 1200,
             classical_elo INTEGER DEFAULT 1200,
             blitz_elo INTEGER DEFAULT 1200,
+            bullet_elo INTEGER DEFAULT 1200,
             games_played INTEGER DEFAULT 0,
             wins INTEGER DEFAULT 0,
             losses INTEGER DEFAULT 0,
@@ -107,6 +108,7 @@ export async function initDatabase({ force = false } = {}) {
         await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS rapid_elo INTEGER DEFAULT 1200');
         await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS classical_elo INTEGER DEFAULT 1200');
         await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS blitz_elo INTEGER DEFAULT 1200');
+        await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS bullet_elo INTEGER DEFAULT 1200');
         await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)');
         await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE');
         await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS image TEXT');

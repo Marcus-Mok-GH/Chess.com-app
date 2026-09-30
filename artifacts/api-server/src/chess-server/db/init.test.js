@@ -243,8 +243,9 @@ describe('initDatabase schema version fast path', () => {
     expect(usersTable).toContain('rapid_elo INTEGER DEFAULT 1200');
     expect(usersTable).toContain('classical_elo INTEGER DEFAULT 1200');
     expect(usersTable).toContain('blitz_elo INTEGER DEFAULT 1200');
+    expect(usersTable).toContain('bullet_elo INTEGER DEFAULT 1200');
     // Pre-existing installs are backfilled.
-    for (const column of ['blitz_elo', 'rapid_elo', 'classical_elo']) {
+    for (const column of ['bullet_elo', 'blitz_elo', 'rapid_elo', 'classical_elo']) {
       expect(
         texts.some((t) => t.includes(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ${column}`)),
       ).toBe(true);
@@ -269,19 +270,42 @@ describe('initDatabase schema version fast path', () => {
       '..'
     );
     const stringRe = /`(?:[^`\\]|\\.)*`|'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"/g;
+    // SQL keywords are uppercase in this codebase, which is what keeps this
+    // extraction precise: the name after FROM/INTO/JOIN/UPDATE is a lowercase
+    // identifier, so an uppercase keyword can never be mistaken for a table. A
+    // statement that breaks the convention would hide its table from this
+    // guard, so non-uppercase keywords are collected and failed on below.
     const tableRe = /\b(FROM|INTO|JOIN|UPDATE)\s+([a-z_][a-z0-9_]*)/g;
+    const opensWithLowercaseVerb = /^['"`]\s*(select|insert|update|delete|with)\b/;
+    const lowercaseKeyword = /\b(from|into|join|update|set|values|where)\b/;
 
     const referenced = new Set();
+    const lowercaseSql = [];
     for (const file of collectSourceFiles(sourceRoot)) {
       const text = readFileSync(file, 'utf8');
       let literalMatch;
       stringRe.lastIndex = 0;
       while ((literalMatch = stringRe.exec(text)) !== null) {
         const literal = literalMatch[0];
-        if (!/\b(SELECT|INSERT|UPDATE|DELETE|JOIN|FROM)\b/.test(literal)) continue;
+        const hasUppercaseKeyword = /\b(SELECT|INSERT|UPDATE|DELETE|JOIN|FROM)\b/.test(literal);
+        if (!hasUppercaseKeyword) {
+          // Not a statement this guard can read. If it opens like SQL anyway,
+          // flag it so the convention (and with it the guard) stays intact.
+          if (opensWithLowercaseVerb.test(literal)) {
+            lowercaseSql.push(`${path.relative(sourceRoot, file)}: ${literal.slice(0, 60)}`);
+          }
+          continue;
+        }
+        // Strip `${...}` interpolations so a JS variable named `values` (or a
+        // placeholder) is not read as a lowercase SQL keyword.
+        const sqlText = literal.replace(/\$\{[^}]*\}/g, ' ');
+        // A keyword in the wrong case would slip past the extraction below.
+        if (lowercaseKeyword.test(sqlText)) {
+          lowercaseSql.push(`${path.relative(sourceRoot, file)}: ${literal.slice(0, 60)}`);
+        }
         let tableMatch;
         tableRe.lastIndex = 0;
-        while ((tableMatch = tableRe.exec(literal)) !== null) {
+        while ((tableMatch = tableRe.exec(sqlText)) !== null) {
           referenced.add(tableMatch[2].toLowerCase());
         }
       }
@@ -289,6 +313,13 @@ describe('initDatabase schema version fast path', () => {
 
     // Keep the extractor honest: if this drops, the regex stopped matching SQL.
     expect(referenced.size).toBeGreaterThan(10);
+    // The guard must notice SQL that is not uppercase, or a lowercase query
+    // would bypass the table scan and reach production without a CREATE TABLE.
+    // Uppercase the offending query rather than deleting this assertion —
+    // otherwise its tables go unchecked.
+    const sampleLowercaseSql = "select id from some_future_table where id = $1";
+    expect(opensWithLowercaseVerb.test(`'${sampleLowercaseSql}'`)).toBe(true);
+    expect(lowercaseSql).toEqual([]);
     // The scan must cover the TypeScript entry points too (app.ts/index.ts), or
     // SQL there would silently bypass this guard.
     const scanned = collectSourceFiles(sourceRoot);
@@ -350,6 +381,7 @@ describe('initDatabase schema version fast path', () => {
     // Keep the extractor honest: if these drop, the parser stopped working.
     expect(defined.get('users')?.has('classical_elo')).toBe(true);
     expect(defined.get('users')?.has('blitz_elo')).toBe(true);
+    expect(defined.get('users')?.has('bullet_elo')).toBe(true);
     expect(defined.get('games')?.has('white_elo')).toBe(true);
 
     // Columns the server actually writes.
