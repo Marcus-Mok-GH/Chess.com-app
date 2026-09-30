@@ -1,8 +1,8 @@
-[2026-09-30] - Schema guard can no longer be bypassed by lowercase SQL
+[2026-09-30] - Schema guard can no longer be bypassed by non-uppercase SQL
 
 - Audited the automatic schema bootstrap and confirmed every table the server queries is created by `initDatabase` (24 tables, all `CREATE TABLE IF NOT EXISTS`, in one ordered transaction), with the runtime paths already covering server startup, the Vercel cold-start warm-up, and the per-query `42P01`/`42703` self-heal. No table was missing.
-- Closed the one way a missing table could still reach production: the completeness guard matched SQL keywords case-sensitively, so a query written in lowercase (`select id from new_table`) was skipped entirely — its table would never be checked against the DDL. The guard now also flags any statement whose SQL keywords are not uppercase, and asserts it can recognize a lowercase statement, so a table can no longer hide from it.
-- Verified both directions against deliberate regressions: lowercasing a `FROM` and naming a non-existent table each fail the guard with the offending file and table, then the regressions were reverted.
+- Closed the one way a missing table could still reach production: the completeness guard matched SQL keywords case-sensitively, so a query written in lowercase *or mixed case* (`select id from new_table`, `Select id From new_table`) was skipped entirely — its table would never be checked against the DDL. The literal scan is now a single `scanSqlLiteral` classifier that flags any SQL statement whose keywords are not uppercase, strips `${...}` interpolations so a JS variable named `values` is not misread as a keyword, and ignores prose ("Update failed."). A table can no longer hide from it.
+- Verified against deliberate regressions, end to end through the scanner: a lowercase `FROM`, a mixed-case `From`, and a non-existent table each fail the guard with the offending file and table, then the regressions were reverted.
 - Full Vitest suite passes (44 files, 387 tests); all packages typecheck.
 
 [2026-09-30] - Bullet 1+0 time control with its own Bullet rating
