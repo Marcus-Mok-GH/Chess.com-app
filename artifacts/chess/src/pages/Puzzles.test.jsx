@@ -377,6 +377,7 @@ describe('SSR puzzle adoption on the client', () => {
     vi.clearAllMocks();
     explainCoachMove.mockResolvedValue('Move explanation.');
     getLessonConcept.mockResolvedValue('Concept for the adopted puzzle.');
+    api.getPuzzleStats.mockResolvedValue({ success: true, stats: null });
   });
 
   // What the server embeds for /puzzles: a real position that differs from
@@ -445,5 +446,104 @@ describe('SSR puzzle adoption on the client', () => {
 
     await waitForPuzzleOnBoard();
     expect(generatePuzzleForThemes).toHaveBeenCalled();
+  });
+
+  it('ignores a payload whose FEN cannot be parsed', async () => {
+    window.__INITIAL_PUZZLE__ = {
+      lessonIndex: 0,
+      puzzle: { id: 'lesson-bad-fen', lessonIndex: 0, fen: 'invalid', solution: 'e4', sideToMove: 'white' },
+    };
+
+    renderPuzzles();
+
+    // Adopting it would show the start position while the puzzle keeps its
+    // broken FEN — generation must run instead.
+    await waitForPuzzleOnBoard();
+    expect(generatePuzzleForThemes).toHaveBeenCalled();
+  });
+
+  it('ignores a payload whose solution is illegal for its position', async () => {
+    window.__INITIAL_PUZZLE__ = {
+      lessonIndex: 0,
+      puzzle: {
+        id: 'lesson-illegal-move',
+        lessonIndex: 0,
+        fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+        solution: 'Na5',
+        sideToMove: 'white',
+      },
+    };
+
+    renderPuzzles();
+
+    await waitForPuzzleOnBoard();
+    expect(generatePuzzleForThemes).toHaveBeenCalled();
+  });
+
+  it('defers progress saves until account stats have loaded', async () => {
+    let resolveStats;
+    api.getPuzzleStats.mockReturnValue(
+      new Promise((resolve) => {
+        resolveStats = resolve;
+      }),
+    );
+    installServerPayload();
+
+    renderPuzzles();
+
+    // The adopted puzzle is playable before the stats request resolves:
+    // skip right away. The local UI advances, but nothing may be persisted
+    // from the default counters.
+    fireEvent.click(screen.getByRole('button', { name: /skip/i }));
+    await screen.findByText('0% accuracy');
+    expect(api.savePuzzleStats).not.toHaveBeenCalled();
+
+    // The account baseline arrives and replaces the session defaults — the
+    // early skip neither persisted defaults nor blocked this response.
+    resolveStats({
+      success: true,
+      stats: {
+        solvedCount: 7,
+        attemptedCount: 10,
+        currentStreak: 3,
+        bestStreak: 9,
+        rating: 1200,
+        updatedAt: '2026-10-09T00:00:00.000Z',
+      },
+    });
+    await waitFor(() => expect(screen.getByText('1200')).toBeTruthy());
+    expect(screen.getByText('70% accuracy')).toBeTruthy();
+    expect(api.savePuzzleStats).not.toHaveBeenCalled();
+
+    // With the baseline known, the next skip persists on top of account values.
+    const skipBtn = screen.getByRole('button', { name: /skip/i });
+    await waitFor(() => expect(skipBtn.disabled).toBe(false));
+    fireEvent.click(skipBtn);
+    await waitFor(() => {
+      expect(api.savePuzzleStats).toHaveBeenCalledWith({
+        solvedCount: 7,
+        attemptedCount: 11,
+        currentStreak: 0,
+        bestStreak: 9,
+        rating: 1160,
+      });
+    });
+  });
+
+  it('keeps progress session-only when the account stats load fails', async () => {
+    api.getPuzzleStats.mockRejectedValue(new Error('backend unreachable'));
+
+    renderPuzzles();
+
+    await waitForPuzzleOnBoard();
+    await waitFor(() => expect(api.getPuzzleStats).toHaveBeenCalled());
+    // Let the rejection settle so the failure is recorded before skipping.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    fireEvent.click(screen.getByRole('button', { name: /skip/i }));
+    await screen.findByText('0% accuracy');
+    // No baseline is known: local progress stays session-only so defaults
+    // can never overwrite unknown account values.
+    expect(api.savePuzzleStats).not.toHaveBeenCalled();
   });
 });

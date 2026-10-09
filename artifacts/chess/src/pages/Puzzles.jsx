@@ -118,6 +118,11 @@ function readEmbeddedPuzzle(lessonIndex) {
     if (!candidate || typeof candidate.fen !== "string" || !candidate.solution) {
       return null;
     }
+    // Only adopt a playable candidate: an unparseable FEN (or a solution
+    // that is illegal from the parsed position) would make loadFen() fall
+    // back to the start position while the puzzle keeps its bad values.
+    const probe = new Chess(candidate.fen);
+    if (!probe.move(candidate.solution)) return null;
     return candidate;
   } catch {
     return null;
@@ -303,6 +308,14 @@ export default function Puzzles() {
   // Set once this session has progressed past its starting stats, so a slow
   // stats load never overwrites progress the user just made.
   const statsTouchedRef = useRef(false);
+  // Whether the account baseline is known for this session: 'loading' until
+  // getPuzzleStats() resolves (logged-in only), 'failed' when it cannot be
+  // fetched, 'ready' otherwise. The adopted SSR puzzle is playable before
+  // that request resolves, so progress is only marked touched and persisted
+  // once the baseline is known — a save built from the default counters
+  // would overwrite the account's real progress, and touching first would
+  // stop the pending response from restoring it.
+  const statsStatusRef = useRef(isLoggedIn ? "loading" : "ready");
 
   const [solvedCount, setSolvedCount] = useState(0);
   const [attemptedCount, setAttemptedCount] = useState(0);
@@ -318,6 +331,9 @@ export default function Puzzles() {
   // session-only defaults.
   useEffect(() => {
     if (!isLoggedIn) {
+      // Guests have no account baseline to wait for; session-only stats
+      // keep saving exactly as before.
+      statsStatusRef.current = "ready";
       // Signed out: drop any session-only counters so they can never be
       // saved over the account's persisted stats after the next sign-in.
       setSolvedCount(0);
@@ -331,11 +347,15 @@ export default function Puzzles() {
     // A fresh sign-in makes the account row the source of truth, even if
     // session-only stats were touched while logged out.
     statsTouchedRef.current = false;
+    statsStatusRef.current = "loading";
     let cancelled = false;
     api
       .getPuzzleStats()
       .then((data) => {
         if (cancelled) return;
+        // The response (even without a stats row) is the baseline, so
+        // progress saves may resume.
+        statsStatusRef.current = "ready";
         const saved = data?.stats;
         if (!saved || statsTouchedRef.current) return;
         setSolvedCount(Number(saved.solvedCount) || 0);
@@ -350,7 +370,10 @@ export default function Puzzles() {
         }
       })
       .catch(() => {
-        // Stats stay session-only when the backend is unreachable.
+        // Stats stay session-only when the backend is unreachable — and so
+        // does progress: without the account baseline a save built from the
+        // default counters could overwrite unknown account values.
+        if (!cancelled) statsStatusRef.current = "failed";
       });
     return () => {
       cancelled = true;
@@ -566,22 +589,28 @@ export default function Puzzles() {
       ? Math.min(PUZZLE_RATING_MAX, puzzleRating + 80)
       : Math.max(PUZZLE_RATING_MIN, puzzleRating - 40);
 
-    statsTouchedRef.current = true;
     setAttemptedCount(nextAttempted);
     setSolvedCount(nextSolved);
     setStreak(nextStreak);
     setBestStreak(nextBestStreak);
     setPuzzleRating(nextRating);
-    persistPuzzleStats({
-      solvedCount: nextSolved,
-      attemptedCount: nextAttempted,
-      // Must match the server contract (PUT /api/puzzles/stats/user expects
-      // currentStreak); a stray key makes the save fail validation and the
-      // rating never reaches the database.
-      currentStreak: nextStreak,
-      bestStreak: nextBestStreak,
-      rating: nextRating,
-    });
+    // Mark touched and persist only once the account baseline is known;
+    // while it is still loading (or after a failed load) the counters stay
+    // session-only so default values can never overwrite real account
+    // progress. The board and navigation are never blocked by this.
+    if (statsStatusRef.current === "ready") {
+      statsTouchedRef.current = true;
+      persistPuzzleStats({
+        solvedCount: nextSolved,
+        attemptedCount: nextAttempted,
+        // Must match the server contract (PUT /api/puzzles/stats/user expects
+        // currentStreak); a stray key makes the save fail validation and the
+        // rating never reaches the database.
+        currentStreak: nextStreak,
+        bestStreak: nextBestStreak,
+        rating: nextRating,
+      });
+    }
 
     const nextIndex = (currentLessonIndex + 1) % LESSON_CATALOG.length;
     setCurrentLessonIndex(nextIndex);
