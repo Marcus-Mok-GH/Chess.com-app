@@ -23,7 +23,7 @@ function difficultyProfile(difficulty) {
 }
 
 
-function normalizeSeed(seed) {
+export function normalizeSeed(seed) {
   if (Number.isFinite(Number(seed))) return Number(seed) >>> 0;
   const text = String(seed ?? "");
   let hash = 2166136261;
