@@ -1,6 +1,6 @@
 import React from 'react'
 import { renderToPipeableStream } from 'react-dom/server'
-import { StaticRouter } from 'react-router'
+import { StaticRouter } from 'react-router-dom'
 import { Writable } from 'node:stream'
 import App from './App'
 
