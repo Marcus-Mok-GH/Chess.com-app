@@ -1,3 +1,8 @@
+[2026-10-09] - Puzzle mistakes now receive concise AI coaching without a red board banner
+
+- Removed the temporary red wrong-move board overlay and its associated timer/state from the lesson-puzzle page, so an incorrect move no longer produces a competing generic error banner.
+- Wrong tactical moves now rely on the existing AI Coach feedback card as the sole explanation. Returned coach text is trimmed through the shared short-concept formatter, limiting it to one or two sentences (up to 22 words) while preserving the Retry action and puzzle reset flow.
+
 [2026-10-09] - The puzzles page is server-rendered with a real board instead of a loading placeholder
 
 - Server-side rendering now produces a complete `/puzzles` page: the first lesson puzzle is generated synchronously while the page renders and the HTML ships the board itself (pieces, lesson header, side panel) plus a `window.__INITIAL_PUZZLE__` payload, instead of the old static shell with a "Preparing lesson puzzle…" box that stayed empty until the JS bundle loaded and the worker finished. A fresh puzzle is built per request (measured ~400ms end to end for the SSR render), so response time stays far inside the 15s function budget.

@@ -308,8 +308,6 @@ export default function Puzzles() {
   const [willPlayFollowup, setWillPlayFollowup] = useState(false);
   const [solved, setSolved] = useState(false);
   const [wrongMove, setWrongMove] = useState(false);
-  const [wrongMoveMessage, setWrongMoveMessage] = useState("");
-  const [showWrongMoveOverlay, setShowWrongMoveOverlay] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [selectedSquare, setSelectedSquare] = useState(null);
 
@@ -323,7 +321,6 @@ export default function Puzzles() {
   const explanationRequestRef = useRef(0);
   const lessonConceptRequestRef = useRef(0);
   const timerIds = useRef([]);
-  const wrongMoveOverlayTimerRef = useRef(null);
   // Set once this session has progressed past its starting stats, so a slow
   // stats load never overwrites progress the user just made.
   const statsTouchedRef = useRef(false);
@@ -427,23 +424,6 @@ export default function Puzzles() {
     timerIds.current.push(timerId);
   }
 
-  function hideWrongMoveOverlay() {
-    if (wrongMoveOverlayTimerRef.current) {
-      window.clearTimeout(wrongMoveOverlayTimerRef.current);
-      wrongMoveOverlayTimerRef.current = null;
-    }
-    setShowWrongMoveOverlay(false);
-  }
-
-  function showWrongMoveFeedback() {
-    hideWrongMoveOverlay();
-    setShowWrongMoveOverlay(true);
-    wrongMoveOverlayTimerRef.current = window.setTimeout(() => {
-      setShowWrongMoveOverlay(false);
-      wrongMoveOverlayTimerRef.current = null;
-    }, 1500);
-  }
-
   async function loadPuzzleForLesson(lessonIndex, seed = randomPuzzleSeed()) {
     const requestId = ++generationRequestRef.current;
     clearTimers();
@@ -454,8 +434,6 @@ export default function Puzzles() {
     setLlmLoading(false);
     setLlmError(null);
     setWrongMove(false);
-    setWrongMoveMessage("");
-    hideWrongMoveOverlay();
     setSelectedSquare(null);
 
     const lesson = LESSON_CATALOG[lessonIndex] || LESSON_CATALOG[0];
@@ -477,8 +455,6 @@ export default function Puzzles() {
       setPosition(freshPuzzle.fen);
       setSolved(false);
       setWrongMove(false);
-    setWrongMoveMessage("");
-    hideWrongMoveOverlay();
       setShowHint(false);
       setWillPlayFollowup(false);
       return true;
@@ -513,10 +489,6 @@ export default function Puzzles() {
     return () => {
       generationRequestRef.current += 1;
       clearTimers();
-      if (wrongMoveOverlayTimerRef.current) {
-        window.clearTimeout(wrongMoveOverlayTimerRef.current);
-        wrongMoveOverlayTimerRef.current = null;
-      }
     };
   }, [currentLessonIndex]);
 
@@ -564,7 +536,7 @@ export default function Puzzles() {
       .then((explanation) => {
         if (requestId !== explanationRequestRef.current) return;
         if (explanation) {
-          setLlmDescription(explanation);
+          setLlmDescription(trimToShortConcept(explanation));
         } else {
           setLlmError("No explanation returned from AI coach.");
         }
@@ -584,8 +556,6 @@ export default function Puzzles() {
     setWillPlayFollowup(false);
     setSolved(false);
     setWrongMove(false);
-    setWrongMoveMessage("");
-    hideWrongMoveOverlay();
     clearCoachExplanation();
     setShowHint(false);
     setSelectedSquare(null);
@@ -674,8 +644,6 @@ export default function Puzzles() {
 
     if (!move) {
       setWrongMove(true);
-      setWrongMoveMessage("That move is not legal in this position. Try another move.");
-      showWrongMoveFeedback();
       setSolved(false);
       clearCoachExplanation();
       setShowHint(false);
@@ -689,8 +657,6 @@ export default function Puzzles() {
 
     if (!isSolution) {
       setWrongMove(true);
-      setWrongMoveMessage("That move missed the tactic. Try again.");
-      showWrongMoveFeedback();
       setSolved(false);
       explainWrongMove(position, move.san, chess.fen());
       return false;
@@ -699,8 +665,6 @@ export default function Puzzles() {
     setPosition(chess.fen());
     setSolved(true);
     setWrongMove(false);
-    setWrongMoveMessage("");
-    hideWrongMoveOverlay();
     clearCoachExplanation();
     setShowHint(false);
     setSelectedSquare(null);
@@ -762,8 +726,6 @@ export default function Puzzles() {
     setPosition(puzzle.fen);
     setSolved(false);
     setWrongMove(false);
-    setWrongMoveMessage("");
-    hideWrongMoveOverlay();
     clearCoachExplanation();
     setShowHint(false);
     setWillPlayFollowup(false);
@@ -959,11 +921,6 @@ export default function Puzzles() {
               <div className="puzzle-result puzzle-result--solved">
                 <Check size={18} /> Correct!
                 {willPlayFollowup && " (+followup)"}
-              </div>
-            )}
-            {showWrongMoveOverlay && (
-              <div className="puzzle-result puzzle-result--wrong" role="status">
-                <AlertTriangle size={18} /> {wrongMoveMessage}
               </div>
             )}
           </div>
