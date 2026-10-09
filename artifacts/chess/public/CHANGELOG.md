@@ -1,3 +1,10 @@
+[2026-10-09] - Pollinations AI coach (Luna/gpt-6) explains wrong puzzle moves instead of the red banner
+
+- Removed the red banner overlay (`showWrongMoveOverlay`/`puzzle-result--wrong`) that briefly flashed "That move missed the tactic. Try again." on incorrect puzzle moves.
+- The Pollinations AI coach (Luna/gpt-6 via the `laguna` free fallback model) is now the primary feedback when a wrong tactical move is played: the existing `explainWrongMove()` call already queries `POST /coach/explain` with `puzzleMistake: true`, and its explanation card ("Why that move missed") now serves as the main wrong-move feedback instead of the red banner.
+- Illegal moves still show a brief inline message ("That move is not legal in this position. Try another move.") since there is no tactical concept for the AI to explain, but the red overlay is gone for those too.
+- Updated the "explains an incorrect move without revealing the answer and offers retry" test to no longer expect the removed "That move missed the tactic." text and to assert the red banner text is absent; all 406 tests still pass.
+
 [2026-10-09] - The puzzles page is server-rendered with a real board instead of a loading placeholder
 
 - Server-side rendering now produces a complete `/puzzles` page: the first lesson puzzle is generated synchronously while the page renders and the HTML ships the board itself (pieces, lesson header, side panel) plus a `window.__INITIAL_PUZZLE__` payload, instead of the old static shell with a "Preparing lesson puzzle…" box that stayed empty until the JS bundle loaded and the worker finished. A fresh puzzle is built per request (measured ~400ms end to end for the SSR render), so response time stays far inside the 15s function budget.

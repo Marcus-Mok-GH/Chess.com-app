@@ -177,11 +177,13 @@ beforeEach(() => {
 
     await waitFor(() => {
       expect(screen.getByText('Why that move missed')).toBeTruthy();
-      expect(screen.getByText('That move missed the tactic. Try again.')).toBeTruthy();
+      // The Pollinations AI coach (Luna/gpt-6) explains why the move misses;
+      // the red banner overlay has been replaced by the AI explanation card.
       expect(screen.getByText('The knight move attacks the exposed black queen.')).toBeTruthy();
       expect(screen.getByRole('button', { name: /retry/i })).toBeTruthy();
     });
     expect(screen.queryByText('Not quite — try again.')).toBeNull();
+    expect(screen.queryByText('That move missed the tactic. Try again.')).toBeNull();
   });
 
   it('renders raw LLM error when coach explanation fails without masking fallback', async () => {
