@@ -4,6 +4,7 @@ import { Chess } from "chess.js";
 import ChessBoard from "../components/ChessBoard";
 import DailyPuzzleStreak from "../components/DailyPuzzleStreak";
 import { generatePuzzleForThemesAsync } from "../engine/puzzles/puzzleWorkerClient";
+import { generatePuzzle } from "../engine/puzzles/puzzleGenerator";
 import api from "../services/api";
 import { useUser } from "../contexts/UserContext";
 import AccountRequired from "../components/AccountRequired";
@@ -55,6 +56,82 @@ function difficultyLabel(difficulty) {
 
 function difficultyProgress(rating) {
   return Math.max(4, Math.min(100, Math.round(((rating - PUZZLE_RATING_MIN) / (PUZZLE_RATING_MAX - PUZZLE_RATING_MIN)) * 100)));
+}
+
+// ── SSR initial puzzle ─────────────────────────────────────────────────────
+// The server renders this page with a REAL puzzle instead of the
+// "Preparing lesson puzzle…" placeholder: while server-rendering, the first
+// lesson puzzle is generated synchronously and embedded into the HTML as an
+// inline payload under this key. The browser adopts that payload on its first
+// render so the client paint matches the server-sent board exactly, instead
+// of flashing the placeholder and then generating a second, different puzzle.
+const INITIAL_PUZZLE_KEY = "__INITIAL_PUZZLE__";
+
+/**
+ * Builds a lesson's first puzzle synchronously. Only called during SSR
+ * (there is no window), where the async worker client is unavailable and a
+ * placeholder would otherwise ship to the browser.
+ *
+ * Uses generatePuzzle directly rather than generatePuzzleForThemes: the
+ * themed search runs up to 50 full generation attempts (~3.5s measured),
+ * every lesson theme in the catalog misses and falls back to exactly this
+ * call — far too slow to sit in front of server rendering. The returned shape
+ * mirrors what loadPuzzleForLesson stores, so the client can adopt it as-is.
+ */
+function buildServerPuzzle(lessonIndex, seed = randomPuzzleSeed()) {
+  try {
+    const lesson = LESSON_CATALOG[lessonIndex] || LESSON_CATALOG[0];
+    const difficulty = difficultyForRating(PUZZLE_RATING_START);
+    const lessonThemes = (lesson.puzzleThemes || [])
+      .map((theme) => String(theme).trim())
+      .filter(Boolean);
+    const freshPuzzle = generatePuzzle(seed, { difficulty });
+    return {
+      ...freshPuzzle,
+      // Same id/lessonThemes contract generatePuzzleForThemes() would return.
+      id: `lesson-${seed >>> 0}`,
+      lessonThemes,
+      lessonIndex,
+      lessonTitle: lesson.title,
+      lessonTopic: lesson.topic,
+      lessonOrder: lesson.order,
+      difficulty,
+    };
+  } catch {
+    // Degrade to the previous behaviour (loading placeholder + client-side
+    // generation) instead of failing the whole SSR response.
+    return null;
+  }
+}
+
+/**
+ * Client half of the handshake: reads the puzzle the server embedded in the
+ * HTML for THIS lesson, if any. Stale or malformed payloads are ignored so
+ * the page falls back to generating a fresh puzzle exactly as before.
+ */
+function readEmbeddedPuzzle(lessonIndex) {
+  if (typeof window === "undefined") return null;
+  try {
+    const payload = window[INITIAL_PUZZLE_KEY];
+    if (!payload || payload.lessonIndex !== lessonIndex) return null;
+    const candidate = payload.puzzle;
+    if (!candidate || typeof candidate.fen !== "string" || !candidate.solution) {
+      return null;
+    }
+    return candidate;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Serializes the payload for the inline <script> that ships it to the
+ * browser. "<" is JSON-escaped so no string value (hint text, lesson titles)
+ * can end the script tag early ("</script>") without changing the decoded
+ * value once JSON.parse runs.
+ */
+function serializeInitialPuzzle(payload) {
+  return JSON.stringify(payload).replace(/</g, "\\u003c");
 }
 
 // Lesson concepts live in a small sidebar card that users skim, so both the
@@ -190,9 +267,19 @@ export default function Puzzles() {
   const [currentLessonIndex, setCurrentLessonIndex] = useState(initialIndex);
   const currentLesson = LESSON_CATALOG[currentLessonIndex] || LESSON_CATALOG[0];
 
-  const [puzzle, setPuzzle] = useState(null);
-  const [position, setPosition] = useState("");
-  const [initializing, setInitializing] = useState(true);
+  // SSR ships the first lesson puzzle inside the page (generated on the
+  // server, embedded as window.__INITIAL_PUZZLE__). The browser adopts it
+  // here so its first render shows the SAME board the server already sent,
+  // with no loading flash and no second, randomly generated puzzle.
+  const [initialPuzzle] = useState(() =>
+    typeof window === "undefined"
+      ? buildServerPuzzle(initialIndex)
+      : readEmbeddedPuzzle(initialIndex),
+  );
+
+  const [puzzle, setPuzzle] = useState(initialPuzzle);
+  const [position, setPosition] = useState(initialPuzzle ? initialPuzzle.fen : "");
+  const [initializing, setInitializing] = useState(!initialPuzzle);
   const [generationError, setGenerationError] = useState(null);
   const [willPlayFollowup, setWillPlayFollowup] = useState(false);
   const [solved, setSolved] = useState(false);
@@ -343,6 +430,7 @@ export default function Puzzles() {
 
       setPuzzle({
         ...freshPuzzle,
+        lessonIndex,
         lessonTitle: lesson.title,
         lessonTopic: lesson.topic,
         lessonOrder: lesson.order,
@@ -374,7 +462,16 @@ export default function Puzzles() {
 
   // Sync puzzle loading when currentLessonIndex changes
   useEffect(() => {
-    loadPuzzleForLesson(currentLessonIndex);
+    // The embedded SSR payload is one-shot: consume it on first mount so
+    // later client-side visits to this page generate a fresh puzzle.
+    if (typeof window !== "undefined") {
+      delete window[INITIAL_PUZZLE_KEY];
+    }
+    // Keep the server-rendered (adopted) puzzle for its own lesson instead of
+    // immediately replacing the SSR first paint with a new random puzzle.
+    if (!puzzle || puzzle.lessonIndex !== currentLessonIndex) {
+      loadPuzzleForLesson(currentLessonIndex);
+    }
     return () => {
       generationRequestRef.current += 1;
       clearTimers();
@@ -670,6 +767,20 @@ export default function Puzzles() {
 
   return (
     <div className="puzzles-page">
+      {/* Server-only: hand the rendered puzzle to the client bundle so its
+          first React render adopts this exact board instead of regenerating.
+          An inline classic script runs during HTML parsing, i.e. before the
+          deferred module bundle, so the payload is always in place. */}
+      {typeof window === "undefined" && initialPuzzle && (
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window[${JSON.stringify(INITIAL_PUZZLE_KEY)}]=${serializeInitialPuzzle({
+              lessonIndex: initialIndex,
+              puzzle: initialPuzzle,
+            })};`,
+          }}
+        />
+      )}
       <div className="puzzles-container">
         {/* 🤖 AI feedback after an incorrect move */}
         {(wrongMove || llmLoading || llmError) && (

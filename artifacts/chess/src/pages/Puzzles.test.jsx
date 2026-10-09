@@ -33,6 +33,7 @@ vi.mock('../engine/puzzles/puzzleGenerator', async (importOriginal) => {
   return {
     ...actual,
     generatePuzzleForThemes: vi.fn((themes, seed) => ({
+
       id: `mock-${seed}`,
       fen: 'r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3',
       sideToMove: 'white',
@@ -76,6 +77,7 @@ vi.mock('../services/api', () => ({
 }));
 
 import { explainCoachMove, getLessonConcept } from '../engine/coach/coachAI';
+import { generatePuzzleForThemes } from '../engine/puzzles/puzzleGenerator';
 import api from '../services/api';
 
 const MOCK_PUZZLE_FEN =
@@ -99,6 +101,8 @@ function renderPuzzles(initialEntries = ['/puzzles']) {
 
 beforeEach(() => {
   mockUserState.isLoggedIn = true;
+  // The server-embedded payload is one-shot; never leak it across tests.
+  delete window.__INITIAL_PUZZLE__;
 });
 
 describe('Puzzles page with Lesson Scheme & LLM commentary', () => {
@@ -363,4 +367,83 @@ beforeEach(() => {
     expect(screen.queryByText('Solved')).toBeNull(); // no stat labels for guests
   });
 
+});
+
+
+describe('SSR puzzle adoption on the client', () => {
+  beforeEach(() => {
+    // Scoped setup: no call history from earlier tests may leak into the
+    // "did NOT regenerate" assertion, and the concept effect needs a promise.
+    vi.clearAllMocks();
+    explainCoachMove.mockResolvedValue('Move explanation.');
+    getLessonConcept.mockResolvedValue('Concept for the adopted puzzle.');
+  });
+
+  // What the server embeds for /puzzles: a real position that differs from
+  // the mocked generator's FEN, so tests can tell adopted vs generated apart.
+  const SSR_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
+  function installServerPayload(lessonIndex = 0) {
+    const lesson = LESSON_CATALOG[lessonIndex];
+    window.__INITIAL_PUZZLE__ = {
+      lessonIndex,
+      puzzle: {
+        id: 'lesson-ssr-424242',
+        lessonIndex,
+        fen: SSR_FEN,
+        sideToMove: 'white',
+        solution: 'e4',
+        rating: 400,
+        hint: 'Open with a central pawn move.',
+        type: 'tactics',
+        theme: 'Material Tactic',
+        difficulty: 'beginner',
+        lessonTitle: lesson.title,
+        lessonTopic: lesson.topic,
+        lessonOrder: lesson.order,
+        lessonThemes: lesson.puzzleThemes,
+      },
+    };
+  }
+
+  it('adopts the server-rendered puzzle on first paint without regenerating', async () => {
+    installServerPayload();
+
+    renderPuzzles();
+
+    // The synchronous first render already shows the embedded board — no
+    // "Preparing lesson puzzle…" state — and the actions are usable.
+    expect(screen.getByTestId('chessboard').getAttribute('data-position')).toBe(SSR_FEN);
+    expect(screen.getByRole('button', { name: /skip/i }).disabled).toBe(false);
+
+    // Effects settle against the ADOPTED puzzle…
+    await waitFor(() => {
+      expect(getLessonConcept).toHaveBeenCalledWith(
+        expect.objectContaining({ fen: SSR_FEN, sideToMove: 'white' })
+      );
+    });
+    // …no second puzzle is generated after mount, and the one-shot payload
+    // is consumed so later visits regenerate as before.
+    expect(generatePuzzleForThemes).not.toHaveBeenCalled();
+    expect(window.__INITIAL_PUZZLE__).toBeUndefined();
+  });
+
+  it('ignores a payload that belongs to a different lesson', async () => {
+    installServerPayload(3);
+
+    renderPuzzles();
+
+    await waitForPuzzleOnBoard();
+    expect(generatePuzzleForThemes).toHaveBeenCalled();
+    expect(window.__INITIAL_PUZZLE__).toBeUndefined();
+  });
+
+  it('ignores a malformed payload and generates normally', async () => {
+    window.__INITIAL_PUZZLE__ = { lessonIndex: 0, puzzle: { fen: 42, solution: null } };
+
+    renderPuzzles();
+
+    await waitForPuzzleOnBoard();
+    expect(generatePuzzleForThemes).toHaveBeenCalled();
+  });
 });
