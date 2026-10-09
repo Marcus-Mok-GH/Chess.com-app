@@ -307,6 +307,18 @@ class ApiService {
         });
     }
 
+    // ── Puzzle Generation ─────────────────────────────────────────────────────
+    // Server-side generation keeps slow devices responsive: the puzzle is
+    // built once on the server (same shared builder as the SSR render) instead
+    // of on the user's CPU. The page falls back to local generation when this
+    // request is unavailable.
+    async generateLessonPuzzle({ lessonId, difficulty, seed }) {
+        const params = new URLSearchParams({ lesson: lessonId });
+        if (difficulty) params.set("difficulty", difficulty);
+        if (Number.isFinite(seed)) params.set("seed", String(seed));
+        return this.request(`/puzzles/lesson?${params.toString()}`);
+    }
+
     // ── Learning ─────────────────────────────────────────────────────────────
     async getLessons() {
         return this.request("/lessons");
