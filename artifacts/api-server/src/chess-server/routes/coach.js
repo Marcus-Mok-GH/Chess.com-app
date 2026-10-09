@@ -36,6 +36,7 @@ async function callCoach(messages, options = {}) {
   if (!token) {
     const error = new Error('Connect your Pollinations account to use the AI coach.');
     error.status = 402;
+    error.code = 'POLLINATIONS_AUTH_REQUIRED';
     throw error;
   }
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
@@ -67,6 +68,21 @@ async function callCoach(messages, options = {}) {
     if (lastError?.status === 402) break;
   }
   throw lastError;
+}
+
+function requiresPollinationsConnection(error) {
+  return error?.code === 'POLLINATIONS_AUTH_REQUIRED';
+}
+
+async function callCoachOrFallback(messages, options = {}) {
+  try {
+    return await callCoach(messages, options);
+  } catch (error) {
+    // A free-model fallback is only for a connected provider that is
+    // temporarily unavailable. It must not hide a missing user authorization.
+    if (requiresPollinationsConnection(error)) throw error;
+    return callCoachFree(messages, options);
+  }
 }
 
 async function callCoachFree(messages, options = {}) {
@@ -290,12 +306,7 @@ router.post('/feedback', async (req, res) => {
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: `A student just played ${playerMove} in this position.\n\nPosition (FEN before move): ${fen}\nMove history: ${moves}\nLast move: ${playerMove}\n\nGive short, encouraging feedback (1-2 sentences, max 30 words). Explain why the move is good, or gently suggest a better move, and mention one tactical or positional concept. No greetings or sign-offs.` },
     ];
-    let response;
-    try {
-      response = await callCoach(feedbackMessages, { userId });
-    } catch (coachErr) {
-      response = await callCoachFree(feedbackMessages, {});
-    }
+    const response = await callCoachOrFallback(feedbackMessages, { userId });
     const data = await response.json();
     return res.json({ feedback: stripThinkingBlocks(data.choices?.[0]?.message?.content || '') });
   } catch (error) {
@@ -317,12 +328,7 @@ router.post('/explain', async (req, res) => {
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: explanationPrompt },
     ];
-    let response;
-    try {
-      response = await callCoach(explainMessages, { userId });
-    } catch (coachErr) {
-      response = await callCoachFree(explainMessages, {});
-    }
+    const response = await callCoachOrFallback(explainMessages, { userId });
     const data = await response.json();
     return res.json({ explanation: stripThinkingBlocks(data.choices?.[0]?.message?.content || '') });
   } catch (error) {
@@ -341,12 +347,7 @@ router.post('/lesson-concept', async (req, res) => {
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: `A student is about to solve this specific chess puzzle. Describe the concrete idea of THIS position in 1 or 2 short sentences, 22 words maximum total. Name the side to move and the tactical motif this exact position contains (for example an undefended piece, a back-rank weakness, a mating net, or a promotion race). Do NOT reveal or suggest the winning move or any specific squares; the student must still find it. Return only the concept text.\nPuzzle from lesson: ${lessonTitle}\nTopic: ${lessonTopic || 'Chess'}\nPosition (FEN): ${fen}\nSide to move: ${sideToMove || 'unknown'}\nPuzzle theme: ${theme || 'tactics'}\nPuzzle hint (context only, do not copy verbatim): ${hint || 'none'}` },
     ];
-    let response;
-    try {
-      response = await callCoach(conceptMessages, { userId, maxTokens: 80, temperature: 0.3 });
-    } catch (coachErr) {
-      response = await callCoachFree(conceptMessages, { maxTokens: 80, temperature: 0.3 });
-    }
+    const response = await callCoachOrFallback(conceptMessages, { userId, maxTokens: 80, temperature: 0.3 });
     const data = await response.json();
     return res.json({ concept: trimLessonSummary(stripThinkingBlocks(data.choices?.[0]?.message?.content || '')) });
   } catch (error) {
@@ -395,12 +396,7 @@ router.post('/analyze', async (req, res) => {
       ];
       const analyzeOptions = { maxTokens: Math.min(4000, Math.max(800, 200 + slice.length * 90)), temperature: 0.7 };
       try {
-        let response;
-        try {
-          response = await callCoach(analyzeMessages, { userId, ...analyzeOptions });
-        } catch (coachErr) {
-          response = await callCoachFree(analyzeMessages, analyzeOptions);
-        }
+        const response = await callCoachOrFallback(analyzeMessages, { userId, ...analyzeOptions });
         const data = await response.json();
         const content = stripThinkingBlocks(data.choices?.[0]?.message?.content || '');
         if (content) lastContent = content;

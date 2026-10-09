@@ -125,6 +125,19 @@ describe('GameReview page', () => {
     });
   });
 
+  it('tells the player to connect Pollinations when coach analysis requires authorization', async () => {
+    mockAnalyzeGame.mockRejectedValue(Object.assign(new Error('Connect your Pollinations account to use the AI coach.'), {
+      status: 402,
+      code: 'POLLINATIONS_AUTH_REQUIRED',
+    }));
+
+    renderPage();
+    await screen.findByText('e4');
+    fireEvent.click(screen.getByText('e4'));
+    expect(await screen.findByText(/The AI coach is not connected/)).toBeTruthy();
+    expect(screen.getByRole('link', { name: /Connect your coach/ }).getAttribute('href')).toBe('https://example.test/coach/connect');
+  });
+
   it('handles a missing game gracefully', async () => {
     mockApi.getGameByCode.mockResolvedValue(null);
     renderPage();

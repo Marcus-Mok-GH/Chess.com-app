@@ -14,8 +14,19 @@ vi.mock('../auth.js', () => ({
   getSessionCookieToken: vi.fn(() => null),
 }));
 
+vi.mock('../coachAuth.js', () => ({
+  authenticatedUserId: vi.fn().mockResolvedValue('user-1'),
+  coachAppRedirect: vi.fn(),
+  coachConfigurationStatus: vi.fn(),
+  completeAuthorization: vi.fn(),
+  createAuthorizationUrl: vi.fn(),
+  disconnectCoach: vi.fn(),
+  getCoachToken: vi.fn().mockResolvedValue('connected-token'),
+}));
+
 import { query } from '../db.js';
 import { getSessionToken, validateSession } from '../auth.js';
+import { authenticatedUserId, getCoachToken } from '../coachAuth.js';
 
 let coachRoutes;
 
@@ -68,6 +79,8 @@ beforeEach(async () => {
   // resetAllMocks clears the factory implementations; re-establish them.
   validateSession.mockResolvedValue('user-1');
   getSessionToken.mockReturnValue('session-token');
+  authenticatedUserId.mockResolvedValue('user-1');
+  getCoachToken.mockResolvedValue('connected-token');
   // The user has a connected Pollinations token.
   query.mockImplementation(async (sql) => {
     if (/pollinations_coach_tokens/.test(sql)) {
@@ -79,6 +92,21 @@ beforeEach(async () => {
 });
 
 describe('POST /api/coach/analyze', () => {
+  it('tells an unconnected player to connect Pollinations instead of using the free fallback', async () => {
+    getCoachToken.mockResolvedValue(null);
+    global.fetch = vi.fn();
+
+    const res = await loopback(buildApp(), '/api/coach/analyze', 'POST', {
+      moveHistory: [{ san: 'e4' }],
+      result: 'white',
+    });
+
+    expect(res.status).toBe(402);
+    expect(res.body.code).toBe('POLLINATIONS_AUTH_REQUIRED');
+    expect(res.body.error).toMatch(/connect your pollinations account/i);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
   it('repairs a truncated JSON array so partial coach comments still load', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,

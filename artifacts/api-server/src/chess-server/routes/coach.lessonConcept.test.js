@@ -14,8 +14,19 @@ vi.mock('../auth.js', () => ({
   getSessionCookieToken: vi.fn(() => null),
 }));
 
+vi.mock('../coachAuth.js', () => ({
+  authenticatedUserId: vi.fn().mockResolvedValue('user-1'),
+  coachAppRedirect: vi.fn(),
+  coachConfigurationStatus: vi.fn(),
+  completeAuthorization: vi.fn(),
+  createAuthorizationUrl: vi.fn(),
+  disconnectCoach: vi.fn(),
+  getCoachToken: vi.fn().mockResolvedValue('connected-token'),
+}));
+
 import { query } from '../db.js';
 import { getSessionToken, validateSession } from '../auth.js';
+import { authenticatedUserId, getCoachToken } from '../coachAuth.js';
 
 let coachRoutes;
 
@@ -68,6 +79,8 @@ beforeEach(async () => {
   // resetAllMocks clears the factory implementations; re-establish them.
   validateSession.mockResolvedValue('user-1');
   getSessionToken.mockReturnValue('session-token');
+  authenticatedUserId.mockResolvedValue('user-1');
+  getCoachToken.mockResolvedValue('connected-token');
   query.mockImplementation(async () => ({ rows: [] }));
   await loadRoutes();
 });
@@ -83,7 +96,7 @@ describe('POST /api/coach/lesson-concept', () => {
   };
 
   it('requires login', async () => {
-    validateSession.mockResolvedValue(null);
+    authenticatedUserId.mockResolvedValue(null);
     const res = await loopback(buildApp(), '/api/coach/lesson-concept', 'POST', baseBody);
     expect(res.status).toBe(401);
   });

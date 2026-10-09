@@ -539,6 +539,8 @@ function ChessGame(
       console.error('[ChessGame] Coaching feedback error:', error);
       if (error.status === 401 || error.status === 403 || error.message?.toLowerCase().includes('log in') || error.message?.toLowerCase().includes('auth')) {
         navigate('/login');
+      } else if (error.code === 'POLLINATIONS_AUTH_REQUIRED' || error.status === 402) {
+        setBotMessage('Pollinations AI is not connected. Connect it in Settings to use the AI coach.');
       } else {
         setBotMessage('Analysis unavailable');
       }

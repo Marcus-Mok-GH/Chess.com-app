@@ -1,3 +1,8 @@
+[2026-10-09] - AI coach clearly reports an unconnected Pollinations account
+
+- AI coach requests now stop with the explicit `POLLINATIONS_AUTH_REQUIRED` response when the player has not connected Pollinations, rather than silently switching to the free fallback. The fallback remains available for connected accounts when the provider is temporarily unavailable.
+- Coach games now show a direct message to connect Pollinations AI in Settings, while Game Review keeps its connection link for move-by-move commentary. Added route and UI coverage for the disconnected-account path.
+
 [2026-10-09] - Puzzle mistakes now receive concise AI coaching without a red board banner
 
 - Removed the temporary red wrong-move board overlay and its associated timer/state from the lesson-puzzle page, so an incorrect move no longer produces a competing generic error banner.
