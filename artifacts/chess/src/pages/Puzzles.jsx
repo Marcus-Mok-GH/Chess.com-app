@@ -4,7 +4,10 @@ import { Chess } from "chess.js";
 import ChessBoard from "../components/ChessBoard";
 import DailyPuzzleStreak from "../components/DailyPuzzleStreak";
 import { generatePuzzleForThemesAsync } from "../engine/puzzles/puzzleWorkerClient";
-import { generatePuzzle } from "../engine/puzzles/puzzleGenerator";
+import {
+  buildLessonPuzzle,
+  randomPuzzleSeed,
+} from "../engine/puzzles/lessonPuzzle";
 import api from "../services/api";
 import { useUser } from "../contexts/UserContext";
 import AccountRequired from "../components/AccountRequired";
@@ -33,10 +36,6 @@ function loadFen(fen) {
   } catch {
     return new Chess();
   }
-}
-
-function randomPuzzleSeed() {
-  return Date.now() ^ Math.floor(Math.random() * 0xffffffff);
 }
 
 const PUZZLE_RATING_START = 400;
@@ -68,40 +67,67 @@ function difficultyProgress(rating) {
 const INITIAL_PUZZLE_KEY = "__INITIAL_PUZZLE__";
 
 /**
- * Builds a lesson's first puzzle synchronously. Only called during SSR
- * (there is no window), where the async worker client is unavailable and a
- * placeholder would otherwise ship to the browser.
- *
- * Uses generatePuzzle directly rather than generatePuzzleForThemes: the
- * themed search runs up to 50 full generation attempts (~3.5s measured),
- * every lesson theme in the catalog misses and falls back to exactly this
- * call — far too slow to sit in front of server rendering. The returned shape
- * mirrors what loadPuzzleForLesson stores, so the client can adopt it as-is.
+ * Builds a lesson's first puzzle synchronously for the SSR render (there is
+ * no window then, so the async worker client is unavailable and a placeholder
+ * would otherwise ship to the browser). Delegates to the shared
+ * buildLessonPuzzle used by `GET /api/puzzles/lesson` too, so a server-built
+ * puzzle has the same shape wherever it comes from.
  */
 function buildServerPuzzle(lessonIndex, seed = randomPuzzleSeed()) {
   try {
     const lesson = LESSON_CATALOG[lessonIndex] || LESSON_CATALOG[0];
-    const difficulty = difficultyForRating(PUZZLE_RATING_START);
-    const lessonThemes = (lesson.puzzleThemes || [])
-      .map((theme) => String(theme).trim())
-      .filter(Boolean);
-    const freshPuzzle = generatePuzzle(seed, { difficulty });
-    return {
-      ...freshPuzzle,
-      // Same id/lessonThemes contract generatePuzzleForThemes() would return.
-      id: `lesson-${seed >>> 0}`,
-      lessonThemes,
+    return buildLessonPuzzle({
+      lesson,
       lessonIndex,
-      lessonTitle: lesson.title,
-      lessonTopic: lesson.topic,
-      lessonOrder: lesson.order,
-      difficulty,
-    };
+      seed,
+      difficulty: difficultyForRating(PUZZLE_RATING_START),
+    });
   } catch {
     // Degrade to the previous behaviour (loading placeholder + client-side
     // generation) instead of failing the whole SSR response.
     return null;
   }
+}
+
+/**
+ * A puzzle is only usable when its FEN parses and its solution is a legal
+ * move from that position — otherwise the board would show the start
+ * position while the puzzle kept its invalid values.
+ */
+function isPlayablePuzzle(candidate) {
+  if (!candidate || typeof candidate.fen !== "string" || !candidate.solution) {
+    return false;
+  }
+  try {
+    const probe = new Chess(candidate.fen);
+    return Boolean(probe.move(candidate.solution));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Fetches the puzzle for one lesson. Generation happens on the SERVER (the
+ * same shared builder the SSR render uses) so slow devices — or ones without
+ * module worker support — never run the generator locally. When that request
+ * is unavailable (offline, rate limited, older API), we fall back to the
+ * worker/synchronous generator exactly as before.
+ */
+async function requestLessonPuzzle({ lesson, seed, difficulty }) {
+  try {
+    const data = await api.generateLessonPuzzle({
+      lessonId: lesson.id,
+      seed,
+      difficulty,
+    });
+    const candidate = data?.puzzle;
+    if (isPlayablePuzzle(candidate)) return candidate;
+  } catch {
+    // Fall through to local generation.
+  }
+  return generatePuzzleForThemesAsync(lesson.puzzleThemes || [], seed, {
+    difficulty,
+  });
 }
 
 /**
@@ -115,15 +141,8 @@ function readEmbeddedPuzzle(lessonIndex) {
     const payload = window[INITIAL_PUZZLE_KEY];
     if (!payload || payload.lessonIndex !== lessonIndex) return null;
     const candidate = payload.puzzle;
-    if (!candidate || typeof candidate.fen !== "string" || !candidate.solution) {
-      return null;
-    }
-    // Only adopt a playable candidate: an unparseable FEN (or a solution
-    // that is illegal from the parsed position) would make loadFen() fall
-    // back to the start position while the puzzle keeps its bad values.
-    const probe = new Chess(candidate.fen);
-    if (!probe.move(candidate.solution)) return null;
-    return candidate;
+    // Only adopt a playable candidate (see isPlayablePuzzle).
+    return isPlayablePuzzle(candidate) ? candidate : null;
   } catch {
     return null;
   }
@@ -443,11 +462,7 @@ export default function Puzzles() {
 
     try {
       const difficulty = difficultyForRating(puzzleRating);
-      const freshPuzzle = await generatePuzzleForThemesAsync(
-        lesson.puzzleThemes || [],
-        seed,
-        { difficulty },
-      );
+      const freshPuzzle = await requestLessonPuzzle({ lesson, seed, difficulty });
 
       if (generationRequestRef.current !== requestId) return false;
 

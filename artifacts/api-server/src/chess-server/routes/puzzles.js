@@ -8,8 +8,33 @@ import { Chess } from 'chess.js';
 import puzzleService from '../services/puzzleService.js';
 import puzzleStatsService from '../services/puzzleStatsService.js';
 import { authenticatedUserId } from '../coachAuth.js';
+import { LESSON_CATALOG, getLessonById } from '../lessons/lessonCatalog.js';
+import {
+  buildLessonPuzzle,
+  isLessonPuzzleDifficulty,
+  LESSON_PUZZLE_DIFFICULTIES,
+  DEFAULT_LESSON_PUZZLE_DIFFICULTY,
+} from '../puzzles/lessonPuzzle.js';
+import { createRateLimiter, requestIp } from '../middleware/rateLimit.js';
 
 const router = Router();
+
+// Generating a lesson puzzle is real CPU work (~170ms) on a public endpoint,
+// so it is rate limited per IP: one puzzle per second sustained is far above
+// what the puzzles page needs (it fetches one per lesson), while a script
+// cannot spin the generator. Override the budget with
+// PUZZLE_LESSON_RATE_MAX for tests or single-user deployments.
+const DEFAULT_LESSON_RATE_MAX = 60;
+const configuredLessonRateMax = Number.parseInt(process.env.PUZZLE_LESSON_RATE_MAX ?? '', 10);
+const lessonPuzzleRateLimit = createRateLimiter({
+  windowMs: 60 * 1000,
+  max:
+    Number.isFinite(configuredLessonRateMax) && configuredLessonRateMax > 0
+      ? configuredLessonRateMax
+      : DEFAULT_LESSON_RATE_MAX,
+  keyGenerator: (req) => 'puzzle:lesson:' + requestIp(req),
+  message: 'Too many puzzle requests. Please try again in a minute.',
+});
 
 async function requirePuzzleUser(req, res, requestedUserId = null) {
   const userId = await authenticatedUserId(req);
@@ -279,6 +304,62 @@ router.put('/stats/user', async (req, res) => {
   } catch (error) {
     console.error('Save user puzzle stats error:', error);
     res.status(500).json({ success: false, error: { message: 'Failed to save puzzle stats' } });
+  }
+});
+
+/**
+ * GET /api/puzzles/lesson
+ * Public. Generate the puzzle for one lesson-scheme entry ON THE SERVER, so
+ * devices that are slow (or without module worker support) never have to run
+ * the generator locally.
+ * Query params: lesson (catalog id, required), difficulty
+ * (beginner|easy|intermediate|advanced, default beginner), seed (optional int)
+ */
+router.get('/lesson', lessonPuzzleRateLimit, (req, res) => {
+  try {
+    const lessonId = typeof req.query.lesson === 'string' ? req.query.lesson.trim() : '';
+    if (!lessonId) {
+      return res.status(400).json({ success: false, error: { message: 'lesson is required' } });
+    }
+
+    const lesson = getLessonById(lessonId);
+    if (!lesson) {
+      return res.status(400).json({ success: false, error: { message: `Unknown lesson: ${lessonId}` } });
+    }
+
+    const requestedDifficulty = String(
+      req.query.difficulty ?? DEFAULT_LESSON_PUZZLE_DIFFICULTY,
+    ).toLowerCase();
+    if (!isLessonPuzzleDifficulty(requestedDifficulty)) {
+      return res.status(400).json({
+        success: false,
+        error: { message: `difficulty must be one of: ${LESSON_PUZZLE_DIFFICULTIES.join(', ')}` },
+      });
+    }
+
+    let seed;
+    if (req.query.seed !== undefined && req.query.seed !== '') {
+      const parsedSeed = Number(req.query.seed);
+      if (!Number.isFinite(parsedSeed)) {
+        return res.status(400).json({ success: false, error: { message: 'seed must be a number' } });
+      }
+      seed = Math.trunc(parsedSeed);
+    }
+
+    const lessonIndex = LESSON_CATALOG.findIndex((entry) => entry.id === lesson.id);
+    const puzzle = buildLessonPuzzle({
+      lesson,
+      lessonIndex: lessonIndex >= 0 ? lessonIndex : 0,
+      seed,
+      difficulty: requestedDifficulty,
+    });
+
+    // Fresh position per request (and, with a seed, deterministic).
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, puzzle });
+  } catch (error) {
+    console.error('Generate lesson puzzle error:', error);
+    res.status(500).json({ success: false, error: { message: 'Failed to generate lesson puzzle' } });
   }
 });
 
