@@ -11,7 +11,6 @@ import { query } from '../db.js';
 
 const RATING_START = 400;
 const MAX_COUNT = 1000000;
-const MAX_STREAK = 1000000;
 const MIN_RATING = 100;
 const MAX_RATING = 4000;
 

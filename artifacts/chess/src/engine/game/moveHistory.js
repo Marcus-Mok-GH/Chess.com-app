@@ -138,26 +138,6 @@ export function getMoveFromEntry(entry) {
   return null;
 }
 
-export function toDetailedMoveHistory(history) {
-  const normalized = normalizeMoveHistory(history);
-  return normalized
-    .map((entry) => {
-      if (typeof entry === 'string') {
-        return { san: entry };
-      }
-      if (entry && typeof entry === 'object') {
-        return {
-          san: entry.san,
-          from: entry.from,
-          to: entry.to,
-          promotion: entry.promotion,
-        };
-      }
-      return null;
-    })
-    .filter(Boolean);
-}
-
 export function toSanHistory(history) {
   const normalized = normalizeMoveHistory(history);
   const game = new Chess();

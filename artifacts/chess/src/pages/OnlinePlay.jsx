@@ -347,7 +347,6 @@ export default function OnlinePlay() {
                     const opponentElo = isWhite
                         ? data.black_elo
                         : data.white_elo;
-                    const oppColor = isWhite ? "black" : "white";
                     setOpponentInfo({
                         name: opponentName || "Opponent",
                         elo: opponentElo,

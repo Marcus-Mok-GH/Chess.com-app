@@ -90,7 +90,3 @@ export function getRandomQuote(bot, category) {
   if (!quotes || quotes.length === 0) return '';
   return quotes[Math.floor(Math.random() * quotes.length)];
 }
-
-export function getBotById(id) {
-  return BOTS.find((bot) => bot.id === id) || BOTS[0];
-}

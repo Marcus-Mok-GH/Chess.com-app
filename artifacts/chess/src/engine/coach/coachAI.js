@@ -38,11 +38,6 @@ export async function getCoachStatus(force = false) {
   }
 }
 
-export async function isCoachAIAvailable() {
-  const status = await getCoachStatus();
-  return Boolean(status.available && status.connected);
-}
-
 export function getCoachConnectionUrl() {
   return `${API_BASE_URL}/coach/connect`;
 }

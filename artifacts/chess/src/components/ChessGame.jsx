@@ -727,11 +727,6 @@ function ChessGame(
     }
   }, [boardOrientation, game, moveHistory, persistLocalSnapshot]);
 
-  const handleSelectBot = useCallback((bot) => {
-    setSelectedBot(bot);
-    setBotMessage(getRandomQuote(bot, "start"));
-  }, []);
-
   const handleGetHint = useCallback(async () => {
     if (!settingsRef.current.showHints) return;
     if (game.isGameOver() || isThinking) return;

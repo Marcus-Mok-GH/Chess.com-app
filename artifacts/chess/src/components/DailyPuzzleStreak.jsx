@@ -115,18 +115,6 @@ function mergeStreakData(local, remote) {
   };
 }
 
-export function useStreakData() {
-  const { user } = useUser();
-  const userId = user?.id || null;
-  const [streak, setStreak] = useState(() => getStreakState(userId));
-
-  useEffect(() => {
-    setStreak(getStreakState(userId));
-  }, [userId]);
-
-  return { streak, refresh: () => setStreak(getStreakState(userId)) };
-}
-
 export default function DailyPuzzleStreak({ compact = false, linkToPuzzles = false }) {
   const { user, token, isLoggedIn } = useUser();
   const navigate = useNavigate();

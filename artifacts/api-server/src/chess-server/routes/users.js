@@ -9,6 +9,23 @@ const router = express.Router();
 
 // Legacy username login was removed; authentication uses the email/OTP flow.
 
+/**
+ * Looks up the user named in the path and enforces that the caller owns the
+ * row. Sends the 404/403 response itself and returns null on failure.
+ */
+async function resolveOwnUserId(res, username, userId, forbiddenMessage) {
+  const result = await query('SELECT id FROM users WHERE LOWER(username) = LOWER($1)', [username]);
+  if (result.rows.length === 0) {
+    errorResponse(res, 404, 'User not found');
+    return null;
+  }
+  if (String(result.rows[0].id) !== String(userId)) {
+    errorResponse(res, 403, forbiddenMessage);
+    return null;
+  }
+  return result.rows[0].id;
+}
+
 // Get leaderboard  (literal path — must come before :username routes).
 // Each row carries both per-control ratings; `?timeControl=` picks which pool
 // the ranking is sorted by (defaults to untimed).
@@ -42,10 +59,9 @@ router.get('/:username/settings', async (req, res) => {
     const userId = await authenticatedUserId(req);
     if (!userId) return errorResponse(res, 401, 'Log in to access user settings.');
     const { username } = req.params;
-    const userResult = await query('SELECT id FROM users WHERE LOWER(username) = LOWER($1)', [username]);
-    if (userResult.rows.length === 0) return errorResponse(res, 404, 'User not found');
-    if (String(userResult.rows[0].id) !== String(userId)) return errorResponse(res, 403, 'You can only access your own settings.');
-    const settingsResult = await query('SELECT settings FROM user_settings WHERE user_id = $1', [userResult.rows[0].id]);
+    const userRowId = await resolveOwnUserId(res, username, userId, 'You can only access your own settings.');
+    if (!userRowId) return;
+    const settingsResult = await query('SELECT settings FROM user_settings WHERE user_id = $1', [userRowId]);
     res.json({ settings: settingsResult.rows[0]?.settings || {} });
   } catch (error) {
     return handleRouteError(res, error, 'Failed to get user settings');
@@ -65,13 +81,12 @@ router.post('/:username/settings', async (req, res) => {
     if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
       return errorResponse(res, 400, 'Settings payload is required');
     }
-    const userResult = await query('SELECT id FROM users WHERE LOWER(username) = LOWER($1)', [username]);
-    if (userResult.rows.length === 0) return errorResponse(res, 404, 'User not found');
-    if (String(userResult.rows[0].id) !== String(userId)) return errorResponse(res, 403, 'You can only update your own settings.');
+    const userRowId = await resolveOwnUserId(res, username, userId, 'You can only update your own settings.');
+    if (!userRowId) return;
     await query(
       `INSERT INTO user_settings (user_id, settings) VALUES ($1, $2::jsonb)
        ON CONFLICT (user_id) DO UPDATE SET settings = EXCLUDED.settings, updated_at = CURRENT_TIMESTAMP`,
-      [userResult.rows[0].id, JSON.stringify(settings)]
+      [userRowId, JSON.stringify(settings)]
     );
     res.json({ success: true });
   } catch (error) {

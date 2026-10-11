@@ -91,17 +91,6 @@ export function loadLocalGame(gameId) {
   return entry;
 }
 
-export function getActiveLocalGameId() {
-  const id = safeGet(LOCAL_ACTIVE_KEY);
-  if (!id) return null;
-  const entry = loadLocalGame(id);
-  if (!entry || entry.result !== 'in_progress' || entry.hasResigned) {
-    safeRemove(LOCAL_ACTIVE_KEY);
-    return null;
-  }
-  return id;
-}
-
 export function clearLocalGame(gameId) {
   if (!gameId) return;
   const id = String(gameId).toUpperCase();

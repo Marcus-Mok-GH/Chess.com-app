@@ -269,14 +269,8 @@ export async function validateSolution(puzzleId, move) {
       
       // For mate puzzles, verify checkmate
       let isMate = false;
-      if (puzzle.type && puzzle.type.startsWith('mate-in')) {
-        const moves = puzzle.type.replace('mate-in-', '');
-        const expectedMateIn = parseInt(moves);
-        
-        // Check if we've reached checkmate
-        if (chess.isCheckmate()) {
-          isMate = true;
-        }
+      if (puzzle.type && puzzle.type.startsWith('mate-in') && chess.isCheckmate()) {
+        isMate = true;
       }
       
       return {
@@ -339,21 +333,6 @@ export function getPuzzleStats() {
     generatedPuzzlesCount: generatedPuzzles.size,
     basePuzzlesCount: 0
   };
-}
-
-/**
- * Get difficulty rating range
- * @param {string} difficulty 
- * @returns {Object}
- */
-function getDifficultyRange(difficulty) {
-  const ranges = {
-    easy: { min: 600, max: 1200 },
-    medium: { min: 1200, max: 1800 },
-    hard: { min: 1800, max: 2500 }
-  };
-  
-  return ranges[difficulty] || ranges.medium;
 }
 
 /**

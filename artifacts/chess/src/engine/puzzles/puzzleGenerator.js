@@ -49,33 +49,6 @@ function pick(random, values) {
   return values[Math.floor(random() * values.length)];
 }
 
-function transformedFen(fen, mirrorFiles, flipColors) {
-  const source = new Chess(fen);
-  const target = new Chess();
-  target.clear();
-
-  for (const row of source.board()) {
-    for (const piece of row) {
-      if (!piece) continue;
-      const fileIndex = piece.square.charCodeAt(0) - 97;
-      const rank = Number(piece.square[1]);
-      const transformedFile = mirrorFiles ? 7 - fileIndex : fileIndex;
-      const transformedRank = flipColors ? 9 - rank : rank;
-      target.put(
-        {
-          type: piece.type,
-          color: flipColors ? (piece.color === "w" ? "b" : "w") : piece.color,
-        },
-        `${String.fromCharCode(97 + transformedFile)}${transformedRank}`,
-      );
-    }
-  }
-
-  const turn = flipColors ? (source.turn() === "w" ? "b" : "w") : source.turn();
-  const parts = target.fen().split(" ");
-  return `${parts[0]} ${turn} - - 0 1`;
-}
-
 function findUniqueMate(chess) {
   let matingMove = null;
   for (const move of chess.moves({ verbose: true })) {
@@ -367,16 +340,6 @@ export async function generatePuzzleWithStockfish(options = {}) {
   console.warn("Stockfish generation is delegated to the server; using a local verified tactical position.");
   return generatePuzzle(seed, { type: puzzleType });
 }
-
-export async function validateWithStockfish(fen, solution) {
-  const chess = new Chess(fen);
-  try {
-    return Boolean(chess.move(solution));
-  } catch {
-    return false;
-  }
-}
-
 export async function generatePuzzleWithAI(description, options = {}) {
   const { provider = "default", seed = Date.now() } = options;
   const puzzle = generatePuzzle(seed, { type: "tactics" });

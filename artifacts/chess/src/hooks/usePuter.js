@@ -138,28 +138,4 @@ export function usePuter() {
   };
 }
 
-/**
- * Utility function to stream AI responses
- * @param {AsyncIterable} stream - The stream from puter.ai.chat
- * @param {Function} onChunk - Callback for each chunk
- * @returns {Promise<string>} Full response text
- */
-export async function streamAIResponse(stream, onChunk) {
-  let fullText = '';
-  
-  try {
-    for await (const chunk of stream) {
-      if (chunk?.text) {
-        fullText += chunk.text;
-        onChunk?.(chunk.text, fullText);
-      }
-    }
-  } catch (err) {
-    console.error('Stream error:', err);
-    throw err;
-  }
-  
-  return fullText;
-}
-
 export default usePuter;

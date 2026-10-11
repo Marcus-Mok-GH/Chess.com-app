@@ -3,13 +3,11 @@ import { API_BASE_URL, isNetworkError } from "./apiBase";
 class ApiService {
     async request(endpoint, options = {}) {
         const url = `${API_BASE_URL}${endpoint}`;
-        const token = null;
         const config = {
             ...options,
             credentials: "include",
             headers: {
                 "Content-Type": "application/json",
-                ...(token ? { Authorization: `Bearer ${token}` } : {}),
                 ...options.headers,
             },
         };

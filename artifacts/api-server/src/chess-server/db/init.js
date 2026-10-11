@@ -617,18 +617,3 @@ export async function initDatabase({ force = false } = {}) {
     }
   }
 }
-
-export async function checkDatabaseConnection() {
-  const pool = getPool();
-  try {
-    await pool.query('SELECT 1');
-    return true;
-  } catch (error) {
-    console.error('Database connection check failed:', error.message);
-    return false;
-  } finally {
-    if (shouldClosePool) {
-      await pool.end();
-    }
-  }
-}

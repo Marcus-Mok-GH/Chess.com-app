@@ -6,8 +6,6 @@ import ChessBoard from '../components/ChessBoard'
 import { Chess } from 'chess.js'
 import {
   Cpu,
-  Globe,
-  BarChart3,
   BookOpen,
   TrendingUp,
   Settings2,
@@ -27,7 +25,6 @@ import {
   Menu,
   X,
   Smartphone,
-  Pencil,
 } from 'lucide-react'
 import './Landing.css'
 

@@ -68,42 +68,10 @@ export const haptics = {
 };
 
 /**
- * Check if haptic feedback is available on this device
- */
-export function isHapticAvailable() {
-  return isVibrationSupported;
-}
-
-/**
  * Enable/disable haptic feedback
  */
 export function setHapticEnabled(enabled) {
   window.__HAPTIC_ENABLED__ = enabled;
-}
-
-/**
- * Check if haptic feedback is currently enabled
- */
-export function isHapticEnabled() {
-  return window.__HAPTIC_ENABLED__ !== false;
-}
-
-/**
- * Touch feedback helper - combines visual and haptic feedback
- * @param {HTMLElement} element - Element to animate
- * @param {string} type - Haptic type
- */
-export function touchFeedback(element, type = 'light') {
-  // Trigger haptic
-  haptic(type);
-  
-  // Add visual feedback class
-  if (element) {
-    element.classList.add('touch-active');
-    setTimeout(() => {
-      element.classList.remove('touch-active');
-    }, 150);
-  }
 }
 
 export default haptics;

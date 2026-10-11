@@ -1,3 +1,13 @@
+[2026-10-11] - Dead code removed and shared helpers de-duplicated
+
+- Deleted two unreferenced legacy client modules that nothing imported: `src/engine/game/onlineGame.js` (BroadcastChannel-only "online" play) and `src/engine/matchmaking/matchmaking.js` (BroadcastChannel queue simulation). Both were superseded by the server-backed online play plus `services/matchmakingPolling.js`, and removing them also drops the duplicate `generateGameId` helper the online-play module carried (`engine/game/gameId.js` remains the single generator).
+- Removed the unused `Breadcrumb` and `Navigation` components and their stylesheets, plus the now-orphaned `LogoIcon` export in `ChessPieceIcon.jsx`.
+- Removed unused exported helpers no caller referenced: `getBotById`, `isCoachAIAvailable`, `toDetailedMoveHistory`, `useStreakData`, `getActiveLocalGameId`, `isHapticAvailable`, `isHapticEnabled`, `touchFeedback`, `streamAIResponse`, `validateWithStockfish` and `checkDatabaseConnection`.
+- Dropped dead local code: the unused `transformedFen` transform in the puzzle generator, `materialiseMateInOnePuzzle` in the Stockfish service, `getDifficultyRange` in the puzzle service, an unread `expectedMateIn` parse (the mate check itself is unchanged), `MAX_STREAK` in the puzzle-stats service, an unused bot-select callback in `ChessGame`, an unused `oppColor` in `OnlinePlay`, and an always-false `token` branch in the client `request()` helper.
+- Extracted the identical `ratingForDifficulty` table shared by the AI and Stockfish puzzle generators into `services/puzzleDifficulty.js`, and folded the duplicated "load the user named in the path, then check the caller owns it" logic in the users routes into a single `resolveOwnUserId` helper. No route, response shape or generated value changed.
+- Dropped the unused `Globe`, `BarChart3` and `Pencil` icon imports in `Landing.jsx` that the Vite build flagged, so `pnpm run build` is warning-free.
+- Full Vitest suite: 404 passed / 2 failed (47 files). Both failures pre-date this change: the stale `Puzzles.test.jsx` assertion for the wrong-move message removed in the previous entry, and the theme-search timeout in `puzzleGenerator.test.js` under a slow runner. All packages typecheck.
+
 [2026-10-11] - Pip joins as the friendliest 250-rated bot for absolute beginners
 
 - Added **Pip** (🐣, Rating 250) — the lowest-rated bot in the roster — as a gentle practice partner for players who have just learned the rules. Pip is encouraging rather than competitive, celebrates every capture, apologizes for mishaps, and never trash-talks.

@@ -9,6 +9,7 @@
 
 import { Chess } from "chess.js";
 import { runEngine, isStockfishConfigured } from "./engineWorker.js";
+import { ratingForDifficulty } from "./puzzleDifficulty.js";
 
 const DEFAULT_TIMEOUT_MS = 6000;
 
@@ -190,41 +191,6 @@ export function isStockfishAvailable() {
 function difficultyDepth(difficulty) {
   return { easy: 6, medium: 9, hard: 12, expert: 14 }[difficulty] ?? 9;
 }
-
-function materialiseMateInOnePuzzle(fen, analysis, difficulty) {
-  try {
-    const chess = new Chess(fen);
-    const sideToMove = chess.turn() === "w" ? "white" : "black";
-    const move = uciToVerbose(chess.moves({ verbose: true }), analysis.bestMove);
-    if (!move) return null;
-
-    const appliedMove = chess.move(move);
-    if (!appliedMove || !chess.isCheckmate()) return null;
-
-    return {
-      id: `stockfish-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
-      fen,
-      sideToMove,
-      rating: ratingForDifficulty(difficulty),
-      theme: "Stockfish Mate in One",
-      hint: `Stockfish found a forcing move for ${sideToMove}. Look for the checkmate.`,
-      solution: appliedMove.san,
-      followup: null,
-      generated: true,
-      method: "stockfish",
-      effectiveMethod: "stockfish",
-      type: "mate-in-1",
-      engineScore: analysis.score,
-    };
-  } catch {
-    return null;
-  }
-}
-
-function ratingForDifficulty(difficulty) {
-  return { easy: 900, medium: 1300, hard: 1700, expert: 2100 }[difficulty] ?? 1300;
-}
-
 function themeForType(type) {
   return (
     {
