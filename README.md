@@ -10,7 +10,7 @@ Challenge delightfully unhinged AI personalities, battle real players in real-ti
 
 ## ✨ Why You'll Love It
 
-- **12+ unforgettable AI opponents** — Each bot has a unique personality, voice, and trash-talking style. Play against a conspiracy theorist who thinks the pawns are plotting against him, a ruthless 2200-rated monster who will destroy your ego, or a friendly coach who actually wants you to improve.
+- **13+ unforgettable AI opponents** — Each bot has a unique personality, voice, and trash-talking style. Play against a conspiracy theorist who thinks the pawns are plotting against him, a ruthless 2200-rated monster who will destroy your ego, or a friendly coach who actually wants you to improve.
 - **Real-time online play** — Jump into ranked matchmaking or create private friendly games with shareable codes. Live queues, instant match-found animations, and smooth Socket.IO gameplay.
 - **Deep post-game analysis** — Step through every move on an interactive board. Review your games with detailed move lists and insights.
 - **Real progression** — Earn a live ELO rating. Track your wins, losses, draws, and win rate. Your stats actually mean something.
@@ -23,7 +23,7 @@ Challenge delightfully unhinged AI personalities, battle real players in real-ti
 
 | Mode          | Description                              | Perfect for                  |
 |---------------|------------------------------------------|------------------------------|
-| **Play vs AI**    | Pick from 12 unique bots with different skill levels | Practicing, having a laugh, learning |
+| **Play vs AI**    | Pick from 13 unique bots with different skill levels | Practicing, having a laugh, learning |
 | **Online Ranked** | Matchmaking against real players at your level | Competitive play & rating climbs |
 | **Friendly Games** | Create or join private games with codes | Playing with friends |
 | **Analysis**      | Deep dive into any finished game         | Improving your chess         |
@@ -33,6 +33,7 @@ Challenge delightfully unhinged AI personalities, battle real players in real-ti
 
 ## 🤖 Meet the Bots (Just a Few Highlights)
 
+- **Pip (250)** — Absolute-beginner buddy. Just learned the rules and just wants a friend to practice with.
 - **Nelson (400)** — Conspiracy theorist. Blames the Illuminati when he loses. Hilarious.
 - **Magnus (2200)** — Ruthless trash-talker. Will mock you while destroying your position.
 - **Coach** — Actually helpful. Gives good advice (sometimes).

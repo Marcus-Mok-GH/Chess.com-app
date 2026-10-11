@@ -1,3 +1,9 @@
+[2026-10-11] - Pip joins as the friendliest 250-rated bot for absolute beginners
+
+- Added **Pip** (🐣, Rating 250) — the lowest-rated bot in the roster — as a gentle practice partner for players who have just learned the rules. Pip is encouraging rather than competitive, celebrates every capture, apologizes for mishaps, and never trash-talks.
+- Pip is intentionally weaker than Nelson (400): depth 1 with only 60 nodes of search, so the engine plays near-random-but-legal moves, plus higher `blunderChance` (0.5) and `missedTacticsChance` (0.75) to keep games forgiving. Every other personality keeps its existing strength.
+- Because the bot list is the single source of truth, Pip appears automatically in the Play setup grid (right after Coach, as the first regular opponent) with its own avatar and rating, and its full quote set covers start, win, lose, check, capture, captured, thinking, goodMove, blunder, and draw.
+
 [2026-10-09] - Puzzle mistakes now receive concise AI coaching without a red board banner
 
 - Removed the temporary red wrong-move board overlay and its associated timer/state from the lesson-puzzle page, so an incorrect move no longer produces a competing generic error banner.

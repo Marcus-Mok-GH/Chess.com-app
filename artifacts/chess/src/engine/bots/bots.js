@@ -1,4 +1,5 @@
 import { coach } from './personalities/coach';
+import { pip } from './personalities/pip';
 import { nelson } from './personalities/nelson';
 import { elena } from './personalities/elena';
 import { viktor } from './personalities/viktor';
@@ -14,6 +15,7 @@ import { custom } from './personalities/custom';
 // Bot personalities with different difficulty levels
 export const BOTS = [
   coach,
+  pip,
   nelson,
   elena,
   viktor,
