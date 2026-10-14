@@ -1,3 +1,8 @@
+[2026-10-14] - The "Confirm Moves" setting now actually confirms moves
+
+- Wired the previously inert **Confirm Moves** setting into the move handlers. With it on, a prompt showing the move ("Confirm move: Nf3?") appears before the move is played; declining leaves the board and move history untouched. The toggle was saved but never read, so it did nothing.
+- A shared `confirmMove` helper (`utils/confirmMove.js`) serves both the local/bot game and online matchmaking games, so the synchronous drag-and-drop handler and tap-to-move both respect it. The move is validated first, so an illegal attempt never prompts, and every move is covered rather than the old pawn-only condition.
+
 [2026-10-11] - Pip joins as the friendliest 250-rated bot for absolute beginners
 
 - Added **Pip** (🐣, Rating 250) — the lowest-rated bot in the roster — as a gentle practice partner for players who have just learned the rules. Pip is encouraging rather than competitive, celebrates every capture, apologizes for mishaps, and never trash-talks.

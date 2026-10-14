@@ -14,6 +14,7 @@ import {
     saveOnlineSession,
 } from "../utils/gamePersistence";
 import haptics from "../utils/haptics";
+import { confirmMove } from "../utils/confirmMove";
 import { findKingSquare } from "./ChessGame/utils";
 import { useGameCore } from "./OnlineChessGame/hooks/useGameCore";
 import { useLiveClock } from "./OnlineChessGame/hooks/useLiveClock";
@@ -463,6 +464,11 @@ export default function OnlineChessGame({
                 return false;
             const piece = game.get(from);
             if (!piece || piece.color !== colorCode) return false;
+            if (!confirmMove({ settings, game, from, to, promotion: "q" })) {
+                setSelectedSquare(null);
+                setPossibleMoves([]);
+                return false;
+            }
             const moved = await makeMove({ from, to, promotion: "q" });
             if (moved) {
                 haptics.move();
@@ -472,7 +478,7 @@ export default function OnlineChessGame({
             }
             return moved;
         },
-        [game, colorCode, gameStatus, makeMove, moveInFlightRef],
+        [game, colorCode, gameStatus, makeMove, moveInFlightRef, settings],
     );
 
     const canDragPiece = useCallback(

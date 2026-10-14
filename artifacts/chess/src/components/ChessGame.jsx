@@ -25,6 +25,7 @@ import {
 } from '../utils/gamePersistence';
 
 import { findKingSquare, applyEngineMove, getMoveCoords } from './ChessGame/utils';
+import { confirmMove } from '../utils/confirmMove';
 import { useCapturedPieces, usePieceAnimations } from './ChessGame/hooks';
 import GameStatus from './ChessGame/subcomponents/GameStatus';
 import './ChessGame.css';
@@ -584,6 +585,14 @@ function ChessGame(
       const move = gameCopy.move(moveAttempt);
 
       if (move) {
+        // "Confirm Moves" setting: ask before committing the move. The move is
+        // validated above, so an illegal attempt never triggers a prompt.
+        if (!confirmMove({ settings: settingsRef.current, game, from, to, promotion })) {
+          setSelectedSquare(null);
+          setPossibleMoves([]);
+          return false;
+        }
+
         const fenBefore = game.fen();
         setGame(gameCopy);
         const nextHistory = [...moveHistory, move];
