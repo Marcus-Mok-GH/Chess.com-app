@@ -1,3 +1,8 @@
+[2026-10-15] - Login no longer fails with "Missing or null Origin"
+
+- Fixed the login failure that surfaced as `Missing or null Origin`. OTP sign-in is proxied from `/api/auth/*` to Neon Auth (Better Auth), and the proxy forwarded only `content-type`, `authorization`, and `cookie` to the upstream service — dropping the browser's `Origin` header. Better Auth rejects any state-changing request without an `Origin` with a 403 `Missing or null Origin`, so every real sign-in from the app was refused. `extractProxyHeaders` now forwards the client's `Origin`, which restores Neon Auth's origin check for send-verification-otp, resend, sign-in, and sign-out.
+- Added a regression test to `auth.proxy.test.js` asserting the client `Origin` reaches the upstream request, so a future proxy change can't silently re-drop it.
+
 [2026-10-11] - Pip joins as the friendliest 250-rated bot for absolute beginners
 
 - Added **Pip** (🐣, Rating 250) — the lowest-rated bot in the roster — as a gentle practice partner for players who have just learned the rules. Pip is encouraging rather than competitive, celebrates every capture, apologizes for mishaps, and never trash-talks.
