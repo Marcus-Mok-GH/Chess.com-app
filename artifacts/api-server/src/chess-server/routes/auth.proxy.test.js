@@ -7,6 +7,9 @@
  *      and 404s with an empty body).
  *   2. send-verification-otp / resend default body.type to "sign-in" when the
  *      caller omits it, while preserving an explicit override.
+ *   3. the proxy must not forward the app's own session cookie upstream, which
+ *      made Better Auth run its origin/CSRF check and reject login with
+ *      "Missing or null Origin" / "Invalid origin".
  */
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import http from 'node:http';
@@ -136,8 +139,26 @@ describe('Neon Auth proxy', () => {
       { origin: 'https://chess.example.com' }
     );
     expect(calls.length).toBeGreaterThanOrEqual(1);
-    // Better Auth rejects POSTs without Origin ("Missing or null Origin"),
-    // so every proxied request must carry the browser's Origin.
+    // Better Auth validates the Origin against Neon's trusted origins for
+    // browser-like requests, so the client's Origin must reach upstream.
+    expect(calls[0].opts.headers.origin).toBe('https://chess.example.com');
+  });
+
+  it('never forwards the app session cookie to Neon Auth', async () => {
+    const calls = mockFetch({ status: 200, body: { success: true } });
+    await loopback(
+      buildApp(),
+      'POST',
+      '/api/auth/email-otp/send-verification-otp',
+      { email: 'user@example.com' },
+      { origin: 'https://chess.example.com', cookie: 'chess_session=deadbeef' }
+    );
+    expect(calls.length).toBeGreaterThanOrEqual(1);
+    // Better Auth only runs its origin/CSRF check when a Cookie header is
+    // present, so forwarding our own `chess_session` cookie made Neon reject
+    // the login with 403 "Invalid origin" (or "Missing or null Origin").
+    expect(calls[0].opts.headers.cookie).toBeUndefined();
+    // The Origin is still relayed once the cookie is gone.
     expect(calls[0].opts.headers.origin).toBe('https://chess.example.com');
   });
 

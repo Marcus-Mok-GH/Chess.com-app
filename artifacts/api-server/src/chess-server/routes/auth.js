@@ -75,12 +75,19 @@ function extractProxyHeaders(req) {
   const headers = {};
   if (req.headers['content-type']) headers['content-type'] = req.headers['content-type'];
   if (req.headers['authorization']) headers['authorization'] = req.headers['authorization'];
-  if (req.headers['cookie']) headers['cookie'] = req.headers['cookie'];
-  // Neon Auth (Better Auth) rejects state-changing requests without an Origin
-  // header with a 403 "Missing or null Origin". The browser sends Origin on the
-  // same-origin POST to this proxy, but fetch() from the server to Neon is a
-  // server-to-server call that carries no Origin, so forward the client's.
+  // Forward the browser's Origin. The browser sends it on the same-origin POST
+  // to this proxy, but the fetch() from here to Neon is a server-to-server call
+  // that carries none, so relay the client's rather than dropping it.
   if (req.headers['origin']) headers['origin'] = req.headers['origin'];
+  // Deliberately do NOT forward the browser's cookie. `chess_session` is this
+  // app's own session credential, not a Neon Auth one — Neon's session cookie is
+  // never handed to the browser (this proxy only relays the JSON body), so the
+  // header means nothing upstream. It also broke login: Better Auth runs its
+  // origin/CSRF check only when a Cookie header is present, so forwarding our
+  // cookie made Neon treat this server-to-server call as a browser request and
+  // reject it with 403 "Missing or null Origin" (no Origin forwarded) or
+  // "Invalid origin" (an app origin Neon has not allowlisted). Without it the
+  // call is correctly recognised as server-to-server and the check is skipped.
   return headers;
 }
 
