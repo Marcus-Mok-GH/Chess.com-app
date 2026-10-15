@@ -38,7 +38,7 @@ function mockFetch(response) {
 }
 
 /** Fire a loopback HTTP request against an express app on an ephemeral port. */
-function loopback(app, method, path, bodyObj) {
+function loopback(app, method, path, bodyObj, extraHeaders = {}) {
   return new Promise((resolve, reject) => {
     const server = app.listen(0, () => {
       const { port } = server.address();
@@ -52,6 +52,7 @@ function loopback(app, method, path, bodyObj) {
           headers: {
             'content-type': 'application/json',
             'content-length': Buffer.byteLength(data),
+            ...extraHeaders,
           },
         },
         (res) => {
@@ -123,6 +124,21 @@ describe('Neon Auth proxy', () => {
     );
     const outbound = JSON.parse(calls[0].opts.body);
     expect(outbound.type).toBe('email-verification');
+  });
+
+  it('forwards the client Origin header to Neon Auth', async () => {
+    const calls = mockFetch({ status: 200, body: { success: true } });
+    await loopback(
+      buildApp(),
+      'POST',
+      '/api/auth/email-otp/send-verification-otp',
+      { email: 'user@example.com' },
+      { origin: 'https://chess.example.com' }
+    );
+    expect(calls.length).toBeGreaterThanOrEqual(1);
+    // Better Auth rejects POSTs without Origin ("Missing or null Origin"),
+    // so every proxied request must carry the browser's Origin.
+    expect(calls[0].opts.headers.origin).toBe('https://chess.example.com');
   });
 
   it('resend: defaults type to "sign-in" and strips /api/auth prefix', async () => {

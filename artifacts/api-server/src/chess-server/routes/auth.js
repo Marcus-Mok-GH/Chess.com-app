@@ -76,6 +76,11 @@ function extractProxyHeaders(req) {
   if (req.headers['content-type']) headers['content-type'] = req.headers['content-type'];
   if (req.headers['authorization']) headers['authorization'] = req.headers['authorization'];
   if (req.headers['cookie']) headers['cookie'] = req.headers['cookie'];
+  // Neon Auth (Better Auth) rejects state-changing requests without an Origin
+  // header with a 403 "Missing or null Origin". The browser sends Origin on the
+  // same-origin POST to this proxy, but fetch() from the server to Neon is a
+  // server-to-server call that carries no Origin, so forward the client's.
+  if (req.headers['origin']) headers['origin'] = req.headers['origin'];
   return headers;
 }
 
