@@ -1,3 +1,9 @@
+[2026-10-18] - Pages now open with your signed-in profile already in place
+
+- Opening any page (home, puzzles, settings, ...) on the live site no longer flashes a logged-out shell before your account appears. The server now recognizes your session before it renders the page, and the sidebar, ratings, and admin tools arrive already filled in for your account.
+- Pages rendered for a signed-in account are marked private so they can never be cached or reused for another player; shared pages keep their normal public caching.
+- The browser adopts that server-rendered profile instantly (the same trick the puzzles page uses for its first board), so there is no logged-out flash after loading, and the app still rechecks the session in the background exactly as before.
+
 [2026-10-18] - Settings page gets a friendlier, safer revamp
 
 - The settings page is now organized for a quick scan: a section navigation strip at the top jumps straight to Display, Gameplay, Sound, AI coach, Advanced, About, or Privacy & terms, and deep links like `/settings#privacy` still land on the right section. Sign-in members open on Account — username, ratings, and game record up top instead of buried at the bottom.

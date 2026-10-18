@@ -12,10 +12,40 @@ import { neonAuth } from "../services/neonAuth";
 const SESSION_USER_KEY = "chess_user_session";
 const SESSION_USER_DATA_KEY = "chess_user_data";
 // Key the online game components (useGameCore, GameUI, coachAI) read the
-// session token from for Authorization headers.
+// session token for Authorization headers.
 const SESSION_TOKEN_KEY = "chess_user_token";
 const PENDING_OTP_KEY = "chess_pending_otp";
 const AUTH_REQUEST_ID_KEY = "chess_auth_request_id";
+
+// Key the Vercel renderer uses for the one-shot inline payload that carries
+// the validated session user (same pattern as the Puzzles page's
+// __INITIAL_PUZZLE__). It exists only between HTML parsing and the first
+// client render: the state initializer adopts it, the first mount deletes it,
+// and no other code ever sees it.
+const SSR_USER_KEY = "__SSR_USER__";
+
+/**
+ * Reads the user payload the server embedded for THIS document. Synchronous
+ * by design: the state initializer calls it so the first client render
+ * matches the personalized server HTML exactly — no logged-out flash and no
+ * waiting for the backend round-trip. Any malformed payload falls back to the
+ * normal started-from-null flow, where init() remains the authority.
+ */
+function readSsrUser() {
+    if (typeof window === "undefined") return null;
+    try {
+        const payload = window[SSR_USER_KEY];
+        const valid =
+            payload &&
+            typeof payload === "object" &&
+            typeof payload.username === "string" &&
+            payload.username;
+        if (!valid) return null;
+        return payload;
+    } catch {
+        return null;
+    }
+}
 
 // Mirrors the backend's 7-day sliding-window (SESSION_DAYS = 7).
 // If a cached user snapshot is older than this, treat it as expired and force a logout.
@@ -24,11 +54,19 @@ const SESSION_CACHE_EPOCH_KEY = "chess_user_cache_epoch";
 
 const UserContext = createContext(null);
 
-export function UserProvider({ children }) {
-    const [user, setUser] = useState(null);
+export function UserProvider({ children, initialUser } = {}) {
+    // Server-rendered pages with a validated session start logged-in: the
+    // renderer passes its validated user via initialUser, and the browser
+    // reads the embedded payload (window.__SSR_USER__) directly from the
+    // HTML, so both trees agree on user/isLoading from the very first render.
+    // Anonymous visits keep the previous behavior: user null, isLoading true
+    // until init() resolves. init() below still revalidates and stays the
+    // authority over the seeded session.
+    const initialSessionUser = initialUser || readSsrUser() || null;
+    const [user, setUser] = useState(initialSessionUser);
     const [token, setToken] = useState(null);
     const userRef = useRef(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(!initialSessionUser);
     const [isOnline, setIsOnline] = useState(() =>
         typeof navigator === "undefined" ? true : navigator.onLine,
     );
@@ -89,6 +127,14 @@ export function UserProvider({ children }) {
             window.removeEventListener("online", handleOnline);
             window.removeEventListener("offline", handleOffline);
         };
+    }, []);
+
+    // The SSR payload is one-shot: consume it on first mount so it can never
+    // outlive this document load — later route changes keep rendering from
+    // live context state, and a fresh full-page load re-renders server-side.
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        delete window[SSR_USER_KEY];
     }, []);
 
     const initRanRef = useRef(false);

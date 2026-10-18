@@ -9,8 +9,13 @@ import App from './App'
  * Server-renders the app for a given URL into an HTML string. Runs <App>
  * under a StaticRouter for the requested location and streams the markup
  * back once the shell is ready.
+ *
+ * `options.user` is the validated session user (or null for anonymous
+ * requests). When provided, UserContext starts logged-in so the server HTML
+ * already shows the personalized shell; the caller embeds the same object as
+ * the one-shot window payload the client adopts on its first render.
  */
-export function render(url) {
+export function render(url, { user } = {}) {
   return new Promise((resolve, reject) => {
     let didError = false
     let html = ''
@@ -31,7 +36,7 @@ export function render(url) {
 
     const { pipe } = renderToPipeableStream(
       <React.StrictMode>
-        <App Router={StaticRouter} routerProps={{ location: url }} />
+        <App Router={StaticRouter} routerProps={{ location: url }} initialUser={user} />
       </React.StrictMode>,
       {
         onAllReady() {

@@ -394,3 +394,145 @@ describe("UserContext.requestOtp – 6-digit code message (PR #1.1.65)", () => {
         });
     });
 });
+
+// ── SSR session adoption (window.__SSR_USER__) ──────────────────────────────
+// The Vercel renderer embeds the validated session user as a one-shot window
+// payload (same pattern as the Puzzles page). The provider must adopt it
+// synchronously so the first client render matches the personalized server
+// HTML exactly, then delete it on mount, while init() stays the authority.
+const SSR_TEST_USER = {
+    id: "ssr-user-1",
+    username: "marina",
+    email: "marina@example.com",
+    elo: 1500,
+    rapidElo: 1500,
+    classicalElo: 1480,
+    blitzElo: 1510,
+    bulletElo: 1520,
+    gamesPlayed: 42,
+    wins: 20,
+    losses: 15,
+    draws: 7,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    needsUsername: false,
+    isAdmin: false,
+};
+
+describe("SSR session adoption (window.__SSR_USER__)", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        neonAuth.getSession.mockResolvedValue({ data: { session: null, user: null } });
+        Object.defineProperty(navigator, "onLine", {
+            value: true,
+            configurable: true,
+        });
+        localStorage.clear();
+        delete window.__SSR_USER__;
+    });
+
+    afterEach(() => {
+        delete window.__SSR_USER__;
+    });
+
+    // Captures the context value DURING the first render, before any effect
+    // (payload deletion, cache restore, or backend validation) can run.
+    function renderCapturingFirstRender() {
+        let first = null;
+        function FirstRenderProbe() {
+            const ctx = useUser();
+            if (!first) {
+                first = { user: ctx.user, isLoggedIn: ctx.isLoggedIn, isLoading: ctx.isLoading };
+            }
+            return null;
+        }
+        render(
+            <UserProvider>
+                <FirstRenderProbe />
+            </UserProvider>,
+        );
+        return first;
+    }
+
+    it("adopts the server payload synchronously on the first render, logged in", () => {
+        window.__SSR_USER__ = SSR_TEST_USER;
+
+        const first = renderCapturingFirstRender();
+
+        expect(first.user).toEqual(SSR_TEST_USER);
+        expect(first.isLoggedIn).toBe(true);
+        expect(first.isLoading).toBe(false);
+    });
+
+    it("never waits for getSession(): the payload counts even when the backend never answers", () => {
+        window.__SSR_USER__ = SSR_TEST_USER;
+        neonAuth.getSession.mockImplementation(() => new Promise(() => {}));
+
+        const first = renderCapturingFirstRender();
+
+        expect(first.user?.username).toBe("marina");
+        expect(first.isLoading).toBe(false);
+    });
+
+    it("deletes the one-shot payload on first mount", () => {
+        window.__SSR_USER__ = SSR_TEST_USER;
+
+        renderCapturingFirstRender();
+
+        expect(window.__SSR_USER__).toBeUndefined();
+    });
+
+    it("ignores malformed payloads and keeps the loading anonymous flow", () => {
+        window.__SSR_USER__ = { not: "a user", username: 42 };
+
+        const first = renderCapturingFirstRender();
+
+        expect(first.user).toBeNull();
+        expect(first.isLoggedIn).toBe(false);
+        expect(first.isLoading).toBe(true);
+    });
+
+    it("keeps init() as the authority: a successful revalidation refreshes and persists the account", async () => {
+        window.__SSR_USER__ = SSR_TEST_USER;
+        neonAuth.getSession.mockResolvedValue({
+            data: {
+                session: { id: "sess-1", userId: "u-1" },
+                user: { id: "u-1", username: "marina", email: "marina@example.com", elo: 1550 },
+            },
+        });
+
+        let capturedContext;
+        renderWithUserContext((ctx) => {
+            capturedContext = ctx;
+        });
+
+        await act(async () => {
+            await new Promise((r) => setTimeout(r, 0));
+        });
+
+        expect(capturedContext.user?.username).toBe("marina");
+        expect(capturedContext.user?.elo).toBe(1550);
+        expect(capturedContext.isLoading).toBe(false);
+        // The adoptable payload was consumed on mount, not persisted anew.
+        expect(window.__SSR_USER__).toBeUndefined();
+    });
+
+    it("keeps init() as the authority: a definitive logged-out answer clears the seeded session", async () => {
+        // Seeded user, but no cached login and the backend answers
+        // definitively "not signed in" -> the seeded session must be cleared.
+        window.__SSR_USER__ = SSR_TEST_USER;
+
+        let capturedContext;
+        renderWithUserContext((ctx) => {
+            capturedContext = ctx;
+        });
+
+        expect(capturedContext.user?.username).toBe("marina");
+
+        await act(async () => {
+            await new Promise((r) => setTimeout(r, 0));
+        });
+
+        expect(capturedContext.user).toBeNull();
+        expect(capturedContext.isLoading).toBe(false);
+    });
+});
