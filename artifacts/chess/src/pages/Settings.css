@@ -77,6 +77,55 @@
   flex-shrink: 0;
 }
 
+.settings-guest-note .guest-signin-btn {
+  margin-left: auto;
+  flex-shrink: 0;
+  min-height: 44px;
+}
+
+/* ── Quick-jump nav ─────────────────── */
+.settings-quick-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding: 0.5rem;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.03),
+    rgba(255, 255, 255, 0.01)
+  );
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+.settings-nav-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: var(--transition-smooth);
+}
+
+.settings-nav-chip:hover {
+  color: var(--text-primary);
+  background: rgba(129, 182, 76, 0.1);
+  border-color: rgba(129, 182, 76, 0.22);
+}
+
+.settings-nav-chip:focus-visible,
+.theme-option:focus-visible,
+.confirm-cancel-btn:focus-visible {
+  outline: 2px solid var(--accent-primary, #81b64c);
+  outline-offset: 2px;
+}
+
 /* ── Section card ───────────────────── */
 .settings-section {
   background: linear-gradient(
@@ -92,6 +141,11 @@
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   transition: border-color 0.25s ease, box-shadow 0.3s ease, transform 0.3s ease;
+  scroll-margin-top: 5rem;
+}
+
+.settings-section:focus {
+  outline: none;
 }
 
 .settings-section:hover {
@@ -203,6 +257,50 @@
   color: var(--text-muted);
   font-size: 0.8125rem;
   line-height: 1.5;
+}
+
+/* ── Two-step confirm actions ───────── */
+.confirm-action-group {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.danger-btn.armed,
+.reset-btn.armed,
+.danger-btn.armed:hover,
+.reset-btn.armed:hover {
+  background: rgba(231, 76, 60, 0.14);
+  border-color: #e76f51;
+  color: #e76f51;
+}
+
+.danger-btn.armed:hover,
+.reset-btn.armed:hover {
+  background: rgba(231, 76, 60, 0.22);
+  border-color: #ff8975;
+}
+
+.confirm-cancel-btn {
+  display: inline-flex;
+  align-items: center;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 44px;
+}
+
+.confirm-cancel-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--border-hover, var(--text-muted));
 }
 
 /* ── Toggle switch ─────────────────── */
@@ -404,8 +502,20 @@
 }
 
 /* ── Account ───────────────────────── */
-.account-info {
-  margin-bottom: 1.1rem;
+.account-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.account-grid .account-row:last-child,
+.account-grid .account-row:nth-last-child(2) {
+  border-bottom: none;
+}
+
+.account-row-wide {
+  grid-column: 1 / -1;
 }
 
 .account-row {
@@ -497,6 +607,7 @@
 .danger-setting-item {
   align-items: flex-start;
   padding-top: 1rem;
+  margin-bottom: 0.95rem;
 }
 
 .danger-setting-item .setting-info {
@@ -549,10 +660,51 @@
 .setting-feedback.error {
   color: #e76f51;
 }
-/* ── Reset actions ─────────────────── */
-.settings-actions {
+/* ── Reset footer ──────────────────── */
+.settings-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   margin-top: 1.75rem;
-  text-align: center;
+  padding: 1.1rem 1.5rem;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.04),
+    rgba(255, 255, 255, 0.012) 60%
+  ), var(--card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-2xl, 22px);
+  box-shadow: var(--shadow-sm);
+}
+
+.footer-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.footer-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.footer-title svg {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.settings-footer .setting-desc {
+  font-size: 0.8125rem;
+}
+
+.settings-footer .confirm-action-group {
+  flex-shrink: 0;
 }
 
 .reset-btn {
@@ -603,10 +755,22 @@
     padding: 1.125rem 1.125rem;
     border-radius: var(--radius-lg);
     margin-bottom: 0.85rem;
+    scroll-margin-top: 4.5rem;
   }
 
   .settings-section h2 {
     font-size: 0.7rem;
+  }
+
+  .settings-quick-nav {
+    gap: 0.375rem;
+    padding: 0.45rem;
+  }
+
+  .settings-nav-chip {
+    padding: 0.4rem 0.7rem;
+    font-size: 0.78rem;
+    min-height: 44px;
   }
 
   .setting-item {
@@ -649,6 +813,15 @@
     min-height: 44px;
   }
 
+  .confirm-action-group {
+    width: 100%;
+  }
+
+  .confirm-action-group > button {
+    flex: 1;
+    min-height: 44px;
+  }
+
   .danger-btn {
     width: 100%;
     min-height: 44px;
@@ -660,23 +833,31 @@
     font-size: 0.9rem;
   }
 
+  .account-grid {
+    grid-template-columns: 1fr;
+    column-gap: 0;
+  }
+
   .account-row {
     padding: 0.75rem 0;
   }
 
-  .settings-actions {
-    margin-top: 1.5rem;
-  }
-
-  .reset-btn {
-    padding: 0.75rem 1.125rem;
-    min-height: 44px;
+  .settings-footer {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1.125rem;
+    border-radius: var(--radius-lg);
   }
 
   .settings-guest-note {
+    flex-wrap: wrap;
     padding: 0.75rem 0.875rem;
     margin-bottom: 1rem;
     font-size: 0.85rem;
+  }
+
+  .settings-guest-note .guest-signin-btn {
+    margin-left: 0;
   }
 }
 
@@ -786,66 +967,6 @@
 /* Reduce abrupt hover opacity on setting items */
 .setting-item:hover {
   opacity: 1;
-}
-
-/* ── Legal content ─────────────────── */
-.legal-settings-block {
-  padding: 1rem 0 1.2rem;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.legal-settings-block:first-of-type {
-  padding-top: 0;
-}
-
-.legal-settings-block:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-.legal-settings-heading {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 0.85rem;
-}
-
-.legal-settings-heading h3 {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: 1.05rem;
-  font-weight: 800;
-  letter-spacing: -0.015em;
-}
-
-.legal-settings-heading span {
-  color: var(--text-muted);
-  font-size: 0.78rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.legal-settings-section {
-  padding: 0.8rem 0;
-}
-
-.legal-settings-section + .legal-settings-section {
-  border-top: 1px solid var(--border-subtle);
-}
-
-.legal-settings-section h4 {
-  margin: 0 0 0.35rem;
-  color: var(--primary);
-  font-size: 0.85rem;
-  font-weight: 800;
-}
-
-.legal-settings-section p {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-  line-height: 1.65;
 }
 
 /* ── Pollinations AI authenticator ───────────────── */

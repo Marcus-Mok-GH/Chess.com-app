@@ -1,7 +1,7 @@
-import { useNavigate } from 'react-router-dom';
-import { useSettings } from '../contexts/SettingsContext';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useSettings, DEFAULT_SETTINGS } from '../contexts/SettingsContext';
 import { useUser } from '../contexts/UserContext';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Palette,
   Volume2,
@@ -16,7 +16,7 @@ import {
   Eye,
   Crosshair,
   Crown,
-  CheckCircle2,
+  Info,
   ShieldCheck,
   Flag,
   BrainCircuit,
@@ -33,59 +33,116 @@ const BOARD_THEMES = [
   { id: 'purple', name: 'Purple', light: '#e8e0f0', dark: '#9070a0' },
 ];
 
-const PRIVACY_SECTIONS = [
-  ['Information We Collect', 'We collect information you provide directly, such as email address for account creation and gameplay data.'],
-  ['How We Use Your Information', 'We use the information to provide, maintain, and improve our services, communicate with you, and ensure security.'],
-  ['Data Storage and Security', 'We implement appropriate technical and organizational measures to protect your personal information against unauthorized access, alteration, or destruction.'],
-  ['Sharing of Information', 'We do not sell or share your personal information with third parties except as described in this policy or with your consent.'],
-  ['Cookies and Tracking', 'We may use cookies and similar tracking technologies to track activity on our service and hold certain information.'],
-  ['Your Rights', 'You have the right to access, correct, or delete your personal data. Contact us at support@playchess.app to exercise these rights.'],
-  ["Children's Privacy", 'Our service is not directed at children under 13. We do not knowingly collect personal information from children.'],
-  ['Changes to Privacy Policy', 'We may update our Privacy Policy from time to time. We will notify users of any changes by posting the new policy on this page.'],
-  ['Contact', 'For questions about this Privacy Policy, please contact us at support@playchess.app.'],
-];
+const CONFIRM_TIMEOUT_MS = 5000;
 
-function Toggle({ checked, onChange, label }) {
+function Toggle({ checked, onChange, label, id }) {
   return (
-    <label className="toggle">
+    <span className="toggle">
       <input
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
         aria-label={label}
+        id={id}
+        aria-describedby={id ? `${id}-desc` : undefined}
       />
-      <span className="toggle-track">
+      <span className="toggle-track" aria-hidden="true">
         <span className="toggle-thumb" />
       </span>
-    </label>
+    </span>
   );
 }
 
-function SettingRow({ icon: Icon, label, desc, children }) {
+function ConfirmActionButton({
+  idle,
+  confirm,
+  busyLabel = 'Working...',
+  busy = false,
+  disabled = false,
+  danger = false,
+  icon: Icon,
+  className = '',
+  onConfirm,
+}) {
+  const [armed, setArmed] = useState(false);
+  const timerRef = useRef(null);
+
+  useEffect(
+    () => () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    },
+    [],
+  );
+
+  const disarm = () => {
+    setArmed(false);
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  const handleClick = async () => {
+    if (disabled || busy) return;
+    if (!armed) {
+      setArmed(true);
+      timerRef.current = setTimeout(() => setArmed(false), CONFIRM_TIMEOUT_MS);
+      return;
+    }
+    disarm();
+    await onConfirm?.();
+  };
+
+  return (
+    <span className="confirm-action-group">
+      <button
+        className={`${className}${armed ? ' armed' : ''}`}
+        type="button"
+        onClick={handleClick}
+        disabled={disabled || busy}
+        aria-disabled={disabled && !armed}
+      >
+        {Icon && <Icon size={15} aria-hidden="true" />}
+        <span>{busy ? busyLabel : armed ? confirm : idle}</span>
+      </button>
+      {armed && !busy && (
+        <button className="confirm-cancel-btn" type="button" onClick={disarm}>
+          Cancel
+        </button>
+      )}
+    </span>
+  );
+}
+
+function SettingRow({ id, icon: Icon, label, desc, children }) {
   return (
     <div className="setting-item">
       <div className="setting-info">
         <div className="setting-title">
-          {Icon && <Icon className="setting-icon" size={16} />}
-          <span>{label}</span>
+          {Icon && <Icon className="setting-icon" size={16} aria-hidden="true" />}
+          {id ? <label htmlFor={id}>{label}</label> : <span>{label}</span>}
         </div>
-        {desc && <span className="setting-desc">{desc}</span>}
+        {desc && (
+          <span className="setting-desc" id={id ? `${id}-desc` : undefined}>
+            {desc}
+          </span>
+        )}
       </div>
       {children}
     </div>
   );
 }
 
-function Section({ icon: Icon, title, children }) {
+function Section({ id, icon: Icon, title, children }) {
   return (
-    <section className="settings-section">
+    <section className="settings-section" id={id} aria-labelledby={`${id}-title`} tabIndex={-1}>
       <div className="section-header">
         {Icon && (
-          <span className="section-icon">
+          <span className="section-icon" aria-hidden="true">
             <Icon size={15} />
           </span>
         )}
-        <h2>{title}</h2>
+        <h2 id={`${id}-title`}>{title}</h2>
       </div>
       {children}
     </section>
@@ -96,6 +153,7 @@ export default function Settings() {
   const { settings, updateSettings, resetSettings } = useSettings();
   const { user, logout } = useUser();
   const navigate = useNavigate();
+  const location = useLocation();
   const [coachStatus, setCoachStatus] = useState(null);
   const [coachLoading, setCoachLoading] = useState(true);
   const [coachBusy, setCoachBusy] = useState(false);
@@ -150,14 +208,8 @@ export default function Settings() {
     }
   }
 
-  async function handleResignAllLiveGames() {
+  async function resignAllLiveGames() {
     if (!user || resigningGames) return;
-
-    const confirmed = window.confirm(
-      'Resign all ongoing online matchmaking games? This will immediately forfeit every active game and cannot be undone.'
-    );
-    if (!confirmed) return;
-
     setResigningGames(true);
     setResignMessage(null);
     try {
@@ -176,26 +228,53 @@ export default function Settings() {
       setResigningGames(false);
     }
   }
-  useEffect(() => {
-    const hash = window.location.hash.slice(1);
-    if (hash) {
-      // Wait for lazy-loaded content to mount
-      const timer = setTimeout(() => {
-        const element = document.getElementById(hash);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }, 100);
-      return () => clearTimeout(timer);
-    }
+
+  const settingsUnchanged = useMemo(
+    () => JSON.stringify(settings) === JSON.stringify(DEFAULT_SETTINGS),
+    [settings],
+  );
+
+  const sections = useMemo(() => {
+    const list = [];
+    if (user) list.push({ id: 'account', label: 'Account' });
+    list.push({ id: 'display', label: 'Display' });
+    list.push({ id: 'gameplay', label: 'Gameplay' });
+    list.push({ id: 'sound', label: 'Sound' });
+    list.push({ id: 'pollinations', label: 'AI coach' });
+    list.push({ id: 'advanced', label: 'Advanced' });
+    list.push({ id: 'about', label: 'About' });
+    list.push({ id: 'legal', label: 'Privacy & terms' });
+    return list;
+  }, [user]);
+
+  const handleNavClick = useCallback((event, id) => {
+    const element = document.getElementById(id);
+    if (!element) return;
+    event.preventDefault();
+    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    element.focus({ preventScroll: true });
   }, []);
+
+  useEffect(() => {
+    const hash = location.hash.slice(1);
+    if (!hash) return undefined;
+    // Wait for lazy-loaded content to mount
+    const timer = setTimeout(() => {
+      const element = document.getElementById(hash);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        element.focus({ preventScroll: true });
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [location.hash]);
 
   return (
     <div className="settings-page">
       <div className="settings-container">
         <div className="settings-header">
           <span className="settings-header-icon">
-            <Settings2 size={22} />
+            <Settings2 size={22} aria-hidden="true" />
           </span>
           <div>
             <h1>Settings</h1>
@@ -203,265 +282,63 @@ export default function Settings() {
           </div>
         </div>
 
+        <nav className="settings-quick-nav" aria-label="Settings sections">
+          {sections.map((section) => (
+            <a
+              key={section.id}
+              className="settings-nav-chip"
+              href={`#${section.id}`}
+              onClick={(e) => handleNavClick(e, section.id)}
+            >
+              {section.label}
+            </a>
+          ))}
+        </nav>
+
         {!user && (
-          <div className="settings-guest-note">
-            <CheckCircle2 size={16} />
+          <div className="settings-guest-note" role="note">
+            <Info size={16} aria-hidden="true" />
             <span>
-              Sign in to save settings and game history. Guests can play vs bots without saves or
-              analysis.
+              Sign in to save settings and game history. Guests can still play vs bots without
+              saves or analysis.
             </span>
+            <button className="link-button guest-signin-btn" type="button" onClick={() => navigate('/login')}>
+              Sign in
+            </button>
           </div>
         )}
 
-        <Section icon={Palette} title="Display">
-          <SettingRow
-            icon={Eye}
-            label="Show Coordinates"
-            desc="Display rank and file labels on the board"
-          >
-            <Toggle
-              label="Show Coordinates"
-              checked={settings.showCoordinates}
-              onChange={(v) => updateSettings({ showCoordinates: v })}
-            />
-          </SettingRow>
-
-          <SettingRow
-            icon={Crosshair}
-            label="Highlight Legal Moves"
-            desc="Show dots on squares where pieces can move"
-          >
-            <Toggle
-              label="Highlight Legal Moves"
-              checked={settings.highlightMoves}
-              onChange={(v) => updateSettings({ highlightMoves: v })}
-            />
-          </SettingRow>
-
-          <div className="setting-item">
-            <div className="setting-info">
-              <div className="setting-title">
-                <Palette className="setting-icon" size={16} />
-                <span>Board Theme</span>
-              </div>
-              <span className="setting-desc">Choose your board color scheme</span>
-            </div>
-            <div className="theme-selector">
-              {BOARD_THEMES.map((theme) => (
-                <button
-                  key={theme.id}
-                  className={`theme-option ${settings.boardTheme === theme.id ? 'active' : ''}`}
-                  aria-pressed={settings.boardTheme === theme.id}
-                  onClick={() => updateSettings({ boardTheme: theme.id })}
-                  title={theme.name}
-                  type="button"
-                >
-                  <div className="theme-preview">
-                    <div className="theme-square light" style={{ backgroundColor: theme.light }} />
-                    <div className="theme-square dark" style={{ backgroundColor: theme.dark }} />
-                  </div>
-                  <span className="theme-name">{theme.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </Section>
-
-        <Section icon={Settings2} title="Gameplay">
-          <SettingRow
-            icon={Crown}
-            label="Auto-Promote to Queen"
-            desc="Automatically promote pawns to queen"
-          >
-            <Toggle label="Auto-Promote to Queen" checked={settings.autoQueen} onChange={(v) => updateSettings({ autoQueen: v })} />
-          </SettingRow>
-
-          <SettingRow
-            icon={MousePointer2}
-            label="Confirm Moves"
-            desc="Require confirmation before making a move"
-          >
-            <Toggle
-              label="Confirm Moves"
-              checked={settings.confirmMoves}
-              onChange={(v) => updateSettings({ confirmMoves: v })}
-            />
-          </SettingRow>
-
-          <SettingRow
-            icon={Settings2}
-            label="Show Hints Button"
-            desc="Display the hint button during games"
-          >
-            <Toggle label="Show Hints Button" checked={settings.showHints} onChange={(v) => updateSettings({ showHints: v })} />
-          </SettingRow>
-        </Section>
-
-        <Section icon={Volume2} title="Sound">
-          <SettingRow
-            icon={Volume2}
-            label="Sound Effects"
-            desc="Play sounds for moves and game events"
-          >
-            <Toggle
-              label="Sound Effects"
-              checked={settings.soundEnabled}
-              onChange={(v) => updateSettings({ soundEnabled: v })}
-            />
-          </SettingRow>
-
-          {settings.soundEnabled && (
-            <div className="setting-item setting-item-vertical">
-              <div className="setting-info">
-                <div className="setting-title">
-                  <Volume2 className="setting-icon" size={16} />
-                  <span>Volume</span>
-                  <span className="volume-value">{settings.soundVolume}%</span>
-                </div>
-                <span className="setting-desc">Adjust the sound effect loudness</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={settings.soundVolume}
-                onChange={(e) => updateSettings({ soundVolume: parseInt(e.target.value) })}
-                className="volume-slider"
-              />
-            </div>
-          )}
-        </Section>
-
-        <Section icon={Smartphone} title="Haptics">
-          <SettingRow
-            icon={Smartphone}
-            label="Haptic Feedback"
-            desc="Vibrate on moves and captures (mobile only)"
-          >
-            <Toggle
-              checked={settings.hapticEnabled}
-              onChange={(v) => updateSettings({ hapticEnabled: v })}
-            />
-          </SettingRow>
-        </Section>
-
-
-        <Section icon={BrainCircuit} title="Pollinations AI">
-          <div className="setting-item pollinations-auth-item">
-            <div className="setting-info">
-              <div className="setting-title">
-                <BrainCircuit className="setting-icon" size={16} />
-                <span>Analysis Authenticator</span>
-                {coachStatus?.connected && <span className="pollinations-status connected">Connected</span>}
-                {!coachStatus?.connected && !coachLoading && <span className="pollinations-status">Not connected</span>}
-              </div>
-              <span className="setting-desc">
-                Log in with Pollinations AI so game review can use your authorized analysis provider.
-              </span>
-              {coachStatus?.configured === false && (
-                <span className="setting-desc pollinations-warning">
-                  Server-side Pollinations OAuth is not configured yet.
-                </span>
-              )}
-              {coachError && <span className="setting-desc pollinations-warning">{coachError}</span>}
-            </div>
-            <button
-              className={coachStatus?.connected ? 'link-button pollinations-disconnect' : 'link-button'}
-              type="button"
-              onClick={coachStatus?.connected ? handleCoachDisconnect : handleCoachConnect}
-              disabled={coachLoading || coachBusy || coachStatus?.configured === false}
-            >
-              {coachLoading || coachBusy
-                ? 'Checking...'
-                : coachStatus?.connected
-                  ? 'Disconnect'
-                  : user
-                    ? 'Log in with Pollinations AI'
-                    : 'Sign in first'}
-            </button>
-          </div>
-        </Section>
-
-        <Section icon={Bug} title="Advanced">
-          <SettingRow icon={Bug} label="Debug Mode" desc="Show AI thinking and evaluation data">
-            <Toggle label="Debug Mode" checked={settings.debugMode} onChange={(v) => updateSettings({ debugMode: v })} />
-          </SettingRow>
-        </Section>
-
-        <Section icon={ScrollText} title="About">
-          <div className="setting-item">
-            <div className="setting-info">
-              <div className="setting-title">
-                <ScrollText className="setting-icon" size={16} />
-                <span>Changelog</span>
-              </div>
-              <span className="setting-desc">See recent updates and fixes</span>
-            </div>
-            <button className="link-button" type="button" onClick={() => navigate('/changelog')}>
-              View
-            </button>
-          </div>
-        </Section>
-
-        <Section icon={ShieldCheck} title="Terms & Privacy">
-          <div className="setting-item">
-            <div className="setting-info">
-              <div className="setting-title">
-                <ShieldCheck className="setting-icon" size={16} />
-                <span>Terms of Service</span>
-              </div>
-              <span className="setting-desc">Read the full Terms of Service on its dedicated page.</span>
-            </div>
-            <button className="link-button" type="button" onClick={() => navigate('/terms')}>
-              View
-            </button>
-          </div>
-
-          <div className="legal-settings-block" id="privacy">
-            <div className="legal-settings-heading">
-              <h3>Privacy Policy</h3>
-              <span>Last updated: July 2026</span>
-            </div>
-            {PRIVACY_SECTIONS.map(([title, text], index) => (
-              <article className="legal-settings-section" key={title}>
-                <h4>{index + 1}. {title}</h4>
-                <p>{text}</p>
-              </article>
-            ))}
-          </div>
-        </Section>
-
         {user && (
-          <Section icon={User2} title="Account">
-            <div className="account-info">
-              <div className="account-row">
+          <Section id="account" icon={User2} title="Account">
+            <div className="account-grid">
+              <div className="account-row account-row-wide">
                 <span className="account-label">Username</span>
                 <span className="account-value">{user.username}</span>
               </div>
               <div className="account-row">
-                <span className="account-label">Unlimited Rating</span>
+                <span className="account-label">Unlimited</span>
                 <span className="account-value account-value-elo">{user.elo}</span>
               </div>
               <div className="account-row">
-                <span className="account-label">Bullet Rating</span>
+                <span className="account-label">Bullet</span>
                 <span className="account-value account-value-elo">
                   {user.bulletElo ?? user.elo}
                 </span>
               </div>
               <div className="account-row">
-                <span className="account-label">Blitz Rating</span>
+                <span className="account-label">Blitz</span>
                 <span className="account-value account-value-elo">
                   {user.blitzElo ?? user.elo}
                 </span>
               </div>
               <div className="account-row">
-                <span className="account-label">Rapid Rating</span>
+                <span className="account-label">Rapid</span>
                 <span className="account-value account-value-elo">
                   {user.rapidElo ?? user.elo}
                 </span>
               </div>
               <div className="account-row">
-                <span className="account-label">Classical Rating</span>
+                <span className="account-label">Classical</span>
                 <span className="account-value account-value-elo">
                   {user.classicalElo ?? user.elo}
                 </span>
@@ -482,30 +359,318 @@ export default function Settings() {
             <div className="setting-item danger-setting-item">
               <div className="setting-info">
                 <div className="setting-title">
-                  <Flag className="setting-icon" size={16} />
+                  <Flag className="setting-icon" size={16} aria-hidden="true" />
                   <span>Live games</span>
                 </div>
                 <span className="setting-desc">Resign every ongoing game started through online matchmaking.</span>
                 {resignMessage && (
-                  <span className={`setting-feedback ${resignMessage.type}`}>{resignMessage.text}</span>
+                  <span
+                    className={`setting-feedback ${resignMessage.type}`}
+                    role={resignMessage.type === 'error' ? 'alert' : 'status'}
+                  >
+                    {resignMessage.text}
+                  </span>
                 )}
               </div>
-              <button className="danger-btn" onClick={handleResignAllLiveGames} type="button" disabled={resigningGames}>
-                <Flag size={16} />
-                <span>{resigningGames ? 'Resigning...' : 'Resign all live games'}</span>
-              </button>
+              <ConfirmActionButton
+                idle="Resign all live games"
+                confirm="Confirm resign all"
+                busy={resigningGames}
+                busyLabel="Resigning..."
+                danger
+                icon={Flag}
+                className="danger-btn"
+                onConfirm={resignAllLiveGames}
+              />
             </div>
-            <button className="logout-btn" onClick={logout} type="button">              <LogOut size={16} />
+            <button className="logout-btn" onClick={logout} type="button">
+              <LogOut size={16} aria-hidden="true" />
               <span>Log Out</span>
             </button>
           </Section>
         )}
 
-        <div className="settings-actions">
-          <button className="reset-btn" onClick={resetSettings} type="button">
-            <RotateCcw size={15} />
-            <span>Reset to Defaults</span>
-          </button>
+        <Section id="display" icon={Palette} title="Display">
+          <SettingRow
+            id="setting-coordinates"
+            icon={Eye}
+            label="Show Coordinates"
+            desc="Display rank and file labels on the board"
+          >
+            <Toggle
+              id="setting-coordinates"
+              label="Show Coordinates"
+              checked={settings.showCoordinates}
+              onChange={(v) => updateSettings({ showCoordinates: v })}
+            />
+          </SettingRow>
+
+          <SettingRow
+            id="setting-highlight"
+            icon={Crosshair}
+            label="Highlight Legal Moves"
+            desc="Show dots on squares where pieces can move"
+          >
+            <Toggle
+              id="setting-highlight"
+              label="Highlight Legal Moves"
+              checked={settings.highlightMoves}
+              onChange={(v) => updateSettings({ highlightMoves: v })}
+            />
+          </SettingRow>
+
+          <div className="setting-item">
+            <div className="setting-info">
+              <div className="setting-title">
+                <Palette className="setting-icon" size={16} aria-hidden="true" />
+                <span>Board Theme</span>
+              </div>
+              <span className="setting-desc">Choose your board color scheme</span>
+            </div>
+            <div className="theme-selector" role="group" aria-label="Board theme">
+              {BOARD_THEMES.map((theme) => (
+                <button
+                  key={theme.id}
+                  className={settings.boardTheme === theme.id ? 'theme-option active' : 'theme-option'}
+                  aria-pressed={settings.boardTheme === theme.id}
+                  onClick={() => updateSettings({ boardTheme: theme.id })}
+                  title={`${theme.name} board theme`}
+                  type="button"
+                >
+                  <div className="theme-preview" aria-hidden="true">
+                    <div className="theme-square light" style={{ backgroundColor: theme.light }} />
+                    <div className="theme-square dark" style={{ backgroundColor: theme.dark }} />
+                  </div>
+                  <span className="theme-name">{theme.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </Section>
+
+        <Section id="gameplay" icon={Settings2} title="Gameplay">
+          <SettingRow
+            id="setting-auto-queen"
+            icon={Crown}
+            label="Auto-Promote to Queen"
+            desc="Automatically promote pawns to queen"
+          >
+            <Toggle
+              id="setting-auto-queen"
+              label="Auto-Promote to Queen"
+              checked={settings.autoQueen}
+              onChange={(v) => updateSettings({ autoQueen: v })}
+            />
+          </SettingRow>
+
+          <SettingRow
+            id="setting-confirm-moves"
+            icon={MousePointer2}
+            label="Confirm Moves"
+            desc="Require confirmation before making a move"
+          >
+            <Toggle
+              id="setting-confirm-moves"
+              label="Confirm Moves"
+              checked={settings.confirmMoves}
+              onChange={(v) => updateSettings({ confirmMoves: v })}
+            />
+          </SettingRow>
+
+          <SettingRow
+            id="setting-hints-button"
+            icon={Settings2}
+            label="Show Hints Button"
+            desc="Display the hint button during games"
+          >
+            <Toggle
+              id="setting-hints-button"
+              label="Show Hints Button"
+              checked={settings.showHints}
+              onChange={(v) => updateSettings({ showHints: v })}
+            />
+          </SettingRow>
+        </Section>
+
+        <Section id="sound" icon={Volume2} title="Sound & Haptics">
+          <SettingRow
+            id="setting-sound"
+            icon={Volume2}
+            label="Sound Effects"
+            desc="Play sounds for moves and game events"
+          >
+            <Toggle
+              id="setting-sound"
+              label="Sound Effects"
+              checked={settings.soundEnabled}
+              onChange={(v) => updateSettings({ soundEnabled: v })}
+            />
+          </SettingRow>
+
+          {settings.soundEnabled && (
+            <div className="setting-item setting-item-vertical">
+              <div className="setting-info">
+                <div className="setting-title">
+                  <Volume2 className="setting-icon" size={16} aria-hidden="true" />
+                  <span>Volume</span>
+                  <span className="volume-value" aria-hidden="true">{settings.soundVolume}%</span>
+                </div>
+                <span className="setting-desc" id="settings-volume-desc">Adjust the sound effect loudness</span>
+              </div>
+              <input
+                id="settings-volume"
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={settings.soundVolume}
+                onChange={(e) => updateSettings({ soundVolume: Number(e.target.value) })}
+                className="volume-slider"
+                aria-label="Sound volume"
+                aria-describedby="settings-volume-desc"
+                aria-valuetext={`${settings.soundVolume}%`}
+              />
+            </div>
+          )}
+
+          <SettingRow
+            id="setting-haptics"
+            icon={Smartphone}
+            label="Haptic Feedback"
+            desc="Vibrate on moves and captures (mobile only)"
+          >
+            <Toggle
+              id="setting-haptics"
+              label="Haptic Feedback"
+              checked={settings.hapticEnabled}
+              onChange={(v) => updateSettings({ hapticEnabled: v })}
+            />
+          </SettingRow>
+        </Section>
+
+        <Section id="pollinations" icon={BrainCircuit} title="Pollinations AI">
+          <div className="setting-item pollinations-auth-item" aria-busy={coachLoading || coachBusy}>
+            <div className="setting-info">
+              <div className="setting-title">
+                <BrainCircuit className="setting-icon" size={16} aria-hidden="true" />
+                <span>Analysis Authenticator</span>
+                <span className="pollinations-status" role="status">
+                  {coachLoading
+                    ? 'Checking…'
+                    : coachStatus?.connected
+                      ? 'Connected'
+                      : 'Not connected'}
+                </span>
+              </div>
+              <span className="setting-desc">
+                Log in with Pollinations AI so game review can use your authorized analysis provider.
+              </span>
+              {coachStatus?.configured === false && (
+                <span className="setting-desc pollinations-warning">
+                  Server-side Pollinations OAuth is not configured yet.
+                </span>
+              )}
+              {coachError && (
+                <span className="setting-desc pollinations-warning" role="alert">{coachError}</span>
+              )}
+            </div>
+            <button
+              className={coachStatus?.connected ? 'link-button pollinations-disconnect' : 'link-button'}
+              type="button"
+              onClick={coachStatus?.connected ? handleCoachDisconnect : handleCoachConnect}
+              disabled={coachLoading || coachBusy}
+            >
+              {coachLoading || coachBusy
+                ? 'Checking...'
+                : coachStatus?.connected
+                  ? 'Disconnect'
+                  : user
+                    ? 'Log in with Pollinations AI'
+                    : 'Sign in first'}
+            </button>
+          </div>
+        </Section>
+
+        <Section id="advanced" icon={Bug} title="Advanced">
+          <SettingRow
+            id="setting-debug"
+            icon={Bug}
+            label="Debug Mode"
+            desc="Show AI thinking and evaluation data"
+          >
+            <Toggle
+              id="setting-debug"
+              label="Debug Mode"
+              checked={settings.debugMode}
+              onChange={(v) => updateSettings({ debugMode: v })}
+            />
+          </SettingRow>
+        </Section>
+
+        <Section id="about" icon={ScrollText} title="About">
+          <div className="setting-item">
+            <div className="setting-info">
+              <div className="setting-title">
+                <ScrollText className="setting-icon" size={16} aria-hidden="true" />
+                <span>Changelog</span>
+              </div>
+              <span className="setting-desc">See recent updates and fixes</span>
+            </div>
+            <button className="link-button" type="button" onClick={() => navigate('/changelog')}>
+              View
+            </button>
+          </div>
+        </Section>
+
+        <Section id="legal" icon={ShieldCheck} title="Privacy & Terms">
+          <div className="setting-item" id="privacy">
+            <div className="setting-info">
+              <div className="setting-title">
+                <ShieldCheck className="setting-icon" size={16} aria-hidden="true" />
+                <span>Privacy Policy</span>
+              </div>
+              <span className="setting-desc">Read the full Privacy Policy on its dedicated page.</span>
+            </div>
+            <button className="link-button" type="button" onClick={() => navigate('/privacy')}>
+              View
+            </button>
+          </div>
+
+          <div className="setting-item">
+            <div className="setting-info">
+              <div className="setting-title">
+                <ShieldCheck className="setting-icon" size={16} aria-hidden="true" />
+                <span>Terms of Service</span>
+              </div>
+              <span className="setting-desc">Read the full Terms of Service on its dedicated page.</span>
+            </div>
+            <button className="link-button" type="button" onClick={() => navigate('/terms')}>
+              View
+            </button>
+          </div>
+        </Section>
+
+        <div className="settings-footer">
+          <div className="footer-info">
+            <span className="footer-title">
+              <RotateCcw size={15} aria-hidden="true" />
+              <span>Reset preferences</span>
+            </span>
+            <span className="setting-desc">
+              {settingsUnchanged
+                ? 'You are already using the default settings.'
+                : 'Restores board, gameplay, sound, and account settings to their defaults.'}
+            </span>
+          </div>
+          <ConfirmActionButton
+            idle="Reset to Defaults"
+            confirm="Confirm reset"
+            busyLabel="Resetting..."
+            disabled={settingsUnchanged}
+            icon={RotateCcw}
+            className="reset-btn"
+            onConfirm={() => resetSettings()}
+          />
         </div>
       </div>
     </div>
