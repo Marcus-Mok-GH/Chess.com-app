@@ -3,25 +3,25 @@ import api from '../services/api';
 import { setHapticEnabled } from '../utils/haptics';
 import { useUser } from './UserContext';
 
-const DEFAULT_SETTINGS = {
+export const DEFAULT_SETTINGS = {
   // Display
   showCoordinates: true,
   highlightMoves: true,
   boardTheme: 'green',
   pieceSet: 'default',
-  
+
   // Gameplay
   autoQueen: true,
   confirmMoves: false,
   showHints: true,
-  
+
   // Sound
   soundEnabled: true,
   soundVolume: 80,
 
   // Haptics
   hapticEnabled: true,
-  
+
   // Debug
   debugMode: false,
 };
