@@ -373,14 +373,16 @@ function AppShell() {
  * Root application component. Wraps the app shell in providers and a router.
  * Accepts an explicit `Router` and `routerProps` so server rendering (a
  * StaticRouter carrying the request location) and client rendering
- * (BrowserRouter) share the same route tree.
+ * (BrowserRouter) share the same route tree. `initialUser` seeds the session
+ * provider on the server when the renderer validated the request's session;
+ * on the client the same payload arrives through window.__SSR_USER__.
  */
-export default function App({ Router = BrowserRouter, routerProps = {} } = {}) {
+export default function App({ Router = BrowserRouter, routerProps = {}, initialUser } = {}) {
   return (
     <>
       <PuterCheck />
       <ErrorBoundary>
-        <UserProvider>
+        <UserProvider initialUser={initialUser}>
           <SettingsProvider>
             <Router {...routerProps}>
               <SetUsernameModal />
