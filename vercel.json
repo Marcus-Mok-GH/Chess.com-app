@@ -44,6 +44,10 @@
       "destination": "/api/health"
     },
     {
+      "source": "/.well-known/strix-verify.txt",
+      "destination": "/strix-verify.txt"
+    },
+    {
       "source": "/((?!api/|assets/|.*\\.(?:html|png|jpg|jpeg|gif|svg|ico|webp|css|js|map|woff2?|json|txt)$).*)",
       "destination": "/api/render?__route=/$1"
     },

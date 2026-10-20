@@ -1,7 +1,7 @@
 [2026-10-20] - Domain verification file for Strix is served from the site
 
-- Added `/.well-known/strix-verify.txt` to the static assets, so the deployed site answers `https://chess-com-app.vercel.app/.well-known/strix-verify.txt` with the verification token `strix-verify-9f0474d11788f741b3573d49d3f23872` instead of falling through to the app shell.
-- The path is served straight from the build output (`artifacts/chess/public` → `dist/.well-known/`), so it is unaffected by the SSR rewrite and needs no server or database changes.
+- Added the Strix verification token as a static file and routed the exact verification path to it, so `https://chess-com-app.vercel.app/.well-known/strix-verify.txt` answers with `strix-verify-9f0474d11788f741b3573d49d3f23872` (plain text) instead of the app shell.
+- The file is deployed as `strix-verify.txt` in the build output and `/.well-known/strix-verify.txt` rewrites to it in `vercel.json`; a file placed inside `public/.well-known/` was not served on the deployment, while the explicit rewrite is matched before the catch-all SSR rewrite.
 
 [2026-10-18] - Pages now open with your signed-in profile already in place
 
