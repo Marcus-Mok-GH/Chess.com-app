@@ -1,3 +1,8 @@
+[2026-10-20] - Domain verification file for Strix is served from the site
+
+- Added `/.well-known/strix-verify.txt` to the static assets, so the deployed site answers `https://chess-com-app.vercel.app/.well-known/strix-verify.txt` with the verification token `strix-verify-9f0474d11788f741b3573d49d3f23872` instead of falling through to the app shell.
+- The path is served straight from the build output (`artifacts/chess/public` → `dist/.well-known/`), so it is unaffected by the SSR rewrite and needs no server or database changes.
+
 [2026-10-18] - Pages now open with your signed-in profile already in place
 
 - Opening any page (home, puzzles, settings, ...) on the live site no longer flashes a logged-out shell before your account appears. The server now recognizes your session before it renders the page, and the sidebar, ratings, and admin tools arrive already filled in for your account.
