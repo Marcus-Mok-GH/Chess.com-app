@@ -1,4 +1,7 @@
 ### Added
+- Integration test for premoves: `artifacts/chess/src/components/ChessGame.premoves.test.jsx` renders the real `ChessGame` with a mocked board and engine, plays 1.e4, queues a premove while the bot is on the move, drives the bot's reply, and asserts the premove auto-plays once the turn returns (plus that an illegal premove is discarded instead of played). Registered in the root `test` script.
+
+### Added
 - Premoves: a new **Enable Premoves** setting (Gameplay section, on by default) lets a player queue their next move while it is the opponent's turn, in both bot/local and online games. Drag or tap a piece and its target while the opponent (or bot) is on the move, and the queued move is highlighted on the board; it plays automatically when the turn returns, but only if it is still legal after the opponent's reply, otherwise it is silently discarded. Queued premoves are cleared when the setting is off, the game ends, the player resigns, or a new game starts. Shared logic lives in `engine/game/premoves.js` (validated queue helpers) and `hooks/usePremove.js` (queued-state lifecycle), and is used by both `ChessGame.jsx` and `OnlineChessGame.jsx`.
 
 ### Fixed
