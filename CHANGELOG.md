@@ -1,3 +1,6 @@
+### Fixed
+- The Postgres pools (`sharedPool` and the non-serverless `directPool` in `artifacts/api-server/src/chess-server/db/pool.js`) now attach an `'error'` listener. node-postgres emits `'error'` on the Pool when an idle pooled client's socket dies — e.g. the database or its proxy closed it while a serverless instance sat frozen past its idle timeout, where idle timers never run. Without a listener, EventEmitter's default behavior rethrows and kills the invocation, which surfaced intermittently as a Vercel `500 FUNCTION_INVOCATION_FAILED` after a long-idle tab reloaded. The listener logs the recovered error and swallows it; a socket that is genuinely broken still fails the query that checks it out, which the existing query/transaction try-catch paths already handle. New registered test `db/pool.test.js` pins the listener on both pools.
+
 ### Added
 - Integration test for premoves: `artifacts/chess/src/components/ChessGame.premoves.test.jsx` renders the real `ChessGame` with a mocked board and engine, plays 1.e4, queues a premove while the bot is on the move, drives the bot's reply, and asserts the premove auto-plays once the turn returns (plus that an illegal premove is discarded instead of played). Registered in the root `test` script.
 

@@ -44,29 +44,56 @@ const timeoutMs = isServerless ? 8000 : isProduction ? 20000 : 10000;
 const pooledHost = resolveHost(pooledUrl);
 const isNeonOnVercel = isVercel && Boolean(pooledUrl) && isNeonPooler(pooledUrl);
 
-const sharedPool = pooledUrl
-  ? new Pool({
-      connectionString: pooledUrl,
-      ssl: sslConfig,
-      connectionTimeoutMillis: timeoutMs,
-      idleTimeoutMillis: isNeonOnVercel ? 5000 : 30000,
-      max: isNeonOnVercel ? 5 : 10,
-      allowExitOnIdle: true,
-      ...(isServerless && pooledHost?.includes('supabase.co') ? { family: 4 } : {})
-    })
-  : null;
+// node-postgres emits 'error' on a Pool when an *idle* pooled client's socket
+// dies (the database or its proxy closed the connection while a serverless
+// instance sat frozen after a long idle period — idle timers do not run while
+// the instance is frozen, so stale idle clients survive until the next
+// request). pg already discards the broken client, but with no 'error'
+// listener EventEmitter's default behavior throws, killing the function
+// process and surfacing as a 500 FUNCTION_INVOCATION_FAILED. Log and swallow
+// the error instead; a genuinely unusable socket still fails the query that
+// checks it out, which the existing try/catch paths already handle.
+function attachPoolErrorHandler(pool, label) {
+  if (!pool) {
+    return pool;
+  }
+
+  pool.on('error', (error) => {
+    console.error(`[DB] ${label} emitted an error on an idle client (recovered):`, error?.message || error);
+  });
+
+  return pool;
+}
+
+const sharedPool = attachPoolErrorHandler(
+  pooledUrl
+    ? new Pool({
+        connectionString: pooledUrl,
+        ssl: sslConfig,
+        connectionTimeoutMillis: timeoutMs,
+        idleTimeoutMillis: isNeonOnVercel ? 5000 : 30000,
+        max: isNeonOnVercel ? 5 : 10,
+        allowExitOnIdle: true,
+        ...(isServerless && pooledHost?.includes('supabase.co') ? { family: 4 } : {})
+      })
+    : null,
+  'shared pool',
+);
 
 
-const directPool = !isServerless && unpooledUrl && unpooledUrl !== pooledUrl
-  ? new Pool({ 
-      connectionString: unpooledUrl,
-      ssl: sslConfig,
-      connectionTimeoutMillis: timeoutMs,
-      idleTimeoutMillis: 30000,
-      max: 2,
-      allowExitOnIdle: true
-    })
-  : null;
+const directPool = attachPoolErrorHandler(
+  !isServerless && unpooledUrl && unpooledUrl !== pooledUrl
+    ? new Pool({ 
+        connectionString: unpooledUrl,
+        ssl: sslConfig,
+        connectionTimeoutMillis: timeoutMs,
+        idleTimeoutMillis: 30000,
+        max: 2,
+        allowExitOnIdle: true
+      })
+    : null,
+  'direct pool',
+);
 
 export const shouldClosePool = false;
 
