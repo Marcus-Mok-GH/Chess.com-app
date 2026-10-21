@@ -24,7 +24,7 @@ export const rex = {
         },
       },
     },
-    personality: 'Bongcloud sage with a supercomputer hidden up his sleeve',
+    personality: 'Bongcloud menace',
     description: 'Opens with the Bongcloud, donates his queen, then plays like Stockfish itself',
     playStyle: {
       aggression: 1,
