@@ -1,3 +1,9 @@
+[2026-10-21] - Login works again from any app origin (real "Invalid origin" fix)
+
+- The October 15 cookie-forwarding fix did not restore production sign-in: live probes showed Neon Auth (Better Auth) enforces its origin/CSRF check unconditionally on its hosted instance — with or without a cookie, an app origin returns 403 `Invalid origin` and no `Origin` at all returns 403 `Missing or null Origin`. The deployed instance simply does not trust `https://chess-com-app.vercel.app` as an origin, and the Neon Console Domains allowlist covers redirect URIs, not this check.
+- The `/api/auth/*` proxy now sets the upstream request's `Origin` to Neon Auth's own base-URL origin instead of relaying the browser's. Better Auth always trusts its own origin, so the check passes for every app domain — production, Vercel previews, and localhost — with no Neon Console configuration changes.
+- Kept the October 15 behavior of never forwarding the app's `chess_session` cookie upstream; the origin rewrite is layered on top of it. Updated the proxy regression tests to assert the upstream `Origin` is the Neon Auth origin regardless of the client's header.
+
 [2026-10-20] - Domain verification file for Strix is served from the site
 
 - Added the Strix verification token as a static file and routed the exact verification path to it, so `https://chess-com-app.vercel.app/.well-known/strix-verify.txt` answers with `strix-verify-9f0474d11788f741b3573d49d3f23872` (plain text) instead of the app shell.
