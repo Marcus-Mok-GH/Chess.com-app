@@ -15,6 +15,8 @@ import {
 } from "../utils/gamePersistence";
 import haptics from "../utils/haptics";
 import { findKingSquare } from "./ChessGame/utils";
+import { usePremove } from "../hooks/usePremove";
+import { isPremoveLegal, premoveTargets } from "../engine/game/premoves";
 import { useGameCore } from "./OnlineChessGame/hooks/useGameCore";
 import { useLiveClock } from "./OnlineChessGame/hooks/useLiveClock";
 import GameUI from "./OnlineChessGame/subcomponents/GameUI";
@@ -92,6 +94,14 @@ export default function OnlineChessGame({
     const presenceTickRef = useRef(0);
     const boardOrientation = playerColor || "white";
     const liveClock = useLiveClock(serverClock);
+
+    // Premoves are only available while the game is live; the queued move is
+    // applied on the player's turn (see the effect next to handlePieceDrop).
+    const premovesEnabled = Boolean(settings.enablePremoves) && gameStatus === "playing";
+    const { premove, queuePremove, clearPremove } = usePremove({
+        enabled: premovesEnabled,
+        resetKey: gameId,
+    });
 
     // Expire floating reaction bursts without waiting for the next chat poll.
     const pruneIntervalRef = useRef(null);
@@ -457,13 +467,29 @@ export default function OnlineChessGame({
     }, []);
 
     const handlePieceDrop = useCallback(
-        async (from, to) => {
-            if (moveInFlightRef.current) return false;
-            if (game.turn() !== colorCode || gameStatus !== "playing")
-                return false;
+        async (from, to, promotionOverride) => {
             const piece = game.get(from);
             if (!piece || piece.color !== colorCode) return false;
-            const moved = await makeMove({ from, to, promotion: "q" });
+
+            // Off-turn: queue the move as a premove instead of sending it.
+            if (game.turn() !== colorCode) {
+                if (gameStatus !== "playing" || !premovesEnabled) return false;
+                if (queuePremove(from, to, promotionOverride)) {
+                    haptics.select();
+                    setSelectedSquare(null);
+                    setPossibleMoves([]);
+                    setDrawOffered(false);
+                }
+                return false;
+            }
+
+            if (moveInFlightRef.current) return false;
+            if (gameStatus !== "playing") return false;
+            const moved = await makeMove({
+                from,
+                to,
+                promotion: promotionOverride || "q",
+            });
             if (moved) {
                 haptics.move();
                 setSelectedSquare(null);
@@ -472,26 +498,59 @@ export default function OnlineChessGame({
             }
             return moved;
         },
-        [game, colorCode, gameStatus, makeMove, moveInFlightRef],
+        [
+            game,
+            colorCode,
+            gameStatus,
+            premovesEnabled,
+            queuePremove,
+            makeMove,
+            moveInFlightRef,
+        ],
     );
+
+    // Apply a queued premove once it is the player's turn; an illegal premove
+    // (the opponent's reply changed the position) is discarded instead.
+    useEffect(() => {
+        if (!premove || !premovesEnabled) return;
+        if (gameStatus !== "playing" || game.turn() !== colorCode) return;
+        if (moveInFlightRef.current) return;
+        clearPremove();
+        if (!isPremoveLegal(game.fen(), premove)) return;
+        handlePieceDrop(premove.from, premove.to, premove.promotion);
+    }, [
+        premove,
+        premovesEnabled,
+        game,
+        gameStatus,
+        colorCode,
+        handlePieceDrop,
+        clearPremove,
+        moveInFlightRef,
+    ]);
 
     const canDragPiece = useCallback(
         (pieceType, square) => {
-            if (game.turn() !== colorCode || gameStatus !== "playing")
-                return false;
+            if (gameStatus !== "playing") return false;
             const piece = game.get(square);
-            return Boolean(
-                piece &&
-                    piece.color === colorCode &&
-                    pieceType?.[0] === colorCode,
-            );
+            if (
+                !piece ||
+                piece.color !== colorCode ||
+                pieceType?.[0] !== colorCode
+            )
+                return false;
+            if (game.turn() === colorCode) return true;
+            // Allow queueing a premove on the opponent's turn.
+            return premovesEnabled;
         },
-        [game, colorCode, gameStatus],
+        [game, colorCode, gameStatus, premovesEnabled],
     );
 
     const onSquareClick = useCallback(
         (square) => {
-            if (game.turn() !== colorCode || gameStatus !== "playing") return;
+            if (gameStatus !== "playing") return;
+            const isPlayerTurn = game.turn() === colorCode;
+            if (!isPlayerTurn && !premovesEnabled) return;
             const piece = game.get(square);
             if (piece && piece.color === colorCode) {
                 if (square === selectedSquare) {
@@ -501,17 +560,18 @@ export default function OnlineChessGame({
                 }
                 setSelectedSquare(square);
                 haptics.select();
+                // On the opponent's turn chess.js has no moves for our pieces,
+                // so preview premove targets from the player's perspective.
                 setPossibleMoves(
-                    game.moves({ square, verbose: true }).map((m) => m.to),
+                    isPlayerTurn
+                        ? game.moves({ square, verbose: true }).map((m) => m.to)
+                        : premoveTargets(game.fen(), colorCode, square),
                 );
                 return;
             }
-            if (selectedSquare) {
-                const isLegal = possibleMoves.includes(square);
-                if (isLegal) {
-                    handlePieceDrop(selectedSquare, square);
-                    return;
-                }
+            if (selectedSquare && possibleMoves.includes(square)) {
+                handlePieceDrop(selectedSquare, square);
+                return;
             }
             setSelectedSquare(null);
             setPossibleMoves([]);
@@ -520,6 +580,7 @@ export default function OnlineChessGame({
             game,
             colorCode,
             gameStatus,
+            premovesEnabled,
             selectedSquare,
             possibleMoves,
             handlePieceDrop,
@@ -546,8 +607,12 @@ export default function OnlineChessGame({
             if (king)
                 styles[king] = { backgroundColor: "rgba(255, 0, 0, 0.5)" };
         }
+        if (premove) {
+            styles[premove.from] = { backgroundColor: "rgba(155, 199, 0, 0.55)" };
+            styles[premove.to] = { backgroundColor: "rgba(155, 199, 0, 0.55)" };
+        }
         return styles;
-    }, [selectedSquare, possibleMoves, game]);
+    }, [selectedSquare, possibleMoves, game, premove]);
 
     const capturedPieces = useMemo(() => {
         const current = {

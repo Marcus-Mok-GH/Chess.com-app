@@ -1,3 +1,6 @@
+### Added
+- Premoves: a new **Enable Premoves** setting (Gameplay section, on by default) lets a player queue their next move while it is the opponent's turn, in both bot/local and online games. Drag or tap a piece and its target while the opponent (or bot) is on the move, and the queued move is highlighted on the board; it plays automatically when the turn returns, but only if it is still legal after the opponent's reply, otherwise it is silently discarded. Queued premoves are cleared when the setting is off, the game ends, the player resigns, or a new game starts. Shared logic lives in `engine/game/premoves.js` (validated queue helpers) and `hooks/usePremove.js` (queued-state lifecycle), and is used by both `ChessGame.jsx` and `OnlineChessGame.jsx`.
+
 ### Fixed
 - Vercel preview deployments no longer compile the SSR render test as a serverless function. `api/render.test.js` sat in the root `api/` directory, where Vercel creates a separate function for every supported source file, so the vitest test was bundled as a production function and failed the build on every push. It now lives at `tests/render.test.js` (still registered in the root `test` script), and `.vercelignore` excludes `api/*.test.js` and `tests` so the function directory only ever holds real handlers.
 
