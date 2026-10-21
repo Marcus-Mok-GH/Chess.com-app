@@ -10,6 +10,7 @@ import { raj } from './personalities/raj';
 import { theo } from './personalities/theo';
 import { felix } from './personalities/felix';
 import { nadia } from './personalities/nadia';
+import { rex } from './personalities/rex';
 import { custom } from './personalities/custom';
 
 // Bot personalities with different difficulty levels
@@ -26,6 +27,7 @@ export const BOTS = [
   theo,
   felix,
   nadia,
+  rex,
   custom
 ];
 

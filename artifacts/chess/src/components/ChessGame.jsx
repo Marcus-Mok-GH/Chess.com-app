@@ -391,6 +391,8 @@ function ChessGame(
           nodes: bot.nodes,
           blunderChance: bot.blunderChance,
           missedTacticsChance: bot.missedTacticsChance,
+          maxStrength: bot.maxStrength,
+          scriptedOpening: bot.scriptedOpening,
           playStyle: bot.playStyle,
         },
         debug: settingsRef.current.debugMode,
