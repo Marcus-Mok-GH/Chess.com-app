@@ -6,6 +6,7 @@ import path from 'node:path';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { errorResponse, handleRouteError } from '../middleware/errors.js';
+import { computeScriptedMove } from '../../../../chess/src/engine/bots/scriptedMoves.js';
 
 // Resolve paths at module load time so they survive esbuild bundling.
 const _require = createRequire(import.meta.url);
@@ -91,6 +92,11 @@ const TIMEOUT_MS = (() => {
   return 10000;
 })();
 
+// Full-strength search budget for maxStrength bots: burn most of the request
+// timeout on the search, but always leave headroom for engine boot so the
+// hard timeout (which degrades to a weak fallback move) never fires.
+const MAX_STRENGTH_MOVETIME_MS = Math.min(9000, Math.max(2000, TIMEOUT_MS - 3500));
+
 const router = Router();
 
 function isValidFen(fen) {
@@ -98,8 +104,11 @@ function isValidFen(fen) {
   try { new Chess(fen); return true; } catch { return false; }
 }
 
-function getSearchParams(bot) {
+export function getSearchParams(bot) {
   if (!bot) return 'go depth 10';
+  // maxStrength bots (e.g. Rex) skip the node/depth caps for a full
+  // movetime-bounded search at the default maximum Skill Level.
+  if (bot.maxStrength) return `go movetime ${MAX_STRENGTH_MOVETIME_MS}`;
   let nodes = Math.min(Math.max(Number(bot.nodes) || 10000, 0), 1_000_000);
   let depth = Math.min(Math.max(Number(bot.depth) || 10, 1), 20);
   if (nodes < 5000)  return `go nodes ${nodes}`;
@@ -217,6 +226,19 @@ router.post('/move', engineConcurrency, async (req, res) => {
     const { fen, bot, debug } = req.body;
     if (!fen) return errorResponse(res, 400, 'Missing required field: fen');
     if (!isValidFen(fen)) return errorResponse(res, 400, 'Invalid FEN string');
+
+    // Scripted personalities (e.g. the Bongcloud + donation preamble) answer
+    // before the engine whenever the position matches their script.
+    const scriptedMove = computeScriptedMove(fen, bot?.scriptedOpening);
+    if (scriptedMove) {
+      if (debug) console.log('[Engine] FEN:', fen, '| Scripted move:', scriptedMove);
+      return res.json({
+        type: 'result',
+        bestMove: scriptedMove,
+        scripted: true,
+        debugInfo: debug ? { fen, scriptedMove, botName: bot?.name, scripted: true } : null,
+      });
+    }
 
     const searchParams = getSearchParams(bot);
     if (debug) console.log('[Engine] FEN:', fen, '| Search:', searchParams);
