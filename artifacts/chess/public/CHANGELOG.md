@@ -5,6 +5,11 @@
 - After the Bongcloud, Rex runs a "donation window" (his move 3 through 8): each turn he looks for a free giveaway with his queen first, then rooks — a non-capture move to a square the opponent actually attacks that nothing of his defends (so the opponent can take the piece and nothing recaptures). When one exists he plays it (a real sacrifice for nothing); when nothing is genuinely hanging, the engine plays a normal strong move and the window stays open. From move 9, or whenever no scripted move applies, it is maximum-strength engine for the rest of the game.
 - Plumbing: the bot payloads the client sends to `/api/engine/move` now also carry optional `maxStrength` and `scriptedOpening` fields (other bots send neither and are unaffected); `getSearchParams` is exported from the engine route, and a new registered test file `engine.scripted-bot.test.js` covers the Bongcloud lines for both colors, the queen donation, the unchanged search mapping for existing bots, roster-rating expectations, and real-engine sanity runs at full strength.
 
+[2026-10-21] - Premoves: queue your next move while your opponent is thinking
+
+- New **Enable Premoves** toggle under Settings → Gameplay (on by default). While it is your opponent's turn — against a bot or online — you can set up your next move on the board. The move is highlighted and plays the instant your turn begins, as long as it is still legal after your opponent's reply; if their move makes it illegal, it is simply dropped.
+- Premoves work the same in bot games and live online games, and are cleared automatically when you turn the setting off, the game ends, you resign, or you start a new game.
+
 [2026-10-21] - Preview builds stop failing on a stray test "function"
 
 - The Vercel preview deployment had been failing to build on every push because the SSR render test file lived in the root `api/` directory, where Vercel turns each source file into its own serverless function. The test moved to `tests/` and `api/` now holds only real handlers, so preview builds no longer carry a broken extra function. No user-facing behavior changes.

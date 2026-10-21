@@ -40,6 +40,7 @@ const DEFAULT_TEST_SETTINGS = {
   autoQueen: true,
   confirmMoves: false,
   showHints: true,
+  enablePremoves: true,
   soundEnabled: true,
   soundVolume: 80,
   hapticEnabled: true,
@@ -135,6 +136,9 @@ describe('Settings page', () => {
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'Auto-Promote to Queen' }));
     expect(updateSettings).toHaveBeenCalledWith({ autoQueen: false });
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Enable Premoves' }));
+    expect(updateSettings).toHaveBeenCalledWith({ enablePremoves: false });
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'Haptic Feedback' }));
     expect(updateSettings).toHaveBeenCalledWith({ hapticEnabled: false });

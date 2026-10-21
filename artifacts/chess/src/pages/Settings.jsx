@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   Flag,
   BrainCircuit,
+  Zap,
 } from 'lucide-react';
 import { connectCoach, disconnectCoach, getCoachStatus } from '../engine/coach/coachAI';
 import api from '../services/api';
@@ -488,6 +489,20 @@ export default function Settings() {
               label="Show Hints Button"
               checked={settings.showHints}
               onChange={(v) => updateSettings({ showHints: v })}
+            />
+          </SettingRow>
+
+          <SettingRow
+            id="setting-enable-premoves"
+            icon={Zap}
+            label="Enable Premoves"
+            desc="Queue your next move while it is your opponent's turn; it plays automatically when your turn starts, if it is still legal."
+          >
+            <Toggle
+              id="setting-enable-premoves"
+              label="Enable Premoves"
+              checked={settings.enablePremoves}
+              onChange={(v) => updateSettings({ enablePremoves: v })}
             />
           </SettingRow>
         </Section>

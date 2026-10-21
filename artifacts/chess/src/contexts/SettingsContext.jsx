@@ -14,6 +14,7 @@ export const DEFAULT_SETTINGS = {
   autoQueen: true,
   confirmMoves: false,
   showHints: true,
+  enablePremoves: true,
 
   // Sound
   soundEnabled: true,

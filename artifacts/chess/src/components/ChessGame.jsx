@@ -26,6 +26,8 @@ import {
 
 import { findKingSquare, applyEngineMove, getMoveCoords } from './ChessGame/utils';
 import { useCapturedPieces, usePieceAnimations } from './ChessGame/hooks';
+import { usePremove } from '../hooks/usePremove';
+import { isPremoveLegal, premoveTargets } from '../engine/game/premoves';
 import GameStatus from './ChessGame/subcomponents/GameStatus';
 import './ChessGame.css';
 
@@ -604,13 +606,36 @@ function ChessGame(
     return 'q';
   }, []);
 
-  const handlePieceDrop = useCallback((from, to) => {
-    if (game.turn() !== playerColor || isThinking || game.isGameOver() || hasResigned) return false;
+  // Premoves may be queued whenever the setting is on and the game is live;
+  // they are applied only once the turn returns (see the effect below).
+  const premovesAvailable = Boolean(
+    settings.enablePremoves && game && !hasResigned && !game.isGameOver(),
+  );
+  const { premove, queuePremove, clearPremove } = usePremove({
+    enabled: premovesAvailable,
+    resetKey: gameId,
+  });
+
+  const handlePieceDrop = useCallback((from, to, promotionOverride) => {
+    if (game.isGameOver() || hasResigned) return false;
 
     const moving_piece = game.get(from);
     if (!moving_piece || moving_piece.color !== playerColor) return false;
 
-    const promotion = resolvePromotion(from, to, moving_piece.type);
+    // Off-turn: queue the move as a premove instead of playing it.
+    if (game.turn() !== playerColor) {
+      if (!premovesAvailable) return false;
+      if (queuePremove(from, to, promotionOverride)) {
+        haptics.select();
+        setSelectedSquare(null);
+        setPossibleMoves([]);
+      }
+      return false;
+    }
+
+    if (isThinking) return false;
+
+    const promotion = promotionOverride || resolvePromotion(from, to, moving_piece.type);
     const moveAttempt = {
       from,
       to,
@@ -647,54 +672,66 @@ function ChessGame(
     }
 
     return false;
-  }, [game, playerColor, isThinking, hasResigned, requestCoachingFeedback, resolvePromotion, moveHistory, persistGame]);
+  }, [game, playerColor, isThinking, hasResigned, premovesAvailable, queuePremove, requestCoachingFeedback, resolvePromotion, moveHistory, persistGame]);
+
+  // Apply a queued premove once the turn returns; an illegal premove (the
+  // opponent's reply changed the position) is discarded instead of played.
+  useEffect(() => {
+    if (!premove || !premovesAvailable) return;
+    if (game.turn() !== playerColor || isThinking || game.isGameOver() || hasResigned) return;
+    clearPremove();
+    if (!isPremoveLegal(game.fen(), premove)) return;
+    handlePieceDrop(premove.from, premove.to, premove.promotion);
+  }, [premove, premovesAvailable, game, playerColor, isThinking, hasResigned, handlePieceDrop, clearPremove]);
 
   const canDragPiece = useCallback((pieceType, square) => {
-    if (game.turn() !== playerColor || isThinking || game.isGameOver() || hasResigned) return false;
+    if (game.isGameOver() || hasResigned) return false;
     const piece = game.get(square);
-    return Boolean(piece && piece.color === playerColor && pieceType?.[0] === playerColor);
-  }, [game, playerColor, isThinking, hasResigned]);
+    if (!piece || piece.color !== playerColor || pieceType?.[0] !== playerColor) return false;
+    if (game.turn() === playerColor) return !isThinking;
+    // Allow queueing a premove on the opponent's turn.
+    return premovesAvailable;
+  }, [game, playerColor, isThinking, hasResigned, premovesAvailable]);
 
   const onSquareClick = useCallback(
     (square) => {
-      if (game.turn() !== playerColor || isThinking || game.isGameOver() || hasResigned) return;
+      const isPlayerTurn = game.turn() === playerColor;
+      if (game.isGameOver() || hasResigned) return;
+      if (isPlayerTurn && isThinking) return;
+      if (!isPlayerTurn && !premovesAvailable) return;
 
       const piece = game.get(square);
 
-      // 1. Selection logic: If clicking our own piece, always select it
+      // 1. Selection logic: if clicking our own piece, always select it.
       if (piece && piece.color === playerColor) {
-        // If clicking same square, deselect
         if (square === selectedSquare) {
           setSelectedSquare(null);
           setPossibleMoves([]);
           return;
         }
-        
-        // Otherwise select new piece
         setSelectedSquare(square);
         haptics.select();
-        const moves = game.moves({ square, verbose: true });
-        setPossibleMoves(moves.map((m) => m.to));
+        // On the opponent's turn chess.js has no moves for our pieces, so
+        // preview premove targets from the player's own perspective instead.
+        const moves = isPlayerTurn
+          ? game.moves({ square, verbose: true }).map((m) => m.to)
+          : premoveTargets(game.fen(), playerColor, square);
+        setPossibleMoves(moves);
         return;
       }
 
-      // 2. Move logic: If we have a selection and click a non-own-piece square
-      if (selectedSquare) {
-        // Check if it's a legal move
-        const isLegal = possibleMoves.includes(square);
-        
-        if (isLegal) {
-          // Execute the move
-          handlePieceDrop(selectedSquare, square);
-          return;
-        }
+      // 2. Move logic: with a selection, a legal target plays the move, or
+      // queues a premove when it is the opponent's turn.
+      if (selectedSquare && possibleMoves.includes(square)) {
+        handlePieceDrop(selectedSquare, square);
+        return;
       }
 
-      // 3. Deselect if clicking anywhere else or invalid move
+      // 3. Deselect if clicking anywhere else or an invalid move.
       setSelectedSquare(null);
       setPossibleMoves([]);
     },
-    [game, playerColor, selectedSquare, possibleMoves, isThinking, game.isGameOver(), hasResigned, handlePieceDrop]
+    [game, playerColor, selectedSquare, possibleMoves, isThinking, hasResigned, premovesAvailable, handlePieceDrop]
   );
 
   const handleNewGame = useCallback(() => {
@@ -752,7 +789,8 @@ function ChessGame(
     persistGame(gameCopy, nextHistory);
     setSelectedSquare(null);
     setPossibleMoves([]);
-  }, [game, moveHistory, persistGame]);
+    clearPremove();
+  }, [game, moveHistory, persistGame, clearPremove]);
 
   const handleFlipBoard = useCallback(() => {
     const newOrientation = boardOrientation === 'white' ? 'black' : 'white';
@@ -859,6 +897,15 @@ function ChessGame(
     };
     customSquareStyles[hintMove.to] = {
       backgroundColor: 'rgba(0, 255, 0, 0.5)',
+    };
+  }
+
+  if (premove) {
+    customSquareStyles[premove.from] = {
+      backgroundColor: 'rgba(155, 199, 0, 0.55)',
+    };
+    customSquareStyles[premove.to] = {
+      backgroundColor: 'rgba(155, 199, 0, 0.55)',
     };
   }
 
