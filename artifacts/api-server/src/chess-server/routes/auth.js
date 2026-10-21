@@ -75,19 +75,26 @@ function extractProxyHeaders(req) {
   const headers = {};
   if (req.headers['content-type']) headers['content-type'] = req.headers['content-type'];
   if (req.headers['authorization']) headers['authorization'] = req.headers['authorization'];
-  // Forward the browser's Origin. The browser sends it on the same-origin POST
-  // to this proxy, but the fetch() from here to Neon is a server-to-server call
-  // that carries none, so relay the client's rather than dropping it.
-  if (req.headers['origin']) headers['origin'] = req.headers['origin'];
   // Deliberately do NOT forward the browser's cookie. `chess_session` is this
   // app's own session credential, not a Neon Auth one — Neon's session cookie is
   // never handed to the browser (this proxy only relays the JSON body), so the
-  // header means nothing upstream. It also broke login: Better Auth runs its
-  // origin/CSRF check only when a Cookie header is present, so forwarding our
-  // cookie made Neon treat this server-to-server call as a browser request and
-  // reject it with 403 "Missing or null Origin" (no Origin forwarded) or
-  // "Invalid origin" (an app origin Neon has not allowlisted). Without it the
-  // call is correctly recognised as server-to-server and the check is skipped.
+  // header means nothing upstream.
+  // Neon Auth (Better Auth) runs its origin/CSRF check UNCONDITIONALLY on its
+  // hosted instance: it rejects app origins it has not allowlisted with 403
+  // "Invalid origin" and origin-less calls with 403 "Missing or null Origin".
+  // The Neon Console Domains allowlist covers redirect URIs, not this check,
+  // and would not cover preview deploys or localhost anyway. Better Auth
+  // always trusts its own origin, so present the request as coming from Neon
+  // Auth itself instead of relaying the browser's Origin.
+  const baseUrl = getNeonAuthBaseUrl();
+  if (baseUrl) {
+    try {
+      headers['origin'] = new URL(baseUrl).origin;
+    } catch {
+      // leave Origin unset on a malformed base URL; upstream will reject
+      // with its own actionable error.
+    }
+  }
   return headers;
 }
 
