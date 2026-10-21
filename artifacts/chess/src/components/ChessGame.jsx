@@ -11,7 +11,7 @@ import PlayerBar from './PlayerBar';
 import DebugPanel from './DebugPanel';
 import AnimatedPiece from './AnimatedPiece';
 import CoachingTip from './CoachingTip';
-import { BOTS, getRandomQuote, createCustomBot } from '../engine/bots/bots';
+import { BOTS, getRandomQuote, createCustomBot, getBotRatingDisplay } from '../engine/bots/bots';
 import { getCoachingFeedback } from '../engine/coach/coachAI';
 import { generateGameId } from '../engine/game/gameId';
 import { normalizeMoveHistory, toSanHistory, toStoredMoveHistory, buildGameFromHistory } from '../engine/game/moveHistory';
@@ -910,12 +910,12 @@ function ChessGame(
   }
 
   const topPlayer = boardOrientation === 'white' 
-    ? { name: selectedBot?.id === 'custom' ? `Custom Bot (${customElo})` : selectedBot?.name, avatar: selectedBot?.avatar, rating: selectedBot?.id === 'custom' ? customElo : selectedBot?.rating, isBot: true, color: 'b', botColor: selectedBot?.color, isCoach: selectedBot?.isCoach }
+    ? { name: selectedBot?.id === 'custom' ? `Custom Bot (${customElo})` : selectedBot?.name, avatar: selectedBot?.avatar, rating: selectedBot?.id === 'custom' ? customElo : getBotRatingDisplay(selectedBot), isBot: true, color: 'b', botColor: selectedBot?.color, isCoach: selectedBot?.isCoach }
     : { name: 'You', avatar: '👤', rating: '???', isBot: false, color: 'w', isCoach: false };
   
   const bottomPlayer = boardOrientation === 'white'
     ? { name: 'You', avatar: '👤', rating: '???', isBot: false, color: 'w', isCoach: false }
-    : { name: selectedBot?.id === 'custom' ? `Custom Bot (${customElo})` : selectedBot?.name, avatar: selectedBot?.avatar, rating: selectedBot?.id === 'custom' ? customElo : selectedBot?.rating, isBot: true, color: 'b', botColor: selectedBot?.color, isCoach: selectedBot?.isCoach };
+    : { name: selectedBot?.id === 'custom' ? `Custom Bot (${customElo})` : selectedBot?.name, avatar: selectedBot?.avatar, rating: selectedBot?.id === 'custom' ? customElo : getBotRatingDisplay(selectedBot), isBot: true, color: 'b', botColor: selectedBot?.color, isCoach: selectedBot?.isCoach };
 
   return (
     <div className="chess-game">

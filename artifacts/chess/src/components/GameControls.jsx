@@ -1,4 +1,5 @@
 import ChessPieceIcon from './ChessPieceIcon';
+import { getBotRatingDisplay } from '../engine/bots/bots';
 
 export default function GameControls({
   gameStatus,
@@ -66,7 +67,7 @@ export default function GameControls({
           <div className="bot-avatar-large">{selectedBot.avatar}</div>
           <div className="bot-details">
             <span className="bot-name-large">{selectedBot.name}</span>
-            <span className="bot-rating-badge">Rating: {selectedBot.rating}</span>
+            <span className="bot-rating-badge">Rating: {getBotRatingDisplay(selectedBot)}</span>
           </div>
         </div>
 

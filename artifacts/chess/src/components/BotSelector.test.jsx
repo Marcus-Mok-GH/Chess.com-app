@@ -25,4 +25,11 @@ describe('BotSelector', () => {
     render(<BotSelector {...defaultProps} isLoggedIn={false} />);
     expect(screen.getByText('Sign in to unlock the AI Coach')).toBeDefined();
   });
+
+  it('hides Rex\'s true rating and shows "???" on his roster card', () => {
+    render(<BotSelector {...defaultProps} />);
+    expect(screen.getByText('Rex')).toBeDefined();
+    expect(screen.getByText('Rating: ???')).toBeDefined();
+    expect(screen.queryByText('Rating: 2900')).toBeNull();
+  });
 });

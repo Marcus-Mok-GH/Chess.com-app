@@ -96,3 +96,10 @@ export function getRandomQuote(bot, category) {
 export function getBotById(id) {
   return BOTS.find((bot) => bot.id === id) || BOTS[0];
 }
+
+// Resolve the rating to show in the UI. A bot may hide its true rating behind a
+// display override (like Rex's "???" on chess.com) while keeping the numeric
+// rating for matchmaking and ELO math.
+export function getBotRatingDisplay(bot) {
+  return bot?.ratingDisplay ?? bot?.rating;
+}

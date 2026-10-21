@@ -2,6 +2,7 @@ export const rex = {
     id: 'rex',
     name: 'Rex',
     rating: 2900,
+    ratingDisplay: '???',
     avatar: '🤴',
     color: '#8A2BE2',
     depth: 20,

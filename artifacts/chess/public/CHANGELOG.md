@@ -1,3 +1,8 @@
+[2026-10-21] - Rex hides his rating: the roster and in-game header show "???" instead of 2900
+
+- Rex's **Rating** now reads **???** everywhere it is shown — his card in the bot roster and the opponent header during a game — instead of 2900, matching chess.com's unknown-rated bots.
+- This is display-only: Rex's numeric rating stays 2900, so matchmaking, the opponent Elo sent to the server, and the "Rex outrates every other bot" expectation are all unchanged. A personality can now set an optional `ratingDisplay` override, and any bot without one keeps showing its numeric rating exactly as before.
+
 [2026-10-21] - Rex joins as the highest-rated bot: Bongcloud opening, a free queen donation, then maximum engine strength
 
 - Added **Rex** (🤴, Rating 2900) — now the top-rated bot in the roster, above Magnus (2200) and above the Custom Bot slider's 2500 cap. Rex has no `blunderChance` and no search caps: he plays at full engine strength, and the engine route gives `maxStrength` bots a movetime-bounded full search (6.5s on the default 10s function budget, scaled with `FUNCTION_TIMEOUT_MS`) at the default maximum Skill Level, instead of the shared `go depth 12` cap. His roster card keeps the same short two-word tagline style as the other bots ("Bongcloud menace"), with the longer story kept in his description.

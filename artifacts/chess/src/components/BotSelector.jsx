@@ -1,4 +1,4 @@
-import { BOTS } from '../engine/bots/bots';
+import { BOTS, getBotRatingDisplay } from '../engine/bots/bots';
 import './BotSelector.css';
 import EloSlider from './EloSlider';
 
@@ -18,7 +18,7 @@ function BotCard({ bot, selected, onSelect, disabled, customElo }) {
       <div className="bot-info">
         <span className="bot-name">{bot.name}</span>
         <span className="bot-rating">
-          {bot.id === 'custom' ? customElo : `Rating: ${bot.rating}`}
+          {bot.id === 'custom' ? customElo : `Rating: ${getBotRatingDisplay(bot)}`}
         </span>
       </div>
       <div className="bot-personality">{bot.personality}</div>
