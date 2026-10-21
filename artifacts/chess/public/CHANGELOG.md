@@ -1,3 +1,9 @@
+[2026-10-21] - Reloading after a long idle no longer crashes the page with a "This page is unavailable" error
+
+- The live site occasionally returned Vercel's **500 FUNCTION_INVOCATION_FAILED** error page ("This page is unavailable — a function needed by this page temporarily failed") when a browser tab had been left open a long time and was then reloaded, or when matchmaking polling resumed from an idle tab.
+- Cause: the database connection pool had no listener for the `'error'` event that PostgreSQL's driver emits when an *idle* pooled connection's socket has already been closed by the database side. On Vercel the instance can sit frozen for a long time, so its idle-connection timers never run and a stale connection survives until the next request; the unhandled `'error'` then killed the serverless invocation. The pool now logs and recovers from that case, so a stale idle connection costs one failed query at most instead of taking down the function.
+- No user-visible behavior change beyond the removal of the intermittent error page; connections that are genuinely broken still fail their query and are handled by the existing retry/error paths.
+
 [2026-10-21] - Rex hides his rating: the roster and in-game header show "???" instead of 2900
 
 - Rex's **Rating** now reads **???** everywhere it is shown — his card in the bot roster and the opponent header during a game — instead of 2900, matching chess.com's unknown-rated bots.
