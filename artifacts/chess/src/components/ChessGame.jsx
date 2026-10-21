@@ -130,6 +130,9 @@ function ChessGame(
   const engineErrorRef = useRef(false);
   const busyRetryCountRef = useRef(0);
 
+  // Tracks a scheduled bot-move application that has not run yet, so a second
+  // bot move can never be requested or applied while one is in flight.
+  const botApplyPendingRef = useRef(false);
   const suppressPersistRef = useRef(false);
   const playerColorRef = useRef(playerColor);
   const boardOrientationRef = useRef(boardOrientation);
@@ -355,7 +358,14 @@ function ChessGame(
   }, [isThinking, moveHistory.length, getGameStatus, onUiStateChange, botMessage, selectedBot]);
 
   const makeAIMove = useCallback(async () => {
-    if (gameRef.current.isGameOver() || isThinkingRef.current || engineErrorRef.current) return;
+    if (
+      gameRef.current.isGameOver() ||
+      isThinkingRef.current ||
+      botApplyPendingRef.current ||
+      engineErrorRef.current
+    ) {
+      return;
+    }
 
     setIsThinking(true);
     isThinkingRef.current = true;
@@ -367,6 +377,10 @@ function ChessGame(
 
     const fen = gameRef.current.fen();
     if (!bot.isCoach) setBotMessage(getRandomQuote(bot, 'thinking'));
+
+    // True only when a move application was scheduled; the finally block must
+    // not release the thinking state while an application is still pending.
+    let moveScheduled = false;
 
     try {
       const response = await api.getEngineMove({
@@ -403,7 +417,22 @@ function ChessGame(
           return;
         }
 
+        // A move is scheduled: keep the thinking state on until it is applied,
+        // so the bot-turn effect cannot request a second move in between.
+        moveScheduled = true;
+        botApplyPendingRef.current = true;
         setTimeout(() => {
+          botApplyPendingRef.current = false;
+
+          // Skip stale applies: the board must still be on the position this
+          // move was computed for when the application finally runs.
+          if (gameRef.current.fen() !== fen) {
+            console.warn('[ChessGame] Skipping stale engine move for position:', fen);
+            setIsThinking(false);
+            isThinkingRef.current = false;
+            return;
+          }
+
           if (moveResult.captured) haptics.capture(); else haptics.move();
           setGame(newGame);
           const nextHistory = [...history, moveResult];
@@ -424,6 +453,10 @@ function ChessGame(
               setBotMessage(getRandomQuote(bot, categories[Math.floor(Math.random() * categories.length)]));
             }
           }
+
+          // The bot move is now committed; release the thinking state only here.
+          setIsThinking(false);
+          isThinkingRef.current = false;
         }, 50);
       }
     } catch (err) {
@@ -436,8 +469,10 @@ function ChessGame(
         setEngineError(`Engine error (attempt ${busyRetryCountRef.current}/3): ${err.message}`);
       }
     } finally {
-      setIsThinking(false);
-      isThinkingRef.current = false;
+      if (!moveScheduled) {
+        setIsThinking(false);
+        isThinkingRef.current = false;
+      }
     }
   }, [triggerAnimation, persistGame]);
 
@@ -449,7 +484,8 @@ function ChessGame(
           gameRef.current &&
           gameRef.current.turn() !== playerColor &&
           !gameRef.current.isGameOver() &&
-          !isThinkingRef.current
+          !isThinkingRef.current &&
+          !botApplyPendingRef.current
         ) {
           makeAIMove();
         }
