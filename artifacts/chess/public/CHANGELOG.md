@@ -5,6 +5,10 @@
 - After the Bongcloud, Rex runs a "donation window" (his move 3 through 8): each turn he looks for a free giveaway with his queen first, then rooks — a non-capture move to a square the opponent actually attacks that nothing of his defends (so the opponent can take the piece and nothing recaptures). When one exists he plays it (a real sacrifice for nothing); when nothing is genuinely hanging, the engine plays a normal strong move and the window stays open. From move 9, or whenever no scripted move applies, it is maximum-strength engine for the rest of the game.
 - Plumbing: the bot payloads the client sends to `/api/engine/move` now also carry optional `maxStrength` and `scriptedOpening` fields (other bots send neither and are unaffected); `getSearchParams` is exported from the engine route, and a new registered test file `engine.scripted-bot.test.js` covers the Bongcloud lines for both colors, the queen donation, the unchanged search mapping for existing bots, roster-rating expectations, and real-engine sanity runs at full strength.
 
+[2026-10-21] - Preview builds stop failing on a stray test "function"
+
+- The Vercel preview deployment had been failing to build on every push because the SSR render test file lived in the root `api/` directory, where Vercel turns each source file into its own serverless function. The test moved to `tests/` and `api/` now holds only real handlers, so preview builds no longer carry a broken extra function. No user-facing behavior changes.
+
 [2026-10-21] - Login works again from any app origin (real "Invalid origin" fix)
 
 - The October 15 cookie-forwarding fix did not restore production sign-in: live probes showed Neon Auth (Better Auth) enforces its origin/CSRF check unconditionally on its hosted instance — with or without a cookie, an app origin returns 403 `Invalid origin` and no `Origin` at all returns 403 `Missing or null Origin`. The deployed instance simply does not trust `https://chess-com-app.vercel.app` as an origin, and the Neon Console Domains allowlist covers redirect URIs, not this check.

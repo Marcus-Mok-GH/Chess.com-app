@@ -79,7 +79,7 @@ let handler;
 beforeAll(async () => {
   ensureStub(rendererPath, STUB_RENDERER);
   ensureStub(templatePath, STUB_TEMPLATE);
-  ({ default: handler } = await import('./render.js'));
+  ({ default: handler } = await import('../api/render.js'));
 });
 
 afterAll(() => {
