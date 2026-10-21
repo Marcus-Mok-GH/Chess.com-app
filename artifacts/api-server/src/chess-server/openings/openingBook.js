@@ -388,6 +388,10 @@ const TREE = [
 const childrenByFen = {};
 const roots = [];
 const positionByFen = new Map();
+// SAN prefix ("e4 e5 Nf3" ...) -> FEN after it, for every step position in
+// the tree (including intermediate steps of multi-move nodes). Used by the
+// game-review book-move walk.
+const bookPrefixBySanPath = new Map();
 
 function build(startFen, defs, path) {
   for (const def of defs) {
@@ -405,6 +409,7 @@ function build(startFen, defs, path) {
       }
       pgn.push(move.san);
       fen = chess.fen();
+      bookPrefixBySanPath.set(pgn.join(' '), fen);
     }
 
     const san = def.moves.length ? pgn[pgn.length - 1] : '';
@@ -481,6 +486,64 @@ export function getPosition(fen) {
   const normalized = normalizeFen(fen);
   if (!normalized) return null;
   return positionByFen.get(normalized) || null;
+}
+
+/**
+ * SAN of a UCI move for a position, or null when the move is not legal there.
+ */
+function sanForUci(fen, uci) {
+  const normalized = normalizeFen(fen);
+  if (!normalized || typeof uci !== 'string' || uci.length < 4) return null;
+  try {
+    const from = uci.slice(0, 2);
+    const to = uci.slice(2, 4);
+    const promotion = uci.length > 4 ? uci.slice(4, 5) : undefined;
+    const applied = new Chess(normalized).move({ from, to, ...(promotion ? { promotion } : {}) });
+    return applied?.san || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Book-move lookup for game review, over the played plies in order.
+ *
+ * A ply is a book move when, starting from the standard initial position, the
+ * game has followed the book's own SAN path so far and this ply's played move
+ * (UCI, resolved against that ply's position FEN) continues the path — matching
+ * chess.com's "Book move" behavior for opening theory. Once a ply leaves the
+ * book, every remaining ply is non-book. Results keep the input order, one
+ * `{ book, san }` per item, where `san` is the normalized SAN of the played
+ * move (null when it is not legal in its position).
+ */
+export function findBookMovesInOrder(items) {
+  const results = [];
+  let walk = [];
+  let expectedFen = normalizeFen(START_FEN);
+  let offBook = false;
+
+  for (const item of Array.isArray(items) ? items : []) {
+    const fen = item?.fen ?? null;
+    const uci = item?.uci ?? null;
+    const san = sanForUci(fen, uci);
+    let book = false;
+
+    if (!offBook && san && normalizeFen(fen) === expectedFen) {
+      const key = [...walk, san].join(' ');
+      const nextFen = bookPrefixBySanPath.get(key);
+      if (nextFen) {
+        book = true;
+        walk.push(san);
+        expectedFen = nextFen;
+      } else {
+        offBook = true;
+      }
+    }
+
+    results.push({ book, san });
+  }
+
+  return results;
 }
 
 /** Case-insensitive substring search over opening names and ECO codes. */

@@ -99,6 +99,10 @@ describe('classifyMove', () => {
   it('is best when the engine best move was played', () => {
     expect(classifyMove(120, true)).toBe('best');
   });
+  it('is book when the played move is book theory, superseding the engine classes', () => {
+    expect(classifyMove(120, false, true)).toBe('book');
+    expect(classifyMove(0, true, true)).toBe('book');
+  });
   it('returns null for unknown loss', () => {
     expect(classifyMove(null)).toBeNull();
   });
@@ -109,11 +113,21 @@ describe('summarizeSide', () => {
     const losses = [0, 40, 300, 60, 5, null];
     const white = summarizeSide(losses, [0, 2, 4]);
     const black = summarizeSide(losses, [1, 3, 5]);
-    expect(white.counts).toEqual({ best: 2, excellent: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 1 });
+    expect(white.counts).toEqual({ best: 2, excellent: 0, good: 0, book: 0, inaccuracy: 0, mistake: 0, blunder: 1 });
     expect(white.analyzedMoves).toBe(3);
     expect(black.analyzedMoves).toBe(2); // null skipped
     expect(white.accuracy).toBeGreaterThan(0);
     expect(white.accuracy).toBeLessThanOrEqual(100);
+  });
+  it('counts book-flagged plies as book moves without changing their accuracy', () => {
+    const losses = [0, 0, 300];
+    const withoutBook = summarizeSide(losses, [0, 1, 2]);
+    const withBook = summarizeSide(losses, [0, 1, 2], [true, false, false]);
+    expect(withoutBook.counts.best).toBe(2);
+    expect(withBook.counts.best).toBe(1); // second best ply is not book-flagged
+    expect(withBook.counts.book).toBe(1);
+    expect(withBook.counts.blunder).toBe(1);
+    expect(withBook.accuracy).toBe(withoutBook.accuracy);
   });
   it('returns null accuracy when nothing is analyzed', () => {
     expect(summarizeSide([null, null], [0, 1]).accuracy).toBeNull();
@@ -138,11 +152,14 @@ describe('formatEval', () => {
 describe('MOVE_CLASSES', () => {
   it('covers all classification keys', () => {
     expect(Object.keys(MOVE_CLASSES).sort()).toEqual(
-      ['best', 'blunder', 'excellent', 'good', 'inaccuracy', 'mistake'].sort()
+      ['best', 'blunder', 'book', 'excellent', 'good', 'inaccuracy', 'mistake'].sort()
     );
     for (const cls of Object.values(MOVE_CLASSES)) {
       expect(cls.label).toBeTruthy();
       expect(cls.color).toMatch(/^#[0-9a-f]{6}$/i);
     }
+  });
+  it('presents the book class as "Book move"', () => {
+    expect(MOVE_CLASSES.book.label).toBe('Book move');
   });
 });
