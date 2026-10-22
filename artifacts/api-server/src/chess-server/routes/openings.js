@@ -10,9 +10,15 @@ import {
   getPosition,
   legalChildren,
   searchOpenings,
+  findBookMovesInOrder,
 } from '../openings/openingBook.js';
 
 const router = Router();
+
+// Game-review payloads carry one pair per played move. Lookups are pure
+// in-memory map reads, so this comfortably fits any real game inside the
+// serverless function budget.
+const BOOK_MOVES_MAX_ITEMS = 64;
 
 /**
  * GET /api/openings
@@ -54,6 +60,41 @@ router.get('/children', (req, res) => {
   } catch (error) {
     console.error('Get opening children error:', error);
     return errorResponse(res, 500, 'Failed to load opening children');
+  }
+});
+
+/**
+ * POST /api/openings/book-moves
+ * Batch book-move lookup for game review: for each { fen, uci } pair (played
+ * plies in order), reports whether the move continues the opening book's
+ * theory from the previous plies. Results keep the request order so clients
+ * can align them to their ply indexes.
+ */
+router.post('/book-moves', (req, res) => {
+  try {
+    const { moves } = req.body || {};
+    if (!Array.isArray(moves) || moves.length === 0) {
+      return errorResponse(res, 400, 'Missing required field: moves (non-empty array)');
+    }
+    if (moves.length > BOOK_MOVES_MAX_ITEMS) {
+      return errorResponse(res, 400, `Too many moves: send at most ${BOOK_MOVES_MAX_ITEMS} per request`);
+    }
+
+    const found = findBookMovesInOrder(moves);
+    const results = moves.map((item, index) => ({
+      fen: item?.fen ?? null,
+      uci: item?.uci ?? null,
+      san: found[index]?.san ?? null,
+      book: found[index]?.book ?? false,
+    }));
+
+    res.json({
+      success: true,
+      results,
+    });
+  } catch (error) {
+    console.error('Book-move lookup error:', error);
+    return errorResponse(res, 500, 'Failed to look up book moves');
   }
 });
 

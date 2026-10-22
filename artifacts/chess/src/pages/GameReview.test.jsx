@@ -25,7 +25,7 @@ vi.mock('../contexts/UserContext', () => ({
   useUser: () => ({ user: mockReviewUser, isLoggedIn: true, isOnline: true }),
 }));
 
-const { mockApi } = vi.hoisted(() => ({ mockApi: { getGameByCode: vi.fn(), getEngineEvaluations: vi.fn() } }));
+const { mockApi } = vi.hoisted(() => ({ mockApi: { getGameByCode: vi.fn(), getEngineEvaluations: vi.fn(), checkBookMoves: vi.fn() } }));
 vi.mock('../services/api', () => ({ default: mockApi }));
 
 const { mockAnalyzeGame } = vi.hoisted(() => ({ mockAnalyzeGame: vi.fn() }));
@@ -72,6 +72,9 @@ describe('GameReview page', () => {
     mockReviewUser.id = 'u1';
     mockApi.getGameByCode.mockResolvedValue(GAME);
     mockApi.getEngineEvaluations.mockResolvedValue(ENGINE_RESPONSE);
+    mockApi.checkBookMoves.mockImplementation(async (moves) => ({
+      results: moves.map((pair) => ({ fen: pair.fen, uci: pair.uci, san: null, book: false })),
+    }));
     mockAnalyzeGame.mockResolvedValue({
       format: 'move_review',
       moves: [
@@ -143,6 +146,36 @@ describe('GameReview page', () => {
     });
     expect(screen.getByText(/White wins/)).toBeTruthy();
     expect(screen.queryByText('You won')).toBeNull();
+  });
+
+  it('classifies opening theory moves as Book move while non-book moves keep engine classes', async () => {
+    // e4 (ply 1) is flagged as book theory; e5 and Nf3 stay engine-classified.
+    mockApi.checkBookMoves.mockImplementation(async (moves) => ({
+      results: moves.map((pair, index) => ({ book: index === 0, san: null })),
+    }));
+
+    renderPage();
+    expect(await screen.findByText('e4')).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByTitle('Book move')).toBeTruthy();
+    });
+    // The e5 dot still carries the engine "Best" classification.
+    expect(screen.getAllByTitle('Best').length).toBeGreaterThan(0);
+    // The book move shows up in the classification counts and legend.
+    await waitFor(() => {
+      expect(screen.getByText('1 book move')).toBeTruthy();
+    });
+  });
+
+  it('keeps engine classifications unchanged when the book lookup fails', async () => {
+    mockApi.checkBookMoves.mockRejectedValue(new Error('book unavailable'));
+
+    renderPage();
+    expect(await screen.findByText('e4')).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getAllByTitle('Best').length).toBeGreaterThan(0);
+    });
+    expect(screen.queryByTitle('Book move')).toBeNull();
   });
 
 });

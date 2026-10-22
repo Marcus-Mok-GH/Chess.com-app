@@ -1,3 +1,8 @@
+[2026-10-21] - Game Review shows "Book move" for opening theory instead of Best
+
+- Opening moves that still follow theory now show chess.com's **Book move** classification (purple dot) in game review, in place of the Best/Excellent/Good they previously displayed. Non-book moves keep their engine classifications exactly as before, and thresholds, accuracy percentages, and the per-side summary math are unchanged.
+- The review page checks each played move against the existing opening book on the API server (the same data the Opening Explorer uses — no new book dataset). Detection follows the book's own move path from the start position: a move is "book" while the game is still in theory, and once the game leaves it, later moves are engine-classified again. If the lookup is unavailable, the review falls back to the previous behavior.
+
 [2026-10-21] - Reloading after a long idle no longer crashes the page with a "This page is unavailable" error
 
 - The live site occasionally returned Vercel's **500 FUNCTION_INVOCATION_FAILED** error page ("This page is unavailable — a function needed by this page temporarily failed") when a browser tab had been left open a long time and was then reloaded, or when matchmaking polling resumed from an idle tab.

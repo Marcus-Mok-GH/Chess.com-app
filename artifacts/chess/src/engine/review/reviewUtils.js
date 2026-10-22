@@ -69,6 +69,7 @@ export const MOVE_CLASSES = {
   best: { label: 'Best', color: '#26c2a3' },
   excellent: { label: 'Excellent', color: '#7cb926' },
   good: { label: 'Good', color: '#a3b1a3' },
+  book: { label: 'Book move', color: '#a487f5' },
   inaccuracy: { label: 'Inaccuracy', color: '#e6b008' },
   mistake: { label: 'Mistake', color: '#e68f28' },
   blunder: { label: 'Blunder', color: '#d3453c' },
@@ -76,9 +77,12 @@ export const MOVE_CLASSES = {
 
 /**
  * Classify a move from its centipawn loss. `isBestMove` (played move equals
- * the engine's first choice) upgrades to "best".
+ * the engine's first choice) upgrades to "best". `isBookMove` (a known opening
+ * theory move, per the api-server's opening book) supersedes the engine
+ * classes, matching chess.com's "Book move" presentation.
  */
-export function classifyMove(cpLoss, isBestMove = false) {
+export function classifyMove(cpLoss, isBestMove = false, isBookMove = false) {
+  if (isBookMove) return 'book';
   if (isBestMove) return 'best';
   if (cpLoss == null) return null;
   if (cpLoss <= 10) return 'best';
@@ -91,16 +95,18 @@ export function classifyMove(cpLoss, isBestMove = false) {
 
 /**
  * Aggregate one side's review: accuracy and classification counts over the
- * given ply indexes (the caller filters whose moves they are).
+ * given ply indexes (the caller filters whose moves they are). `bookFlags` (a
+ * ply-indexed array of booleans, or null when the book lookup is unavailable)
+ * reclassifies covered plies as "book" without changing their accuracy.
  */
-export function summarizeSide(losses, plyIndexes) {
-  const counts = { best: 0, excellent: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 0 };
+export function summarizeSide(losses, plyIndexes, bookFlags = null) {
+  const counts = { best: 0, excellent: 0, good: 0, book: 0, inaccuracy: 0, mistake: 0, blunder: 0 };
   const accuracies = [];
   for (const i of plyIndexes) {
     const cpLoss = losses[i];
     if (cpLoss == null) continue;
     accuracies.push(accuracyFromWinDelta(winDropFromLoss(cpLoss)));
-    const cls = classifyMove(cpLoss, false);
+    const cls = bookFlags?.[i] ? 'book' : classifyMove(cpLoss, false);
     if (cls) counts[cls] += 1;
   }
   const accuracy = accuracies.length

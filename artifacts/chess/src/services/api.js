@@ -353,6 +353,15 @@ class ApiService {
         );
     }
 
+    // Book-move lookup for game review: `moves` is a list of
+    // `{ fen, uci }` pairs in ply order; the results keep that order.
+    async checkBookMoves(moves) {
+        return this.request("/openings/book-moves", {
+            method: "POST",
+            body: JSON.stringify({ moves }),
+        });
+    }
+
     async searchOpenings(query) {
         return this.request(`/openings/search?q=${encodeURIComponent(query)}`);
     }

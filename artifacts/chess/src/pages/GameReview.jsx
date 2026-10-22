@@ -16,6 +16,9 @@ import {
 } from '../engine/review/reviewUtils';
 import './GameReview.css';
 
+// The openings API caps book-move batches at 64 pairs per request.
+const BOOK_BATCH_SIZE = 64;
+
 function formatDate(dateString) {
   if (!dateString) return '';
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -45,6 +48,7 @@ export default function GameReview() {
   const [bestMoves, setBestMoves] = useState(null);
   const [engineProgress, setEngineProgress] = useState({ done: 0, total: 0 });
   const [engineError, setEngineError] = useState('');
+  const [bookFlags, setBookFlags] = useState(null);
   const [coachComments, setCoachComments] = useState(null);
   const [coachState, setCoachState] = useState('loading'); // loading | ready | unavailable | connect
 
@@ -59,6 +63,7 @@ export default function GameReview() {
     setCurrentPly(0);
     setEvalScores(null);
     setBestMoves(null);
+    setBookFlags(null);
     setEngineError('');
     setCoachComments(null);
     setCoachState('loading');
@@ -148,6 +153,39 @@ export default function GameReview() {
     return () => { cancelled = true; };
   }, [positions]);
 
+  // ── Opening-book moves (chess.com-style "Book move") ─────────────────────
+  // Consulted separately from the engine so a book lookup failure only drops
+  // the Book classification; engine classifications keep working as before.
+  useEffect(() => {
+    if (!positions || positions.ucis.length === 0) return undefined;
+    let cancelled = false;
+    setBookFlags(null);
+
+    const pairs = positions.ucis.map((uci, i) => ({ fen: positions.fens[i], uci }));
+    const batches = [];
+    for (let i = 0; i < pairs.length; i += BOOK_BATCH_SIZE) {
+      batches.push(pairs.slice(i, i + BOOK_BATCH_SIZE));
+    }
+
+    Promise.all(batches.map((moves) => api.checkBookMoves(moves)))
+      .then((responses) => {
+        if (cancelled) return;
+        const flags = new Array(positions.ucis.length).fill(false);
+        responses.forEach((response, batchIndex) => {
+          (response?.results || []).forEach((result, offset) => {
+            const index = batchIndex * BOOK_BATCH_SIZE + offset;
+            if (index >= 0 && index < flags.length) flags[index] = Boolean(result?.book);
+          });
+        });
+        setBookFlags(flags);
+      })
+      .catch(() => {
+        if (!cancelled) setBookFlags(null);
+      });
+
+    return () => { cancelled = true; };
+  }, [positions]);
+
   // ── LLM coach commentary ─────────────────────────────────────────────────
   useEffect(() => {
     if (!game) return undefined;
@@ -185,23 +223,26 @@ export default function GameReview() {
   const classes = useMemo(() => {
     if (!positions) return null;
     return positions.sans.map((_, i) => {
+      // A book move supersedes the engine classification, even before the
+      // engine finishes analyzing.
+      if (bookFlags?.[i]) return 'book';
       if (!losses) return null;
       const isBest = Boolean(bestMoves?.[i]?.bestMove && positions.ucis[i] === bestMoves[i].bestMove);
       return classifyMove(losses[i], isBest);
     });
-  }, [positions, losses, bestMoves]);
+  }, [positions, losses, bestMoves, bookFlags]);
 
   const whiteSummary = useMemo(() => {
     if (!losses) return null;
     const plies = positions.sans.map((_, i) => i).filter((i) => i % 2 === 0);
-    return summarizeSide(losses, plies);
-  }, [losses, positions]);
+    return summarizeSide(losses, plies, bookFlags);
+  }, [losses, positions, bookFlags]);
 
   const blackSummary = useMemo(() => {
     if (!losses) return null;
     const plies = positions.sans.map((_, i) => i).filter((i) => i % 2 === 1);
-    return summarizeSide(losses, plies);
-  }, [losses, positions]);
+    return summarizeSide(losses, plies, bookFlags);
+  }, [losses, positions, bookFlags]);
 
   const whiteEval = useMemo(() => {
     if (!positions || !evalScores) return null;
