@@ -1,3 +1,7 @@
+[2026-10-22] - Test suite runs reliably green again (fixed a stale puzzle test assertion)
+
+- The root `test` suite had been red on every run: `artifacts/chess/src/pages/Puzzles.test.jsx` > "explains an incorrect move without revealing the answer and offers retry" still asserted the copy **"That move missed the tactic. Try again."**, which was removed when the puzzle mistake feedback was simplified to the coach-explanation card. The assertion now checks the real contract — the "Why that move missed" card with the coach explanation and a Retry button, with no solved state and the solution move withheld — so the full suite (485 tests) passes on repeated runs. Test-only change; no product behavior changed.
+
 [2026-10-21] - Game Review shows "Book move" for opening theory instead of Best
 
 - Opening moves that still follow theory now show chess.com's **Book move** classification (purple dot) in game review, in place of the Best/Excellent/Good they previously displayed. Non-book moves keep their engine classifications exactly as before, and thresholds, accuracy percentages, and the per-side summary math are unchanged.
