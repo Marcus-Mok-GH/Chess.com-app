@@ -175,12 +175,18 @@ beforeEach(() => {
 
     fireEvent.click(screen.getByTestId('wrong-move'));
 
+    // The coach explanation is the only miss feedback now: the older inline
+    // "That move missed the tactic. Try again." line was removed when the
+    // mistake feedback was simplified, so the card renders the explanation
+    // itself. Assert the real contract instead of the retired copy.
     await waitFor(() => {
       expect(screen.getByText('Why that move missed')).toBeTruthy();
-      expect(screen.getByText('That move missed the tactic. Try again.')).toBeTruthy();
       expect(screen.getByText('The knight move attacks the exposed black queen.')).toBeTruthy();
       expect(screen.getByRole('button', { name: /retry/i })).toBeTruthy();
     });
+    // The miss stays a miss: no solved state and the solution SAN is withheld.
+    expect(screen.queryByText('Correct!')).toBeNull();
+    expect(screen.queryByText('Na5')).toBeNull();
     expect(screen.queryByText('Not quite — try again.')).toBeNull();
   });
 
