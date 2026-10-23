@@ -43,4 +43,16 @@ describe('PlaySetup', () => {
     render(<PlaySetup {...defaultProps} playerColor={null} />);
     expect(screen.getByRole('button', { name: /start game/i }).disabled).toBe(true);
   });
+
+  it('renders a Back button that calls onBack when provided', () => {
+    const onBack = vi.fn();
+    render(<PlaySetup {...defaultProps} onBack={onBack} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('hides the Back button when no onBack handler is provided', () => {
+    render(<PlaySetup {...defaultProps} />);
+    expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
+  });
 });

@@ -85,4 +85,13 @@ describe('LobbyUI time control', () => {
     expect(classical.textContent).toContain('Classical 30+5');
     expect(classical.textContent).toContain('30 min + 5s per move');
   });
+
+  it('navigates back to the play mode selection page via the Back button', () => {
+    const navigate = vi.fn();
+    render(<LobbyUI {...defaultProps} navigate={navigate} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+
+    expect(navigate).toHaveBeenCalledWith('/play');
+  });
 });

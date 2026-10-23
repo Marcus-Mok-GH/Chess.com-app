@@ -1,3 +1,5 @@
+import { ArrowLeft } from 'lucide-react';
+
 import BotSelector from './BotSelector';
 
 import './PlaySetup.css';
@@ -10,6 +12,7 @@ export default function PlaySetup({
   playerColor,
   onSelectColor,
   onStart,
+  onBack,
   isLoggedIn,
 }) {
   const canStart = Boolean(selectedBot) && Boolean(playerColor);
@@ -17,6 +20,15 @@ export default function PlaySetup({
   return (
     <div className="play-setup">
       <div className="play-setup-card">
+        {onBack && (
+          <button
+            type="button"
+            className="play-setup-back"
+            onClick={onBack}
+          >
+            <ArrowLeft size={15} aria-hidden="true" /> Back
+          </button>
+        )}
         <div>
           <h2 className="play-setup-title">Play Chess</h2>
           <p className="play-setup-subtitle">Choose your opponent and color to start a game.</p>

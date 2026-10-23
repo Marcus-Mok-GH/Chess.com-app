@@ -208,6 +208,7 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
             playerColor={playerColor}
             onSelectColor={setPlayerColor}
             onStart={handleStart}
+            onBack={() => setPlayMode(null)}
             isLoggedIn={isLoggedIn}
           />
         ) : (

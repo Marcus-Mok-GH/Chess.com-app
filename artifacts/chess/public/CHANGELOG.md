@@ -1,3 +1,8 @@
+[2026-10-23] - Back button on bot setup and online lobby returns to the play mode picker
+
+- **Bot setup** (`/play` → **Bots**) and the **online lobby** (`/online`) now have a **Back** button at the top-left of the card, styled like the existing Openings page back button: from bot setup it returns to the mode picker in place (bot and color selections are kept), and from the online lobby it navigates to `/play` without a full page reload.
+- Both screens keep their existing escape hatches (cancelling matchmaking or leaving a live game is unchanged), and the mode picker itself (`/play`) is unchanged.
+
 [2026-10-22] - Test suite runs reliably green again (fixed a stale puzzle test assertion)
 
 - The root `test` suite had been red on every run: `artifacts/chess/src/pages/Puzzles.test.jsx` > "explains an incorrect move without revealing the answer and offers retry" still asserted the copy **"That move missed the tactic. Try again."**, which was removed when the puzzle mistake feedback was simplified to the coach-explanation card. The assertion now checks the real contract — the "Why that move missed" card with the coach explanation and a Retry button, with no solved state and the solution move withheld — so the full suite (485 tests) passes on repeated runs. Test-only change; no product behavior changed.

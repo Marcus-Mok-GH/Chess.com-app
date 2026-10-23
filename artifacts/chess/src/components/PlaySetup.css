@@ -49,6 +49,24 @@
   margin: 0;
   line-height: 1.5;
 }
+.play-setup-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.5rem 0.75rem;
+  min-height: 40px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+  align-self: flex-start;
+}
+
+.play-setup-back:hover { border-color: var(--primary, #81b64c); }
 
 .play-setup-section {
   display: flex;

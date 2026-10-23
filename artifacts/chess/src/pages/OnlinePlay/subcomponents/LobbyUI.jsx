@@ -1,4 +1,5 @@
 import React from 'react';
+import { ArrowLeft } from 'lucide-react';
 import { TIME_CONTROLS } from '../../../utils/timeControls';
 
 export default function LobbyUI({
@@ -16,6 +17,13 @@ export default function LobbyUI({
   return (
     <div className="lobby-container">
       <div className="lobby-content mode-select-content">
+        <button
+          type="button"
+          className="lobby-back"
+          onClick={() => navigate('/play')}
+        >
+          <ArrowLeft size={15} aria-hidden="true" /> Back
+        </button>
         <div className="elo-display">
           <span className="elo-label">{isLoggedIn ? user.username : 'Your Rating'}</span>
           {/* Rating for the selected time control's pool (falls back to the
