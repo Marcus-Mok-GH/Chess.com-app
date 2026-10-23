@@ -1,3 +1,7 @@
+[2026-10-23] - Fix Vercel refresh errors on non-root pages
+
+- Vercel's SSR render function now explicitly packages the built HTML template and server-rendered app bundle it reads at startup. Without those runtime files in the function bundle, direct visits and refreshes on non-root routes failed with `FUNCTION_INVOCATION_FAILED`, while the static homepage continued to load.
+
 [2026-10-23] - Back button on bot setup and online lobby returns to the play mode picker
 
 - **Bot setup** (`/play` → **Bots**) and the **online lobby** (`/online`) now have a **Back** button at the top-left of the card, styled like the existing Openings page back button: from bot setup it returns to the mode picker in place (bot and color selections are kept), and from the online lobby it navigates to `/play` without a full page reload.
