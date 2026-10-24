@@ -1,16 +1,16 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { render } from '../artifacts/chess/dist/server/entry-server.js'
-import { getSessionUserFromHeaders } from '../artifacts/api-server/src/chess-server/ssrSession.js'
 
-const template = fs.readFileSync(path.join(process.cwd(), 'dist', 'index.html'), 'utf8')
+const TEMPLATE_PATH = path.join(process.cwd(), 'dist', 'index.html')
 
 function getRenderUrl(req) {
   const requestUrl = new URL(req.url || '/', 'http://localhost')
   const route = requestUrl.searchParams.get('__route') || requestUrl.pathname
   requestUrl.searchParams.delete('__route')
+  const diagnostic = requestUrl.searchParams.get('__ssr_diagnostic') === '1'
+  requestUrl.searchParams.delete('__ssr_diagnostic')
   const query = requestUrl.searchParams.toString()
-  return route + (query ? '?' + query : '')
+  return { url: route + (query ? '?' + query : ''), diagnostic }
 }
 
 // ── Session-aware SSR ──────────────────────────────────────────────────────
@@ -66,7 +66,7 @@ export function composeRenderedHtml({ template, appHtml, user }) {
  * invalid token, cold/unreachable database, unexpected error) degrades to
  * the anonymous shell instead of failing the request.
  */
-async function resolveSsrUser(req) {
+async function resolveSsrUser(getSessionUserFromHeaders, req) {
   try {
     return await getSessionUserFromHeaders(req?.headers || {})
   } catch (error) {
@@ -78,19 +78,50 @@ async function resolveSsrUser(req) {
   }
 }
 
+function sendDiagnostic(res, status, stage, error = null) {
+  res.statusCode = status
+  res.setHeader('Content-Type', 'application/json; charset=utf-8')
+  res.setHeader('Cache-Control', 'no-store')
+  res.end(JSON.stringify({
+    ok: status === 200,
+    stage,
+    error: error ? { name: error.name, code: error.code || null, message: error.message || String(error) } : null,
+  }))
+}
+
 export default async function handler(req, res) {
-  const ssrUser = await resolveSsrUser(req)
+  const { url, diagnostic } = getRenderUrl(req)
+  const canDiagnose = diagnostic && process.env.VERCEL_ENV === 'preview'
+  let stage = 'read-template'
+  let template
+
   try {
-    const appHtml = await render(getRenderUrl(req), { user: ssrUser })
+    template = fs.readFileSync(TEMPLATE_PATH, 'utf8')
+    stage = 'import-session-module'
+    const { getSessionUserFromHeaders } = await import('../artifacts/api-server/src/chess-server/ssrSession.js')
+    stage = 'import-renderer-module'
+    const { render } = await import('../artifacts/chess/dist/server/entry-server.js')
+    stage = 'resolve-session'
+    const ssrUser = await resolveSsrUser(getSessionUserFromHeaders, req)
+    stage = 'render-route'
+    const appHtml = await render(url, { user: ssrUser })
+
+    if (canDiagnose) {
+      return sendDiagnostic(res, 200, 'complete')
+    }
+
     const html = composeRenderedHtml({ template, appHtml, user: ssrUser })
     res.statusCode = 200
     res.setHeader('Content-Type', 'text/html; charset=utf-8')
     res.setHeader('Cache-Control', cacheControlFor(ssrUser))
     res.end(html)
   } catch (error) {
-    console.error('[SSR] Request failed:', error)
+    console.error(`[SSR] Request failed during ${stage}:`, error)
+    if (canDiagnose) {
+      return sendDiagnostic(res, 500, stage, error)
+    }
     res.statusCode = 500
     res.setHeader('Content-Type', 'text/html; charset=utf-8')
-    res.end(template)
+    res.end(template || '')
   }
 }
