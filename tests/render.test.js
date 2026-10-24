@@ -204,19 +204,6 @@ describe('session-aware SSR render handler', () => {
     expect(response.body).not.toContain('__SSR_USER__');
   });
 
-  it('runs the SSR diagnostic only in Vercel preview', async () => {
-    vi.stubEnv('VERCEL_ENV', 'preview');
-
-    try {
-      const response = await runHandler({}, '/api/render?__route=/play&__ssr_diagnostic=1');
-
-      expect(response.status).toBe(200);
-      expect(JSON.parse(response.body)).toEqual({ ok: true, stage: 'complete', error: null });
-    } finally {
-      vi.unstubAllEnvs();
-    }
-  });
-
   it('keeps the 500 + plain-template fallback when rendering fails', async () => {
     // Uses the stub renderer's failure mode; skipped when the real built
     // renderer is in place so the built artifact is never modified.

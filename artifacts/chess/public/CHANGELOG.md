@@ -1,10 +1,6 @@
-[2026-10-24] - Add preview-only SSR diagnostics for the Vercel render function
+[2026-10-24] - Fix Vercel SSR imports on direct route loads
 
-- The SSR handler now reports whether a preview request fails while reading the generated HTML template, importing the renderer or session module, resolving the session, or rendering the route. Diagnostics are available only on Vercel preview deployments.
-
-[2026-10-23] - Fix Vercel refresh errors on non-root pages
-
-- Vercel's SSR render function now explicitly packages the built HTML template and server-rendered app bundle it reads at startup. Without those runtime files in the function bundle, direct visits and refreshes on non-root routes failed with `FUNCTION_INVOCATION_FAILED`, while the static homepage continued to load.
+- The Vercel render function crashed because its SSR bundle left frontend packages external, and the function package could not resolve the workspace symlink for `react-router-dom`. The SSR build now bundles frontend dependencies into its generated server output, leaving only Node built-ins external.
 
 [2026-10-23] - Back button on bot setup and online lobby returns to the play mode picker
 
