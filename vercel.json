@@ -35,7 +35,8 @@
       "maxDuration": 15
     },
     "api/render.js": {
-      "maxDuration": 15
+      "maxDuration": 15,
+      "includeFiles": "{dist/index.html,artifacts/chess/dist/server/**}"
     }
   },
   "rewrites": [

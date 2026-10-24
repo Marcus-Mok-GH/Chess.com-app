@@ -1,3 +1,7 @@
+[2026-10-24] - Fix Vercel SSR imports on direct route loads
+
+- The Vercel render function crashed because its SSR bundle left frontend packages external, and the function package could not resolve the workspace symlink for `react-router-dom`. The SSR build now bundles frontend dependencies into its generated server output, leaving only Node built-ins external.
+
 [2026-10-23] - Back button on bot setup and online lobby returns to the play mode picker
 
 - **Bot setup** (`/play` → **Bots**) and the **online lobby** (`/online`) now have a **Back** button at the top-left of the card, styled like the existing Openings page back button: from bot setup it returns to the mode picker in place (bot and color selections are kept), and from the online lobby it navigates to `/play` without a full page reload.
