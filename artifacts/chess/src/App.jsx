@@ -47,6 +47,7 @@ const Friends = lazy(() => import('./pages/Friends'))
 const Clubs = lazy(() => import('./pages/Clubs'))
 const Leaderboard = lazy(() => import('./pages/Leaderboard'))
 const More = lazy(() => import('./pages/More'))
+const BotBuilder = lazy(() => import('./pages/BotBuilder'))
 const Admin = lazy(() => import('./pages/Admin'))
 const NotFound = lazy(() => import('./pages/not-found'))
 
@@ -66,7 +67,8 @@ function getTitle(path) {
   if (path === '/clubs') return 'Clubs'
   if (path === '/leaderboard') return 'Leaderboard'
   if (path === '/more') return 'More'
-  if (path === '/admin') return 'Admin'
+  if (path === "/admin") return "Admin"
+  if (path === '/admin/bots') return 'Bot Builder'
   return 'PlayChess'
 }
 
@@ -422,6 +424,7 @@ export default function App({ Router = BrowserRouter, routerProps = {}, initialU
                   <Route path="/leaderboard" element={<Suspense fallback={<RouteFallback />}><Leaderboard /></Suspense>} />
                   <Route path="/more" element={<More />} />
                   <Route path="/admin" element={<Suspense fallback={<RouteFallback />}><RequireAdmin><Admin /></RequireAdmin></Suspense>} />
+                  <Route path="/admin/bots" element={<Suspense fallback={<RouteFallback />}><RequireAdmin><BotBuilder /></RequireAdmin></Suspense>} />
                 </Route>
                 <Route path="*" element={<Suspense fallback={<RouteFallback />}><NotFound /></Suspense>} />
               </Routes>

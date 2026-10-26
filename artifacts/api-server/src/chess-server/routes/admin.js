@@ -316,3 +316,249 @@ router.delete('/users/:id', async (req, res) => {
 });
 
 export default router;
+
+// ---------------------------------------------------------------------------
+// BOTS ADMIN ROUTES
+// ---------------------------------------------------------------------------
+
+// GET /api/admin/bots
+router.get('/bots', async (req, res) => {
+  try {
+    const result = await query(
+      `SELECT
+         id, username, display_name, avatar, personality, system_prompt, model,
+         elo, play_style, chat_frequency, chat_style,
+         join_communities, create_communities, auto_join_matches,
+         is_active, is_public, created_by, created_at,
+         games_played, wins, losses, draws, win_rate,
+         messages_sent, communities_joined
+       FROM bots
+       ORDER BY created_at DESC`
+    );
+    return res.json({ success: true, bots: result.rows });
+  } catch (error) {
+    return handleRouteError(res, error, 'Failed to list bots');
+  }
+});
+
+// POST /api/admin/bots
+router.post('/bots', async (req, res) => {
+  try {
+    const {
+      username,
+      display_name,
+      avatar = '♟️',
+      personality,
+      system_prompt = '',
+      model = 'gpt-4o-mini',
+      elo = 1500,
+      play_style = 'balanced',
+      chat_frequency = 'medium',
+      chat_style = 'friendly',
+      join_communities = false,
+      create_communities = false,
+      auto_join_matches = false,
+      is_active = true,
+      is_public = true,
+    } = req.body || {};
+
+    // Validation
+    if (!username || !display_name || !personality) {
+      return errorResponse(res, 400, 'username, display_name, and personality are required');
+    }
+    if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+      return errorResponse(res, 400, 'Username must be 3-20 characters (letters, numbers, underscore)');
+    }
+    if (elo < 100 || elo > 3000) {
+      return errorResponse(res, 400, 'ELO must be between 100 and 3000');
+    }
+
+    // Check username uniqueness
+    const existing = await query('SELECT 1 FROM bots WHERE username = $1', [username]);
+    if (existing.rows.length > 0) {
+      return errorResponse(res, 409, 'Username already taken');
+    }
+
+    const botId = crypto.randomUUID();
+    const result = await query(
+      `INSERT INTO bots (
+         id, username, display_name, avatar, personality, system_prompt, model,
+         elo, play_style, chat_frequency, chat_style,
+         join_communities, create_communities, auto_join_matches,
+         is_active, is_public, created_by
+       ) VALUES (
+         $1, $2, $3, $4, $5, $6, $7,
+         $8, $9, $10, $11,
+         $12, $13, $14,
+         $15, $16, $17
+       )
+       RETURNING
+         id, username, display_name, avatar, personality, system_prompt, model,
+         elo, play_style, chat_frequency, chat_style,
+         join_communities, create_communities, auto_join_matches,
+         is_active, is_public, created_by, created_at,
+         games_played, wins, losses, draws, win_rate,
+         messages_sent, communities_joined`,
+      [botId, username, display_name, avatar, personality, system_prompt, model,
+       elo, play_style, chat_frequency, chat_style,
+       join_communities, create_communities, auto_join_matches,
+       is_active, is_public, req.adminId]
+    );
+    return res.status(201).json({ success: true, bot: result.rows[0] });
+  } catch (error) {
+    return handleRouteError(res, error, 'Failed to create bot');
+  }
+});
+
+// PATCH /api/admin/bots/:id
+router.patch('/bots/:id', async (req, res) => {
+  try {
+    const botId = String(req.params.id || '').trim();
+    if (!botId) return errorResponse(res, 400, 'Invalid bot id');
+
+    const existing = await query('SELECT * FROM bots WHERE id = $1', [botId]);
+    if (existing.rows.length === 0) return errorResponse(res, 404, 'Bot not found');
+
+    const {
+      display_name,
+      avatar,
+      personality,
+      system_prompt,
+      model,
+      elo,
+      play_style,
+      chat_frequency,
+      chat_style,
+      join_communities,
+      create_communities,
+      auto_join_matches,
+      is_active,
+      is_public,
+    } = req.body || {};
+
+    // Build dynamic update
+    const updates = [];
+    const params = [botId];
+    let paramIndex = 2;
+
+    const addField = (field, value) => {
+      if (value !== undefined) {
+        updates.push(`${field} = $${paramIndex++}`);
+        params.push(value);
+      }
+    };
+
+    if (display_name !== undefined) addField('display_name', display_name);
+    if (avatar !== undefined) addField('avatar', avatar);
+    if (personality !== undefined) addField('personality', personality);
+    if (system_prompt !== undefined) addField('system_prompt', system_prompt);
+    if (model !== undefined) addField('model', model);
+    if (elo !== undefined) {
+      if (!Number.isInteger(elo) || elo < 100 || elo > 3000) {
+        return errorResponse(res, 400, 'ELO must be a whole number between 100 and 3000');
+      }
+      addField('elo', elo);
+    }
+    if (play_style !== undefined) addField('play_style', play_style);
+    if (chat_frequency !== undefined) addField('chat_frequency', chat_frequency);
+    if (chat_style !== undefined) addField('chat_style', chat_style);
+    if (join_communities !== undefined) addField('join_communities', join_communities);
+    if (create_communities !== undefined) addField('create_communities', create_communities);
+    if (auto_join_matches !== undefined) addField('auto_join_matches', auto_join_matches);
+    if (is_active !== undefined) addField('is_active', is_active);
+    if (is_public !== undefined) addField('is_public', is_public);
+
+    if (updates.length === 0) {
+      return errorResponse(res, 400, 'No fields to update');
+    }
+
+    updates.push(`updated_at = CURRENT_TIMESTAMP`);
+
+    const result = await query(
+      `UPDATE bots SET ${updates.join(', ')} WHERE id = $1
+       RETURNING
+         id, username, display_name, avatar, personality, system_prompt, model,
+         elo, play_style, chat_frequency, chat_style,
+         join_communities, create_communities, auto_join_matches,
+         is_active, is_public, created_by, created_at,
+         games_played, wins, losses, draws, win_rate,
+         messages_sent, communities_joined`,
+      params
+    );
+    return res.json({ success: true, bot: result.rows[0] });
+  } catch (error) {
+    return handleRouteError(res, error, 'Failed to update bot');
+  }
+});
+
+// DELETE /api/admin/bots/:id
+router.delete('/bots/:id', async (req, res) => {
+  try {
+    const botId = String(req.params.id || '').trim();
+    if (!botId) return errorResponse(res, 400, 'Invalid bot id');
+
+    const result = await query('DELETE FROM bots WHERE id = $1 RETURNING id, username', [botId]);
+    if (result.rows.length === 0) return errorResponse(res, 404, 'Bot not found');
+
+    return res.json({ success: true, deleted: result.rows[0] });
+  } catch (error) {
+    return handleRouteError(res, error, 'Failed to delete bot');
+  }
+});
+
+
+// GET /api/admin/bots/:id/activity
+router.get('/bots/:id/activity', async (req, res) => {
+  try {
+    const botId = String(req.params.id || '').trim();
+    if (!botId) return errorResponse(res, 400, 'Invalid bot id');
+
+    const limit = Math.min(Number(req.query.limit) || 50, 200);
+    const result = await query(
+      `SELECT action, details, created_at
+       FROM bot_activity
+       WHERE bot_id = $1
+       ORDER BY created_at DESC
+       LIMIT $2`
+    }, [botId, limit]);
+    return res.json({ success: true, activity: result.rows });
+  } catch (error) {
+    return handleRouteError(res, error, 'Failed to fetch bot activity');
+  }
+});
+
+// POST /api/admin/bots/:id/start
+router.post('/bots/:id/start', async (req, res) => {
+  try {
+    const botId = String(req.params.id || '').trim();
+    if (!botId) return errorResponse(res, 400, 'Invalid bot id');
+
+    const existing = await query('SELECT * FROM bots WHERE id = $1', [botId]);
+    if (existing.rows.length === 0) return errorResponse(res, 404, 'Bot not found');
+
+    await query(
+      `UPDATE bots SET is_active = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1`
+    }, [botId]);
+    return res.json({ success: true });
+  } catch (error) {
+    return handleRouteError(res, error, 'Failed to start bot');
+  }
+});
+
+// POST /api/admin/bots/:id/stop
+router.post('/bots/:id/stop', async (req, res) => {
+  try {
+    const botId = String(req.params.id || '').trim();
+    if (!botId) return errorResponse(res, 400, 'Invalid bot id');
+
+    const existing = await query('SELECT * FROM bots WHERE id = $1', [botId]);
+    if (existing.rows.length === 0) return errorResponse(res, 404, 'Bot not found');
+
+    await query(
+      `UPDATE bots SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = $1`
+    }, [botId]);
+    return res.json({ success: true });
+  } catch (error) {
+    return handleRouteError(res, error, 'Failed to stop bot');
+  }
+});

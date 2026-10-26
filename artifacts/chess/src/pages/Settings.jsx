@@ -22,6 +22,18 @@ import {
   BrainCircuit,
   Zap,
   Languages,
+  Bot,
+  Plus,
+  Trash2,
+  Edit,
+  ToggleLeft,
+  ToggleRight,
+  Users,
+  MessageSquare,
+  Crown as CrownIcon,
+  Shield,
+  Cpu,
+  Sparkles,
 } from 'lucide-react';
 import { useI18n, useT } from '../i18n/I18nContext';
 import { SUPPORTED_LOCALES } from '../i18n/locales';
@@ -159,7 +171,7 @@ function Section({ id, icon: Icon, title, children }) {
 export default function Settings() {
   const { settings, updateSettings, resetSettings } = useSettings();
   const { locale, setLocale, t } = useI18n();
-  const { user, logout } = useUser();
+  const { user, logout, isAdmin } = useUser();
   const navigate = useNavigate();
   const location = useLocation();
   const [coachStatus, setCoachStatus] = useState(null);
@@ -250,6 +262,7 @@ export default function Settings() {
     list.push({ id: 'gameplay', label: 'Gameplay' });
     list.push({ id: 'sound', label: 'Sound' });
     list.push({ id: 'pollinations', label: 'AI coach' });
+    if (user?.isAdmin) list.push({ id: 'bot-builder', label: 'Bot Builder' });
     list.push({ id: 'advanced', label: 'Advanced' });
     list.push({ id: 'about', label: 'About' });
     list.push({ id: 'legal', label: 'Privacy & terms' });
@@ -633,6 +646,23 @@ export default function Settings() {
             </button>
           </div>
         </Section>
+
+        {user && isAdmin && (
+          <Section id="bot-builder" icon={Bot} title={t("Bot Builder")}>
+            <div className="setting-item">
+              <div className="setting-info">
+                <div className="setting-title">
+                  <Bot className="setting-icon" size={16} aria-hidden="true" />
+                  <span>{t("Admin Bot Builder")}</span>
+                </div>
+                <span className="setting-desc">{t("Create and manage AI bots that play, chat, and build communities like real players.")}</span>
+              </div>
+              <button className="link-button" type="button" onClick={() => navigate('/admin/bots')}>
+                {t("Open Bot Builder")}
+              </button>
+            </div>
+          </Section>
+        )}
 
         <Section id="advanced" icon={Bug} title={t("Advanced")}>
           <SettingRow

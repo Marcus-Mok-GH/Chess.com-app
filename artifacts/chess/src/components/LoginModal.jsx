@@ -138,7 +138,7 @@ export default function LoginModal({ onClose, onContinueAsGuest, mode = 'ranked'
                   inputMode="numeric"
                   pattern="[0-9]*"
                   value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
                   placeholder="000000"
                   autoFocus
                   autoComplete="one-time-code"

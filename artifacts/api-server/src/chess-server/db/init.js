@@ -471,7 +471,50 @@ export async function initDatabase({ force = false } = {}) {
             PRIMARY KEY (club_id, user_id)
           )
         `);
-        await client.query("ALTER TABLE club_members ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'member'");
+        
+        // AI Bots (admin-managed bot accounts that behave like human players)
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS bots (
+            id VARCHAR(100) PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+            name VARCHAR(50) NOT NULL,
+            avatar VARCHAR(10) DEFAULT '🤖',
+            personality TEXT NOT NULL,
+            system_prompt TEXT NOT NULL,
+            model VARCHAR(50) DEFAULT 'gpt-4o-mini',
+            elo INTEGER DEFAULT 1200,
+            is_active BOOLEAN DEFAULT TRUE,
+            play_style VARCHAR(20) DEFAULT 'balanced',
+            chat_frequency DECIMAL(3,2) DEFAULT 0.30,
+            community_creator BOOLEAN DEFAULT FALSE,
+            created_by VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        await client.query("ALTER TABLE bots ADD COLUMN IF NOT EXISTS name VARCHAR(50)");
+        await client.query("ALTER TABLE bots ADD COLUMN IF NOT EXISTS avatar VARCHAR(10) DEFAULT '🤖'");
+        await client.query("ALTER TABLE bots ADD COLUMN IF NOT EXISTS personality TEXT");
+        await client.query("ALTER TABLE bots ADD COLUMN IF NOT EXISTS system_prompt TEXT");
+        await client.query("ALTER TABLE bots ADD COLUMN IF NOT EXISTS model VARCHAR(50) DEFAULT 'gpt-4o-mini'");
+        await client.query("ALTER TABLE bots ADD COLUMN IF NOT EXISTS elo INTEGER DEFAULT 1200");
+        await client.query("ALTER TABLE bots ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE");
+        await client.query("ALTER TABLE bots ADD COLUMN IF NOT EXISTS play_style VARCHAR(20) DEFAULT 'balanced'");
+        await client.query("ALTER TABLE bots ADD COLUMN IF NOT EXISTS chat_frequency DECIMAL(3,2) DEFAULT 0.30");
+        await client.query("ALTER TABLE bots ADD COLUMN IF NOT EXISTS community_creator BOOLEAN DEFAULT FALSE");
+        await client.query("ALTER TABLE bots ADD COLUMN IF NOT EXISTS created_by VARCHAR(100)");
+        await client.query("ALTER TABLE bots ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+        await client.query("ALTER TABLE bots ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+
+        // Bot activity log for debugging
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS bot_activity (
+            id SERIAL PRIMARY KEY,
+            bot_id VARCHAR(100) NOT NULL REFERENCES bots(id) ON DELETE CASCADE,
+            action VARCHAR(50) NOT NULL,
+            details JSONB,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
 
 
         // Lessons (curated learning content)

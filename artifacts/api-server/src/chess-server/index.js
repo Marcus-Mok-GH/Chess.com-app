@@ -19,6 +19,7 @@ import socialRoutes from './routes/social.js';
 import feedbackRoutes from './routes/feedback.js';
 import notificationRoutes from './routes/notifications.js';
 import adminRoutes from './routes/admin.js';
+import botsRoutes from './routes/bots.js';
 import { query } from './db.js';
 import { initDatabase } from './db/init.js';
 import { setDatabaseReady } from './db/status.js';
@@ -76,6 +77,7 @@ app.use('/api/lessons', lessonRoutes);
 app.use('/api/social', socialRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/bots', botsRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Health check
@@ -128,10 +130,13 @@ const cleanupStaleGames = async () => {
 // binding a port is unnecessary and will fail silently. Only start the HTTP
 // listener when running as a standalone process.
 const PORT = process.env.PORT || 3001;
+import { startBotRunner } from './services/botRunner.js';
+
 if (!process.env.VERCEL) {
   (async () => {
     await checkDbConnection();
     setInterval(cleanupStaleGames, 1000 * 60 * 30); // Every 30 minutes
+    startBotRunner(); // Start the bot runner
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
     });

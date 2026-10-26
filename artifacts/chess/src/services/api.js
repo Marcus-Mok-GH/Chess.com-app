@@ -40,8 +40,6 @@ class ApiService {
     }
 
     async updateUsername(username, token = null) {
-        // Authenticate via the httpOnly session cookie by default; the explicit
-        // Bearer token is legacy and only attached when a real one is provided.
         return this.request("/auth/update-username", {
             method: "POST",
             headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -63,7 +61,6 @@ class ApiService {
         });
     }
 
-    // Rows carry both per-control ratings; `timeControl` picks the ranked pool.
     async getLeaderboard(limit = 10, timeControl = null) {
         const pool = timeControl
             ? `&timeControl=${encodeURIComponent(timeControl)}`
@@ -77,8 +74,6 @@ class ApiService {
         );
     }
 
-    // Queue size for the caller's time-control pool (or the whole queue when
-    // no control is given).
     async getQueueStatus(timeControl = null) {
         const query = timeControl
             ? `?timeControl=${encodeURIComponent(timeControl)}`
@@ -103,7 +98,6 @@ class ApiService {
         );
     }
 
-    // Get in-progress local game by code and username
     async getLocalGameByCode(username, gameCode) {
         return this.request(
             `/games/local/${encodeURIComponent(username)}/${encodeURIComponent(gameCode)}`,
@@ -116,7 +110,6 @@ class ApiService {
         );
     }
 
-    // Create a friendly local game record
     async createLocalGame({
         gameCode,
         userId,
@@ -233,6 +226,51 @@ class ApiService {
     async adminDeleteUser(userId) {
         return this.request(`/admin/users/${encodeURIComponent(userId)}`, {
             method: "DELETE",
+        });
+    }
+
+    // ─── Bot Builder ─────────────────────────────────────────────────────
+    async adminListBots() {
+        return this.request("/admin/bots");
+    }
+
+    async adminGetBot(botId) {
+        return this.request(`/admin/bots/${encodeURIComponent(botId)}`);
+    }
+
+    async adminCreateBot(botData) {
+        return this.request("/admin/bots", {
+            method: "POST",
+            body: JSON.stringify(botData),
+        });
+    }
+
+    async adminUpdateBot(botId, botData) {
+        return this.request(`/admin/bots/${encodeURIComponent(botId)}`, {
+            method: "PATCH",
+            body: JSON.stringify(botData),
+        });
+    }
+
+    async adminDeleteBot(botId) {
+        return this.request(`/admin/bots/${encodeURIComponent(botId)}`, {
+            method: "DELETE",
+        });
+    }
+
+    async adminGetBotActivity(botId, limit = 50) {
+        return this.request(`/admin/bots/${encodeURIComponent(botId)}/activity?limit=${limit}`);
+    }
+
+    async adminStartBot(botId) {
+        return this.request(`/admin/bots/${encodeURIComponent(botId)}/start`, {
+            method: "POST",
+        });
+    }
+
+    async adminStopBot(botId) {
+        return this.request(`/admin/bots/${encodeURIComponent(botId)}/stop`, {
+            method: "POST",
         });
     }
 
