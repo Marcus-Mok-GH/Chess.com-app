@@ -21,7 +21,10 @@ import {
   Flag,
   BrainCircuit,
   Zap,
+  Languages,
 } from 'lucide-react';
+import { useI18n, useT } from '../i18n/I18nContext';
+import { SUPPORTED_LOCALES } from '../i18n/locales';
 import { connectCoach, disconnectCoach, getCoachStatus } from '../engine/coach/coachAI';
 import api from '../services/api';
 import { clearOnlineSession } from '../utils/gamePersistence';
@@ -37,6 +40,7 @@ const BOARD_THEMES = [
 const CONFIRM_TIMEOUT_MS = 5000;
 
 function Toggle({ checked, onChange, label, id }) {
+  const t = useT();
   return (
     <span className="toggle">
       <input
@@ -65,6 +69,7 @@ function ConfirmActionButton({
   className = '',
   onConfirm,
 }) {
+  const t = useT();
   const [armed, setArmed] = useState(false);
   const timerRef = useRef(null);
 
@@ -104,18 +109,18 @@ function ConfirmActionButton({
         aria-disabled={disabled && !armed}
       >
         {Icon && <Icon size={15} aria-hidden="true" />}
-        <span>{busy ? busyLabel : armed ? confirm : idle}</span>
+        <span>{t(busy ? busyLabel : armed ? confirm : idle)}</span>
       </button>
       {armed && !busy && (
         <button className="confirm-cancel-btn" type="button" onClick={disarm}>
-          Cancel
-        </button>
+          {t("Cancel")}</button>
       )}
     </span>
   );
 }
 
 function SettingRow({ id, icon: Icon, label, desc, children }) {
+  const t = useT();
   return (
     <div className="setting-item">
       <div className="setting-info">
@@ -135,6 +140,7 @@ function SettingRow({ id, icon: Icon, label, desc, children }) {
 }
 
 function Section({ id, icon: Icon, title, children }) {
+  const t = useT();
   return (
     <section className="settings-section" id={id} aria-labelledby={`${id}-title`} tabIndex={-1}>
       <div className="section-header">
@@ -152,6 +158,7 @@ function Section({ id, icon: Icon, title, children }) {
 
 export default function Settings() {
   const { settings, updateSettings, resetSettings } = useSettings();
+  const { locale, setLocale, t } = useI18n();
   const { user, logout } = useUser();
   const navigate = useNavigate();
   const location = useLocation();
@@ -238,6 +245,7 @@ export default function Settings() {
   const sections = useMemo(() => {
     const list = [];
     if (user) list.push({ id: 'account', label: 'Account' });
+    list.push({ id: 'language', label: 'Language' });
     list.push({ id: 'display', label: 'Display' });
     list.push({ id: 'gameplay', label: 'Gameplay' });
     list.push({ id: 'sound', label: 'Sound' });
@@ -278,12 +286,12 @@ export default function Settings() {
             <Settings2 size={22} aria-hidden="true" />
           </span>
           <div>
-            <h1>Settings</h1>
-            <p className="settings-subtitle">Board, sound, and account preferences</p>
+            <h1>{t("Settings")}</h1>
+            <p className="settings-subtitle">{t("Board, sound, and account preferences")}</p>
           </div>
         </div>
 
-        <nav className="settings-quick-nav" aria-label="Settings sections">
+        <nav className="settings-quick-nav" aria-label={t("Settings sections")}>
           {sections.map((section) => (
             <a
               key={section.id}
@@ -291,7 +299,7 @@ export default function Settings() {
               href={`#${section.id}`}
               onClick={(e) => handleNavClick(e, section.id)}
             >
-              {section.label}
+              {t(section.label)}
             </a>
           ))}
         </nav>
@@ -300,56 +308,53 @@ export default function Settings() {
           <div className="settings-guest-note" role="note">
             <Info size={16} aria-hidden="true" />
             <span>
-              Sign in to save settings and game history. Guests can still play vs bots without
-              saves or analysis.
-            </span>
+              {t("Sign in to save settings and game history. Guests can still play vs bots without saves or analysis.")}</span>
             <button className="link-button guest-signin-btn" type="button" onClick={() => navigate('/login')}>
-              Sign in
-            </button>
+              {t("Sign in")}</button>
           </div>
         )}
 
         {user && (
-          <Section id="account" icon={User2} title="Account">
+          <Section id="account" icon={User2} title={t("Account")}>
             <div className="account-grid">
               <div className="account-row account-row-wide">
-                <span className="account-label">Username</span>
+                <span className="account-label">{t("Username")}</span>
                 <span className="account-value">{user.username}</span>
               </div>
               <div className="account-row">
-                <span className="account-label">Unlimited</span>
+                <span className="account-label">{t("Unlimited")}</span>
                 <span className="account-value account-value-elo">{user.elo}</span>
               </div>
               <div className="account-row">
-                <span className="account-label">Bullet</span>
+                <span className="account-label">{t("Bullet")}</span>
                 <span className="account-value account-value-elo">
                   {user.bulletElo ?? user.elo}
                 </span>
               </div>
               <div className="account-row">
-                <span className="account-label">Blitz</span>
+                <span className="account-label">{t("Blitz")}</span>
                 <span className="account-value account-value-elo">
                   {user.blitzElo ?? user.elo}
                 </span>
               </div>
               <div className="account-row">
-                <span className="account-label">Rapid</span>
+                <span className="account-label">{t("Rapid")}</span>
                 <span className="account-value account-value-elo">
                   {user.rapidElo ?? user.elo}
                 </span>
               </div>
               <div className="account-row">
-                <span className="account-label">Classical</span>
+                <span className="account-label">{t("Classical")}</span>
                 <span className="account-value account-value-elo">
                   {user.classicalElo ?? user.elo}
                 </span>
               </div>
               <div className="account-row">
-                <span className="account-label">Rated Games</span>
+                <span className="account-label">{t("Rated Games")}</span>
                 <span className="account-value">{user.gamesPlayed || 0}</span>
               </div>
               <div className="account-row">
-                <span className="account-label">Rated Record</span>
+                <span className="account-label">{t("Rated Record")}</span>
                 <span className="account-value record">
                   <span className="rec-w">{user.wins || 0}W</span>
                   <span className="rec-d">{user.draws || 0}D</span>
@@ -361,9 +366,9 @@ export default function Settings() {
               <div className="setting-info">
                 <div className="setting-title">
                   <Flag className="setting-icon" size={16} aria-hidden="true" />
-                  <span>Live games</span>
+                  <span>{t("Live games")}</span>
                 </div>
-                <span className="setting-desc">Resign every ongoing game started through online matchmaking.</span>
+                <span className="setting-desc">{t("Resign every ongoing game started through online matchmaking.")}</span>
                 {resignMessage && (
                   <span
                     className={`setting-feedback ${resignMessage.type}`}
@@ -386,21 +391,46 @@ export default function Settings() {
             </div>
             <button className="logout-btn" onClick={logout} type="button">
               <LogOut size={16} aria-hidden="true" />
-              <span>Log Out</span>
+              <span>{t("Log Out")}</span>
             </button>
           </Section>
         )}
 
-        <Section id="display" icon={Palette} title="Display">
+        <Section id="language" icon={Languages} title={t('Language')}>
+          <SettingRow
+            id="setting-language"
+            icon={Languages}
+            label={t('App language')}
+            desc={t('Changes the interface and every AI voice in the app')}
+          >
+            <label className="select-field settings-language-select">
+              <select
+                id="setting-language"
+                aria-label={t('App language')}
+                aria-describedby="setting-language-desc"
+                value={locale}
+                onChange={(event) => setLocale(event.target.value)}
+              >
+                {SUPPORTED_LOCALES.map((option) => (
+                  <option key={option.code} value={option.code}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </SettingRow>
+        </Section>
+
+        <Section id="display" icon={Palette} title={t("Display")}>
           <SettingRow
             id="setting-coordinates"
             icon={Eye}
-            label="Show Coordinates"
-            desc="Display rank and file labels on the board"
+            label={t("Show Coordinates")}
+            desc={t("Display rank and file labels on the board")}
           >
             <Toggle
               id="setting-coordinates"
-              label="Show Coordinates"
+              label={t("Show Coordinates")}
               checked={settings.showCoordinates}
               onChange={(v) => updateSettings({ showCoordinates: v })}
             />
@@ -409,12 +439,12 @@ export default function Settings() {
           <SettingRow
             id="setting-highlight"
             icon={Crosshair}
-            label="Highlight Legal Moves"
-            desc="Show dots on squares where pieces can move"
+            label={t("Highlight Legal Moves")}
+            desc={t("Show dots on squares where pieces can move")}
           >
             <Toggle
               id="setting-highlight"
-              label="Highlight Legal Moves"
+              label={t("Highlight Legal Moves")}
               checked={settings.highlightMoves}
               onChange={(v) => updateSettings({ highlightMoves: v })}
             />
@@ -424,41 +454,41 @@ export default function Settings() {
             <div className="setting-info">
               <div className="setting-title">
                 <Palette className="setting-icon" size={16} aria-hidden="true" />
-                <span>Board Theme</span>
+                <span>{t("Board Theme")}</span>
               </div>
-              <span className="setting-desc">Choose your board color scheme</span>
+              <span className="setting-desc">{t("Choose your board color scheme")}</span>
             </div>
-            <div className="theme-selector" role="group" aria-label="Board theme">
+            <div className="theme-selector" role="group" aria-label={t("Board theme")}>
               {BOARD_THEMES.map((theme) => (
                 <button
                   key={theme.id}
                   className={settings.boardTheme === theme.id ? 'theme-option active' : 'theme-option'}
                   aria-pressed={settings.boardTheme === theme.id}
                   onClick={() => updateSettings({ boardTheme: theme.id })}
-                  title={`${theme.name} board theme`}
+                  title={t('{theme} board theme', { theme: t(theme.name) })}
                   type="button"
                 >
                   <div className="theme-preview" aria-hidden="true">
                     <div className="theme-square light" style={{ backgroundColor: theme.light }} />
                     <div className="theme-square dark" style={{ backgroundColor: theme.dark }} />
                   </div>
-                  <span className="theme-name">{theme.name}</span>
+                  <span className="theme-name">{t(theme.name)}</span>
                 </button>
               ))}
             </div>
           </div>
         </Section>
 
-        <Section id="gameplay" icon={Settings2} title="Gameplay">
+        <Section id="gameplay" icon={Settings2} title={t("Gameplay")}>
           <SettingRow
             id="setting-auto-queen"
             icon={Crown}
-            label="Auto-Promote to Queen"
-            desc="Automatically promote pawns to queen"
+            label={t("Auto-Promote to Queen")}
+            desc={t("Automatically promote pawns to queen")}
           >
             <Toggle
               id="setting-auto-queen"
-              label="Auto-Promote to Queen"
+              label={t("Auto-Promote to Queen")}
               checked={settings.autoQueen}
               onChange={(v) => updateSettings({ autoQueen: v })}
             />
@@ -467,12 +497,12 @@ export default function Settings() {
           <SettingRow
             id="setting-confirm-moves"
             icon={MousePointer2}
-            label="Confirm Moves"
-            desc="Require confirmation before making a move"
+            label={t("Confirm Moves")}
+            desc={t("Require confirmation before making a move")}
           >
             <Toggle
               id="setting-confirm-moves"
-              label="Confirm Moves"
+              label={t("Confirm Moves")}
               checked={settings.confirmMoves}
               onChange={(v) => updateSettings({ confirmMoves: v })}
             />
@@ -481,12 +511,12 @@ export default function Settings() {
           <SettingRow
             id="setting-hints-button"
             icon={Settings2}
-            label="Show Hints Button"
-            desc="Display the hint button during games"
+            label={t("Show Hints Button")}
+            desc={t("Display the hint button during games")}
           >
             <Toggle
               id="setting-hints-button"
-              label="Show Hints Button"
+              label={t("Show Hints Button")}
               checked={settings.showHints}
               onChange={(v) => updateSettings({ showHints: v })}
             />
@@ -495,28 +525,28 @@ export default function Settings() {
           <SettingRow
             id="setting-enable-premoves"
             icon={Zap}
-            label="Enable Premoves"
-            desc="Queue your next move while it is your opponent's turn; it plays automatically when your turn starts, if it is still legal."
+            label={t("Enable Premoves")}
+            desc={t("Queue your next move while it is your opponent's turn; it plays automatically when your turn starts, if it is still legal.")}
           >
             <Toggle
               id="setting-enable-premoves"
-              label="Enable Premoves"
+              label={t("Enable Premoves")}
               checked={settings.enablePremoves}
               onChange={(v) => updateSettings({ enablePremoves: v })}
             />
           </SettingRow>
         </Section>
 
-        <Section id="sound" icon={Volume2} title="Sound & Haptics">
+        <Section id="sound" icon={Volume2} title={t("Sound & Haptics")}>
           <SettingRow
             id="setting-sound"
             icon={Volume2}
-            label="Sound Effects"
-            desc="Play sounds for moves and game events"
+            label={t("Sound Effects")}
+            desc={t("Play sounds for moves and game events")}
           >
             <Toggle
               id="setting-sound"
-              label="Sound Effects"
+              label={t("Sound Effects")}
               checked={settings.soundEnabled}
               onChange={(v) => updateSettings({ soundEnabled: v })}
             />
@@ -527,10 +557,10 @@ export default function Settings() {
               <div className="setting-info">
                 <div className="setting-title">
                   <Volume2 className="setting-icon" size={16} aria-hidden="true" />
-                  <span>Volume</span>
+                  <span>{t("Volume")}</span>
                   <span className="volume-value" aria-hidden="true">{settings.soundVolume}%</span>
                 </div>
-                <span className="setting-desc" id="settings-volume-desc">Adjust the sound effect loudness</span>
+                <span className="setting-desc" id="settings-volume-desc">{t("Adjust the sound effect loudness")}</span>
               </div>
               <input
                 id="settings-volume"
@@ -541,7 +571,7 @@ export default function Settings() {
                 value={settings.soundVolume}
                 onChange={(e) => updateSettings({ soundVolume: Number(e.target.value) })}
                 className="volume-slider"
-                aria-label="Sound volume"
+                aria-label={t("Sound volume")}
                 aria-describedby="settings-volume-desc"
                 aria-valuetext={`${settings.soundVolume}%`}
               />
@@ -551,42 +581,40 @@ export default function Settings() {
           <SettingRow
             id="setting-haptics"
             icon={Smartphone}
-            label="Haptic Feedback"
-            desc="Vibrate on moves and captures (mobile only)"
+            label={t("Haptic Feedback")}
+            desc={t("Vibrate on moves and captures (mobile only)")}
           >
             <Toggle
               id="setting-haptics"
-              label="Haptic Feedback"
+              label={t("Haptic Feedback")}
               checked={settings.hapticEnabled}
               onChange={(v) => updateSettings({ hapticEnabled: v })}
             />
           </SettingRow>
         </Section>
 
-        <Section id="pollinations" icon={BrainCircuit} title="Pollinations AI">
+        <Section id="pollinations" icon={BrainCircuit} title={t("Pollinations AI")}>
           <div className="setting-item pollinations-auth-item" aria-busy={coachLoading || coachBusy}>
             <div className="setting-info">
               <div className="setting-title">
                 <BrainCircuit className="setting-icon" size={16} aria-hidden="true" />
-                <span>Analysis Authenticator</span>
+                <span>{t("Analysis Authenticator")}</span>
                 <span className="pollinations-status" role="status">
                   {coachLoading
-                    ? 'Checking…'
+                    ? t('Checking…')
                     : coachStatus?.connected
-                      ? 'Connected'
-                      : 'Not connected'}
+                      ? t('Connected')
+                      : t('Not connected')}
                 </span>
               </div>
               <span className="setting-desc">
-                Log in with Pollinations AI so game review can use your authorized analysis provider.
-              </span>
+                {t("Log in with Pollinations AI so game review can use your authorized analysis provider.")}</span>
               {coachStatus?.configured === false && (
                 <span className="setting-desc pollinations-warning">
-                  Server-side Pollinations OAuth is not configured yet.
-                </span>
+                  {t("Server-side Pollinations OAuth is not configured yet.")}</span>
               )}
               {coachError && (
-                <span className="setting-desc pollinations-warning" role="alert">{coachError}</span>
+                <span className="setting-desc pollinations-warning" role="alert">{t(coachError)}</span>
               )}
             </div>
             <button
@@ -595,73 +623,70 @@ export default function Settings() {
               onClick={coachStatus?.connected ? handleCoachDisconnect : handleCoachConnect}
               disabled={coachLoading || coachBusy}
             >
-              {coachLoading || coachBusy
+              {t(coachLoading || coachBusy
                 ? 'Checking...'
                 : coachStatus?.connected
                   ? 'Disconnect'
                   : user
                     ? 'Log in with Pollinations AI'
-                    : 'Sign in first'}
+                    : 'Sign in first')}
             </button>
           </div>
         </Section>
 
-        <Section id="advanced" icon={Bug} title="Advanced">
+        <Section id="advanced" icon={Bug} title={t("Advanced")}>
           <SettingRow
             id="setting-debug"
             icon={Bug}
-            label="Debug Mode"
-            desc="Show AI thinking and evaluation data"
+            label={t("Debug Mode")}
+            desc={t("Show AI thinking and evaluation data")}
           >
             <Toggle
               id="setting-debug"
-              label="Debug Mode"
+              label={t("Debug Mode")}
               checked={settings.debugMode}
               onChange={(v) => updateSettings({ debugMode: v })}
             />
           </SettingRow>
         </Section>
 
-        <Section id="about" icon={ScrollText} title="About">
+        <Section id="about" icon={ScrollText} title={t("About")}>
           <div className="setting-item">
             <div className="setting-info">
               <div className="setting-title">
                 <ScrollText className="setting-icon" size={16} aria-hidden="true" />
-                <span>Changelog</span>
+                <span>{t("Changelog")}</span>
               </div>
-              <span className="setting-desc">See recent updates and fixes</span>
+              <span className="setting-desc">{t("See recent updates and fixes")}</span>
             </div>
             <button className="link-button" type="button" onClick={() => navigate('/changelog')}>
-              View
-            </button>
+              {t("View")}</button>
           </div>
         </Section>
 
-        <Section id="legal" icon={ShieldCheck} title="Privacy & Terms">
+        <Section id="legal" icon={ShieldCheck} title={t("Privacy & Terms")}>
           <div className="setting-item" id="privacy">
             <div className="setting-info">
               <div className="setting-title">
                 <ShieldCheck className="setting-icon" size={16} aria-hidden="true" />
-                <span>Privacy Policy</span>
+                <span>{t("Privacy Policy")}</span>
               </div>
-              <span className="setting-desc">Read the full Privacy Policy on its dedicated page.</span>
+              <span className="setting-desc">{t("Read the full Privacy Policy on its dedicated page.")}</span>
             </div>
             <button className="link-button" type="button" onClick={() => navigate('/privacy')}>
-              View
-            </button>
+              {t("View")}</button>
           </div>
 
           <div className="setting-item">
             <div className="setting-info">
               <div className="setting-title">
                 <ShieldCheck className="setting-icon" size={16} aria-hidden="true" />
-                <span>Terms of Service</span>
+                <span>{t("Terms of Service")}</span>
               </div>
-              <span className="setting-desc">Read the full Terms of Service on its dedicated page.</span>
+              <span className="setting-desc">{t("Read the full Terms of Service on its dedicated page.")}</span>
             </div>
             <button className="link-button" type="button" onClick={() => navigate('/terms')}>
-              View
-            </button>
+              {t("View")}</button>
           </div>
         </Section>
 
@@ -669,12 +694,12 @@ export default function Settings() {
           <div className="footer-info">
             <span className="footer-title">
               <RotateCcw size={15} aria-hidden="true" />
-              <span>Reset preferences</span>
+              <span>{t("Reset preferences")}</span>
             </span>
             <span className="setting-desc">
-              {settingsUnchanged
+              {t(settingsUnchanged
                 ? 'You are already using the default settings.'
-                : 'Restores board, gameplay, sound, and account settings to their defaults.'}
+                : 'Restores board, gameplay, sound, and account settings to their defaults.')}
             </span>
           </div>
           <ConfirmActionButton

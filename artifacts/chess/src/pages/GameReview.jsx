@@ -15,27 +15,31 @@ import {
   winPercentFromCp,
 } from '../engine/review/reviewUtils';
 import './GameReview.css';
+import { useT } from '../i18n/I18nContext';
+import { tNow } from '../i18n/translate';
+import { getActiveLocale } from '../i18n/translate';
 
 // The openings API caps book-move batches at 64 pairs per request.
 const BOOK_BATCH_SIZE = 64;
 
 function formatDate(dateString) {
   if (!dateString) return '';
-  return new Date(dateString).toLocaleDateString('en-US', {
+  return new Date(dateString).toLocaleDateString(getActiveLocale(), {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
   });
 }
 
-function resultText(result, orientation, isParticipant = true) {
-  if (result === 'white') return isParticipant ? (orientation === 'white' ? 'You won' : 'You lost') : 'White wins';
-  if (result === 'black') return isParticipant ? (orientation === 'black' ? 'You won' : 'You lost') : 'Black wins';
-  if (result === 'draw') return 'Draw';
-  return result || 'Unknown';
+function resultText(result, orientation, t, isParticipant = true) {
+  if (result === 'white') return isParticipant ? t(orientation === 'white' ? 'You won' : 'You lost') : t('White wins');
+  if (result === 'black') return isParticipant ? t(orientation === 'black' ? 'You won' : 'You lost') : t('Black wins');
+  if (result === 'draw') return t('Draw');
+  return t(result || 'Unknown');
 }
 
 export default function GameReview() {
+  const t = useT();
   const { gameCode } = useParams();
   const navigate = useNavigate();
   const { user } = useUser();
@@ -72,13 +76,13 @@ export default function GameReview() {
       .then((record) => {
         if (cancelled) return;
         if (!record || !Array.isArray(record.move_history)) {
-          setLoadError('Game not found.');
+          setLoadError(tNow('Game not found.'));
           return;
         }
         setGame(record);
       })
       .catch(() => {
-        if (!cancelled) setLoadError('Could not load this game. It may have been removed.');
+        if (!cancelled) setLoadError(tNow('Could not load this game. It may have been removed.'));
       });
 
     return () => { cancelled = true; };
@@ -333,9 +337,8 @@ export default function GameReview() {
       <div className="game-review-page">
         <div className="game-review-container">
           <button type="button" className="review-back-link" onClick={() => navigate('/history')}>
-            ← Back to Game History
-          </button>
-          <div className="review-error">{loadError}</div>
+            {t("← Back to Game History")}</button>
+          <div className="review-error">{t(loadError)}</div>
         </div>
       </div>
     );
@@ -345,8 +348,8 @@ export default function GameReview() {
     return (
       <div className="game-review-page">
         <div className="game-review-container">
-          <h1 className="review-heading">Game Review</h1>
-          <div className="review-loading"><div className="spinner" /> Loading game…</div>
+          <h1 className="review-heading">{t("Game Review")}</h1>
+          <div className="review-loading"><div className="spinner" /> {' '}{t("Loading game…")}</div>
         </div>
       </div>
     );
@@ -369,7 +372,7 @@ export default function GameReview() {
             .filter(([, count]) => count > 0)
             .map(([key, count]) => (
               <span key={key} className="review-count-pill" style={{ background: MOVE_CLASSES[key].color }}>
-                {count} {MOVE_CLASSES[key].label.toLowerCase()}
+                {count} {t(MOVE_CLASSES[key].label).toLowerCase()}
               </span>
             ))}
         </span>
@@ -381,14 +384,13 @@ export default function GameReview() {
     <div className="game-review-page">
       <div className="game-review-container">
         <button type="button" className="review-back-link" onClick={() => navigate('/history')}>
-          ← Back to Game History
-        </button>
+          {t("← Back to Game History")}</button>
 
         <div className="review-header">
           <div>
-            <h1 className="review-heading">Game Review</h1>
+            <h1 className="review-heading">{t("Game Review")}</h1>
             <p className="review-subtitle">
-              {game.white_player_name || 'White'} vs {game.black_player_name || 'Black'} · {resultText(game.result, orientation, isParticipant)}
+              {t(game.white_player_name || 'White')} {t('vs')} {t(game.black_player_name || 'Black')} · {resultText(game.result, orientation, t, isParticipant)}
             </p>
           </div>
           <div className="review-meta">
@@ -398,7 +400,7 @@ export default function GameReview() {
           </div>
         </div>
 
-        {engineError && <div className="review-banner review-banner-error">Stockfish analysis is unavailable: {engineError}</div>}
+        {engineError && <div className="review-banner review-banner-error">{t("Stockfish analysis is unavailable:")}{' '}{t(engineError)}</div>}
         {engineActive && (
           <div className="review-banner review-banner-progress">
             <div className="review-progress-track">
@@ -407,7 +409,7 @@ export default function GameReview() {
                 style={{ width: `${engineProgress.total ? Math.round((engineProgress.done / engineProgress.total) * 100) : 0}%` }}
               />
             </div>
-            Analyzing with Stockfish… {engineProgress.done}/{engineProgress.total} positions
+            {t("Analyzing with Stockfish…")}{' '}{engineProgress.done}/{engineProgress.total} positions
           </div>
         )}
 
@@ -429,38 +431,37 @@ export default function GameReview() {
             </div>
 
             <div className="review-controls">
-              <button type="button" className="review-control-btn" onClick={() => goToPly(0)} aria-label="First move" disabled={currentPly === 0}>⏮</button>
-              <button type="button" className="review-control-btn" onClick={() => goToPly(currentPly - 1)} aria-label="Previous move" disabled={currentPly === 0}>◀</button>
-              <span className="review-ply-indicator">{currentPly === 0 ? 'Start' : `Move ${Math.ceil(currentPly / 2)}${currentPly % 2 === 1 ? '' : '…'}`}</span>
-              <button type="button" className="review-control-btn" onClick={() => goToPly(currentPly + 1)} aria-label="Next move" disabled={currentPly >= totalPlies}>▶</button>
-              <button type="button" className="review-control-btn" onClick={() => goToPly(totalPlies)} aria-label="Last move" disabled={currentPly >= totalPlies}>⏭</button>
+              <button type="button" className="review-control-btn" onClick={() => goToPly(0)} aria-label={t("First move")} disabled={currentPly === 0}>⏮</button>
+              <button type="button" className="review-control-btn" onClick={() => goToPly(currentPly - 1)} aria-label={t("Previous move")} disabled={currentPly === 0}>◀</button>
+              <span className="review-ply-indicator">{currentPly === 0 ? t('Start') : t('Move {number}{suffix}', { number: Math.ceil(currentPly / 2), suffix: currentPly % 2 === 1 ? '' : '…' })}</span>
+              <button type="button" className="review-control-btn" onClick={() => goToPly(currentPly + 1)} aria-label={t("Next move")} disabled={currentPly >= totalPlies}>▶</button>
+              <button type="button" className="review-control-btn" onClick={() => goToPly(totalPlies)} aria-label={t("Last move")} disabled={currentPly >= totalPlies}>⏭</button>
             </div>
           </div>
 
           <div className="review-panel">
             <div className="review-summary">
-              {accuracyCard(whiteSummary, game.white_player_name || 'White', 'white')}
-              {accuracyCard(blackSummary, game.black_player_name || 'Black', 'black')}
+              {accuracyCard(whiteSummary, t(game.white_player_name || 'White'), 'white')}
+              {accuracyCard(blackSummary, t(game.black_player_name || 'Black'), 'black')}
             </div>
 
             <div className="review-comment-box">
-              <h3 className="review-comment-title">Coach commentary</h3>
+              <h3 className="review-comment-title">{t("Coach commentary")}</h3>
               {currentPly === 0 ? (
-                <p className="review-comment-hint">Step through the moves to see Stockfish notes and coach comments.</p>
+                <p className="review-comment-hint">{t("Step through the moves to see Stockfish notes and coach comments.")}</p>
               ) : (
                 <>
                   {currentEngineNote && (
                     <p className={`review-engine-note ${currentEngineNote.isBest ? 'review-engine-note-best' : ''}`}>
-                      <span className="review-engine-tag">Stockfish</span> {currentEngineNote.text}
+                      <span className="review-engine-tag">{t("Stockfish")}</span> {currentEngineNote.text}
                     </p>
                   )}
-                  {coachState === 'loading' && <p className="review-comment-hint">Coach is reviewing this game…</p>}
+                  {coachState === 'loading' && <p className="review-comment-hint">{t("Coach is reviewing this game…")}</p>}
                   {coachState === 'connect' && (
                     <p className="review-comment-hint">
-                      The AI coach is not connected. <a href={getCoachConnectionUrl()}>Connect your coach</a> to get move-by-move comments.
-                    </p>
+                      {t("The AI coach is not connected.")}{' '}<a href={getCoachConnectionUrl()}>{t("Connect your coach")}</a> {' '}{t("to get move-by-move comments.")}</p>
                   )}
-                  {coachState === 'unavailable' && <p className="review-comment-hint">Coach comments are unavailable right now.</p>}
+                  {coachState === 'unavailable' && <p className="review-comment-hint">{t("Coach comments are unavailable right now.")}</p>}
                   {currentComment && <p className="review-comment-text">{currentComment}</p>}
                 </>
               )}
@@ -477,7 +478,7 @@ export default function GameReview() {
                     onClick={() => goToPly(row.white.ply)}
                   >
                     {row.white.san}
-                    {row.white.cls && <span className="review-move-dot" style={{ background: MOVE_CLASSES[row.white.cls].color }} title={MOVE_CLASSES[row.white.cls].label} />}
+                    {row.white.cls && <span className="review-move-dot" style={{ background: MOVE_CLASSES[row.white.cls].color }} title={t(MOVE_CLASSES[row.white.cls].label)} />}
                   </button>
                   {row.black ? (
                     <button
@@ -487,19 +488,19 @@ export default function GameReview() {
                       onClick={() => goToPly(row.black.ply)}
                     >
                       {row.black.san}
-                      {row.black.cls && <span className="review-move-dot" style={{ background: MOVE_CLASSES[row.black.cls].color }} title={MOVE_CLASSES[row.black.cls].label} />}
+                      {row.black.cls && <span className="review-move-dot" style={{ background: MOVE_CLASSES[row.black.cls].color }} title={t(MOVE_CLASSES[row.black.cls].label)} />}
                     </button>
                   ) : <span className="review-move review-move-empty" />}
                 </div>
               ))}
-              {moveRows.length === 0 && <p className="review-comment-hint">This game has no recorded moves.</p>}
+              {moveRows.length === 0 && <p className="review-comment-hint">{t("This game has no recorded moves.")}</p>}
             </div>
 
             {classes && engineDone && (
               <div className="review-legend">
                 {Object.entries(MOVE_CLASSES).map(([key, cls]) => (
                   <span key={key} className="review-legend-item">
-                    <span className="review-move-dot" style={{ background: cls.color }} /> {cls.label}
+                    <span className="review-move-dot" style={{ background: cls.color }} /> {t(cls.label)}
                   </span>
                 ))}
               </div>

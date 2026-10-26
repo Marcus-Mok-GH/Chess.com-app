@@ -2,8 +2,12 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import api from '../services/api';
 import { setHapticEnabled } from '../utils/haptics';
 import { useUser } from './UserContext';
+import { getInitialLocale } from '../i18n/locales';
 
 export const DEFAULT_SETTINGS = {
+  // Language
+  language: getInitialLocale(),
+
   // Display
   showCoordinates: true,
   highlightMoves: true,

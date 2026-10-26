@@ -1,4 +1,6 @@
+import { useT } from '../i18n/I18nContext';
 export default function DebugPanel({ debugInfo, isThinking }) {
+  const t = useT();
   if (!debugInfo) return null;
 
   const { moves, depth, time, bestMove, current, progress, evaluating } = debugInfo;
@@ -6,7 +8,7 @@ export default function DebugPanel({ debugInfo, isThinking }) {
   return (
     <div className="debug-panel">
       <div className="debug-header">
-        <span className="debug-title">🔍 AI Debug</span>
+        <span className="debug-title">{t("🔍 AI Debug")}</span>
         {isThinking && <span className="debug-thinking">{evaluating || 'calculating...'}</span>}
       </div>
 
@@ -15,29 +17,29 @@ export default function DebugPanel({ debugInfo, isThinking }) {
           <div className="progress-bar">
             <div className="progress-fill" style={{ width: `${progress * 100}%` }} />
           </div>
-          {current && <span className="current-move">Evaluating: <strong>{current}</strong></span>}
+          {current && <span className="current-move">{t("Evaluating:")}{' '}<strong>{current}</strong></span>}
         </div>
       )}
       
       <div className="debug-stats">
         <div className="debug-stat">
-          <span className="stat-label">Depth</span>
+          <span className="stat-label">{t("Depth")}</span>
           <span className="stat-value">{depth}</span>
         </div>
         <div className="debug-stat">
-          <span className="stat-label">Time</span>
+          <span className="stat-label">{t("Time")}</span>
           <span className="stat-value">{time}ms</span>
         </div>
         <div className="debug-stat">
-          <span className="stat-label">Best</span>
+          <span className="stat-label">{t("Best")}</span>
           <span className="stat-value best-move">{bestMove || '...'}</span>
         </div>
       </div>
 
       <div className="debug-moves">
         <div className="debug-moves-header">
-          <span>Move</span>
-          <span>Eval</span>
+          <span>{t("Move")}</span>
+          <span>{t("Eval")}</span>
         </div>
         <div className="debug-moves-list">
           {moves && moves.slice(0, 10).map((m, i) => (

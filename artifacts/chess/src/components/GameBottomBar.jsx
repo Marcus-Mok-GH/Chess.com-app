@@ -1,5 +1,6 @@
 import './GameBottomBar.css';
 import haptics from "../utils/haptics";
+import { useT } from '../i18n/I18nContext';
 
 export default function GameBottomBar({
   onNew,
@@ -13,35 +14,31 @@ export default function GameBottomBar({
   botMessage,
   selectedBot,
 }) {
+  const t = useT();
   return (
-    <div className="game-bottom-bar" role="navigation" aria-label="Game controls">
+    <div className="game-bottom-bar" role="navigation" aria-label={t("Game controls")}>
       {botMessage && selectedBot && (
         <div className="gbb-bot-message">
           <span className="gbb-bot-avatar" style={{ background: selectedBot.color }}>{selectedBot.avatar}</span>
           <div className="gbb-bot-text">
-            <span className="gbb-bot-name">{selectedBot.name}</span>
-            <span className="gbb-bot-quote">"{botMessage}"</span>
+            <span className="gbb-bot-name">{t(selectedBot.name)}</span>
+            <span className="gbb-bot-quote">"{t(botMessage)}"</span>
           </div>
         </div>
       )}
       <div className="gbb-actions">
         <button type="button" className="gbb-btn" onClick={() => { haptics.button(); onNew(); }}>
-          New
-        </button>
+          {t("New")}</button>
         <button type="button" className="gbb-btn" onClick={() => { haptics.button(); onUndo(); }} disabled={!canUndo || isThinking}>
-          Undo
-        </button>
+          {t("Undo")}</button>
         <button type="button" className="gbb-btn" onClick={() => { haptics.button(); onFlipBoard(); }}>
-          Flip
-        </button>
+          {t("Flip")}</button>
         {showHints && (
           <button type="button" className="gbb-btn" onClick={() => { haptics.button(); onHint(); }} disabled={isThinking}>
-            Hint
-          </button>
+            {t("Hint")}</button>
         )}
         <button type="button" className="gbb-btn danger" onClick={() => { haptics.button(); onResign(); }} disabled={isThinking}>
-          Resign
-        </button>
+          {t("Resign")}</button>
       </div>
     </div>
   );

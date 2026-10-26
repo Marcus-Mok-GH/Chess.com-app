@@ -1,11 +1,13 @@
 import { BOTS, getBotRatingDisplay } from '../engine/bots/bots';
 import './BotSelector.css';
 import EloSlider from './EloSlider';
+import { useT } from '../i18n/I18nContext';
 
 const REGULAR_BOTS = BOTS.filter((b) => b.id !== 'coach');
 const COACH_BOT = BOTS.find((b) => b.id === 'coach');
 
 function BotCard({ bot, selected, onSelect, disabled, customElo }) {
+  const t = useT();
   return (
     <button
       type="button"
@@ -16,20 +18,21 @@ function BotCard({ bot, selected, onSelect, disabled, customElo }) {
     >
       <div className="bot-avatar">{bot.avatar}</div>
       <div className="bot-info">
-        <span className="bot-name">{bot.name}</span>
+        <span className="bot-name">{t(bot.name)}</span>
         <span className="bot-rating">
-          {bot.id === 'custom' ? customElo : `Rating: ${getBotRatingDisplay(bot)}`}
+          {bot.id === 'custom' ? customElo : t('Rating: {rating}', { rating: getBotRatingDisplay(bot) })}
         </span>
       </div>
-      <div className="bot-personality">{bot.personality}</div>
+      <div className="bot-personality">{t(bot.personality)}</div>
     </button>
   );
 }
 
 export default function BotSelector({ selectedBot, onSelectBot, disabled, customElo, onCustomEloChange, isLoggedIn }) {
+  const t = useT();
   return (
     <div className="bot-selector">
-      <label className="bot-selector-label">Choose your opponent:</label>
+      <label className="bot-selector-label">{t("Choose your opponent:")}</label>
       <div className="bot-grid">
         {REGULAR_BOTS.map((bot) => (
           <BotCard
@@ -44,7 +47,7 @@ export default function BotSelector({ selectedBot, onSelectBot, disabled, custom
       </div>
       {COACH_BOT && (
         <div className="bot-special-section">
-          <span className="bot-special-label">Special</span>
+          <span className="bot-special-label">{t("Special")}</span>
           <div className="bot-special-grid">
             <BotCard
               bot={COACH_BOT}
@@ -54,7 +57,7 @@ export default function BotSelector({ selectedBot, onSelectBot, disabled, custom
               customElo={customElo}
             />
             {!isLoggedIn && (
-              <div className="coach-login-hint">Sign in to unlock the AI Coach</div>
+              <div className="coach-login-hint">{t("Sign in to unlock the AI Coach")}</div>
             )}
           </div>
         </div>

@@ -1,5 +1,6 @@
 import ChessPieceIcon from './ChessPieceIcon';
 import { formatClock, isLowTime } from '../utils/timeControls';
+import { useT } from '../i18n/I18nContext';
 
 export default function PlayerBar({ 
   name, 
@@ -15,6 +16,7 @@ export default function PlayerBar({
   clockMs = null,
   clockActive = false,
 }) {
+  const t = useT();
   const pieceValues = { p: 1, n: 3, b: 3, r: 5, q: 9 };
   const materialDiff = capturedPieces.reduce((sum, p) => sum + (pieceValues[p] || 0), 0);
   const capturedColor = color === 'w' ? 'b' : 'w';
@@ -31,13 +33,13 @@ export default function PlayerBar({
       </div>
       {isBot && botMessage && (
         <div className={`bot-message-inline ${isCoach ? 'coach-message' : ''}`}>
-          <span className={`bot-quote ${isCoach ? 'coach-quote' : ''}`}>"{botMessage}"</span>
+          <span className={`bot-quote ${isCoach ? 'coach-quote' : ''}`}>"{t(botMessage)}"</span>
         </div>
       )}
       {showClock && (
         <div
           className={`player-clock ${clockActive ? 'active' : ''} ${isLowTime(clockMs) ? 'low' : ''}`}
-          aria-label={`${name} clock ${formatClock(clockMs)}`}
+          aria-label={t('{name} clock {time}', { name: t(name), time: formatClock(clockMs) })}
         >
           {formatClock(clockMs)}
         </div>

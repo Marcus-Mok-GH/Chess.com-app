@@ -1,6 +1,7 @@
 import { Bot, Globe2 } from 'lucide-react';
 
 import './PlayModeSelect.css';
+import { useT } from '../i18n/I18nContext';
 
 /**
  * Entry screen for the Play tab: offers the two ways to play — Bots (local
@@ -17,12 +18,13 @@ export default function PlayModeSelect({
   onSelectOnline,
   onlineDisabled = false,
 }) {
+  const t = useT();
   return (
     <div className="play-mode-select">
       <div className="play-mode-card">
         <div>
-          <h2 className="play-mode-title">Play Chess</h2>
-          <p className="play-mode-subtitle">Choose how you want to play.</p>
+          <h2 className="play-mode-title">{t("Play Chess")}</h2>
+          <p className="play-mode-subtitle">{t("Choose how you want to play.")}</p>
         </div>
 
         <div className="play-mode-options">
@@ -34,8 +36,8 @@ export default function PlayModeSelect({
             <span className="play-mode-icon" aria-hidden="true">
               <Bot size={28} />
             </span>
-            <span className="play-mode-name">Bots</span>
-            <span className="play-mode-desc">Play against the computer</span>
+            <span className="play-mode-name">{t("Bots")}</span>
+            <span className="play-mode-desc">{t("Play against the computer")}</span>
           </button>
 
           <button
@@ -47,14 +49,14 @@ export default function PlayModeSelect({
             <span className="play-mode-icon" aria-hidden="true">
               <Globe2 size={28} />
             </span>
-            <span className="play-mode-name">Online</span>
+            <span className="play-mode-name">{t("Online")}</span>
             <span className="play-mode-desc">
               {onlineDisabled
-                ? 'Connect to play online'
-                : 'Play against other players live'}
+                ? t('Connect to play online')
+                : t('Play against other players live')}
             </span>
             {onlineDisabled && (
-              <span className="play-mode-badge">Offline</span>
+              <span className="play-mode-badge">{t("Offline")}</span>
             )}
           </button>
         </div>

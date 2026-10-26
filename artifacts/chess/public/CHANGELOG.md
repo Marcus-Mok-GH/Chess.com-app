@@ -1,3 +1,12 @@
+[2026-10-25] - PlayChess speaks six languages: English, Chinese (Simplified and Traditional), Malay, Tamil and Hindi
+
+- **Settings → Language** now has a picker with English, 简体中文, 繁體中文, Bahasa Melayu, தமிழ் and हिन्दी. The choice is saved with the rest of the settings for signed-in players and in the browser for guests, and the first visit follows the browser's own language when it is one of the six.
+- **1,602 interface and content strings** are translated per language, including navigation, buttons, forms, validation and error messages, game status, lesson titles and prose, and bot names, taglines and in-game banter. Terms and Privacy pages remain in English. The selected language applies across the app immediately.
+- **The AI coach answers in the selected language.** Every coach request carries the interface locale, and the API server adds a language instruction for move feedback, move explanations, puzzle concepts and full game reviews. JSON keys, SAN moves and FEN strings stay unchanged; unknown locale tags fall back to English.
+- Dates and numbers follow the selected language across member dates, game history, review charts, notifications, the landing page and admin views.
+- Puzzle concept summaries use a character limit for Chinese so the short sidebar card stays compact.
+- Missing translations fall back to the English source string. Tests cover all locale keys and placeholders, language selection, server-side coach language mapping, and the Chinese character cap for puzzle summaries.
+
 [2026-10-23] - Back button on bot setup and online lobby returns to the play mode picker
 
 - **Bot setup** (`/play` → **Bots**) and the **online lobby** (`/online`) now have a **Back** button at the top-left of the card, styled like the existing Openings page back button: from bot setup it returns to the mode picker in place (bot and color selections are kept), and from the online lobby it navigates to `/play` without a full page reload.

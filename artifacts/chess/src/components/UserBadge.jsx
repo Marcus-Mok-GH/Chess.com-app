@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { useUser } from '../contexts/UserContext';
 import LoginModal from './LoginModal';
 import './UserBadge.css';
+import { useT } from '../i18n/I18nContext';
 
 export default function UserBadge() {
+  const t = useT();
   const { user, isLoggedIn, logout, isOnline } = useUser();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -24,11 +26,10 @@ export default function UserBadge() {
       <>
         <button 
           className="login-btn"
-          aria-label="Sign in to your account"
+          aria-label={t("Sign in to your account")}
           onClick={() => setShowLoginModal(true)}
         >
-          Sign In
-        </button>
+          {t("Sign In")}</button>
         {showLoginModal && (
           <LoginModal onClose={() => setShowLoginModal(false)} />
         )}
@@ -46,13 +47,13 @@ export default function UserBadge() {
         className="user-badge"
         aria-expanded={showDropdown}
         aria-haspopup="true"
-        aria-label="User profile and menu"
+        aria-label={t("User profile and menu")}
         onClick={() => setShowDropdown(!showDropdown)}
       >
         <span className="user-avatar" aria-hidden="true">👤</span>
         <span className="user-name">{user.username}</span>
         <span className="user-elo">{user.elo}</span>
-        <span className="db-indicator" title={isOnline ? "Online" : "Offline"}>{isOnline ? '●' : '○'}</span>
+        <span className="db-indicator" title={t(isOnline ? "Online" : "Offline")}>{isOnline ? '●' : '○'}</span>
       </button>
 
       {showDropdown && (
@@ -61,27 +62,27 @@ export default function UserBadge() {
             className="dropdown-backdrop" 
             onClick={() => setShowDropdown(false)}
           />
-          <div className="user-dropdown" role="menu" aria-label="User menu">
+          <div className="user-dropdown" role="menu" aria-label={t("User menu")}>
             <div className="dropdown-header">
               <span className="dropdown-username">{user.username}</span>
               <span className="dropdown-elo">
-                <span className="elo-label">Unlimited:</span>
+                <span className="elo-label">{t("Unlimited:")}</span>
                 <span className="elo-value">{user.elo}</span>
               </span>
               <span className="dropdown-elo">
-                <span className="elo-label">Bullet:</span>
+                <span className="elo-label">{t("Bullet:")}</span>
                 <span className="elo-value">{user.bulletElo ?? user.elo}</span>
               </span>
               <span className="dropdown-elo">
-                <span className="elo-label">Blitz:</span>
+                <span className="elo-label">{t("Blitz:")}</span>
                 <span className="elo-value">{user.blitzElo ?? user.elo}</span>
               </span>
               <span className="dropdown-elo">
-                <span className="elo-label">Rapid:</span>
+                <span className="elo-label">{t("Rapid:")}</span>
                 <span className="elo-value">{user.rapidElo ?? user.elo}</span>
               </span>
               <span className="dropdown-elo">
-                <span className="elo-label">Classical:</span>
+                <span className="elo-label">{t("Classical:")}</span>
                 <span className="elo-value">
                   {user.classicalElo ?? user.elo}
                 </span>
@@ -90,11 +91,11 @@ export default function UserBadge() {
             <div className="dropdown-divider" role="separator" />
             <div className="dropdown-stats">
               <div className="stat-row">
-                <span className="stat-label">Rated Games</span>
+                <span className="stat-label">{t("Rated Games")}</span>
                 <span className="stat-value">{user.gamesPlayed || 0}</span>
               </div>
               <div className="stat-row">
-                <span className="stat-label">Rated W / L / D</span>
+                <span className="stat-label">{t("Rated W / L / D")}</span>
                 <span className="stat-value">
                   <span className="win">{user.wins || 0}</span>
                   {' / '}
@@ -104,7 +105,7 @@ export default function UserBadge() {
                 </span>
               </div>
               <div className="stat-row">
-                <span className="stat-label">Rated Win Rate</span>
+                <span className="stat-label">{t("Rated Win Rate")}</span>
                 <span className="stat-value">{winRate}%</span>
               </div>
             </div>
@@ -117,12 +118,11 @@ export default function UserBadge() {
                 window.location.href = '/history';
               }}
             >
-              View Stats & Charts
-            </button>
+              {t("View Stats & Charts")}</button>
             <div className="dropdown-divider" role="separator" />
             <div className="dropdown-sync-status">
               <span className={isOnline ? "sync-online" : "sync-offline"}>
-                {isOnline ? 'Connected' : 'Offline'}
+                {t(isOnline ? 'Connected' : 'Offline')}
               </span>
             </div>
             <div className="dropdown-divider" role="separator" />
@@ -134,8 +134,7 @@ export default function UserBadge() {
                 setShowDropdown(false);
               }}
             >
-              Sign Out
-            </button>
+              {t("Sign Out")}</button>
           </div>
         </>
       )}

@@ -1,3 +1,6 @@
+### Added
+- Added a six-language interface (English, Simplified Chinese, Traditional Chinese, Malay, Tamil, and Hindi), with saved language selection, translated game and lesson copy, locale-aware dates and numbers, and AI-coach responses in the selected language. The root test suite now checks catalog completeness, placeholders, locale resolution, and coach prompt language.
+
 ### Fixed
 - The root `test` suite is reliably green again: `artifacts/chess/src/pages/Puzzles.test.jsx` ("explains an incorrect move without revealing the answer and offers retry") still asserted the retired inline copy "That move missed the tactic. Try again.", which was removed when the puzzle mistake feedback was simplified to the coach-explanation card. The assertion now matches the real contract (explanation card + Retry, no solved state, solution withheld). Test-only change; no product behavior changed.
 

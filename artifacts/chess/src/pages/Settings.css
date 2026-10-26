@@ -1015,3 +1015,9 @@
   transform: none;
   box-shadow: none;
 }
+
+/* ── Language selector ────────────────────── */
+.settings-language-select {
+  width: min(240px, 100%);
+  margin: 0;
+}

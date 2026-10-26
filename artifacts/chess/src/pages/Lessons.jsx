@@ -18,10 +18,12 @@ import {
   getLessonParagraphs,
 } from "../engine/lessons/lessonCatalog";
 import api from "../services/api";
+import { tNow } from "../i18n/translate";
 import "./Lessons.css";
+import { useT } from '../i18n/I18nContext';
 
 function difficultyLabel(difficulty) {
-  return difficulty === "beginner" ? "Beginner" : "Intermediate";
+  return tNow(difficulty === "beginner" ? "Beginner" : "Intermediate");
 }
 
 function exampleFenFor(lesson) {
@@ -54,6 +56,7 @@ function mergeRemoteLesson(remote) {
 }
 
 export default function Lessons() {
+  const t = useT();
   const navigate = useNavigate();
   const [lessons, setLessons] = useState(LESSON_CATALOG);
   const [progress, setProgress] = useState({});
@@ -159,18 +162,15 @@ export default function Lessons() {
           <div className="lessons-header-top">
             <div className="lessons-eyebrow">
               <GraduationCap className="lessons-eyebrow-icon" size={13} />
-              <span>Learning Path</span>
+              <span>{t("Learning Path")}</span>
             </div>
             <span className="lessons-meta">
-              {completedCount} of {lessons.length} lessons complete
-            </span>
+              {completedCount} of {lessons.length} {' '}{t("lessons complete")}</span>
           </div>
-          <h1 className="lessons-title">Chess Lessons</h1>
+          <h1 className="lessons-title">{t("Chess Lessons")}</h1>
           <p className="lessons-subtitle">
-            Structured topics with examples. Finish a lesson, then practice the
-            idea in the tactical trainer.
-          </p>
-          <div className="lessons-progress-track" aria-label="Lesson progress">
+            {t("Structured topics with examples. Finish a lesson, then practice the idea in the tactical trainer.")}</p>
+          <div className="lessons-progress-track" aria-label={t("Lesson progress")}>
             <div
               className="lessons-progress-fill"
               style={{ width: `${lessons.length ? (completedCount / lessons.length) * 100 : 0}%` }}
@@ -179,14 +179,14 @@ export default function Lessons() {
         </header>
 
         <LessonGroup
-          title="Beginner"
+          title={t("Beginner")}
           icon={<BookOpen size={16} />}
           lessons={beginners}
           progress={progress}
           onSelect={setSelectedLesson}
         />
         <LessonGroup
-          title="Intermediate"
+          title={t("Intermediate")}
           icon={<Target size={16} />}
           lessons={intermediates}
           progress={progress}
@@ -198,6 +198,7 @@ export default function Lessons() {
 }
 
 function LessonGroup({ title, icon, lessons, progress, onSelect }) {
+  const t = useT();
   if (lessons.length === 0) return null;
   const done = lessons.filter((lesson) => progress[lesson.id]?.completed).length;
 
@@ -225,11 +226,11 @@ function LessonGroup({ title, icon, lessons, progress, onSelect }) {
                 {lesson.order}
               </span>
               <span className="lesson-card-body">
-                <span className="lesson-card-title">{lesson.title}</span>
-                <span className="lesson-card-snippet">{snippet}</span>
+                <span className="lesson-card-title">{t(lesson.title)}</span>
+                <span className="lesson-card-snippet">{t(snippet)}</span>
               </span>
               {isCompleted ? (
-                <CheckCircle2 className="lesson-card-check" size={20} aria-label="Completed" />
+                <CheckCircle2 className="lesson-card-check" size={20} aria-label={t("Completed")} />
               ) : (
                 <Circle className="lesson-card-check lesson-card-check--pending" size={20} />
               )}
@@ -242,6 +243,7 @@ function LessonGroup({ title, icon, lessons, progress, onSelect }) {
 }
 
 function LessonDetail({ lesson, completed, saving, onBack, onToggleComplete, onPractice }) {
+  const t = useT();
   const paragraphs = getLessonParagraphs(lesson);
   const fen = exampleFenFor(lesson);
 
@@ -249,8 +251,7 @@ function LessonDetail({ lesson, completed, saving, onBack, onToggleComplete, onP
     <div className="lessons-page lessons-page--detail">
       <div className="lessons-container">
         <button type="button" className="lesson-back" onClick={onBack}>
-          <ArrowLeft size={16} /> All lessons
-        </button>
+          <ArrowLeft size={16} /> {' '}{t("All lessons")}</button>
 
         <header className="lessons-header">
           <div className="lessons-header-top">
@@ -258,25 +259,25 @@ function LessonDetail({ lesson, completed, saving, onBack, onToggleComplete, onP
               <BookOpen className="lessons-eyebrow-icon" size={13} />
               <span>{difficultyLabel(lesson.difficulty)}</span>
             </div>
-            <span className="lessons-meta">{lesson.topic}</span>
+            <span className="lessons-meta">{t(lesson.topic)}</span>
           </div>
-          <h1 className="lessons-title">{lesson.title}</h1>
+          <h1 className="lessons-title">{t(lesson.title)}</h1>
         </header>
 
         <div className="lesson-detail-layout">
           <article className="lesson-text">
             {paragraphs.map((paragraph, index) => (
               <p key={index} className="lesson-paragraph">
-                {paragraph}
+                {t(paragraph)}
               </p>
             ))}
 
             {lesson.puzzleThemes?.length > 0 && (
               <div className="lesson-themes">
-                <span className="lesson-themes-label">Related puzzle themes:</span>
+                <span className="lesson-themes-label">{t("Related puzzle themes:")}</span>
                 {lesson.puzzleThemes.map((theme) => (
                   <span key={theme} className="lesson-theme-chip">
-                    {theme}
+                    {t(theme)}
                   </span>
                 ))}
               </div>
@@ -290,13 +291,12 @@ function LessonDetail({ lesson, completed, saving, onBack, onToggleComplete, onP
               </div>
             )}
             {lesson.exampleExplanation && (
-              <p className="lesson-example-caption">{lesson.exampleExplanation}</p>
+              <p className="lesson-example-caption">{t(lesson.exampleExplanation)}</p>
             )}
 
             <div className="lesson-actions">
               <button type="button" className="lesson-action lesson-action--practice" onClick={onPractice}>
-                <Play size={16} /> Practice
-              </button>
+                <Play size={16} /> {' '}{t("Practice")}</button>
               <button
                 type="button"
                 className={`lesson-action lesson-action--complete${completed ? " is-completed" : ""}`}
@@ -304,7 +304,7 @@ function LessonDetail({ lesson, completed, saving, onBack, onToggleComplete, onP
                 disabled={saving}
               >
                 {completed ? <Trophy size={16} /> : <CheckCircle2 size={16} />}
-                {completed ? "Completed" : "Mark Complete"}
+                {t(completed ? "Completed" : "Mark Complete")}
               </button>
             </div>
           </aside>

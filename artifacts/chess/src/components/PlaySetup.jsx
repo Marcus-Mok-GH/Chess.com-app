@@ -3,6 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 import BotSelector from './BotSelector';
 
 import './PlaySetup.css';
+import { useT } from '../i18n/I18nContext';
 
 export default function PlaySetup({
   selectedBot,
@@ -15,6 +16,7 @@ export default function PlaySetup({
   onBack,
   isLoggedIn,
 }) {
+  const t = useT();
   const canStart = Boolean(selectedBot) && Boolean(playerColor);
 
   return (
@@ -26,16 +28,15 @@ export default function PlaySetup({
             className="play-setup-back"
             onClick={onBack}
           >
-            <ArrowLeft size={15} aria-hidden="true" /> Back
-          </button>
+            <ArrowLeft size={15} aria-hidden="true" /> {' '}{t("Back")}</button>
         )}
         <div>
-          <h2 className="play-setup-title">Play Chess</h2>
-          <p className="play-setup-subtitle">Choose your opponent and color to start a game.</p>
+          <h2 className="play-setup-title">{t("Play Chess")}</h2>
+          <p className="play-setup-subtitle">{t("Choose your opponent and color to start a game.")}</p>
         </div>
 
         <div className="play-setup-section">
-          <h3 className="play-setup-label">Opponent</h3>
+          <h3 className="play-setup-label">{t("Opponent")}</h3>
           <BotSelector
             selectedBot={selectedBot}
             onSelectBot={onSelectBot}
@@ -47,7 +48,7 @@ export default function PlaySetup({
         </div>
 
         <div className="play-setup-section">
-          <h3 className="play-setup-label">Color</h3>
+          <h3 className="play-setup-label">{t("Color")}</h3>
           <div className="color-choice">
             <button
               type="button"
@@ -56,8 +57,7 @@ export default function PlaySetup({
               aria-pressed={playerColor === 'w'}
             >
               <span className="color-btn-emoji" aria-hidden="true">♔</span>
-              White
-            </button>
+              {t("White")}</button>
             <button
               type="button"
               className={`color-btn ${playerColor === 'b' ? 'selected' : ''}`}
@@ -65,8 +65,7 @@ export default function PlaySetup({
               aria-pressed={playerColor === 'b'}
             >
               <span className="color-btn-emoji" aria-hidden="true">♚</span>
-              Black
-            </button>
+              {t("Black")}</button>
             <button
               type="button"
               className={`color-btn color-btn-random ${playerColor === 'random' ? 'selected' : ''}`}
@@ -74,8 +73,7 @@ export default function PlaySetup({
               aria-pressed={playerColor === 'random'}
             >
               <span className="color-btn-emoji" aria-hidden="true">🎲</span>
-              Random
-            </button>
+              {t("Random")}</button>
           </div>
         </div>
 
@@ -86,8 +84,7 @@ export default function PlaySetup({
             onClick={onStart}
             disabled={!canStart}
           >
-            Start Game
-          </button>
+            {t("Start Game")}</button>
         </div>
       </div>
     </div>

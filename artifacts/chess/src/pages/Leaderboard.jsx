@@ -4,10 +4,12 @@ import { useUser } from "../contexts/UserContext";
 import api from "../services/api";
 import { RATING_POOLS, DEFAULT_TIME_CONTROL } from "../utils/timeControls";
 import "./Leaderboard.css";
+import { useT } from '../i18n/I18nContext';
 
 const LEADERBOARD_LIMIT = 50;
 
 export default function Leaderboard() {
+  const t = useT();
     const { user } = useUser();
     const [timeControl, setTimeControl] = useState(DEFAULT_TIME_CONTROL);
     const [rows, setRows] = useState([]);
@@ -53,29 +55,23 @@ export default function Leaderboard() {
                 <header className="leaderboard-header">
                     <div className="leaderboard-eyebrow">
                         <Trophy size={13} />
-                        <span>Rankings</span>
+                        <span>{t("Rankings")}</span>
                     </div>
-                    <h1 className="leaderboard-title">Leaderboard</h1>
+                    <h1 className="leaderboard-title">{t("Leaderboard")}</h1>
                     <p className="leaderboard-subtitle">
-                        Top players by rating. Unlimited, Bullet, Blitz, Rapid,
-                        and Classical each have their own rating pool. Both
-                        Blitz variants (3+0 and 3+2) share the Blitz rating,
-                        both Rapid variants (10+0 and 10+3) share the Rapid
-                        rating, and both Classical variants share the Classical
-                        rating.
-                    </p>
+                        {t("Top players by rating. Unlimited, Bullet, Blitz, Rapid, and Classical each have their own rating pool. Both Blitz variants (3+0 and 3+2) share the Blitz rating, both Rapid variants (10+0 and 10+3) share the Rapid rating, and both Classical variants share the Classical rating.")}</p>
                 </header>
 
                 <label className="select-field leaderboard-pool-select">
-                    <span className="select-field-label">Rating pool</span>
+                    <span className="select-field-label">{t("Rating pool")}</span>
                     <select
-                        aria-label="Rating pool"
+                        aria-label={t("Rating pool")}
                         value={timeControl}
                         onChange={(event) => setTimeControl(event.target.value)}
                     >
                         {RATING_POOLS.map((option) => (
                             <option key={option.id} value={option.id}>
-                                {option.label}
+                                {t(option.label)}
                             </option>
                         ))}
                     </select>
@@ -84,13 +80,12 @@ export default function Leaderboard() {
                 <section className="leaderboard-card card-surface">
                     <div className="leaderboard-card-head">
                         <h2 className="section-title">
-                            {activeControl.label} Ratings
-                        </h2>
+                            {t(activeControl.label)} {' '}{t("Ratings")}</h2>
                         <button
                             className="leaderboard-refresh"
                             onClick={() => load(timeControl)}
-                            title="Refresh"
-                            aria-label="Refresh leaderboard"
+                            title={t("Refresh")}
+                            aria-label={t("Refresh leaderboard")}
                         >
                             <RefreshCw size={16} />
                         </button>
@@ -98,17 +93,14 @@ export default function Leaderboard() {
 
                     {loading ? (
                         <div className="leaderboard-status">
-                            <Loader2 size={18} className="spin" /> Loading
-                            rankings…
-                        </div>
+                            <Loader2 size={18} className="spin" /> {' '}{t("Loading rankings…")}</div>
                     ) : error ? (
                         <p className="leaderboard-error" role="alert">
-                            {error}
+                            {t(error)}
                         </p>
                     ) : rows.length === 0 ? (
                         <div className="leaderboard-status">
-                            No ranked players yet.
-                        </div>
+                            {t("No ranked players yet.")}</div>
                     ) : (
                         <ol className="leaderboard-list">
                             {rows.map((row) => {
@@ -136,7 +128,7 @@ export default function Leaderboard() {
                                         </span>
                                         <span
                                             className="leaderboard-rating"
-                                            title={`${activeControl.label} rating`}
+                                            title={t('{pool} rating', { pool: t(activeControl.label) })}
                                         >
                                             {ranked ?? "—"}
                                         </span>
@@ -145,7 +137,7 @@ export default function Leaderboard() {
                                             title={otherPools
                                                 .map(
                                                     (pool) =>
-                                                        `${pool.label} rating`,
+                                                        t('{pool} rating', { pool: t(pool.label) }),
                                                 )
                                                 .join(", ")}
                                         >
@@ -154,7 +146,7 @@ export default function Leaderboard() {
                                                     key={pool.id}
                                                     className="leaderboard-other-item"
                                                 >
-                                                    {pool.label}{" "}
+                                                    {t(pool.label)}{" "}
                                                     {ratingFor(row, pool.id) ??
                                                         "—"}
                                                 </span>
@@ -168,9 +160,7 @@ export default function Leaderboard() {
                 </section>
 
                 <p className="leaderboard-note">
-                    Left column is the {activeControl.label} rating; the second
-                    lists each player's other pool ratings.
-                </p>
+                    {t("Left column is the")}{' '}{t(activeControl.label)} {' '}{t("rating; the second lists each player's other pool ratings.")}</p>
             </div>
         </div>
     );

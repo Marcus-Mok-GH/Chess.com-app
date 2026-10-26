@@ -15,10 +15,13 @@ import { useUser } from "../contexts/UserContext";
 import api from "../services/api";
 import { startHeartbeat, stopHeartbeat } from "../services/presence";
 import "./Friends.css";
+import { useT } from '../i18n/I18nContext';
+import { tNow } from '../i18n/translate';
 
 const POLL_INTERVAL_MS = 30000;
 
 export default function Friends() {
+  const t = useT();
     const navigate = useNavigate();
     const { user, isLoggedIn, isLoading } = useUser();
 
@@ -78,7 +81,7 @@ export default function Friends() {
         setAddSuccess("");
         try {
             await api.addFriend(username);
-            setAddSuccess(`${username} added to your friends.`);
+            setAddSuccess(tNow('{username} added to your friends.', { username }));
             setAddUsername("");
             loadFriends(true);
         } catch (err) {
@@ -113,8 +116,7 @@ export default function Friends() {
                             color: "var(--text-dim)",
                         }}
                     >
-                        Loading...
-                    </div>
+                        {t("Loading...")}</div>
                 </div>
             </div>
         );
@@ -126,7 +128,7 @@ export default function Friends() {
                 <div className="friends-container">
                     <div className="friends-empty-card card-surface">
                         <Users size={40} />
-                        <h2>Access Restricted</h2>
+                        <h2>{t("Access Restricted")}</h2>
                         <p
                             style={{
                                 color: "var(--text-dim)",
@@ -134,15 +136,12 @@ export default function Friends() {
                                 textAlign: "center",
                             }}
                         >
-                            You need to be logged in to access account specific
-                            privileges.
-                        </p>
+                            {t("You need to be logged in to access account specific privileges.")}</p>
                         <button
                             className="friends-primary-btn"
                             onClick={() => navigate("/login")}
                         >
-                            Go to Login
-                        </button>
+                            {t("Go to Login")}</button>
                     </div>
                 </div>
             </div>
@@ -155,13 +154,11 @@ export default function Friends() {
                 <header className="friends-header">
                     <div className="friends-eyebrow">
                         <Users size={13} />
-                        <span>Social</span>
+                        <span>{t("Social")}</span>
                     </div>
-                    <h1 className="friends-title">Friends</h1>
+                    <h1 className="friends-title">{t("Friends")}</h1>
                     <p className="friends-subtitle">
-                        Add players, see who is online, and jump into games
-                        together.
-                    </p>
+                        {t("Add players, see who is online, and jump into games together.")}</p>
                 </header>
 
                 {/* Add friend */}
@@ -171,13 +168,12 @@ export default function Friends() {
                         onSubmit={handleAddFriend}
                     >
                         <label className="sr-only" htmlFor="friend-username">
-                            Username
-                        </label>
+                            {t("Username")}</label>
                         <input
                             id="friend-username"
                             type="text"
                             className="friends-input"
-                            placeholder="Add by username"
+                            placeholder={t("Add by username")}
                             value={addUsername}
                             onChange={(e) => setAddUsername(e.target.value)}
                             maxLength={50}
@@ -193,8 +189,7 @@ export default function Friends() {
                             ) : (
                                 <UserPlus size={16} />
                             )}
-                            Add Friend
-                        </button>
+                            {t("Add Friend")}</button>
                     </form>
                     {addError && (
                         <p
@@ -217,12 +212,12 @@ export default function Friends() {
                 {/* Friend list */}
                 <section className="friends-list-section">
                     <div className="friends-list-head">
-                        <h2 className="section-title">Your Friends</h2>
+                        <h2 className="section-title">{t("Your Friends")}</h2>
                         <button
                             className="friends-refresh"
                             onClick={() => loadFriends(true)}
-                            title="Refresh"
-                            aria-label="Refresh friends"
+                            title={t("Refresh")}
+                            aria-label={t("Refresh friends")}
                         >
                             <RefreshCw size={16} />
                         </button>
@@ -230,16 +225,12 @@ export default function Friends() {
 
                     {loading && friends.length === 0 ? (
                         <div className="friends-loading card-surface">
-                            <Loader2 size={18} className="spin" /> Loading
-                            friends…
-                        </div>
+                            <Loader2 size={18} className="spin" /> {' '}{t("Loading friends…")}</div>
                     ) : friends.length === 0 ? (
                         <div className="friends-empty-card card-surface">
                             <Users size={36} />
                             <p>
-                                No friends yet. Add someone by username above to
-                                get started.
-                            </p>
+                                {t("No friends yet. Add someone by username above to get started.")}</p>
                         </div>
                     ) : (
                         <ul className="friends-list">
@@ -255,7 +246,7 @@ export default function Friends() {
                                         <span
                                             className={`friend-status-dot ${isOnline ? "is-online" : ""}`}
                                             aria-label={
-                                                isOnline ? "Online" : "Offline"
+                                                t(isOnline ? "Online" : "Offline")
                                             }
                                         />
                                         <div className="friend-info">
@@ -266,13 +257,11 @@ export default function Friends() {
                                                 {isOnline ? (
                                                     <>
                                                         <Wifi size={12} />{" "}
-                                                        Online
-                                                    </>
+                                                        {t("Online")}</>
                                                 ) : (
                                                     <>
                                                         <WifiOff size={12} />{" "}
-                                                        Offline
-                                                    </>
+                                                        {t("Offline")}</>
                                                 )}
                                             </span>
                                         </div>
@@ -286,8 +275,8 @@ export default function Friends() {
                                                     removing ===
                                                     String(friend.id)
                                                 }
-                                                title="Remove friend"
-                                                aria-label={`Remove ${friend.username}`}
+                                                title={t("Remove friend")}
+                                                aria-label={t('Remove {username}', { username: friend.username })}
                                             >
                                                 {removing ===
                                                 String(friend.id) ? (
@@ -308,7 +297,7 @@ export default function Friends() {
 
                     {error && (
                         <p className="friends-error" role="alert">
-                            {error}
+                            {t(error)}
                         </p>
                     )}
                 </section>
@@ -316,9 +305,7 @@ export default function Friends() {
                 <section className="friends-tip card-surface">
                     <ArrowUpRight size={16} />
                     <p>
-                        Tip: friends appear with a green dot when they are
-                        online on the site.
-                    </p>
+                        {t("Tip: friends appear with a green dot when they are online on the site.")}</p>
                 </section>
             </div>
         </div>

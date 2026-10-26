@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './PollinationsCoachPrompt.css';
+import { useT } from '../i18n/I18nContext';
 
 export default function PollinationsCoachPrompt({ mode = 'connect', onConnected, bannerError = null }) {
+  const t = useT();
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState(bannerError);
   const navigate = useNavigate();
@@ -45,40 +47,38 @@ export default function PollinationsCoachPrompt({ mode = 'connect', onConnected,
     <div className="coach-prompt-overlay" role="presentation">
       <div className="coach-prompt-modal" role="dialog" aria-modal="true" aria-labelledby="coach-prompt-title" aria-describedby="coach-prompt-description" onClick={(e) => e.stopPropagation()}>
         <div className="coach-prompt-header">
-          <h2 id="coach-prompt-title">{isLogin ? '🔒 Sign in to use AI Coach' : '🧠 Connect AI Coach'}</h2>
+          <h2 id="coach-prompt-title">
+            {isLogin ? t('🔒 Sign in to use AI Coach') : t('🧠 Connect AI Coach')}</h2>
         </div>
         <div className="coach-prompt-body" id="coach-prompt-description">
           <p className="coach-prompt-desc">
             {isLogin
-              ? 'The AI coach is powered by Pollinations AI. Sign in to your chess account to connect your personal Pollinations authorization and start improving your game.'
-              : 'The chess coach is powered by <strong>Pollinations AI</strong> using a secure OAuth connection tied to your chess account.'}
+              ? t('The AI coach is powered by Pollinations AI. Sign in to your chess account to connect your personal Pollinations authorization and start improving your game.')
+              : t('The chess coach is powered by Pollinations AI using a secure OAuth connection tied to your chess account.')}
           </p>
           {!isLogin && (
             <ul className="coach-prompt-list">
-              <li>You will be redirected to Pollinations AI to sign in and grant access.</li>
-              <li>Your authorization is stored per account and can be disconnected anytime.</li>
+              <li>{t("You will be redirected to Pollinations AI to sign in and grant access.")}</li>
+              <li>{t("Your authorization is stored per account and can be disconnected anytime.")}</li>
             </ul>
           )}
-          {error && <span className="coach-prompt-error">{error}</span>}
+          {error && <span className="coach-prompt-error">{t(error)}</span>}
         </div>
         <div className="coach-prompt-actions">
           {isLogin ? (
             <>
               <button type="button" className="btn btn-primary btn-full" onClick={handleLogin}>
-                Sign In
-              </button>
+                {t("Sign In")}</button>
               <button type="button" className="btn btn-ghost btn-full" onClick={handleDismiss}>
-                Not now
-              </button>
+                {t("Not now")}</button>
             </>
           ) : (
             <>
               <button type="button" className="btn btn-primary btn-full" onClick={handleConnect} disabled={isConnecting}>
-                {isConnecting ? 'Opening Pollinations...' : 'Connect Pollinations AI'}
+                {t(isConnecting ? 'Opening Pollinations...' : 'Connect Pollinations AI')}
               </button>
               <button type="button" className="btn btn-ghost btn-full" onClick={handleDismiss}>
-                Not now
-              </button>
+                {t("Not now")}</button>
             </>
           )}
         </div>

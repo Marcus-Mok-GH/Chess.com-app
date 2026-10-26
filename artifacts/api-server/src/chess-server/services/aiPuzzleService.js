@@ -17,6 +17,7 @@ import {
   generatePuzzle as generateProceduralPuzzle,
   validateGeneratedPuzzle,
 } from "../puzzles/puzzleGenerator.js";
+import { languageInstruction } from "./outputLanguage.js";
 
 const PUZZLE_AI_API_URL =
   process.env.PUZZLE_AI_API_URL ||
@@ -43,7 +44,7 @@ Constraints:
  * Generate a puzzle via AI from a text description.
  *
  * @param {string} description - Natural-language request, e.g. "a smothered mate with a knight".
- * @param {object} [options] - { difficulty, type, seed, provider, userId }
+ * @param {object} [options] - { difficulty, type, seed, provider, userId, language }
  * @returns {Promise<object>} A valid puzzle object (AI-generated if the model output is legal, else a procedural fallback that still satisfies the request shape).
  */
 export function isAIAvailable() {
@@ -51,12 +52,18 @@ export function isAIAvailable() {
 }
 
 export async function generatePuzzleWithAI(description, options = {}) {
-  const { difficulty = "medium", type = "tactics", seed, provider = "default" } = options;
+  const {
+    difficulty = "medium",
+    type = "tactics",
+    seed,
+    provider = "default",
+    language,
+  } = options;
 
   const userPrompt = buildUserPrompt(description, difficulty, type);
   let aiResult = null;
   try {
-    aiResult = await callAI(userPrompt, provider);
+    aiResult = await callAI(userPrompt, provider, language);
   } catch (error) {
     console.warn("[AI Puzzle] Provider call failed:", error.message);
   }
@@ -141,7 +148,7 @@ function buildUserPrompt(description, difficulty, type) {
   return `Compose ${diff} chess puzzle: ${target}.\nRequest: "${description || "a tactical combination"}"\nReturn only the JSON object described above.`;
 }
 
-async function callAI(userPrompt, _provider) {
+async function callAI(userPrompt, _provider, language) {
   const headers = { "Content-Type": "application/json" };
   if (PUZZLE_AI_API_KEY) headers.Authorization = `Bearer ${PUZZLE_AI_API_KEY}`;
 
@@ -157,7 +164,7 @@ async function callAI(userPrompt, _provider) {
         body: JSON.stringify({
           model: PUZZLE_AI_MODEL,
           messages: [
-            { role: "system", content: SYSTEM_PROMPT },
+            { role: "system", content: `${SYSTEM_PROMPT}${languageInstruction(language)}` },
             { role: "user", content: userPrompt },
           ],
           stream: false,

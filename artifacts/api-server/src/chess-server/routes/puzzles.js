@@ -392,7 +392,7 @@ router.get('/base', async (req, res) => {
 /**
  * POST /api/puzzles/ai
  * Generate a puzzle using AI with a text description
- * Body: { description, provider, difficulty, type, userId }
+ * Body: { description, provider, difficulty, type, userId, language }
  */
 router.post('/ai', async (req, res) => {
   try {
@@ -401,7 +401,8 @@ router.post('/ai', async (req, res) => {
       provider = 'default',
       difficulty = 'medium',
       type = 'tactics',
-      userId = null
+      userId = null,
+      language = null
     } = req.body;
     
     if (!description) {
@@ -417,7 +418,8 @@ router.post('/ai', async (req, res) => {
       provider,
       difficulty,
       type,
-      userId
+      userId,
+      language
     });
     
     res.json({

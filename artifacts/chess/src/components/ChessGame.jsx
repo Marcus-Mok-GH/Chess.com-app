@@ -30,6 +30,8 @@ import { usePremove } from '../hooks/usePremove';
 import { isPremoveLegal, premoveTargets } from '../engine/game/premoves';
 import GameStatus from './ChessGame/subcomponents/GameStatus';
 import './ChessGame.css';
+import { useT } from '../i18n/I18nContext';
+import { tNow } from '../i18n/translate';
 
 function resolveBotFromPersisted(persisted, fallbackBot) {
   if (persisted?.botId === 'custom') {
@@ -53,6 +55,7 @@ function ChessGame(
   },
   ref,
 ) {
+  const t = useT();
   const { user, isOnline } = useUser();
   const { settings } = useSettings();
 
@@ -470,7 +473,7 @@ function ChessGame(
         engineErrorRef.current = true;
         setEngineError(err.message || 'Failed to connect to chess engine');
       } else {
-        setEngineError(`Engine error (attempt ${busyRetryCountRef.current}/3): ${err.message}`);
+        setEngineError(tNow('Engine error (attempt {attempt}/3): {message}', { attempt: busyRetryCountRef.current, message: err.message }));
       }
     } finally {
       if (!moveScheduled) {
@@ -849,14 +852,13 @@ function ChessGame(
     return (
       <div className="chess-game-error">
         <div className="error-message">
-          <h2>⚠️ Game Initialization Error</h2>
-          <p>Failed to initialize the chess game. Please refresh the page.</p>
+          <h2>{t("⚠️ Game Initialization Error")}</h2>
+          <p>{t("Failed to initialize the chess game. Please refresh the page.")}</p>
           <button
             onClick={() => window.location.reload()}
             className="retry-button"
           >
-            Refresh Page
-          </button>
+            {t("Refresh Page")}</button>
         </div>
       </div>
     );
@@ -952,7 +954,7 @@ function ChessGame(
               {showVictory && (
                 <div className="victory-burst" role="status" aria-live="polite">
                   <span className="victory-spark" />
-                  <span className="victory-text">Checkmate!</span>
+                  <span className="victory-text">{t("Checkmate!")}</span>
                 </div>
               )}
             </div>
@@ -970,7 +972,7 @@ function ChessGame(
 
           <div className="sidebar">
             <div className="sidebar-header">
-              <span className="game-id-label" title="Game ID">Game {gameId}</span>
+              <span className="game-id-label" title={t("Game ID")}>{t("Game")}{' '}{gameId}</span>
             </div>
             <GameControls
               gameStatus={getGameStatus}

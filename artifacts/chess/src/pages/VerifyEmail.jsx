@@ -2,10 +2,13 @@ import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 import './Login.css';
+import { useT } from '../i18n/I18nContext';
+import { tNow } from '../i18n/translate';
 
 const PENDING_OTP_KEY = 'chess_pending_otp';
 
 export default function VerifyEmail() {
+  const t = useT();
   const {
     isAwaitingVerification,
     isLoggedIn,
@@ -41,7 +44,7 @@ export default function VerifyEmail() {
 
   const handleVerifyCode = async () => {
     setError('');
-    if (!/^\d{6}$/.test(otpCode)) return setError('Please enter the full 6-digit code.');
+    if (!/^\d{6}$/.test(otpCode)) return setError(tNow('Please enter the full 6-digit code.'));
 
     setIsSubmitting(true);
     try {
@@ -64,13 +67,13 @@ export default function VerifyEmail() {
     const pending = getPendingData();
     const emailToUse = pending?.email || pendingOtpEmail;
     if (!emailToUse) {
-      return setError('Session expired. Please start over.');
+      return setError(tNow('Session expired. Please start over.'));
     }
     setIsSubmitting(true);
     try {
       const result = await requestOtp({ email: emailToUse });
       if (!result.success) return setError(result.error);
-      setSuccessMsg('New code sent! Check your email for a 6-digit code.');
+      setSuccessMsg(tNow('New code sent! Check your email for a 6-digit code.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -101,10 +104,10 @@ export default function VerifyEmail() {
         </div>
 
         <div className="login-header">
-          <span className="login-eyebrow">PlayChess</span>
-          <h1 className="login-title">Check your email</h1>
+          <span className="login-eyebrow">{t("PlayChess")}</span>
+          <h1 className="login-title">{t("Check your email")}</h1>
           <p className="login-subtitle">
-            We sent a 6-digit code to <strong>{pendingOtpEmail || 'your email'}</strong>
+            {t("We sent a 6-digit code to")}{' '}<strong>{pendingOtpEmail || 'your email'}</strong>
           </p>
         </div>
 
@@ -112,7 +115,7 @@ export default function VerifyEmail() {
 
         <form className="login-form" onSubmit={(e) => e.preventDefault()}>
           <div className="login-field">
-            <label htmlFor="otp-code">Verification code</label>
+            <label htmlFor="otp-code">{t("Verification code")}</label>
             <input
               id="otp-code"
               type="text"
@@ -129,8 +132,8 @@ export default function VerifyEmail() {
             />
           </div>
 
-          {error && <p className="login-error" role="alert">{error}</p>}
-          {!error && successMsg && <p className="login-success" role="status">{successMsg}</p>}
+          {error && <p className="login-error" role="alert">{t(error)}</p>}
+          {!error && successMsg && <p className="login-success" role="status">{t(successMsg)}</p>}
 
           <button
             type="button"
@@ -138,7 +141,7 @@ export default function VerifyEmail() {
             disabled={isSubmitting || otpCode.length !== 6}
             onClick={handleVerifyCode}
           >
-            {isSubmitting ? 'Verifying…' : 'Verify Code'}
+            {t(isSubmitting ? 'Verifying…' : 'Verify Code')}
           </button>
 
           <div className="login-secondary-actions">
@@ -148,8 +151,7 @@ export default function VerifyEmail() {
               disabled={isSubmitting}
               onClick={handleResendCode}
             >
-              Resend code
-            </button>
+              {t("Resend code")}</button>
             <span className="login-divider-dot">·</span>
             <button
               type="button"
@@ -157,8 +159,7 @@ export default function VerifyEmail() {
               disabled={isSubmitting}
               onClick={handleCancel}
             >
-              Cancel &amp; log out
-            </button>
+              {t("Cancel & log out")}</button>
           </div>
         </form>
       </div>

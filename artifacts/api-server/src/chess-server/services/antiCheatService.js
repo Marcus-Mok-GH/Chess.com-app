@@ -264,7 +264,22 @@ export async function notifyCheatConfirmed(gameCode, { reviewerId = null } = {})
       gameCode: code,
       title: `Cheating confirmed in game ${code}`,
       body: `A fair-play review confirmed that ${summary} used engine assistance against you in ranked game ${code}.`,
-      payload,
+      payload: {
+        ...payload,
+        // The inbox renders these templates in the reader's own language; the
+        // English title and body above stay as the stored fallback.
+        i18n: {
+          titleKey: 'Cheating confirmed in game {code}',
+          bodyKey:
+            'A fair-play review confirmed that {summary} used engine assistance against you in ranked game {code}.',
+          params: {
+            code,
+            name: cheaters[0]?.name || null,
+            poolLabel: pool.label || null,
+            elo: cheaters[0] ? eloOf(cheaters[0]) : null,
+          },
+        },
+      },
     })),
     ...admins.map((id) => ({
       recipientId: id,
@@ -272,7 +287,22 @@ export async function notifyCheatConfirmed(gameCode, { reviewerId = null } = {})
       gameCode: code,
       title: `Fair-play case confirmed — game ${code}`,
       body: `Game ${code}: ${summary} was confirmed as cheating${attribution}.`,
-      payload,
+      payload: {
+        ...payload,
+        i18n: {
+          titleKey: 'Fair-play case confirmed — game {code}',
+          bodyKey: actingReviewer
+            ? 'Game {code}: {summary} was confirmed as cheating by reviewer {reviewer}.'
+            : 'Game {code}: {summary} was confirmed as cheating.',
+          params: {
+            code,
+            name: cheaters[0]?.name || null,
+            poolLabel: pool.label || null,
+            elo: cheaters[0] ? eloOf(cheaters[0]) : null,
+            reviewer: actingReviewer ? String(actingReviewer) : null,
+          },
+        },
+      },
     })),
   ];
 

@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import './EloSlider.css'
+import { useT } from '../i18n/I18nContext';
 
 export default function EloSlider({ value, onChange, disabled }) {
+  const t = useT();
   const [displayValue, setDisplayValue] = useState(value)
 
   const handleChange = (e) => {
@@ -22,7 +24,7 @@ export default function EloSlider({ value, onChange, disabled }) {
   return (
     <div className="elo-slider">
       <div className="elo-slider-header">
-        <label className="elo-slider-label">Custom ELO Rating</label>
+        <label className="elo-slider-label">{t("Custom ELO Rating")}</label>
         <div className="elo-value">
           <span className="elo-number">{displayValue}</span>
           <span className="elo-skill">{getSkillLevel(displayValue)}</span>

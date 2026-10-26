@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Changelog.css';
+import { useT } from '../i18n/I18nContext';
 
 function parseChangelog(markdown) {
   const lines = markdown.split('\n');
@@ -26,6 +27,7 @@ function parseChangelog(markdown) {
 }
 
 export default function Changelog() {
+  const t = useT();
   const navigate = useNavigate();
   const [markdown, setMarkdown] = useState('');
 
@@ -53,13 +55,12 @@ export default function Changelog() {
       <div className="changelog-container">
         <div className="changelog-nav-row">
           <button className="changelog-home-btn" onClick={() => navigate('/home')}>
-            ← Back to Home
-          </button>
+            {t("← Back to Home")}</button>
         </div>
 
         <header className="changelog-header">
-          <h1>Changelog</h1>
-          <p>Release history synced from CHANGELOG.md (latest first, auto-updated)</p>
+          <h1>{t("Changelog")}</h1>
+          <p>{t("Release history synced from CHANGELOG.md (latest first, auto-updated)")}</p>
         </header>
 
         <div className="changelog-entries">

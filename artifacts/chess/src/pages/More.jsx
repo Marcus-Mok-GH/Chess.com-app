@@ -3,14 +3,7 @@ import { BookOpen, Building2, History, Puzzle, Settings2, ShieldCheck, Trophy, U
 import { useUser } from '../contexts/UserContext';
 import { RATING_POOLS } from '../utils/timeControls';
 import './More.css'
-
-// Built from RATING_POOLS so this entry can never drift from the pools the
-// leaderboard actually offers (Unlimited, Blitz, Rapid, Classical).
-const ratingPoolLabels = RATING_POOLS.map((pool) => pool.label)
-const ratingPoolList =
-  ratingPoolLabels.length > 1
-    ? `${ratingPoolLabels.slice(0, -1).join(', ')}, and ${ratingPoolLabels.at(-1)}`
-    : ratingPoolLabels[0] ?? ''
+import { useI18n } from '../i18n/I18nContext';
 
 // Mobile users never see the desktop sidebar, so the admin-only /admin route
 // is surfaced here for admins (mirrors the sidebar link on desktop).
@@ -34,7 +27,7 @@ const staticOptionGroups = [
     options: [
       { to: '/friends', icon: UsersRound, title: 'Friends', description: 'Connect with other players' },
       { to: '/clubs', icon: Building2, title: 'Clubs', description: 'Find a community to join' },
-      { to: '/leaderboard', icon: Trophy, title: 'Leaderboard', description: `See the top ${ratingPoolList} ratings` },
+      { to: '/leaderboard', icon: Trophy, title: 'Leaderboard', description: 'See the top {pools} ratings' },
     ],
   },
   {
@@ -47,7 +40,11 @@ const staticOptionGroups = [
 ]
 
 export default function More() {
+  const { locale, t } = useI18n();
   const { user } = useUser();
+  const ratingPoolList = new Intl.ListFormat(locale, { style: 'long', type: 'conjunction' }).format(
+    RATING_POOLS.map((pool) => t(pool.label)),
+  );
   const optionGroups = user?.isAdmin
     ? [...staticOptionGroups, { title: 'Admin', options: [adminOption] }]
     : staticOptionGroups;
@@ -58,15 +55,15 @@ export default function More() {
         <header className="more-page-header">
           <span className="more-page-icon" aria-hidden="true">•••</span>
           <div>
-            <h1 id="more-page-title">More</h1>
-            <p>Discover more ways to play, learn, and connect.</p>
+            <h1 id="more-page-title">{t("More")}</h1>
+            <p>{t("Discover more ways to play, learn, and connect.")}</p>
           </div>
         </header>
 
         <div className="more-groups">
           {optionGroups.map((group) => (
             <section className="more-group" key={group.title} aria-labelledby={`more-${group.title.replaceAll(' ', '-').toLowerCase()}`}>
-              <h2 id={`more-${group.title.replaceAll(' ', '-').toLowerCase()}`}>{group.title}</h2>
+              <h2 id={`more-${group.title.replaceAll(' ', '-').toLowerCase()}`}>{t(group.title)}</h2>
               <div className="more-options">
                 {group.options.map((option) => {
                   const Icon = option.icon
@@ -74,8 +71,8 @@ export default function More() {
                     <Link key={option.to} to={option.to} className="more-option">
                       <span className="more-option-icon" aria-hidden="true"><Icon size={18} /></span>
                       <span className="more-option-copy">
-                        <span className="more-option-title">{option.title}</span>
-                        <span className="more-option-description">{option.description}</span>
+                        <span className="more-option-title">{t(option.title)}</span>
+                        <span className="more-option-description">{t(option.description, { pools: ratingPoolList })}</span>
                       </span>
                       <span className="more-option-arrow" aria-hidden="true">›</span>
                     </Link>

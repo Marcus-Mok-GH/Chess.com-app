@@ -29,6 +29,8 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import "./Puzzles.css";
+import { useT } from '../i18n/I18nContext';
+import { tNow } from '../i18n/translate';
 
 function loadFen(fen) {
   try {
@@ -50,7 +52,7 @@ function difficultyForRating(rating) {
 }
 
 function difficultyLabel(difficulty) {
-  return difficulty === "beginner" ? "Beginner" : difficulty === "easy" ? "Easy" : difficulty === "intermediate" ? "Intermediate" : "Advanced";
+  return tNow(difficulty === "beginner" ? "Beginner" : difficulty === "easy" ? "Easy" : difficulty === "intermediate" ? "Intermediate" : "Advanced");
 }
 
 function difficultyProgress(rating) {
@@ -180,10 +182,10 @@ function countMaterial(chess, color) {
  * generator's position-specific hint, so the guidance matches the board
  * without naming the solution move.
  */
-function buildPuzzleConceptFallback(puzzle) {
+function buildPuzzleConceptFallback(puzzle, t) {
   if (!puzzle?.fen) return "";
-  const side = puzzle.sideToMove === "black" ? "Black" : "White";
-  const parts = [`${side} to move.`];
+  const side = t(puzzle.sideToMove === "black" ? "Black" : "White");
+  const parts = [t("{side} to move.", { side })];
 
   try {
     const chess = new Chess(puzzle.fen);
@@ -193,7 +195,7 @@ function buildPuzzleConceptFallback(puzzle) {
     // Material context: capture tactics usually appear when the mover is down
     // material or an enemy piece can be won.
     if (countMaterial(chess, opponent) > countMaterial(chess, mover)) {
-      parts.push(`${side} is down material and needs a tactic to fight back.`);
+      parts.push(t("{side} is down material and needs a tactic to fight back.", { side }));
     }
 
     // Best available capture value for the side to move.
@@ -203,21 +205,21 @@ function buildPuzzleConceptFallback(puzzle) {
       if (value > 0 && (!bestCapture || value > bestCapture)) bestCapture = value;
     }
     if (bestCapture !== null && bestCapture >= 3) {
-      parts.push("A valuable enemy piece can be captured — check it is not defended first.");
+      parts.push(t("A valuable enemy piece can be captured — check it is not defended first."));
     }
 
     if (chess.isCheck()) {
-      parts.push(`${side} is in check and must deal with the threat first.`);
+      parts.push(t("{side} is in check and must deal with the threat first.", { side }));
     }
   } catch {
     // Position could not be parsed; the theme/hint lines below still apply.
   }
 
   if (parts.length === 1 && puzzle.hint) {
-    parts.push(puzzle.hint);
+    parts.push(t(puzzle.hint));
   }
   if (parts.length === 1 && puzzle.theme) {
-    parts.push(`This position calls for the "${puzzle.theme}" idea.`);
+    parts.push(t('This position calls for the "{theme}" idea.', { theme: t(puzzle.theme) }));
   }
 
   return trimToShortConcept(parts.join(" "));
@@ -254,10 +256,25 @@ function splitSentencesForConcept(text) {
  * @param {number} [maxWords] Total word cap across kept sentences.
  * @returns {string} The trimmed concept, at most `maxWords` words long.
  */
-function trimToShortConcept(text, maxWords = SHORT_CONCEPT_MAX_WORDS) {
+export function trimToShortConcept(text, maxWords = SHORT_CONCEPT_MAX_WORDS) {
   const joined = Array.isArray(text) ? text.join(" ") : String(text || "");
   const cleaned = joined.replace(/\s+/g, " ").trim();
   if (!cleaned) return "";
+
+  if (/[\u3400-\u9fff\u3040-\u30ff\uac00-\ud7af]/u.test(cleaned)) {
+    const maxCharacters = maxWords * 5;
+    const characters = Array.from(cleaned);
+    if (characters.length <= maxCharacters) return cleaned;
+    const shortened = characters.slice(0, maxCharacters).join("");
+    const sentenceEnd = Math.max(
+      shortened.lastIndexOf("。"),
+      shortened.lastIndexOf("！"),
+      shortened.lastIndexOf("？"),
+    );
+    if (sentenceEnd >= maxCharacters * 0.6) return shortened.slice(0, sentenceEnd + 1);
+    const trimmed = Array.from(shortened.replace(/[\s，、,.!?;:]+$/u, ""));
+    return `${trimmed.slice(0, Math.max(0, maxCharacters - 1)).join("")}…`;
+  }
 
   let kept = "";
   for (const sentence of splitSentencesForConcept(cleaned).slice(0, 2)) {
@@ -275,6 +292,7 @@ function trimToShortConcept(text, maxWords = SHORT_CONCEPT_MAX_WORDS) {
 }
 
 export default function Puzzles() {
+  const t = useT();
   const { isLoggedIn } = useUser();
   const location = useLocation();
   const navigate = useNavigate();
@@ -499,7 +517,7 @@ export default function Puzzles() {
   useEffect(() => {
     if (!puzzle) return;
     const requestId = ++lessonConceptRequestRef.current;
-    setLessonConcept(buildPuzzleConceptFallback(puzzle));
+    setLessonConcept(buildPuzzleConceptFallback(puzzle, t));
 
     getLessonConcept({
       fen: puzzle.fen,
@@ -538,7 +556,7 @@ export default function Puzzles() {
         if (explanation) {
           setLlmDescription(trimToShortConcept(explanation));
         } else {
-          setLlmError("No explanation returned from AI coach.");
+          setLlmError(tNow('No explanation returned from AI coach.'));
         }
       })
       .catch((error) => {
@@ -795,11 +813,10 @@ export default function Puzzles() {
               <div className="puzzles-llm-card puzzles-llm-card--loading" role="status">
                 <div className="puzzles-llm-header">
                   <Bot className="puzzles-llm-icon" size={18} />
-                  <span>AI Coach Explanation</span>
+                  <span>{t("AI Coach Explanation")}</span>
                 </div>
                 <p className="puzzles-llm-text">
-                  <span className="puzzles-llm-spinner" /> Analyzing why that move missed...
-                </p>
+                  <span className="puzzles-llm-spinner" /> {' '}{t("Analyzing why that move missed...")}</p>
               </div>
             )}
 
@@ -807,7 +824,7 @@ export default function Puzzles() {
               <div className="puzzles-llm-card puzzles-llm-card--error" role="alert">
                 <div className="puzzles-llm-header">
                   <AlertTriangle className="puzzles-llm-icon" size={18} />
-                  <span>AI Coach Explanation Error</span>
+                  <span>{t("AI Coach Explanation Error")}</span>
                 </div>
                 <p className="puzzles-llm-error-text">{llmError}</p>
               </div>
@@ -817,7 +834,7 @@ export default function Puzzles() {
               <div className="puzzles-llm-card">
                 <div className="puzzles-llm-header">
                   <Bot className="puzzles-llm-icon" size={18} />
-                  <span>Why that move missed</span>
+                  <span>{t("Why that move missed")}</span>
                 </div>
                 <p className="puzzles-llm-text">{llmDescription}</p>
               </div>
@@ -830,8 +847,7 @@ export default function Puzzles() {
                 onClick={handleReset}
                 disabled={initializing || !puzzle || llmLoading}
               >
-                <RotateCcw size={16} /> Retry
-              </button>
+                <RotateCcw size={16} /> {' '}{t("Retry")}</button>
             )}
           </div>
         )}
@@ -847,11 +863,11 @@ export default function Puzzles() {
             <div className="puzzles-eyebrow">
               <GraduationCap className="puzzles-eyebrow-icon" size={13} />
               <span>
-                Lesson Scheme · {currentLesson.order} of {LESSON_CATALOG.length}
+                {t("Lesson Scheme ·")}{' '}{currentLesson.order} of {LESSON_CATALOG.length}
               </span>
             </div>
             <span className="puzzles-meta">
-              Topic: {currentLesson.topic} · {difficultyLabel(puzzle?.difficulty || difficultyForRating(puzzleRating))}
+              {t("Topic:")}{' '}{t(currentLesson.topic)} · {difficultyLabel(puzzle?.difficulty || difficultyForRating(puzzleRating))}
             </span>
           </div>
 
@@ -860,19 +876,18 @@ export default function Puzzles() {
               type="button"
               className="puzzles-scheme-btn"
               onClick={goToPrevPuzzle}
-              title="Previous lesson puzzle"
+              title={t("Previous lesson puzzle")}
             >
-              <ChevronLeft size={16} /> Prev
-            </button>
+              <ChevronLeft size={16} /> {' '}{t("Prev")}</button>
             <select
               className="puzzles-scheme-select"
               value={currentLessonIndex}
               onChange={(e) => setCurrentLessonIndex(Number(e.target.value))}
-              aria-label="Select puzzle in lesson scheme"
+              aria-label={t("Select puzzle in lesson scheme")}
             >
               {LESSON_CATALOG.map((lesson, idx) => (
                 <option key={lesson.id} value={idx}>
-                  {lesson.order}. {lesson.title} ({lesson.topic})
+                  {lesson.order}. {t(lesson.title)} ({t(lesson.topic)})
                 </option>
               ))}
             </select>
@@ -880,20 +895,19 @@ export default function Puzzles() {
               type="button"
               className="puzzles-scheme-btn"
               onClick={goToNextLesson}
-              title="Next lesson puzzle"
+              title={t("Next lesson puzzle")}
             >
-              Next <ChevronRight size={16} />
+              {t("Next")}{' '}<ChevronRight size={16} />
             </button>
           </div>
 
-          <h1 className="puzzles-title">{currentLesson.title}</h1>
+          <h1 className="puzzles-title">{t(currentLesson.title)}</h1>
           <p className="puzzles-subtitle">
-            {displaySide === "white" ? "White" : "Black"} to move. Start with a clear tactic; the challenge grows as you solve.
-          </p>
-          <div className="puzzle-progression" aria-label={`Puzzle progression: ${difficultyLabel(difficultyForRating(puzzleRating))}, rating ${puzzleRating}`}>
+            {t('{side} to move. Start with a clear tactic; the challenge grows as you solve.', { side: t(displaySide === "white" ? "White" : "Black") })}</p>
+          <div className="puzzle-progression" aria-label={t('Puzzle progression: {difficulty}, rating {rating}', { difficulty: difficultyLabel(difficultyForRating(puzzleRating)), rating: puzzleRating })}>
             <div className="puzzle-progression-top"><span>{difficultyLabel(difficultyForRating(puzzleRating))}</span><strong>{puzzleRating}</strong></div>
             <div className="puzzle-progression-track"><span style={{ width: `${difficultyProgress(puzzleRating)}%` }} /></div>
-            <div className="puzzle-progression-caption">Solve to move up · miss or skip to ease back</div>
+            <div className="puzzle-progression-caption">{t("Solve to move up · miss or skip to ease back")}</div>
           </div>
         </header>
 
@@ -912,15 +926,14 @@ export default function Puzzles() {
               />
             ) : (
               <div className="puzzle-board-loading" role="status">
-                {generationError
+                {t(generationError
                   ? "Puzzle generation is unavailable"
-                  : "Preparing lesson puzzle…"}
+                  : "Preparing lesson puzzle…")}
               </div>
             )}
             {solved && (
               <div className="puzzle-result puzzle-result--solved">
-                <Check size={18} /> Correct!
-                {willPlayFollowup && " (+followup)"}
+                <Check size={18} /> {' '}{t("Correct!")}{willPlayFollowup && <> {' '}{t("(+follow-up)")}</>}
               </div>
             )}
           </div>
@@ -931,33 +944,29 @@ export default function Puzzles() {
               <div className="status-row">
                 <div className="status-stat">
                   <span className="status-label">
-                    <Target size={12} /> Solved
-                  </span>
+                    <Target size={12} /> {' '}{t("Solved")}</span>
                   <span className="status-value">{solvedCount}</span>
                 </div>
                 <div className="status-stat">
                   <span className="status-label">
-                    <Zap size={12} /> Streak
-                  </span>
+                    <Zap size={12} /> {' '}{t("Streak")}</span>
                   <span className="status-value">{streak}</span>
                 </div>
                 <div className="status-stat">
                   <span className="status-label">
-                    <Trophy size={12} /> Best
-                  </span>
+                    <Trophy size={12} /> {' '}{t("Best")}</span>
                   <span className="status-value">{bestStreak}</span>
                 </div>
               </div>
               {attemptedCount > 0 && (
                 <div className="status-accuracy">
-                  {Math.round((solvedCount / attemptedCount) * 100)}% accuracy
-                </div>
+                  {Math.round((solvedCount / attemptedCount) * 100)}{t("% accuracy")}</div>
               )}
             </div>
             ) : (
               <AccountRequired
-                title="Track your progress"
-                message="Solved count, streak, and rating are saved to your account. Log in to keep them."
+                title={t("Track your progress")}
+                message={t("Solved count, streak, and rating are saved to your account. Log in to keep them.")}
               />
             )}
 
@@ -968,7 +977,7 @@ export default function Puzzles() {
                 onClick={() => setShowHint(true)}
                 disabled={showHint || initializing || !puzzle}
               >
-                <Lightbulb size={16} /> {showHint ? "Hint shown" : "Hint"}
+                <Lightbulb size={16} /> {t(showHint ? "Hint shown" : "Hint")}
               </button>
               <button
                 type="button"
@@ -976,21 +985,19 @@ export default function Puzzles() {
                 onClick={() => goToNextPuzzle(false)}
                 disabled={initializing}
               >
-                <SkipForward size={16} /> Skip
-              </button>
+                <SkipForward size={16} /> {' '}{t("Skip")}</button>
               <button
                 type="button"
                 className="puzzle-action puzzle-action--reset"
                 onClick={handleReset}
                 disabled={initializing || !puzzle}
               >
-                <RotateCcw size={16} /> Reset
-              </button>
+                <RotateCcw size={16} /> {' '}{t("Reset")}</button>
             </div>
 
             {generationError && (
               <div className="puzzle-side-card puzzle-engine-error" role="alert">
-                <strong>Unable to create lesson puzzle.</strong>
+                <strong>{t("Unable to create lesson puzzle.")}</strong>
                 <span>{generationError}</span>
                 <button
                   type="button"
@@ -998,35 +1005,32 @@ export default function Puzzles() {
                   onClick={() => loadPuzzleForLesson(currentLessonIndex)}
                   disabled={initializing}
                 >
-                  Try again
-                </button>
+                  {t("Try again")}</button>
               </div>
             )}
 
             {showHint && puzzle && (
               <div className="puzzle-side-card puzzle-hint-card">
                 <div className="puzzle-hint-eyebrow">
-                  <Lightbulb size={13} /> Hint
-                </div>
-                <p className="puzzle-hint-text">{puzzle.hint}</p>
+                  <Lightbulb size={13} /> {' '}{t("Hint")}</div>
+                <p className="puzzle-hint-text">{t(puzzle.hint)}</p>
               </div>
             )}
 
             <div className="puzzle-side-card puzzle-lesson-summary">
               <div className="puzzle-lesson-summary-header">
-                <GraduationCap size={14} /> Lesson Concept
-              </div>
+                <GraduationCap size={14} /> {' '}{t("Lesson Concept")}</div>
               <p className="puzzle-lesson-para">
-                {trimToShortConcept(lessonConcept || buildPuzzleConceptFallback(puzzle))}
+                {trimToShortConcept(lessonConcept || buildPuzzleConceptFallback(puzzle, t))}
               </p>
             </div>
 
             <div className="puzzle-side-card puzzle-to-move-hint">
               <span className="dot" data-color={displaySide} />
               <span>
-                {displaySide === "white"
+                {t(displaySide === "white"
                   ? "White to move. Drag or tap a piece, then tap destination."
-                  : "Black to move. Drag or tap a piece, then tap destination."}
+                  : "Black to move. Drag or tap a piece, then tap destination.")}
               </span>
             </div>
           </aside>

@@ -7,6 +7,8 @@ import {
   markNotificationRead,
   useNotifications,
 } from '../hooks/useNotifications';
+import { useT } from '../i18n/I18nContext';
+import { getActiveLocale } from '../i18n/translate';
 
 const PANEL_WIDTH = 340;
 const PANEL_MAX_HEIGHT = 420;
@@ -14,12 +16,40 @@ const PANEL_MAX_HEIGHT = 420;
 function formatWhen(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString(undefined, {
+  return date.toLocaleString(getActiveLocale(), {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+/**
+ * Inbox bell for the app shell./**
+ * Server-written notifications carry a template key alongside the English
+ * fallback, so the inbox can follow the interface language. Rows written before
+ * localisation shipped have no template and fall back to the stored text.
+ *
+ * @param {object} item Notification row.
+ * @param {Function} t Translator from the interface locale.
+ * @returns {{title: string, body: string}} Text to display.
+ */
+function notificationText(item, t) {
+  const template = item?.payload?.i18n;
+  if (!template?.titleKey || !template?.bodyKey) {
+    return { title: item.title, body: item.body };
+  }
+  const params = template.params || {};
+  // `summary` is the accused player plus their rating context. Building it here
+  // rather than on the server keeps the time-control label in the reader's
+  // language; the server cannot know which locale the inbox will render in.
+  const bits = [params.poolLabel ? t(params.poolLabel) : null, params.elo != null ? `Elo ${params.elo}` : null].filter(
+    Boolean,
+  );
+  const who = params.name || t('Your opponent');
+  const summary = bits.length ? `${who} (${bits.join(' · ')})` : who;
+  const merged = { ...params, summary };
+  return { title: t(template.titleKey, merged), body: t(template.bodyKey, merged) };
 }
 
 /**
@@ -32,6 +62,7 @@ function formatWhen(value) {
  * absolutely positioned dropdown would be clipped by either.
  */
 export default function NotificationBell() {
+  const t = useT();
   const { user, isLoggedIn } = useUser();
   const accountKey = isLoggedIn && user?.id ? user.id : null;
   const { items, unreadCount, loading, loaded, error } = useNotifications(accountKey);
@@ -116,7 +147,11 @@ export default function NotificationBell() {
       <button
         type="button"
         className="notification-bell-btn"
-        aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : 'Notifications'}
+        aria-label={
+          unreadCount > 0
+            ? t('Notifications ({count} unread)', { count: unreadCount })
+            : t('Notifications')
+        }
         aria-expanded={open}
         aria-haspopup="true"
         onClick={() => setOpen((value) => !value)}
@@ -126,40 +161,42 @@ export default function NotificationBell() {
       </button>
 
       {open && panelStyle && (
-        <div className="notification-panel" style={panelStyle} aria-label="Notifications">
+        <div className="notification-panel" style={panelStyle} aria-label={t("Notifications")}>
           <div className="notification-panel-head">
-            <strong>Notifications</strong>
+            <strong>{t("Notifications")}</strong>
             {unreadCount > 0 && (
               <button
                 type="button"
                 className="notification-mark-all"
                 onClick={() => { markAllNotificationsRead().catch(() => {}); }}
               >
-                Mark all read
-              </button>
+                {t("Mark all read")}</button>
             )}
           </div>
 
           <ul className="notification-list">
             {loading && !loaded && (
-              <li className="notification-empty">Loading…</li>
+              <li className="notification-empty">{t("Loading…")}</li>
             )}
             {!loading && items.length === 0 && (
               <li className="notification-empty">{error || 'No notifications yet.'}</li>
             )}
-            {items.map((item) => (
-              <li key={item.id}>
-                <button
-                  type="button"
-                  className={`notification-item${item.read_at ? '' : ' is-unread'}`}
-                  onClick={() => openItem(item)}
-                >
-                  <span className="notification-item-title">{item.title}</span>
-                  <span className="notification-item-body">{item.body}</span>
-                  <span className="notification-item-time">{formatWhen(item.created_at)}</span>
-                </button>
-              </li>
-            ))}
+            {items.map((item) => {
+              const text = notificationText(item, t);
+              return (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    className={`notification-item${item.read_at ? '' : ' is-unread'}`}
+                    onClick={() => openItem(item)}
+                  >
+                    <span className="notification-item-title">{text.title}</span>
+                    <span className="notification-item-body">{text.body}</span>
+                    <span className="notification-item-time">{formatWhen(item.created_at)}</span>
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

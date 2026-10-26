@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import './FeedbackPanel.css';
+import { useT } from '../i18n/I18nContext';
 
 const REAPPEAR_DELAY = 30000; // 30 seconds
 
 export function FeedbackPanel() {
+  const t = useT();
   const [isOpen, setIsOpen] = useState(false);
   const [isHidden, setIsHidden] = useState(false);
   const [feedbackType, setFeedbackType] = useState('suggestion');
@@ -92,14 +94,13 @@ export function FeedbackPanel() {
         <button
           className="feedback-trigger"
           onClick={() => { setSubmitError(''); setIsOpen(true); }}
-          aria-label="Send feedback"
+          aria-label={t("Send feedback")}
         >
-          Feedback
-        </button>
+          {t("Feedback")}</button>
         <button
           className="feedback-dismiss"
           onClick={handleDismiss}
-          aria-label="Dismiss feedback button"
+          aria-label={t("Dismiss feedback button")}
         >
           ✕
         </button>
@@ -111,7 +112,7 @@ export function FeedbackPanel() {
             <button
               className="feedback-close"
               onClick={() => setIsOpen(false)}
-              aria-label="Close feedback"
+              aria-label={t("Close feedback")}
             >
               ✕
             </button>
@@ -119,14 +120,14 @@ export function FeedbackPanel() {
             {submitted ? (
               <div className="feedback-success">
                 <span className="success-icon">✓</span>
-                <h3>Thank you!</h3>
-                <p>Your feedback has been submitted.</p>
+                <h3>{t("Thank you!")}</h3>
+                <p>{t("Your feedback has been submitted.")}</p>
               </div>
             ) : (
               <>
                 <div className="feedback-header">
-                  <h2>Send Feedback</h2>
-                  <p>Help us improve your chess experience</p>
+                  <h2>{t("Send Feedback")}</h2>
+                  <p>{t("Help us improve your chess experience")}</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="feedback-form">
@@ -142,23 +143,23 @@ export function FeedbackPanel() {
                         className={`type-btn ${feedbackType === type.value ? 'active' : ''}`}
                         onClick={() => setFeedbackType(type.value)}
                       >
-                        {type.label}
+                        {t(type.label)}
                       </button>
                     ))}
                   </div>
 
                   <div className="input-group">
-                    <label htmlFor="feedback-message">Your feedback</label>
+                    <label htmlFor="feedback-message">{t("Your feedback")}</label>
                     <textarea
                       id="feedback-message"
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
                       placeholder={
                         feedbackType === 'bug'
-                          ? 'Describe the bug and steps to reproduce...'
+                          ? t('Describe the bug and steps to reproduce...')
                           : feedbackType === 'praise'
-                          ? 'What do you love about the app?'
-                          : 'Share your ideas for improvement...'
+                          ? t('What do you love about the app?')
+                          : t('Share your ideas for improvement...')
                       }
                       rows={4}
                       autoFocus
@@ -168,18 +169,18 @@ export function FeedbackPanel() {
                   </div>
 
                   <div className="input-group">
-                    <label htmlFor="feedback-email">Email (optional)</label>
+                    <label htmlFor="feedback-email">{t("Email (optional)")}</label>
                     <input
                       id="feedback-email"
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="your@email.com"
+                      placeholder={t("your@email.com")}
                     />
-                    <span className="input-hint">We'll only use this to follow up on your feedback</span>
+                    <span className="input-hint">{t("We'll only use this to follow up on your feedback")}</span>
                   </div>
 
-                  {submitError && <p className="feedback-error" role="alert">{submitError}</p>}
+                  {submitError && <p className="feedback-error" role="alert">{t(submitError)}</p>}
 
                   <div className="feedback-buttons">
                     <button
@@ -187,14 +188,13 @@ export function FeedbackPanel() {
                       className="btn btn-secondary"
                       onClick={() => setIsOpen(false)}
                     >
-                      Cancel
-                    </button>
+                      {t("Cancel")}</button>
                     <button
                       type="submit"
                       className="btn btn-primary"
                       disabled={isSubmitting || !message.trim()}
                     >
-                      {isSubmitting ? 'Sending...' : 'Send Feedback'}
+                      {t(isSubmitting ? 'Sending...' : 'Send Feedback')}
                     </button>
                   </div>
                 </form>

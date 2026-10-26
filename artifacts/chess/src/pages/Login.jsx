@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 import './Login.css';
+import { useT } from '../i18n/I18nContext';
+import { tNow } from '../i18n/translate';
 
 /**
  * Render the sign-in page that collects an email and initiates an OTP request.
@@ -12,6 +14,7 @@ import './Login.css';
  * @returns {JSX.Element} The login page UI.
  */
 export default function Login() {
+  const t = useT();
   const { requestOtp, isLoggedIn, isLoading } = useUser();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -42,11 +45,11 @@ export default function Login() {
     if (isSubmitting) return;
     setError('');
     if (!email.trim()) {
-      setError('Please enter your email address.');
+      setError(tNow('Please enter your email address.'));
       return;
     }
     if (!validateEmail(email)) {
-      setError('Please enter a valid email address.');
+      setError(tNow('Please enter a valid email address.'));
       return;
     }
 
@@ -106,22 +109,22 @@ export default function Login() {
         </div>
 
         <div className="login-header">
-          <span className="login-eyebrow">PlayChess</span>
-          <h1 className="login-title">{isSignupIntent ? 'Create an account' : 'Log in'}</h1>
-          <p className="login-subtitle">{isSignupIntent ? 'Pick a username, get a rating, start playing.' : 'Enter your email and we\'ll send a code.'}</p>
+          <span className="login-eyebrow">{t("PlayChess")}</span>
+          <h1 className="login-title">{t(isSignupIntent ? 'Create an account' : 'Log in')}</h1>
+          <p className="login-subtitle">{t(isSignupIntent ? 'Pick a username, get a rating, start playing.' : "Enter your email and we'll send a code.")}</p>
         </div>
 
         <hr className="login-divider" />
 
         <form className="login-form" onSubmit={(e) => e.preventDefault()}>
           <div className="login-field">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">{t("Email")}</label>
             <input
               id="email"
               type="email"
               value={email}
               onChange={handleEmailChange}
-              placeholder="your@email.com"
+              placeholder={t("your@email.com")}
               autoComplete="email"
               autoFocus
               aria-describedby={error ? 'email-error' : emailInvalid ? 'login-validator' : undefined}
@@ -130,8 +133,8 @@ export default function Login() {
             />
           </div>
 
-          {error && <p id="email-error" className="login-error" role="alert">{error}</p>}
-          {emailInvalid && !error && <p className="login-validator">Please enter a valid email address</p>}
+          {error && <p id="email-error" className="login-error" role="alert">{t(error)}</p>}
+          {emailInvalid && !error && <p className="login-validator">{t("Please enter a valid email address")}</p>}
 
           <button
             type="button"
@@ -139,14 +142,14 @@ export default function Login() {
             disabled={isSubmitting || !email.trim() || emailInvalid}
             onClick={handleSendCode}
           >
-            {isSubmitting ? 'Sending…' : 'Send Code'}
+            {t(isSubmitting ? 'Sending…' : 'Send Code')}
           </button>
 
           <div className="login-legal">
-            By {isSignupIntent ? 'creating an account' : 'signing in'}, you agree to our{' '}
-            <a href="/terms" target="_blank" rel="noopener noreferrer">Terms</a>{' '}
-            and{' '}
-            <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.
+            {t("By")}{' '}{t(isSignupIntent ? 'creating an account' : 'signing in')}{t(", you agree to our")}{' '}
+            <a href="/terms" target="_blank" rel="noopener noreferrer">{t("Terms")}</a>{' '}
+            {t('and')}{' '}
+            <a href="/privacy" target="_blank" rel="noopener noreferrer">{t("Privacy Policy")}</a>.
           </div>
         </form>
       </div>

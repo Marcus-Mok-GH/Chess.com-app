@@ -1,9 +1,11 @@
 import { useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import './WinRateChart.css';
+import { useT } from '../i18n/I18nContext';
+import { getActiveLocale } from '../i18n/translate';
 
 const formatDate = (dateString) =>
-  new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  new Date(dateString).toLocaleDateString(getActiveLocale(), { month: 'short', day: 'numeric' });
 
 const getLineColor = (winRate) => {
   if (winRate >= 60) return '#81b64c';
@@ -12,6 +14,7 @@ const getLineColor = (winRate) => {
 };
 
 const CustomTooltip = ({ active, payload }) => {
+  const t = useT();
   if (!active || !payload?.length) {
     return null;
   }
@@ -21,10 +24,9 @@ const CustomTooltip = ({ active, payload }) => {
   return (
     <div className="winrate-tooltip">
       <div className="tooltip-header">
-        <span className="tooltip-games">Game {data.game}</span>
+        <span className="tooltip-games">{t("Game")}{' '}{data.game}</span>
         <span className={`tooltip-winrate ${data.winRate >= 50 ? 'positive' : 'negative'}`}>
-          {data.winRate}% win rate
-        </span>
+          {data.winRate}{t("% win rate")}</span>
       </div>
       <div className="tooltip-stats">
         <span className="stat-item win">{data.wins}W</span>
@@ -43,6 +45,7 @@ const CustomTooltip = ({ active, payload }) => {
 };
 
 const WinRateChart = ({ history = [] }) => {
+  const t = useT();
   const chartData = useMemo(() => {
     if (!history || history.length === 0) {
       return [];
@@ -104,8 +107,8 @@ const WinRateChart = ({ history = [] }) => {
     return (
       <div className="winrate-chart-container">
         <div className="winrate-chart-placeholder">
-          <p>No game history available</p>
-          <p className="hint">Play games to track your win rate</p>
+          <p>{t("No game history available")}</p>
+          <p className="hint">{t("Play games to track your win rate")}</p>
         </div>
       </div>
     );
@@ -118,19 +121,19 @@ const WinRateChart = ({ history = [] }) => {
   return (
     <div className="winrate-chart-container">
       <div className="winrate-chart-header">
-        <h2 className="winrate-chart-title">Win Rate Over Time</h2>
+        <h2 className="winrate-chart-title">{t("Win Rate Over Time")}</h2>
         <div className="winrate-chart-legend">
           <div className="legend-item">
             <span className="legend-dot win"></span>
-            <span>Win</span>
+            <span>{t("Win")}</span>
           </div>
           <div className="legend-item">
             <span className="legend-dot loss"></span>
-            <span>Loss</span>
+            <span>{t("Loss")}</span>
           </div>
           <div className="legend-item">
             <span className="legend-dot draw"></span>
-            <span>Draw</span>
+            <span>{t("Draw")}</span>
           </div>
         </div>
       </div>

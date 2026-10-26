@@ -6,9 +6,12 @@ import AccountRequired from '../components/AccountRequired';
 import EloProgressChart from '../components/EloProgressChart';
 import WinRateChart from '../components/WinRateChart';
 import './GameHistory.css';
+import { useI18n } from '../i18n/I18nContext';
+import { tNow } from '../i18n/translate';
+import { getActiveLocale } from '../i18n/translate';
 
 function formatDate(dateString) {
-  return new Date(dateString).toLocaleDateString('en-US', {
+  return new Date(dateString).toLocaleDateString(getActiveLocale(), {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -17,16 +20,17 @@ function formatDate(dateString) {
   });
 }
 
-function getResultText(result) {
+function getResultText(result, t) {
   switch (result) {
-    case 'white': return 'White wins';
-    case 'black': return 'Black wins';
-    case 'draw': return 'Draw';
-    default: return 'Unknown';
+    case 'white': return t('White wins');
+    case 'black': return t('Black wins');
+    case 'draw': return t('Draw');
+    default: return t('Unknown');
   }
 }
 
 export default function GameHistory() {
+  const { t, tCount } = useI18n();
   const { user, isOnline, isLoggedIn } = useUser();
   const navigate = useNavigate();
   const [games, setGames] = useState([]);
@@ -49,7 +53,7 @@ export default function GameHistory() {
         setGames(userGames);
         setEloHistory(historyData);
       } catch (err) {
-        setError('Failed to load game history');
+        setError(tNow('Failed to load game history'));
         console.error('Error loading games:', err);
       } finally {
         setLoading(false);
@@ -64,11 +68,11 @@ export default function GameHistory() {
       <div className="game-history-page">
         <div className="game-history-container">
           <div className="game-history-header">
-            <h1>Game History</h1>
+            <h1>{t("Game History")}</h1>
           </div>
           <AccountRequired
-            title="Your archive is tied to your account"
-            message="Game history and rating charts are stored per account. Log in to browse your games and reviews."
+            title={t("Your archive is tied to your account")}
+            message={t("Game history and rating charts are stored per account. Log in to browse your games and reviews.")}
           />
         </div>
       </div>
@@ -79,9 +83,9 @@ export default function GameHistory() {
     return (
       <div className="game-history-page">
         <div className="game-history-container">
-          <h1>Game History</h1>
+          <h1>{t("Game History")}</h1>
           <div className="offline-message">
-            <p>Game history is only available when online.</p>
+            <p>{t("Game history is only available when online.")}</p>
           </div>
         </div>
       </div>
@@ -92,10 +96,10 @@ export default function GameHistory() {
     return (
       <div className="game-history-page">
         <div className="game-history-container">
-          <h1>Game History</h1>
+          <h1>{t("Game History")}</h1>
           <div className="loading">
             <div className="spinner"></div>
-            <p>Loading your games...</p>
+            <p>{t("Loading your games...")}</p>
           </div>
         </div>
       </div>
@@ -106,9 +110,9 @@ export default function GameHistory() {
     return (
       <div className="game-history-page">
         <div className="game-history-container">
-          <h1>Game History</h1>
+          <h1>{t("Game History")}</h1>
           <div className="error-message">
-            <p>{error}</p>
+            <p>{t(error)}</p>
           </div>
         </div>
       </div>
@@ -119,9 +123,9 @@ export default function GameHistory() {
     <div className="game-history-page">
       <div className="game-history-container">
         <div className="game-history-header">
-          <h1>Game History</h1>
+          <h1>{t("Game History")}</h1>
           <p className="game-count">
-            {games.length} game{games.length !== 1 ? 's' : ''} played
+            {tCount(games.length, '{count} game played', '{count} games played')}
           </p>
         </div>
 
@@ -135,8 +139,8 @@ export default function GameHistory() {
 
         {games.length === 0 ? (
           <div className="no-games">
-            <p>No games played yet.</p>
-            <p>Start playing to see your game history here!</p>
+            <p>{t("No games played yet.")}</p>
+            <p>{t("Start playing to see your game history here!")}</p>
           </div>
         ) : (
           <div className="games-list">
@@ -146,17 +150,17 @@ export default function GameHistory() {
                 type="button"
                 className="game-item"
                 onClick={() => navigate(`/review/${encodeURIComponent(game.game_code)}`)}
-                aria-label={`Review game ${game.game_code} (${getResultText(game.result)})`}
+                aria-label={t('Review game {code} ({result})', { code: game.game_code, result: getResultText(game.result, t) })}
               >
                 <div className="game-info">
                   <div className="game-details">
                     <span className="game-code">{game.game_code}</span>
-                    <span className="game-result">{getResultText(game.result)}</span>
-                    <span className="game-mode">{game.game_mode}</span>
+                    <span className="game-result">{getResultText(game.result, t)}</span>
+                    <span className="game-mode">{t(game.game_mode || 'friendly')}</span>
                   </div>
                   <div className="game-date">
                     {formatDate(game.created_at)}
-                    <span className="game-review-hint">Review →</span>
+                    <span className="game-review-hint">{t("Review →")}</span>
                   </div>
                 </div>
               </button>

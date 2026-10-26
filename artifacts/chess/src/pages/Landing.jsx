@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { api } from '../services/api'
 import { useNavigate, Link } from 'react-router-dom'
 import { useUser } from '../contexts/UserContext'
+import { getActiveLocale } from '../i18n/translate'
 import ChessBoard from '../components/ChessBoard'
 import { Chess } from 'chess.js'
 import {
@@ -30,6 +31,7 @@ import {
   Pencil,
 } from 'lucide-react'
 import './Landing.css'
+import { useT } from '../i18n/I18nContext';
 
 // Left sidebar navigation — mirrors chess.com's primary nav
 const NAV_LINKS = [
@@ -114,7 +116,19 @@ const FOOTER_LINKS = [
   { label: 'Cheating & Fair Play', to: '/terms' },
 ]
 
+// The rank numeral keeps its own accent colour, so the sentence is translated
+// whole and split on a sentinel that no translator can type or move. Languages
+// that put "#1" somewhere other than the front of the sentence (Tamil, Hindi)
+// then read naturally instead of being stitched together from fragments.
+const HERO_RANK = '1';
+const HERO_RANK_SLOT = '\u0000';
+const HERO_TITLE_KEY = 'Play Chess Online on the #{n} Site!';
+
 export default function Landing() {
+  const t = useT();
+  const [heroTitleBefore, heroTitleAfter = ''] = t(HERO_TITLE_KEY, {
+    n: HERO_RANK_SLOT,
+  }).split(HERO_RANK_SLOT);
   const navigate = useNavigate()
   const { isLoggedIn, isOnline } = useUser()
   const [stats, setStats] = useState({
@@ -199,15 +213,15 @@ export default function Landing() {
   return (
     <div className={`landing ${mobileNavOpen ? 'nav-open' : ''}`}>
       {/* === Left sidebar — chess.com style nav rail === */}
-      <aside className="landing-sidebar" aria-label="Primary navigation">
+      <aside className="landing-sidebar" aria-label={t("Primary navigation")}>
         <Link to="/" className="sidebar-logo" onClick={() => setMobileNavOpen(false)}>
           <span className="sidebar-logo-icon">
             <Crown size={22} />
           </span>
-          <span className="sidebar-logo-text">PlayChess</span>
+          <span className="sidebar-logo-text">{t("PlayChess")}</span>
         </Link>
 
-        <nav className="landing-sidebar-nav" aria-label="Main">
+        <nav className="landing-sidebar-nav" aria-label={t("Main")}>
           {NAV_LINKS.map(({ icon: Icon, label, to }) => (
             <button
               key={label}
@@ -216,13 +230,13 @@ export default function Landing() {
               type="button"
             >
               <Icon size={22} className="landing-sidebar-nav-icon" />
-              <span>{label}</span>
+              <span>{t(label)}</span>
             </button>
           ))}
         </nav>
 
         {/* "Other" collapsible group — mirrors chess.com's overflow rail */}
-        <nav className="landing-sidebar-nav landing-sidebar-nav-other" aria-label="More">
+        <nav className="landing-sidebar-nav landing-sidebar-nav-other" aria-label={t("More")}>
           {OTHER_LINKS.map((l) => (
             <button
               key={l.label}
@@ -231,21 +245,21 @@ export default function Landing() {
               type="button"
             >
               <span className="landing-sidebar-nav-bullet" />
-              <span>{l.label}</span>
+              <span>{t(l.label)}</span>
             </button>
           ))}
         </nav>
 
-        <button className="sidebar-search" type="button" aria-label="Search">
+        <button className="sidebar-search" type="button" aria-label={t("Search")}>
           <Search size={16} />
-          <span>Search</span>
+          <span>{t("Search")}</span>
           <span className="sidebar-search-shortcut">/</span>
         </button>
 
         {/* Live-player count — chess.com shows a green online indicator */}
-        <div className="sidebar-online" title="Players online now">
+        <div className="sidebar-online" title={t("Players online now")}>
           <span className="sidebar-online-dot" />
-          <span>{stats.livePlayers.toLocaleString()} online</span>
+          <span>{t('{count} online', { count: stats.livePlayers.toLocaleString(getActiveLocale()) })}</span>
         </div>
 
         <div className="sidebar-spacer" />
@@ -253,8 +267,7 @@ export default function Landing() {
         <div className="sidebar-auth">
           {isLoggedIn ? (
             <button className="btn-green btn-block" onClick={() => goTo('/home')} type="button">
-              Go to Dashboard
-              <ArrowRight size={16} />
+              {t("Go to Dashboard")}<ArrowRight size={16} />
             </button>
           ) : (
             <>
@@ -264,16 +277,14 @@ export default function Landing() {
                 type="button"
               >
                 <UserPlus size={16} />
-                Sign Up
-              </button>
+                {t("Sign Up")}</button>
               <button
                 className="btn-ghost btn-block"
                 onClick={() => goTo('/login')}
                 type="button"
               >
                 <LogIn size={16} />
-                Log In
-              </button>
+                {t("Log In")}</button>
             </>
           )}
         </div>
@@ -282,7 +293,7 @@ export default function Landing() {
       {/* Mobile nav backdrop */}
       <button
         className="landing-nav-backdrop"
-        aria-label="Close menu"
+        aria-label={t("Close menu")}
         onClick={() => setMobileNavOpen(false)}
         tabIndex={mobileNavOpen ? 0 : -1}
       />
@@ -292,7 +303,7 @@ export default function Landing() {
         className="landing-burger"
         type="button"
         onClick={() => setMobileNavOpen((v) => !v)}
-        aria-label="Toggle navigation"
+        aria-label={t("Toggle navigation")}
         aria-expanded={mobileNavOpen}
       >
         {mobileNavOpen ? <X size={22} /> : <Menu size={22} />}
@@ -313,20 +324,16 @@ export default function Landing() {
               />
             </div>
             <div className="hero-board-live">
-              <span className="dot" /> Live preview
-            </div>
+              <span className="dot" /> {' '}{t("Live preview")}</div>
           </div>
 
           <div className="hero-copy">
             <h1 className="hero-title">
-              Play Chess Online on the #<span className="hero-title-num">1</span> Site!
-            </h1>
+              {heroTitleBefore}<span className="hero-title-num">{HERO_RANK}</span>{heroTitleAfter}</h1>
             <p className="hero-subtitle">
-              Play the bots, find a rated opponent, and keep your games in one place. Free, no
-              download.{' '}
+              {t("Play the bots, find a rated opponent, and keep your games in one place. Free, no download.")}{' '}
               <span className="hero-online">
-                {stats.livePlayers.toLocaleString()} playing now
-              </span>
+                {stats.livePlayers.toLocaleString(getActiveLocale())} {' '}{t("playing now")}</span>
             </p>
 
             <div className="hero-actions">
@@ -335,8 +342,7 @@ export default function Landing() {
                 onClick={() => goTo(isLoggedIn ? '/online' : '/login?mode=signup')}
                 type="button"
               >
-                Get Started
-                <ArrowRight size={18} />
+                {t("Get Started")}<ArrowRight size={18} />
               </button>
               <button
                 className="btn-ghost btn-lg"
@@ -344,31 +350,30 @@ export default function Landing() {
                 type="button"
               >
                 <Cpu size={18} />
-                Play a Bot
-              </button>
+                {t("Play a Bot")}</button>
             </div>
           </div>
         </section>
 
         {/* === Live stats bar === */}
         {stats.livePlayers > 0 || stats.gamesRecorded > 0 ? (
-          <section className="stats-bar" aria-label="Live stats">
+          <section className="stats-bar" aria-label={t("Live stats")}>
             <div className="stat-item">
               <Users size={16} />
-              <strong>{stats.livePlayers.toLocaleString()}</strong>
-              <span>Playing Now</span>
+              <strong>{stats.livePlayers.toLocaleString(getActiveLocale())}</strong>
+              <span>{t("Playing Now")}</span>
             </div>
             <div className="stat-divider" />
             <div className="stat-item">
               <Gamepad2 size={16} />
-              <strong>{stats.gamesRecorded.toLocaleString()}</strong>
-              <span>Games Recorded</span>
+              <strong>{stats.gamesRecorded.toLocaleString(getActiveLocale())}</strong>
+              <span>{t("Games Recorded")}</span>
             </div>
             <div className="stat-divider" />
             <div className="stat-item">
               <UsersRound size={16} />
-              <strong>{stats.registeredPlayers.toLocaleString()}</strong>
-              <span>Members</span>
+              <strong>{stats.registeredPlayers.toLocaleString(getActiveLocale())}</strong>
+              <span>{t("Members")}</span>
             </div>
           </section>
         ) : null}
@@ -388,23 +393,23 @@ export default function Landing() {
                       boardTheme={block.boardTheme}
                     />
                     <span className="feature-block-board-tag">
-                      <Icon size={14} /> {block.eyebrow}
+                      <Icon size={14} /> {t(block.eyebrow)}
                     </span>
                   </div>
                 </div>
 
                 <div className="feature-block-text">
                   <span className="feature-block-eyebrow">
-                    <Icon size={14} /> {block.eyebrow}
+                    <Icon size={14} /> {t(block.eyebrow)}
                   </span>
-                  <h2 className="feature-block-title">{block.title}</h2>
-                  <p className="feature-block-desc">{block.description}</p>
+                  <h2 className="feature-block-title">{t(block.title)}</h2>
+                  <p className="feature-block-desc">{t(block.description)}</p>
                   <button
                     className="btn-link feature-block-cta"
                     onClick={() => goTo(block.to)}
                     type="button"
                   >
-                    {block.cta}
+                    {t(block.cta)}
                     <ArrowRight size={16} />
                   </button>
                 </div>
@@ -418,11 +423,9 @@ export default function Landing() {
           <div className="app-promo-content">
             <Smartphone size={20} className="app-promo-icon" />
             <div>
-              <h3 className="app-promo-title">Works on your phone</h3>
+              <h3 className="app-promo-title">{t("Works on your phone")}</h3>
               <p className="app-promo-sub">
-                The whole site runs in the browser — same account, same games, on desktop and
-                mobile.
-              </p>
+                {t("The whole site runs in the browser — same account, same games, on desktop and mobile.")}</p>
             </div>
           </div>
           <div className="app-promo-actions">
@@ -431,7 +434,7 @@ export default function Landing() {
               onClick={() => goTo(isLoggedIn ? '/home' : '/login?mode=signup')}
               type="button"
             >
-              {isLoggedIn ? 'Open Dashboard' : 'Get Started'}
+              {t(isLoggedIn ? 'Open Dashboard' : 'Get Started')}
               <ArrowRight size={18} />
             </button>
           </div>
@@ -439,14 +442,13 @@ export default function Landing() {
 
         {/* === Final CTA === */}
         <section className="final-cta">
-          <h2 className="final-cta-title">Set up the board.</h2>
+          <h2 className="final-cta-title">{t("Set up the board.")}</h2>
           <button
             className="btn-green btn-xl"
             onClick={() => goTo(isLoggedIn ? '/online' : '/login?mode=signup')}
             type="button"
           >
-            Get Started
-            <ArrowRight size={20} />
+            {t("Get Started")}<ArrowRight size={20} />
           </button>
         </section>
 
@@ -456,26 +458,25 @@ export default function Landing() {
             {FOOTER_LINKS.map((l) =>
               l.to ? (
                 <Link key={l.label} to={l.to} className="footer-link">
-                  {l.label}
+                  {t(l.label)}
                 </Link>
               ) : (
                 <a key={l.label} href={l.href} className="footer-link">
-                  {l.label}
+                  {t(l.label)}
                 </a>
               ),
             )}
           </div>
 
           <p className="footer-copyright">
-            PlayChess · © 2026 · Inspired by{' '}
+            {t("PlayChess · © 2026 · Inspired by")}{' '}
             <a href="https://www.chess.com" target="_blank" rel="noopener noreferrer">
-              Chess.com
-            </a>
+              {t("Chess.com")}</a>
           </p>
 
           <div className="footer-social">
             {SOCIAL_LINKS.map((s) => (
-              <a key={s.label} href={s.href} className="footer-social-btn" aria-label={s.label}>
+              <a key={s.label} href={s.href} className="footer-social-btn" aria-label={t(s.label)}>
                 {s.label[0]}
               </a>
             ))}

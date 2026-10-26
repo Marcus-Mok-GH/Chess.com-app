@@ -7,6 +7,7 @@ import { generatePuzzle } from "../engine/puzzles/puzzleGenerator";
 import { useUser } from "../contexts/UserContext";
 import api from "../services/api";
 import "./DailyPuzzleStreak.css";
+import { useT } from '../i18n/I18nContext';
 
 function getTodayDateString() {
   const now = new Date();
@@ -128,6 +129,7 @@ export function useStreakData() {
 }
 
 export default function DailyPuzzleStreak({ compact = false, linkToPuzzles = false }) {
+  const t = useT();
   const { user, token, isLoggedIn } = useUser();
   const navigate = useNavigate();
   const userId = user?.id || null;
@@ -314,16 +316,16 @@ export default function DailyPuzzleStreak({ compact = false, linkToPuzzles = fal
       <div className="daily-puzzle-streak-header">
         <div className="daily-puzzle-streak-title-row">
           <span className="daily-puzzle-flame">🔥</span>
-          <h2 className="daily-puzzle-streak-title">Daily Puzzle</h2>
+          <h2 className="daily-puzzle-streak-title">{t("Daily Puzzle")}</h2>
         </div>
         <div className="daily-puzzle-streak-stats">
           <div className="daily-streak-count">
             <span className="daily-streak-number">{streakData.count}</span>
-            <span className="daily-streak-label">day streak</span>
+            <span className="daily-streak-label">{t("day streak")}</span>
           </div>
           <div className="daily-streak-best">
             <Trophy size={14} />
-            <span>Best: {streakData.bestStreak}</span>
+            <span>{t("Best:")}{' '}{streakData.bestStreak}</span>
           </div>
         </div>
       </div>
@@ -334,9 +336,8 @@ export default function DailyPuzzleStreak({ compact = false, linkToPuzzles = fal
             <Check size={24} />
           </div>
           <p className="daily-puzzle-completed-text">
-            🎉 Great job! You've solved today's puzzle.
-          </p>
-          <p className="daily-puzzle-completed-sub">Come back tomorrow to keep your streak!</p>
+            {t("🎉 Great job! You've solved today's puzzle.")}</p>
+          <p className="daily-puzzle-completed-sub">{t("Come back tomorrow to keep your streak!")}</p>
         </div>
       ) : (
         <>
@@ -352,15 +353,13 @@ export default function DailyPuzzleStreak({ compact = false, linkToPuzzles = fal
               }}
             >
               <Flame size={18} />
-              Solve Today's Puzzle
-            </button>
+              {t("Solve Today's Puzzle")}</button>
           ) : (
             <div className="daily-puzzle-board-area">
               <div className="daily-puzzle-board-info">
-                <span className="daily-puzzle-theme">{puzzle.theme}</span>
+                <span className="daily-puzzle-theme">{t(puzzle.theme)}</span>
                 <span className="daily-puzzle-side">
-                  {puzzle.sideToMove === "white" ? "White" : "Black"} to move
-                </span>
+                  {t('{side} to move', { side: t(puzzle.sideToMove === "white" ? "White" : "Black") })}</span>
               </div>
               <div className="daily-puzzle-board-wrap">
                 <ChessBoard
@@ -372,12 +371,11 @@ export default function DailyPuzzleStreak({ compact = false, linkToPuzzles = fal
                 />
                 {failed && (
                   <div className="daily-puzzle-result daily-puzzle-result--failed">
-                    Not quite — try again!
-                  </div>
+                    {t("Not quite — try again!")}</div>
                 )}
               </div>
               {puzzle.hint && (
-                <p className="daily-puzzle-hint">💡 {puzzle.hint}</p>
+                <p className="daily-puzzle-hint">💡 {t(puzzle.hint)}</p>
               )}
             </div>
           )}

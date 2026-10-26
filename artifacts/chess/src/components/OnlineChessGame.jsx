@@ -2,6 +2,7 @@ import "./ChessGame.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSettings } from "../contexts/SettingsContext";
 import { useUser } from "../contexts/UserContext";
+import { useT } from "../i18n/I18nContext";
 import {
     buildGameFromHistory,
     normalizeMoveHistory,
@@ -36,6 +37,7 @@ export default function OnlineChessGame({
     onLeave,
 }) {
     const { settings } = useSettings();
+    const t = useT();
     const { user } = useUser();
     const {
         game,
@@ -636,16 +638,15 @@ export default function OnlineChessGame({
     }, [game]);
 
     const getStatusMessage = () => {
-        if (gameStatus === "ended")
-            return endReason === "resignation"
-                ? `${winner} wins by resignation`
-                : endReason === "timeout"
-                  ? `${winner} wins on time`
-                  : winner === "draw"
-                    ? "Draw"
-                    : `${winner} wins`;
-        if (game.inCheck()) return "Check!";
-        return game.turn() === colorCode ? "Your turn" : "Opponent's turn";
+        if (gameStatus === "ended") {
+            if (winner === "draw") return t("Draw");
+            const winningSide = winner === "white" ? t("White") : winner === "black" ? t("Black") : t(winner || "");
+            if (endReason === "resignation") return t("{winner} wins by resignation", { winner: winningSide });
+            if (endReason === "timeout") return t("{winner} wins on time", { winner: winningSide });
+            return t("{winner} wins", { winner: winningSide });
+        }
+        if (game.inCheck()) return t("Check!");
+        return t(game.turn() === colorCode ? "Your turn" : "Opponent's turn");
     };
 
     return (

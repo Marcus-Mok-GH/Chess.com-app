@@ -5,6 +5,29 @@
 const MAX_SUMMARY_WORDS = 22;
 const MAX_SUMMARY_SENTENCES = 2;
 
+// Chinese writes a sentence in far fewer characters than English does in words,
+// so a word cap would let a concept run to several lines. Cap by characters
+// instead, using a deliberately generous words-to-characters ratio.
+const CJK_CHAR_RATIO = 4.5;
+const CJK_PATTERN = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/;
+const CJK_SENTENCE_END = /[。！？!?]/;
+
+function trimCjkSummary(text, maxCharacters) {
+  const chars = Array.from(text);
+  if (chars.length <= maxCharacters) return text;
+  const slice = chars.slice(0, maxCharacters).join('');
+  let cut = -1;
+  for (let index = slice.length - 1; index >= 0; index -= 1) {
+    if (CJK_SENTENCE_END.test(slice[index])) {
+      cut = index;
+      break;
+    }
+  }
+  if (cut >= Math.floor(maxCharacters * 0.6)) return slice.slice(0, cut + 1);
+  const trimmed = Array.from(slice.replace(/[，、,;:]$/, ''));
+  return `${trimmed.slice(0, Math.max(0, maxCharacters - 1)).join('')}…`;
+}
+
 /**
  * Splits text into sentences. A period only counts as a sentence boundary when
  * it does not belong to a single-letter abbreviation ("e.g.", "i.e.") or a
@@ -37,15 +60,25 @@ export function splitSentences(text) {
  * @param {object} [options]
  * @param {number} [options.maxWords=22] Total word cap across kept sentences.
  * @param {number} [options.maxSentences=2] Maximum sentences to keep.
+ * @param {number} [options.maxCharacters] Character cap; defaults to a
+ *   word-equivalent cap for Chinese text and is ignored otherwise.
  * @returns {string} The trimmed concept, at most `maxWords` words long.
  */
 export function trimLessonSummary(
   raw,
-  { maxWords = MAX_SUMMARY_WORDS, maxSentences = MAX_SUMMARY_SENTENCES } = {}
+  {
+    maxWords = MAX_SUMMARY_WORDS,
+    maxSentences = MAX_SUMMARY_SENTENCES,
+    maxCharacters,
+  } = {}
 ) {
   const joined = Array.isArray(raw) ? raw.join(' ') : String(raw || '');
   const cleaned = joined.replace(/\s+/g, ' ').trim();
   if (!cleaned) return '';
+
+  if (CJK_PATTERN.test(cleaned)) {
+    return trimCjkSummary(cleaned, maxCharacters || Math.round(maxWords * CJK_CHAR_RATIO));
+  }
 
   let kept = '';
   for (const sentence of splitSentences(cleaned).slice(0, maxSentences)) {

@@ -6,8 +6,11 @@ import api from '../services/api'
 import DailyPuzzleStreak from '../components/DailyPuzzleStreak'
 import AccountRequired from '../components/AccountRequired'
 import './Home.css'
+import { useT } from '../i18n/I18nContext';
+import { getActiveLocale } from '../i18n/translate';
 
 export default function Home() {
+  const t = useT();
   const navigate = useNavigate()
   const { user, isLoggedIn, isLoading, isOnline } = useUser()
   const [greeting, setGreeting] = useState('')
@@ -44,7 +47,7 @@ export default function Home() {
       <div className="home-page">
         <div className="home-container">
           <div style={{ textAlign: 'center', padding: '4rem' }}>
-            <p style={{ color: 'var(--chesscom-text-dim)' }}>Loading...</p>
+            <p style={{ color: 'var(--chesscom-text-dim)' }}>{t("Loading...")}</p>
           </div>
         </div>
       </div>
@@ -64,23 +67,23 @@ export default function Home() {
             {isOnline ? (
               <>
                 <Wifi size={14} />
-                <span>Online</span>
+                <span>{t("Online")}</span>
               </>
             ) : (
               <>
                 <WifiOff size={14} />
-                <span>Offline</span>
+                <span>{t("Offline")}</span>
               </>
             )}
           </div>
           <h1 className="welcome-title">
             {isLoggedIn && user ? (
-              <>{greeting}, <span className="username-highlight">{user.username}</span></>
+              <>{t(greeting)}, <span className="username-highlight">{user.username}</span></>
             ) : (
               'Welcome to PlayChess'
             )}
           </h1>
-          <p className="welcome-subtitle">Ready for your next game?</p>
+          <p className="welcome-subtitle">{t("Ready for your next game?")}</p>
         </section>
 
         {/* Daily Puzzle Streak */}
@@ -93,35 +96,35 @@ export default function Home() {
           <section className="stats-overview">
             <div className="stat-card card-surface">
               <div className="stat-content">
-                <div className="stat-label">Unlimited Rating</div>
+                <div className="stat-label">{t("Unlimited Rating")}</div>
                 <div className="stat-value">{user.elo}</div>
               </div>
             </div>
 
             <div className="stat-card card-surface">
               <div className="stat-content">
-                <div className="stat-label">Bullet Rating</div>
+                <div className="stat-label">{t("Bullet Rating")}</div>
                 <div className="stat-value">{user.bulletElo ?? user.elo}</div>
               </div>
             </div>
 
             <div className="stat-card card-surface">
               <div className="stat-content">
-                <div className="stat-label">Blitz Rating</div>
+                <div className="stat-label">{t("Blitz Rating")}</div>
                 <div className="stat-value">{user.blitzElo ?? user.elo}</div>
               </div>
             </div>
 
             <div className="stat-card card-surface">
               <div className="stat-content">
-                <div className="stat-label">Rapid Rating</div>
+                <div className="stat-label">{t("Rapid Rating")}</div>
                 <div className="stat-value">{user.rapidElo ?? user.elo}</div>
               </div>
             </div>
 
             <div className="stat-card card-surface">
               <div className="stat-content">
-                <div className="stat-label">Classical Rating</div>
+                <div className="stat-label">{t("Classical Rating")}</div>
                 <div className="stat-value">
                   {user.classicalElo ?? user.elo}
                 </div>
@@ -130,41 +133,41 @@ export default function Home() {
 
             <div className="stat-card card-surface">
               <div className="stat-content">
-                <div className="stat-label">Rated Games</div>
+                <div className="stat-label">{t("Rated Games")}</div>
                 <div className="stat-value">{user.gamesPlayed || 0}</div>
               </div>
             </div>
 
             <div className="stat-card card-surface">
               <div className="stat-content">
-                <div className="stat-label">Win Rate</div>
+                <div className="stat-label">{t("Win Rate")}</div>
                 <div className="stat-value">{winRate}%</div>
               </div>
             </div>
           </section>
         ) : (
           <AccountRequired
-            title="Your stats live in your account"
-            message="Rating, games played, and win rate are tied to your account. Log in to see them here."
+            title={t("Your stats live in your account")}
+            message={t("Rating, games played, and win rate are tied to your account. Log in to see them here.")}
           />
         )}
 
         {/* Detailed Stats */}
         {isLoggedIn && user && (
           <section className="detailed-stats">
-            <h2 className="section-title">Your Statistics</h2>
+            <h2 className="section-title">{t("Your Statistics")}</h2>
             <div className="stats-grid">
               <div className="stat-item card-surface win-stat">
                 <span className="stat-number">{user.wins || 0}</span>
-                <span className="stat-text">Wins</span>
+                <span className="stat-text">{t("Wins")}</span>
               </div>
               <div className="stat-item card-surface draw-stat">
                 <span className="stat-number">{user.draws || 0}</span>
-                <span className="stat-text">Draws</span>
+                <span className="stat-text">{t("Draws")}</span>
               </div>
               <div className="stat-item card-surface loss-stat">
                 <span className="stat-number">{user.losses || 0}</span>
-                <span className="stat-text">Losses</span>
+                <span className="stat-text">{t("Losses")}</span>
               </div>
             </div>
           </section>
@@ -174,16 +177,15 @@ export default function Home() {
           <section className="resume-game-section">
             <div className="resume-game-card card-surface">
               <div className="resume-game-copy">
-                <div className="resume-game-eyebrow"><Play size={14} /> In progress</div>
-                <h2>Complete this game?</h2>
-                <p>Resume your game against {String(incompleteGame.white_player_id) === String(user.id) ? incompleteGame.black_player_name : incompleteGame.white_player_name}.</p>
+                <div className="resume-game-eyebrow"><Play size={14} /> {' '}{t("In progress")}</div>
+                <h2>{t("Complete this game?")}</h2>
+                <p>{t("Resume your game against")}{' '}{String(incompleteGame.white_player_id) === String(user.id) ? incompleteGame.black_player_name : incompleteGame.white_player_name}.</p>
               </div>
               <button
                 className="resume-game-button"
                 onClick={() => navigate(`/game/${incompleteGame.game_code}?mode=local`)}
               >
-                Resume game
-                <ArrowUpRight size={18} />
+                {t("Resume game")}<ArrowUpRight size={18} />
               </button>
             </div>
           </section>
@@ -191,15 +193,15 @@ export default function Home() {
 
         {/* Quick Actions */}
         <section className="quick-actions">
-          <h2 className="section-title">Quick Play</h2>
+          <h2 className="section-title">{t("Quick Play")}</h2>
           <div className="action-cards">
             <button
               className="action-card card-surface"
               onClick={() => navigate('/play')}
             >
               <div className="action-content">
-                <h3>Play a bot</h3>
-                <p>Pick an opponent at any strength, from 400 up</p>
+                <h3>{t("Play a bot")}</h3>
+                <p>{t("Pick an opponent at any strength, from 400 up")}</p>
               </div>
               <ArrowUpRight className="action-arrow" size={18} />
             </button>
@@ -209,8 +211,8 @@ export default function Home() {
               onClick={() => navigate('/puzzles')}
             >
               <div className="action-content">
-                <h3>Puzzles</h3>
-                <p>Work through the lesson scheme, one tactic at a time</p>
+                <h3>{t("Puzzles")}</h3>
+                <p>{t("Work through the lesson scheme, one tactic at a time")}</p>
               </div>
               <ArrowUpRight className="action-arrow" size={18} />
             </button>
@@ -220,8 +222,8 @@ export default function Home() {
               onClick={() => navigate('/changelog')}
             >
               <div className="action-content">
-                <h3>Changelog</h3>
-                <p>What's new and what got fixed</p>
+                <h3>{t("Changelog")}</h3>
+                <p>{t("What's new and what got fixed")}</p>
               </div>
               <ArrowUpRight className="action-arrow" size={18} />
             </button>
@@ -231,8 +233,8 @@ export default function Home() {
               onClick={() => navigate('/openings')}
             >
               <div className="action-content">
-                <h3>Openings</h3>
-                <p>Follow main lines and check the move stats</p>
+                <h3>{t("Openings")}</h3>
+                <p>{t("Follow main lines and check the move stats")}</p>
               </div>
               <ArrowUpRight className="action-arrow" size={18} />
             </button>
@@ -243,15 +245,15 @@ export default function Home() {
               disabled={!isOnline}
             >
               <div className="action-content">
-                <h3>Play online</h3>
+                <h3>{t("Play online")}</h3>
                 <p>
                   {isOnline
-                    ? 'Find a rated opponent at your level'
-                    : 'Connect to play online'}
+                    ? t('Find a rated opponent at your level')
+                    : t('Connect to play online')}
                 </p>
               </div>
               {!isOnline ? (
-                <span className="card-badge">Offline</span>
+                <span className="card-badge">{t("Offline")}</span>
               ) : (
                 <ArrowUpRight className="action-arrow" size={18} />
               )}
@@ -262,7 +264,7 @@ export default function Home() {
         {isLoggedIn && user?.createdAt && (
           <section className="member-info">
             <p className="member-text">
-              Member since {new Date(user.createdAt).toLocaleDateString('en-US', {
+              {t("Member since")}{' '}{new Date(user.createdAt).toLocaleDateString(getActiveLocale(), {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric'

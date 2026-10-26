@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import pollingService from "../../../services/matchmakingPolling";
+import { tNow } from '../../../i18n/translate';
 
 export function useMatchmaking(user, isLoggedIn, settings) {
     const [error, setError] = useState("");
@@ -63,7 +64,7 @@ export function useMatchmaking(user, isLoggedIn, settings) {
         setMatchFound(false);
 
         if (!isLoggedIn || !user) {
-            setError("Sign in required for matchmaking.");
+            setError(tNow('Sign in required for matchmaking.'));
             return false;
         }
 

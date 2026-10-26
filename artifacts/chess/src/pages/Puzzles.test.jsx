@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import Puzzles from './Puzzles';
+import Puzzles, { trimToShortConcept } from './Puzzles';
 import { LESSON_CATALOG } from '../engine/lessons/lessonCatalog';
 
 vi.mock('../components/ChessBoard', () => ({
@@ -616,5 +616,11 @@ describe('Server-side lesson puzzle generation', () => {
 
     await waitForPuzzleOnBoard();
     expect(generatePuzzleForThemes).toHaveBeenCalled();
+  });
+
+  it('caps Chinese lesson concepts by characters instead of treating them as one word', () => {
+    const trimmed = trimToShortConcept('局面说明'.repeat(40));
+    expect(Array.from(trimmed).length).toBeLessThanOrEqual(110);
+    expect(trimmed.endsWith('…')).toBe(true);
   });
 });

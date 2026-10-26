@@ -3,6 +3,8 @@ import { BookOpen, Search, ArrowLeft, Loader2, ChevronRight } from 'lucide-react
 import ChessBoard from '../components/ChessBoard';
 import api from '../services/api';
 import './Openings.css';
+import { useT } from '../i18n/I18nContext';
+import { getActiveLocale } from '../i18n/translate';
 
 function sideToMove(fen) {
   return fen.split(' ')[1] === 'b' ? 'black' : 'white';
@@ -19,6 +21,7 @@ function statsTotal(stats) {
 }
 
 export default function Openings() {
+  const t = useT();
   const [roots, setRoots] = useState([]);
   const [rootsLoading, setRootsLoading] = useState(true);
   const [path, setPath] = useState([]);
@@ -121,12 +124,11 @@ export default function Openings() {
         <header className="openings-header">
           <div className="openings-eyebrow">
             <BookOpen size={13} />
-            <span>Opening Explorer</span>
+            <span>{t("Opening Explorer")}</span>
           </div>
-          <h1 className="openings-title">Openings</h1>
+          <h1 className="openings-title">{t("Openings")}</h1>
           <p className="openings-subtitle">
-            Browse the encyclopedic opening tree, follow main lines, and explore move statistics.
-          </p>
+            {t("Browse the encyclopedic opening tree, follow main lines, and explore move statistics.")}</p>
 
           <form className="openings-search" onSubmit={handleSearch} role="search">
             <Search size={15} />
@@ -134,17 +136,17 @@ export default function Openings() {
               type="search"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Search an opening or ECO code…"
-              aria-label="Search openings"
+              placeholder={t("Search an opening or ECO code…")}
+              aria-label={t("Search openings")}
             />
             <button type="submit" disabled={searching || !searchQuery.trim()}>
-              {searching ? <Loader2 className="spin" size={14} /> : 'Search'}
+              {searching ? <Loader2 className="spin" size={14} /> : t('Search')}
             </button>
           </form>
 
           {searchResults.length > 0 && (
             <div className="openings-search-results">
-              <div className="openings-search-label">Search results</div>
+              <div className="openings-search-label">{t("Search results")}</div>
               {searchResults.map((result) => (
                 <button
                   key={result.fen}
@@ -161,16 +163,16 @@ export default function Openings() {
           )}
         </header>
 
-        {error && <p className="openings-error" role="alert">{error}</p>}
+        {error && <p className="openings-error" role="alert">{t(error)}</p>}
 
         {rootsLoading ? (
           <div className="openings-loading" role="status">
             <Loader2 className="spin" size={22} />
-            <span>Loading opening book…</span>
+            <span>{t("Loading opening book…")}</span>
           </div>
         ) : path.length === 0 ? (
           <section className="openings-roots">
-            <h2 className="openings-section-title">Major openings</h2>
+            <h2 className="openings-section-title">{t("Major openings")}</h2>
             <div className="openings-roots-grid">
               {roots.map((root) => (
                 <button
@@ -215,13 +217,11 @@ export default function Openings() {
                     onClick={goBack}
                     disabled={path.length <= 1}
                   >
-                    <ArrowLeft size={15} /> Back
-                  </button>
+                    <ArrowLeft size={15} /> {' '}{t("Back")}</button>
                   <span className="openings-crumb-turn">
-                    {sideToMove(currentFen) === 'white' ? 'White' : 'Black'} to move
-                  </span>
+                    {t(sideToMove(currentFen) === 'white' ? 'White' : 'Black')} {' '}{t("to move")}</span>
                 </div>
-                <div className="openings-crumbs" aria-label="Move path">
+                <div className="openings-crumbs" aria-label={t("Move path")}>
                   {path.map((step, index) => (
                     <span key={`${step.fen}-${index}`} className="openings-crumb">
                       {index > 0 && <ChevronRight size={12} className="openings-crumb-sep" />}
@@ -241,14 +241,14 @@ export default function Openings() {
               </div>
 
               <div className="openings-moves-card">
-                <div className="openings-moves-label">Continue the line</div>
+                <div className="openings-moves-label">{t("Continue the line")}</div>
                 {childrenLoading ? (
                   <div className="openings-loading" role="status">
                     <Loader2 className="spin" size={18} />
-                    <span>Loading moves…</span>
+                    <span>{t("Loading moves…")}</span>
                   </div>
                 ) : children.length === 0 ? (
-                  <p className="openings-empty">No book continuations from this position.</p>
+                  <p className="openings-empty">{t("No book continuations from this position.")}</p>
                 ) : (
                   <ul className="openings-move-list">
                     {children.map((child) => (
@@ -278,9 +278,10 @@ export default function Openings() {
 }
 
 function MoveBar({ stats }) {
+  const t = useT();
   const total = statsTotal(stats);
   if (!total) {
-    return <div className="move-bar move-bar--empty">No game data</div>;
+    return <div className="move-bar move-bar--empty">{t("No game data")}</div>;
   }
   const white = statsPct(stats, 'whiteWins');
   const draws = statsPct(stats, 'draws');
@@ -294,9 +295,9 @@ function MoveBar({ stats }) {
         <span className="move-bar-seg move-bar-seg--black" style={{ width: `${black}%` }} />
       </div>
       <div className="move-bar-legend">
-        <span className="move-bar-stat"><i className="dot dot--white" /> {white}% white</span>
-        <span className="move-bar-stat"><i className="dot dot--draw" /> {draws}% draw</span>
-        <span className="move-bar-stat"><i className="dot dot--black" /> {black}% black</span>
+        <span className="move-bar-stat"><i className="dot dot--white" /> {white}{t("% white")}</span>
+        <span className="move-bar-stat"><i className="dot dot--draw" /> {draws}{t("% draw")}</span>
+        <span className="move-bar-stat"><i className="dot dot--black" /> {black}{t("% black")}</span>
         <span className="move-bar-games">{formatGames(total)} games</span>
       </div>
     </div>
@@ -305,5 +306,5 @@ function MoveBar({ stats }) {
 
 function formatGames(n) {
   if (!n) return '0';
-  return new Intl.NumberFormat('en-US').format(n);
+  return new Intl.NumberFormat(getActiveLocale()).format(n);
 }

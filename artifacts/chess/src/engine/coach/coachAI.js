@@ -1,9 +1,16 @@
 import { API_BASE_URL, isNetworkError } from '../../services/apiBase';
+import { getActiveLocale } from '../../i18n/translate';
 
 let coachStatus = null;
 
 function getToken() {
   try { return localStorage.getItem('chess_user_token'); } catch { return null; }
+}
+
+// The coach answers in whichever language the interface is set to, so every
+// request carries it. Keys inside JSON replies stay English for the client.
+function coachBody(payload) {
+  return JSON.stringify({ ...payload, language: getActiveLocale() });
 }
 
 function authHeaders() {
@@ -63,7 +70,7 @@ export async function disconnectCoach() {
 export async function getCoachingFeedback(fen, playerMove, moveHistory, onStream = null) {
   try {
     const data = await coachRequest('/coach/feedback', {
-      method: 'POST', body: JSON.stringify({ fen, playerMove, moveHistory }),
+      method: 'POST', body: coachBody({ fen, playerMove, moveHistory }),
     });
     if (onStream && data.feedback) onStream(data.feedback);
     return data.feedback || null;
@@ -76,7 +83,7 @@ export async function getCoachingFeedback(fen, playerMove, moveHistory, onStream
 export async function explainCoachMove(fenBefore, move, fenAfter, onStream = null, context = {}) {
   try {
     const data = await coachRequest('/coach/explain', {
-      method: 'POST', body: JSON.stringify({ fenBefore, move, fenAfter, ...context }),
+      method: 'POST', body: coachBody({ fenBefore, move, fenAfter, ...context }),
     });
     if (onStream && data.explanation) onStream(data.explanation);
     return data.explanation || null;
@@ -96,7 +103,7 @@ export async function getLessonConcept({ fen, sideToMove, theme, hint, lessonTit
   try {
     const data = await coachRequest('/coach/lesson-concept', {
       method: 'POST',
-      body: JSON.stringify({ fen, sideToMove, theme, hint, lessonTitle, lessonTopic }),
+      body: coachBody({ fen, sideToMove, theme, hint, lessonTitle, lessonTopic }),
     });
     return data.concept || null;
   } catch (error) {
@@ -108,7 +115,7 @@ export async function getLessonConcept({ fen, sideToMove, theme, hint, lessonTit
 export async function analyzeGame(moveHistory, result, gameId = null) {
   try {
     const data = await coachRequest('/coach/analyze', {
-      method: 'POST', body: JSON.stringify({ moveHistory, result, gameId }),
+      method: 'POST', body: coachBody({ moveHistory, result, gameId }),
     });
     return data.analysis || null;
   } catch (error) {

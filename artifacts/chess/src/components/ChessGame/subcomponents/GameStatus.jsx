@@ -1,6 +1,8 @@
 import React from 'react';
+import { useT } from '../../../i18n/I18nContext';
 
 export default function GameStatus({ engineError }) {
+  const t = useT();
   if (!engineError) return null;
 
   return (
@@ -17,7 +19,7 @@ export default function GameStatus({ engineError }) {
         lineHeight: '1.4',
       }}
     >
-      <strong>⚠️ Engine error:</strong> {engineError}
+      <strong>{t("⚠️ Engine error:")}</strong> {engineError}
     </div>
   );
 }

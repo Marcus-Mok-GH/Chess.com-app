@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { useUser } from '../contexts/UserContext';
 import './SetUsernameModal.css';
+import { useT } from '../i18n/I18nContext';
+import { tNow } from '../i18n/translate';
 
 export default function SetUsernameModal() {
+  const t = useT();
   const { user, updateUsername, logout } = useUser();
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
@@ -15,13 +18,13 @@ export default function SetUsernameModal() {
     setError('');
 
     const trimmed = username.trim();
-    if (trimmed.length < 2) return setError('Username is too short (min 2 chars).');
-    if (trimmed.length > 20) return setError('Username is too long (max 20 chars).');
+    if (trimmed.length < 2) return setError(tNow('Username is too short (min 2 chars).'));
+    if (trimmed.length > 20) return setError(tNow('Username is too long (max 20 chars).'));
     if (trimmed !== username) {
-      return setError("Usernames can't start or end with a space.");
+      return setError(tNow("Usernames can't start or end with a space."));
     }
     if (!/^[a-zA-Z0-9._-]+$/.test(trimmed)) {
-      return setError('Only letters, numbers, dots (.), hyphens (-), and underscores (_) are allowed. Spaces are not allowed.');
+      return setError(tNow('Only letters, numbers, dots (.), hyphens (-), and underscores (_) are allowed. Spaces are not allowed.'));
     }
 
     setIsLoading(true);
@@ -31,7 +34,7 @@ export default function SetUsernameModal() {
         setError(result.error);
       }
     } catch (err) {
-      setError('Something went wrong. Please try again.');
+      setError(tNow('Something went wrong. Please try again.'));
     } finally {
       setIsLoading(false);
     }
@@ -41,25 +44,25 @@ export default function SetUsernameModal() {
     <div className="username-overlay">
         <div className="username-modal">
           <div className="username-header">
-            <h2>👟 One last step!</h2>
-            <p>Please choose a username for your account.</p>
+            <h2>{t("👟 One last step!")}</h2>
+            <p>{t("Please choose a username for your account.")}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="username-form">
             <div className="input-group">
-              <label htmlFor="new-username">Choose a username</label>
+              <label htmlFor="new-username">{t("Choose a username")}</label>
               <input
                 id="new-username"
                 type="text"
                 value={username}
                 onChange={(e) => { setUsername(e.target.value); if (error) setError(''); }}
-                placeholder="e.g. ChessMaster99"
+                placeholder={t("e.g. ChessMaster99")}
                 autoFocus
                 autoComplete="off"
                 maxLength={20}
                 disabled={isLoading}
               />
-              {error && <span className="error-text">{error}</span>}
+              {error && <span className="error-text">{t(error)}</span>}
             </div>
 
             <button
@@ -67,7 +70,7 @@ export default function SetUsernameModal() {
               className="btn btn-secondary btn-full"
               disabled={isLoading || !username.trim()}
             >
-              {isLoading ? 'Setting username...' : 'Set Username'}
+              {t(isLoading ? 'Setting username...' : 'Set Username')}
             </button>
 
             <button
@@ -76,8 +79,7 @@ export default function SetUsernameModal() {
               onClick={logout}
               style={{ marginTop: '0.5rem' }}
             >
-              Cancel and Logout
-            </button>
+              {t("Cancel and Logout")}</button>
           </form>
         </div>
       </div>

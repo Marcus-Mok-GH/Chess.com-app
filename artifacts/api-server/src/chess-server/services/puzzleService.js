@@ -163,7 +163,8 @@ export async function generatePuzzle(options = {}) {
     type = 'tactics',
     description = '',
     provider = 'default',
-    userId = null
+    userId = null,
+    language = null
   } = options;
   const selection = selectPuzzleMethod({ requestedMethod, difficulty, type, description });
   const method = selection.method;
@@ -172,7 +173,7 @@ export async function generatePuzzle(options = {}) {
   
   switch (method) {
     case 'ai':
-      puzzle = await aiPuzzleService.generatePuzzleWithAI(description, { difficulty, type, provider });
+      puzzle = await aiPuzzleService.generatePuzzleWithAI(description, { difficulty, type, provider, language });
       stats.byMethod.ai++;
       break;
       

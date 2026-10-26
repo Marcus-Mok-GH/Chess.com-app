@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { query } from '../db.js';
 import { trimLessonSummary } from '../services/lessonSummary.js';
+import { languageInstruction } from '../services/outputLanguage.js';
 import { errorResponse, handleRouteError } from '../middleware/errors.js';
 import {
   authenticatedUserId,
@@ -29,6 +30,16 @@ Analyze the position thoroughly, considering:
 - Strategic plans for both sides
 
 Provide insightful, educational, and EXTREMELY CONCISE feedback that helps the student improve their chess understanding.`;
+
+/**
+ * System prompt for one request, with the locale the app is showing.
+ *
+ * @param {object} req Express request whose body may carry `language`.
+ * @returns {string} Coach system prompt.
+ */
+function coachSystemPrompt(req) {
+  return `${SYSTEM_PROMPT}${languageInstruction(req.body?.language)}`;
+}
 
 async function callCoach(messages, options = {}) {
   const { userId, maxTokens = 500, temperature = 0.7 } = options;
@@ -287,7 +298,7 @@ router.post('/feedback', async (req, res) => {
     if (!fen || !playerMove) return errorResponse(res, 400, 'Missing required fields: fen, playerMove');
     const moves = Array.isArray(moveHistory) ? moveHistory.join(' ') : '';
     const feedbackMessages = [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: coachSystemPrompt(req) },
       { role: 'user', content: `A student just played ${playerMove} in this position.\n\nPosition (FEN before move): ${fen}\nMove history: ${moves}\nLast move: ${playerMove}\n\nGive short, encouraging feedback (1-2 sentences, max 30 words). Explain why the move is good, or gently suggest a better move, and mention one tactical or positional concept. No greetings or sign-offs.` },
     ];
     let response;
@@ -314,7 +325,7 @@ router.post('/explain', async (req, res) => {
       ? `A student played an incorrect move while solving a chess puzzle. Explain why this move fails or misses the position's key idea in 1-2 very short sentences (max 25 words).\nPosition before: ${fenBefore}\nMove played: ${move}\nPosition after: ${fenAfter || 'N/A'}\nDo not reveal, name, or hint at the puzzle's best move or answer. Focus only on the consequence of the move and the chess concept to learn. Be educational and encouraging.`
       : `Explain this move to a student in 1-2 very short sentences (max 25 words).\nPosition before: ${fenBefore}\nMove played: ${move}\nPosition after: ${fenAfter || 'N/A'}\nFocus on the main chess idea. Be educational but concise.`;
     const explainMessages = [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: coachSystemPrompt(req) },
       { role: 'user', content: explanationPrompt },
     ];
     let response;
@@ -338,7 +349,7 @@ router.post('/lesson-concept', async (req, res) => {
     const { fen, sideToMove, theme, hint, lessonTitle, lessonTopic } = req.body;
     if (!fen || !lessonTitle) return errorResponse(res, 400, 'Missing required fields: fen, lessonTitle');
     const conceptMessages = [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: coachSystemPrompt(req) },
       { role: 'user', content: `A student is about to solve this specific chess puzzle. Describe the concrete idea of THIS position in 1 or 2 short sentences, 22 words maximum total. Name the side to move and the tactical motif this exact position contains (for example an undefended piece, a back-rank weakness, a mating net, or a promotion race). Do NOT reveal or suggest the winning move or any specific squares; the student must still find it. Return only the concept text.\nPuzzle from lesson: ${lessonTitle}\nTopic: ${lessonTopic || 'Chess'}\nPosition (FEN): ${fen}\nSide to move: ${sideToMove || 'unknown'}\nPuzzle theme: ${theme || 'tactics'}\nPuzzle hint (context only, do not copy verbatim): ${hint || 'none'}` },
     ];
     let response;
@@ -390,7 +401,7 @@ router.post('/analyze', async (req, res) => {
     for (let start = 0; start < sanMoves.length; start += CHUNK_SIZE) {
       const slice = sanMoves.slice(start, start + CHUNK_SIZE);
       const analyzeMessages = [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: coachSystemPrompt(req) },
         { role: 'user', content: `Review every move in this game.\n\nMoves: ${moves}\nResult: ${result || 'Unknown'}\n\nProvide reviews ONLY for these moves (game plies ${start + 1} to ${start + slice.length}): ${slice.join(' ')}.\n\nReturn ONLY valid JSON: an array with one object per reviewed move containing ply, moveNumber, color, san, and review. Use the true game ply numbers (${start + 1} to ${start + slice.length}). Keep each review under 25 words. No markdown.` },
       ];
       const analyzeOptions = { maxTokens: Math.min(4000, Math.max(800, 200 + slice.length * 90)), temperature: 0.7 };

@@ -8,6 +8,7 @@ import { useUser } from '../contexts/UserContext';
 import api from '../services/api';
 import { getCoachStatus } from '../engine/coach/coachAI';
 import { clearOnlineSession } from '../utils/gamePersistence';
+import { I18nProvider } from '../i18n/I18nContext';
 
 vi.mock('../contexts/SettingsContext', async (importOriginal) => ({
   ...(await importOriginal()),
@@ -33,6 +34,7 @@ vi.mock('../utils/gamePersistence', () => ({
 }));
 
 const DEFAULT_TEST_SETTINGS = {
+  language: 'en',
   showCoordinates: true,
   highlightMoves: true,
   boardTheme: 'green',
@@ -62,15 +64,17 @@ const testUser = {
 
 function renderSettings() {
   return render(
-    <MemoryRouter initialEntries={['/settings']}>
-      <Routes>
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/login" element={<div data-testid="login-page" />} />
-        <Route path="/privacy" element={<div data-testid="privacy-page" />} />
-        <Route path="/terms" element={<div data-testid="terms-page" />} />
-        <Route path="/changelog" element={<div data-testid="changelog-page" />} />
-      </Routes>
-    </MemoryRouter>,
+    <I18nProvider>
+      <MemoryRouter initialEntries={['/settings']}>
+        <Routes>
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/login" element={<div data-testid="login-page" />} />
+          <Route path="/privacy" element={<div data-testid="privacy-page" />} />
+          <Route path="/terms" element={<div data-testid="terms-page" />} />
+          <Route path="/changelog" element={<div data-testid="changelog-page" />} />
+        </Routes>
+      </MemoryRouter>
+    </I18nProvider>,
   );
 }
 
@@ -95,6 +99,24 @@ describe('Settings page', () => {
     expect(screen.getByRole('heading', { name: 'Gameplay' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Sound & Haptics' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Account' })).toBeNull();
+  });
+
+  it('offers the six supported languages and persists a selection through settings', () => {
+    const updateSettings = vi.fn();
+    useSettings.mockReturnValue({
+      settings: { ...DEFAULT_TEST_SETTINGS },
+      updateSettings,
+      resetSettings: vi.fn(),
+      isLoaded: true,
+    });
+    renderSettings();
+
+    const picker = screen.getByRole('combobox', { name: 'App language' });
+    expect([...picker.options].map((option) => option.value)).toEqual([
+      'en', 'zh-CN', 'zh-TW', 'ms', 'ta', 'hi',
+    ]);
+    fireEvent.change(picker, { target: { value: 'zh-TW' } });
+    expect(updateSettings).toHaveBeenCalledWith({ language: 'zh-TW' });
   });
 
   it('does not render the inline privacy policy and links to the privacy page instead', () => {

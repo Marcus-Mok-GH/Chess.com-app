@@ -1,30 +1,32 @@
+import { useT } from '../i18n/I18nContext';
 export default function Settings({ settings, onUpdateSettings, onClose }) {
+  const t = useT();
   return (
     <div className="settings-overlay" onClick={onClose}>
       <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
         <div className="settings-header">
-          <h2>Settings</h2>
+          <h2>{t("Settings")}</h2>
           <button className="close-btn" onClick={onClose}>✕</button>
         </div>
         
         <div className="settings-content">
           <div className="settings-section">
-            <h3>Debug</h3>
+            <h3>{t("Debug")}</h3>
             <label className="setting-row">
-              <span>Show AI Thinking</span>
+              <span>{t("Show AI Thinking")}</span>
               <input
                 type="checkbox"
                 checked={settings.debugMode}
                 onChange={(e) => onUpdateSettings({ ...settings, debugMode: e.target.checked })}
               />
             </label>
-            <p className="setting-desc">Shows what moves the AI is considering and their evaluations</p>
+            <p className="setting-desc">{t("Shows what moves the AI is considering and their evaluations")}</p>
           </div>
 
           <div className="settings-section">
-            <h3>Display</h3>
+            <h3>{t("Display")}</h3>
             <label className="setting-row">
-              <span>Show Coordinates</span>
+              <span>{t("Show Coordinates")}</span>
               <input
                 type="checkbox"
                 checked={settings.showCoordinates}
@@ -32,7 +34,7 @@ export default function Settings({ settings, onUpdateSettings, onClose }) {
               />
             </label>
             <label className="setting-row">
-              <span>Highlight Moves</span>
+              <span>{t("Highlight Moves")}</span>
               <input
                 type="checkbox"
                 checked={settings.highlightMoves}
@@ -42,9 +44,9 @@ export default function Settings({ settings, onUpdateSettings, onClose }) {
           </div>
 
           <div className="settings-section">
-            <h3>Gameplay</h3>
+            <h3>{t("Gameplay")}</h3>
             <label className="setting-row">
-              <span>Auto-Promote to Queen</span>
+              <span>{t("Auto-Promote to Queen")}</span>
               <input
                 type="checkbox"
                 checked={settings.autoQueen}

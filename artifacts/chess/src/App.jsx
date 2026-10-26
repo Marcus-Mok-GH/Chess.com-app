@@ -2,6 +2,8 @@ import { useEffect, useState, Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Link, Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom'
 import { UserProvider, useUser } from './contexts/UserContext'
 import { SettingsProvider } from './contexts/SettingsContext'
+import { I18nProvider } from './i18n/I18nContext'
+import { useT } from './i18n/I18nContext'
 import { FeedbackPanel } from './components/FeedbackPanel'
 import NotificationBell from './components/NotificationBell'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -69,6 +71,7 @@ function getTitle(path) {
 }
 
 function RequireAdmin({ children }) {
+  const t = useT();
   const { user, isLoading } = useUser()
   // While the session is still loading we can't tell admins from guests;
   // render the route fallback instead of bouncing a real admin to home.
@@ -78,6 +81,7 @@ function RequireAdmin({ children }) {
 }
 
 function LessonsRedirect() {
+  const t = useT();
   const location = useLocation()
   return <Navigate to={`/puzzles${location.search}`} replace />
 }
@@ -94,7 +98,7 @@ function AppHeader({ isGameRoute = false }) {
   const location = useLocation()
   const { isOnline, isLoggedIn, user, logout } = useUser()
   const navigate = useNavigate()
-
+  const t = useT()
   const currentPath = location.pathname.startsWith('/online/') ? '/online' : location.pathname
   const isLanding = location.pathname === '/'
 
@@ -107,52 +111,52 @@ function AppHeader({ isGameRoute = false }) {
       <aside className="sidebar-nav">
         <div className="sidebar-content">
           <div className="sidebar-brand-row">
-            <Link to="/home" className="sidebar-logo" aria-label="PlayChess home">
+            <Link to="/home" className="sidebar-logo" aria-label={t("PlayChess home")}>
               <span className="logo-mark">
                 <Crown size={17} />
               </span>
-              <span className="logo-text">PlayChess</span>
+              <span className="logo-text">{t("PlayChess")}</span>
             </Link>
             <NotificationBell />
           </div>
 
-          <div className="sidebar-links" aria-label="Desktop navigation">
+          <div className="sidebar-links" aria-label={t("Desktop navigation")}>
             <Link to="/home" className={`sidebar-item ${currentPath === '/home' ? 'active' : ''}`}>
               <span className="sidebar-icon"><House size={17} /></span>
-              <span className="sidebar-label">Home</span>
+              <span className="sidebar-label">{t("Home")}</span>
             </Link>
             <Link to="/play" className={`sidebar-item ${currentPath === '/play' ? 'active' : ''}`}>
               <span className="sidebar-icon"><Swords size={17} /></span>
-              <span className="sidebar-label">Play</span>
+              <span className="sidebar-label">{t("Play")}</span>
             </Link>
             <Link to="/puzzles" className={`sidebar-item ${currentPath === '/puzzles' || currentPath === '/lessons' ? 'active' : ''}`}>
               <span className="sidebar-icon"><Puzzle size={17} /></span>
-              <span className="sidebar-label">Puzzles</span>
+              <span className="sidebar-label">{t("Puzzles")}</span>
             </Link>
             <Link to="/openings" className={`sidebar-item ${currentPath === '/openings' ? 'active' : ''}`}>
               <span className="sidebar-icon"><BookOpen size={17} /></span>
-              <span className="sidebar-label">Openings</span>
+              <span className="sidebar-label">{t("Openings")}</span>
             </Link>
             <Link to="/friends" className={`sidebar-item ${currentPath === '/friends' ? 'active' : ''}`}>
               <span className="sidebar-icon"><UsersRound size={17} /></span>
-              <span className="sidebar-label">Friends</span>
+              <span className="sidebar-label">{t("Friends")}</span>
             </Link>
             <Link to="/clubs" className={`sidebar-item ${currentPath === '/clubs' ? 'active' : ''}`}>
               <span className="sidebar-icon"><Building2 size={17} /></span>
-              <span className="sidebar-label">Clubs</span>
+              <span className="sidebar-label">{t("Clubs")}</span>
             </Link>
             <Link to="/leaderboard" className={`sidebar-item ${currentPath === '/leaderboard' ? 'active' : ''}`}>
               <span className="sidebar-icon"><Trophy size={17} /></span>
-              <span className="sidebar-label">Leaderboard</span>
+              <span className="sidebar-label">{t("Leaderboard")}</span>
             </Link>
             <Link to="/history" className={`sidebar-item ${currentPath === '/history' ? 'active' : ''}`}>
               <span className="sidebar-icon"><History size={17} /></span>
-              <span className="sidebar-label">Archive</span>
+              <span className="sidebar-label">{t("Archive")}</span>
             </Link>
             {user?.isAdmin && (
               <Link to="/admin" className={`sidebar-item ${currentPath === '/admin' ? 'active' : ''}`}>
                 <span className="sidebar-icon"><ShieldCheck size={17} /></span>
-                <span className="sidebar-label">Admin</span>
+                <span className="sidebar-label">{t("Admin")}</span>
               </Link>
             )}
           </div>
@@ -164,17 +168,17 @@ function AppHeader({ isGameRoute = false }) {
                    <span className="username">{user.username}</span>
                    <span className="elo">{user.elo}</span>
                 </div>
-                <button onClick={logout} className="sidebar-logout" title="Logout" aria-label="Log out">
+                <button onClick={logout} className="sidebar-logout" title={t("Logout")} aria-label={t("Log out")}>
                   <DoorOpen size={16} />
                 </button>
               </div>
             ) : (
-              <button onClick={() => navigate('/login')} className="sidebar-login">Log In</button>
+              <button onClick={() => navigate('/login')} className="sidebar-login">{t("Log In")}</button>
             )}
-            {!isOnline && <span className="offline-badge">Offline</span>}
-            <Link to="/settings" className={`sidebar-item ${currentPath === '/settings' ? 'active' : ''}`} title="Settings">
+            {!isOnline && <span className="offline-badge">{t("Offline")}</span>}
+            <Link to="/settings" className={`sidebar-item ${currentPath === '/settings' ? 'active' : ''}`} title={t("Settings")}>
               <span className="sidebar-icon"><UserRound size={17} /></span>
-              <span className="sidebar-label">Settings</span>
+              <span className="sidebar-label">{t("Settings")}</span>
             </Link>
           </div>
         </div>
@@ -182,25 +186,25 @@ function AppHeader({ isGameRoute = false }) {
 
       {/* Top Mobile Header */}
       <header className="mobile-header">
-        <Link to="/" className="app-logo" aria-label="PlayChess home">
+        <Link to="/" className="app-logo" aria-label={t("PlayChess home")}>
           <span className="app-logo-mark" aria-hidden="true">
             <Crown size={15} />
           </span>
-          <span className="app-logo-text">PlayChess</span>
+          <span className="app-logo-text">{t("PlayChess")}</span>
         </Link>
-        <h1 className="page-title">{getTitle(location.pathname)}</h1>
+        <h1 className="page-title">{t(getTitle(location.pathname))}</h1>
         <NotificationBell />
       </header>
 
       {/* Bottom Mobile Navigation */}
-      <nav className={`bottom-nav ${user?.isAdmin ? "bottom-nav-with-admin" : ""}`} aria-label="Mobile navigation">
+      <nav className={`bottom-nav ${user?.isAdmin ? "bottom-nav-with-admin" : ""}`} aria-label={t("Mobile navigation")}>
         <Link
           to="/home"
           className={`nav-item ${currentPath === '/home' ? 'active' : ''}`}
           aria-current={currentPath === '/home' ? 'page' : undefined}
         >
           <span className="nav-icon" aria-hidden="true"><House /></span>
-          <span>Home</span>
+          <span>{t("Home")}</span>
         </Link>
         <Link
           to="/play"
@@ -208,7 +212,7 @@ function AppHeader({ isGameRoute = false }) {
           aria-current={currentPath === '/play' ? 'page' : undefined}
         >
           <span className="nav-icon" aria-hidden="true"><Swords /></span>
-          <span>Play</span>
+          <span>{t("Play")}</span>
         </Link>
         {user?.isAdmin && (
           <Link
@@ -217,7 +221,7 @@ function AppHeader({ isGameRoute = false }) {
             aria-current={currentPath === '/admin' ? 'page' : undefined}
           >
             <span className="nav-icon" aria-hidden="true"><ShieldCheck /></span>
-            <span>Admin</span>
+            <span>{t("Admin")}</span>
           </Link>
         )}
         <Link
@@ -226,7 +230,7 @@ function AppHeader({ isGameRoute = false }) {
           aria-current={currentPath === '/more' ? 'page' : undefined}
         >
           <span className="nav-icon" aria-hidden="true"><MoreHorizontal /></span>
-          <span>More</span>
+          <span>{t("More")}</span>
         </Link>
       </nav>
     </>
@@ -245,6 +249,7 @@ function PuterCheck() {
 }
 
 function RouteFallback() {
+  const t = useT();
   return <div className="loading-screen"><div className="spinner"></div></div>
 }
 
@@ -271,6 +276,7 @@ function safeLocalStorageSet(key, value) {
 }
 
 export function PollinationsCoachGate() {
+  const t = useT();
   const { user, token, isLoggedIn, isLoading } = useUser();
   const [showPrompt, setShowPrompt] = useState(false);
   const [mode, setMode] = useState('connect');
@@ -353,6 +359,7 @@ export function PollinationsCoachGate() {
 }
 
 function AppShell() {
+  const t = useT();
   const location = useLocation();
   const isGameRoute = location.pathname.startsWith('/game/') ||
                      (location.pathname.startsWith('/online/') && location.pathname.length > 8);
@@ -378,12 +385,14 @@ function AppShell() {
  * on the client the same payload arrives through window.__SSR_USER__.
  */
 export default function App({ Router = BrowserRouter, routerProps = {}, initialUser } = {}) {
+  const t = useT();
   return (
     <>
       <PuterCheck />
       <ErrorBoundary>
         <UserProvider initialUser={initialUser}>
           <SettingsProvider>
+            <I18nProvider>
             <Router {...routerProps}>
               <SetUsernameModal />
               <PollinationsCoachGate />
@@ -418,6 +427,7 @@ export default function App({ Router = BrowserRouter, routerProps = {}, initialU
               </Routes>
               <FeedbackPanel />
             </Router>
+            </I18nProvider>
           </SettingsProvider>
         </UserProvider>
       </ErrorBoundary>

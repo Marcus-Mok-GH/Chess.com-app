@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Dot } from 'recharts';
 import './EloProgressChart.css';
+import { useT } from '../i18n/I18nContext';
+import { getActiveLocale } from '../i18n/translate';
 
 const RESULT_COLORS = Object.freeze({
   win: '#81b64c',
@@ -12,11 +14,12 @@ const RESULT_COLORS = Object.freeze({
 });
 
 const formatDate = (dateString) =>
-  new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  new Date(dateString).toLocaleDateString(getActiveLocale(), { month: 'short', day: 'numeric' });
 
 const getResultColor = (result) => RESULT_COLORS[result] ?? RESULT_COLORS.default;
 
 const CustomDot = (props) => {
+  const t = useT();
   const { payload } = props;
   const isEndpoint = payload.result === 'start' || payload.result === 'current';
   const isCurrent = payload.result === 'current';
@@ -33,6 +36,7 @@ const CustomDot = (props) => {
 };
 
 const CustomTooltip = ({ active, payload }) => {
+  const t = useT();
   if (!active || !payload?.length) {
     return null;
   }
@@ -61,6 +65,7 @@ const CustomTooltip = ({ active, payload }) => {
 };
 
 const EloProgressChart = ({ history = [], currentElo }) => {
+  const t = useT();
   const chartData = useMemo(() => {
     // Always start with initial ELO of 1200
     const data = [
@@ -110,8 +115,8 @@ const EloProgressChart = ({ history = [], currentElo }) => {
     return (
       <div className="elo-chart-container">
         <div className="elo-chart-placeholder">
-          <p>No ELO history available</p>
-          <p className="hint">Play ranked games to track your progress</p>
+          <p>{t("No ELO history available")}</p>
+          <p className="hint">{t("Play ranked games to track your progress")}</p>
         </div>
       </div>
     );
@@ -123,19 +128,19 @@ const EloProgressChart = ({ history = [], currentElo }) => {
   return (
     <div className="elo-chart-container">
       <div className="elo-chart-header">
-        <h2 className="elo-chart-title">ELO Progress</h2>
+        <h2 className="elo-chart-title">{t("ELO Progress")}</h2>
         <div className="elo-chart-legend">
           <div className="legend-item">
             <span className="legend-dot win"></span>
-            <span>Win</span>
+            <span>{t("Win")}</span>
           </div>
           <div className="legend-item">
             <span className="legend-dot loss"></span>
-            <span>Loss</span>
+            <span>{t("Loss")}</span>
           </div>
           <div className="legend-item">
             <span className="legend-dot draw"></span>
-            <span>Draw</span>
+            <span>{t("Draw")}</span>
           </div>
         </div>
       </div>

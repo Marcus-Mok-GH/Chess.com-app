@@ -27,7 +27,10 @@ import {
 import "./OnlinePlay.css";
 
 import { resolveOnlinePlayerSeat } from "./OnlinePlay/seatResolution";
+import { useT } from '../i18n/I18nContext';
+import { tNow } from '../i18n/translate';
 export default function OnlinePlay() {
+  const t = useT();
     const [searchParams] = useSearchParams();
     const { gameId: routeGameId } = useParams();
     const navigate = useNavigate();
@@ -205,7 +208,7 @@ export default function OnlinePlay() {
                     );
 
                     if (!resolvedSeat) {
-                        setError("Could not restore your seat in this match.");
+                        setError(tNow('Could not restore your seat in this match.'));
                         return;
                     }
 
@@ -235,7 +238,7 @@ export default function OnlinePlay() {
                     });
                 })
                 .catch(() => {
-                    if (!cancelled) setError("Could not restore this match.");
+                    if (!cancelled) setError(tNow('Could not restore this match.'));
                 });
 
             return () => {
@@ -396,7 +399,7 @@ export default function OnlinePlay() {
 
     const handleCreateGame = useCallback(async () => {
         if (pendingCreateRef.current) return;
-        if (!isLoggedIn || !user) return setError("Sign in required.");
+        if (!isLoggedIn || !user) return setError(tNow('Sign in required.'));
         pendingCreateRef.current = true;
         setIsCreating(true);
         try {
@@ -422,7 +425,7 @@ export default function OnlinePlay() {
             setView("waiting");
             setIsWaiting(true);
         } catch (e) {
-            setError("Failed to create game.");
+            setError(tNow('Failed to create game.'));
         } finally {
             pendingCreateRef.current = false;
             setIsCreating(false);
@@ -432,8 +435,8 @@ export default function OnlinePlay() {
     const handleJoinGame = useCallback(async () => {
         if (pendingJoinRef.current) return;
         const code = joinCode.trim().toUpperCase();
-        if (!code) return setError("Please enter a game code");
-        if (!isLoggedIn || !user) return setError("Sign in required.");
+        if (!code) return setError(tNow('Please enter a game code'));
+        if (!isLoggedIn || !user) return setError(tNow('Sign in required.'));
         pendingJoinRef.current = true;
         setIsJoining(true);
         try {
@@ -455,7 +458,7 @@ export default function OnlinePlay() {
             setView("playing");
             navigate(`/online/${res.gameCode}`, { replace: true });
         } catch (e) {
-            setError("Game not found or full.");
+            setError(tNow('Game not found or full.'));
         } finally {
             pendingJoinRef.current = false;
             setIsJoining(false);
@@ -517,28 +520,25 @@ export default function OnlinePlay() {
                     <div className="guest-banner-content">
                         <div className="guest-banner-icon">🔒</div>
                         <div className="guest-banner-text">
-                            <strong>Guest mode.</strong> Sign in for online
-                            games.
-                        </div>
+                            <strong>{t("Guest mode.")}</strong> {' '}{t("Sign in for online games.")}</div>
                         <button
                             className="btn btn-primary"
                             onClick={() => navigate("/login")}
                         >
-                            Sign In
-                        </button>
+                            {t("Sign In")}</button>
                     </div>
                 </div>
             )}
             {showMatchFoundAnimation && foundOpponent && (
                 <div className="match-found-animation active">
                     <div className="match-found-content">
-                        <h2>MATCH FOUND!</h2>
+                        <h2>{t("MATCH FOUND!")}</h2>
                         <div className="opponent-preview">
                             <div className="opponent-avatar">
                                 {foundOpponent.name.charAt(0).toUpperCase()}
                             </div>
                             <div>
-                                {foundOpponent.name} (Rating:{" "}
+                                {foundOpponent.name} {' '}{t("(Rating:")}{" "}
                                 {foundOpponent.elo})
                             </div>
                         </div>
@@ -564,13 +564,13 @@ export default function OnlinePlay() {
             {view === "matchmaking" && (
                 <div className="waiting-container">
                     <div className="waiting-content">
-                        <h2>Finding Opponent</h2>
+                        <h2>{t("Finding Opponent")}</h2>
                         <p>
-                            Searching... {Math.floor(searchTime / 60)}:
+                            {t("Searching...")}{' '}{Math.floor(searchTime / 60)}:
                             {(searchTime % 60).toString().padStart(2, "0")}
                         </p>
                         <p>
-                            Players in {timeControlLabel(selectedTimeControl)}{" "}
+                            {t("Players in")}{' '}{timeControlLabel(selectedTimeControl)}{" "}
                             pool: {playersInQueue}
                         </p>
                         <button
@@ -580,19 +580,18 @@ export default function OnlinePlay() {
                                 setView("mode-select");
                             }}
                         >
-                            Cancel
-                        </button>
+                            {t("Cancel")}</button>
                     </div>
                 </div>
             )}
             {view === "lobby" && (
                 <div className="lobby-container">
                     <div className="lobby-content">
-                        <h2>Friendly Game</h2>
+                        <h2>{t("Friendly Game")}</h2>
                         <div
                             className="online-color-choice"
                             role="group"
-                            aria-label="Choose your color"
+                            aria-label={t("Choose your color")}
                         >
                             <button
                                 type="button"
@@ -600,31 +599,27 @@ export default function OnlinePlay() {
                                 onClick={() => setSelectedColor("white")}
                                 aria-pressed={selectedColor === "white"}
                             >
-                                <span aria-hidden="true">♔</span> White
-                            </button>
+                                <span aria-hidden="true">♔</span> {' '}{t("White")}</button>
                             <button
                                 type="button"
                                 className={`online-color-btn${selectedColor === "random" ? " selected" : ""}`}
                                 onClick={() => setSelectedColor("random")}
                                 aria-pressed={selectedColor === "random"}
                             >
-                                <span aria-hidden="true">🎲</span> Random
-                            </button>
+                                <span aria-hidden="true">🎲</span> {' '}{t("Random")}</button>
                             <button
                                 type="button"
                                 className={`online-color-btn${selectedColor === "black" ? " selected" : ""}`}
                                 onClick={() => setSelectedColor("black")}
                                 aria-pressed={selectedColor === "black"}
                             >
-                                <span aria-hidden="true">♚</span> Black
-                            </button>
+                                <span aria-hidden="true">♚</span> {' '}{t("Black")}</button>
                         </div>
                         <label className="select-field">
                             <span className="select-field-label">
-                                Time control
-                            </span>
+                                {t("Time control")}</span>
                             <select
-                                aria-label="Time control"
+                                aria-label={t("Time control")}
                                 value={selectedTimeControl}
                                 onChange={(event) =>
                                     setSelectedTimeControl(event.target.value)
@@ -632,7 +627,7 @@ export default function OnlinePlay() {
                             >
                                 {TIME_CONTROLS.map((option) => (
                                     <option key={option.id} value={option.id}>
-                                        {option.label} — {option.description}
+                                        {t(option.label)} — {t(option.description)}
                                     </option>
                                 ))}
                             </select>
@@ -642,7 +637,7 @@ export default function OnlinePlay() {
                             onClick={handleCreateGame}
                             disabled={isCreating}
                         >
-                            {isCreating ? "Creating..." : "Create Game"}
+                            {t(isCreating ? "Creating..." : "Create Game")}
                         </button>
                         <div className="join-form">
                             <input
@@ -650,22 +645,21 @@ export default function OnlinePlay() {
                                 onChange={(e) =>
                                     setJoinCode(e.target.value.toUpperCase())
                                 }
-                                placeholder="Game Code"
+                                placeholder={t("Game Code")}
                             />
                             <button
                                 className="btn btn-secondary"
                                 onClick={handleJoinGame}
                                 disabled={isJoining || !joinCode.trim()}
                             >
-                                {isJoining ? "Joining..." : "Join"}
+                                {t(isJoining ? "Joining..." : "Join")}
                             </button>
                         </div>
                         <button
                             className="btn btn-ghost"
                             onClick={() => setView("mode-select")}
                         >
-                            Back
-                        </button>
+                            {t("Back")}</button>
                     </div>
                 </div>
             )}
@@ -674,25 +668,21 @@ export default function OnlinePlay() {
                     <div className="waiting-content code-request-panel">
                         <div className="waiting-status" aria-hidden="true">
                             <span className="waiting-status-dot" />
-                            <span>Game ready</span>
+                            <span>{t("Game ready")}</span>
                         </div>
-                        <h2>Invite a friend to play</h2>
+                        <h2>{t("Invite a friend to play")}</h2>
                         <p className="waiting-description">
-                            Share this code with your opponent. We’ll start the
-                            game as soon as they join.
-                        </p>
+                            {t("Share this code with your opponent. We’ll start the game as soon as they join.")}</p>
                         <div className="game-code-box">
                             <div className="game-code-heading">
                                 <span className="game-code-label">
-                                    Game code
-                                </span>
+                                    {t("Game code")}</span>
                                 <span className="game-code-hint">
-                                    One-time invite
-                                </span>
+                                    {t("One-time invite")}</span>
                             </div>
                             <span
                                 className="game-code-value"
-                                aria-label={`Game code ${gameId}`}
+                                aria-label={t("Game code {code}", { code: gameId })}
                             >
                                 {gameId}
                             </span>
@@ -706,20 +696,18 @@ export default function OnlinePlay() {
                             <span aria-hidden="true">
                                 {copiedGameCode ? "✓" : "⧉"}
                             </span>
-                            {copiedGameCode ? "Code copied" : "Copy game code"}
+                            {t(copiedGameCode ? "Code copied" : "Copy game code")}
                         </button>
                         <div className="waiting-divider" aria-hidden="true">
-                            <span>or</span>
+                            <span>{t("or")}</span>
                         </div>
                         <p className="waiting-footnote">
-                            Keep this window open while your opponent joins.
-                        </p>
+                            {t("Keep this window open while your opponent joins.")}</p>
                         <button
                             className="btn btn-ghost"
                             onClick={handleCancelFriendlyGame}
                         >
-                            Cancel game
-                        </button>
+                            {t("Cancel game")}</button>
                     </div>
                 </div>
             )}
@@ -735,7 +723,7 @@ export default function OnlinePlay() {
             {view === "playing" && gameId && (!playerId || !playerColor) && (
                 <div className="waiting-container">
                     <div className="waiting-content">
-                        <h2>Restoring game</h2>
+                        <h2>{t("Restoring game")}</h2>
                         <p>{error || "Confirming your player seat…"}</p>
                     </div>
                 </div>

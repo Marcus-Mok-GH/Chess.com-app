@@ -13,6 +13,8 @@ import {
 } from '../../../utils/timeControls';
 import { REACTIONS, reactionEmoji, displayChatBody } from '../onlineReactions';
 import api from '../../../services/api';
+import { useT } from '../../../i18n/I18nContext';
+import { tNow } from '../../../i18n/translate';
 
 export default function GameUI({
   topPlayer, bottomPlayer, game, onSquareClick, onPieceDrop, canDragPiece,
@@ -24,6 +26,7 @@ export default function GameUI({
   handleOfferDraw, handleResign, onLeave, canLeave, chatEnabled,
   liveClock = null, timeControl = null,
 }) {
+  const t = useT();
   // Only timed games show clocks, and each player bar shows the clock for the
   // color it represents (the bars swap with the board orientation).
   const clockFor = (playerColor) => {
@@ -49,7 +52,7 @@ export default function GameUI({
     try {
       const token = localStorage.getItem('chess_user_token');
       await api.reportFairPlay({ gameId, reason: reportReason, details: reportDetails, token });
-      setReportStatus('Report submitted for private review.');
+      setReportStatus(tNow('Report submitted for private review.'));
       setReportDetails('');
     } catch (error) {
       setReportStatus(error?.message || 'Could not submit report');
@@ -105,7 +108,7 @@ export default function GameUI({
               {burst.emoji}
             </div>
           ))}
-          {showVictory && <div className="victory-burst">Checkmate!</div>}
+          {showVictory && <div className="victory-burst">{t("Checkmate!")}</div>}
         </div>
         <PlayerBar
           {...bottomPlayer}
@@ -117,35 +120,35 @@ export default function GameUI({
 
       <div className="sidebar">
         <div className="online-game-info">
-          <div>Game Code: {gameId}</div>
+          <div>{t("Game Code:")}{' '}{gameId}</div>
           {isTimedControl(timeControl) && (
             <div>
-              {timeControlLabel(timeControl)} · {timeControlDescription(timeControl)}
+              {t(timeControlLabel(timeControl))} · {t(timeControlDescription(timeControl))}
             </div>
           )}
-          <div className={`status-${opponentStatus}`}>Opponent {opponentStatus}</div>
-          {eloChange !== null && <div>Rating: {eloChange > 0 ? '+' : ''}{eloChange}</div>}
+          <div className={`status-${opponentStatus}`}>{t('Opponent')} {' '}{t(opponentStatus === 'connected' ? 'Connected' : 'Disconnected')}</div>
+          {eloChange !== null && <div>{t("Rating:")}{' '}{eloChange > 0 ? '+' : ''}{eloChange}</div>}
         </div>
         <div className="status-message">{getStatusMessage()}</div>
-        {moveError && <div className="error-message">{moveError}</div>}
+        {moveError && <div className="error-message">{t(moveError)}</div>}
 
         {drawOffered && (
           <div className="draw-offer">
-            <p>Draw offered</p>
-            <button onClick={() => handleRespondDraw(true)}>Accept</button>
-            <button onClick={() => handleRespondDraw(false)}>Decline</button>
+            <p>{t("Draw offered")}</p>
+            <button onClick={() => handleRespondDraw(true)}>{t("Accept")}</button>
+            <button onClick={() => handleRespondDraw(false)}>{t("Decline")}</button>
           </div>
         )}
 
         {chatEnabled && (
-          <div className="reactions" role="group" aria-label="Quick reactions">
+          <div className="reactions" role="group" aria-label={t("Quick reactions")}>
             {REACTIONS.map((r) => (
               <button
                 key={r.word}
                 type="button"
                 onClick={() => handleSendReaction(r.word)}
-                title={r.label}
-                aria-label={r.label}
+                title={t(r.label)}
+                aria-label={t(r.label)}
               >
                 <span aria-hidden="true" className="reaction-emoji">
                   {r.emoji}
@@ -162,7 +165,7 @@ export default function GameUI({
               .filter((msg) => !reactionEmoji(msg.message))
               .map((msg, i) => (
                 <div key={msg.id ?? i} className={"chat-message " + (msg.playerId === playerId ? "mine" : "theirs")}>
-                  <span className="chat-sender">{msg.playerId === playerId ? 'You' : 'Opponent'}:</span>
+                  <span className="chat-sender">{t(msg.playerId === playerId ? 'You' : 'Opponent')}:</span>
                   <span className="chat-text">{displayChatBody(msg.message)}</span>
                 </div>
               ))}
@@ -174,10 +177,10 @@ export default function GameUI({
                 type="text" 
                 value={chatInput} 
                 onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Type a message..."
+                placeholder={t("Type a message...")}
                 maxLength={500}
               />
-              <button type="submit">Send</button>
+              <button type="submit">{t("Send")}</button>
             </form>
           )}
         </div>
@@ -185,16 +188,16 @@ export default function GameUI({
 
         {gameStatus === 'ended' && (
           <div className="fair-play-report">
-            <strong>Report fair-play concern</strong>
+            <strong>{t("Report fair-play concern")}</strong>
             <select value={reportReason} onChange={(event) => setReportReason(event.target.value)}>
-              <option value="engine_assistance">Engine assistance</option>
-              <option value="outside_help">Outside help</option>
-              <option value="account_sharing">Account sharing</option>
-              <option value="suspicious_behavior">Suspicious behavior</option>
-              <option value="other">Other</option>
+              <option value="engine_assistance">{t("Engine assistance")}</option>
+              <option value="outside_help">{t("Outside help")}</option>
+              <option value="account_sharing">{t("Account sharing")}</option>
+              <option value="suspicious_behavior">{t("Suspicious behavior")}</option>
+              <option value="other">{t("Other")}</option>
             </select>
-            <textarea value={reportDetails} onChange={(event) => setReportDetails(event.target.value)} maxLength={1000} placeholder="Optional details" />
-            <button className="online-action-btn" onClick={onReport}>Submit private report</button>
+            <textarea value={reportDetails} onChange={(event) => setReportDetails(event.target.value)} maxLength={1000} placeholder={t("Optional details")} />
+            <button className="online-action-btn" onClick={onReport}>{t("Submit private report")}</button>
             {reportStatus && <div className="status-message">{reportStatus}</div>}
           </div>
         )}
@@ -202,11 +205,11 @@ export default function GameUI({
         <div className="controls">
           {isOnlineGameActive(gameStatus) && (
             <>
-              <button className="online-action-btn online-action-btn--draw" onClick={handleOfferDraw}>Offer Draw</button>
-              <button className="online-action-btn online-action-btn--resign" onClick={handleResign}>Resign</button>
+              <button className="online-action-btn online-action-btn--draw" onClick={handleOfferDraw}>{t("Offer Draw")}</button>
+              <button className="online-action-btn online-action-btn--resign" onClick={handleResign}>{t("Resign")}</button>
             </>
           )}
-          <button className="online-action-btn online-action-btn--leave" onClick={onLeave} disabled={!canLeave}>Leave</button>
+          <button className="online-action-btn online-action-btn--leave" onClick={onLeave} disabled={!canLeave}>{t("Leave")}</button>
         </div>
       </div>
     </div>

@@ -1,8 +1,9 @@
 import React from 'react';
 import './ErrorBoundary.css';
+import { tNow } from '../i18n/translate';
 
 function getErrorMessage(error) {
-  if (!error) return 'Unknown error';
+  if (!error) return tNow('Unknown error');
   return error instanceof Error ? error.toString() : String(error);
 }
 
@@ -51,38 +52,38 @@ class ErrorBoundary extends React.Component {
     if (!this.state.hasError) return this.props.children;
 
     const errorMessage = getErrorMessage(this.state.error);
-    const componentStack = this.state.errorInfo?.componentStack?.trim() || 'Unavailable';
+    const componentStack = this.state.errorInfo?.componentStack?.trim() || tNow('Unavailable');
 
     return (
       <div className="error-boundary">
         <div className="error-container" role="alert">
           <div className="error-content">
-            <p className="error-eyebrow">PlayChess error</p>
-            <h2>Something went wrong</h2>
-            <p> The application encountered an unexpected error. Copy the report and send it to the site owner so it can be fixed.</p>
+            <p className="error-eyebrow">{tNow('PlayChess error')}</p>
+            <h2>{tNow('Something went wrong')}</h2>
+            <p>{tNow('The application encountered an unexpected error. Copy the report and send it to the site owner so it can be fixed.')}</p>
             <details className="error-details" open>
-              <summary>Error details</summary>
+              <summary>{tNow('Error details')}</summary>
               <div className="error-details-content">
                 <div>
-                  <strong>Error</strong>
+                  <strong>{tNow('Error')}</strong>
                   <code>{errorMessage}</code>
                 </div>
                 <div>
-                  <strong>Component stack</strong>
+                  <strong>{tNow('Component stack')}</strong>
                   <code>{componentStack}</code>
                 </div>
               </div>
             </details>
             <div className="error-actions">
               <button className="error-button error-button-primary" onClick={this.copyErrorReport} type="button">
-                Copy error report
+                {tNow('Copy error report')}
               </button>
               <button className="error-button error-button-secondary" onClick={() => window.location.reload()} type="button">
-                Reload page
+                {tNow('Reload page')}
               </button>
             </div>
-            {this.state.copyState === 'copied' && <p className="error-copy-status" role="status">Error report copied to clipboard.</p>}
-            {this.state.copyState === 'failed' && <p className="error-copy-status error-copy-status-failed" role="status">Copy failed. Select the details above and copy them manually.</p>}
+            {this.state.copyState === 'copied' && <p className="error-copy-status" role="status">{tNow('Error report copied to clipboard.')}</p>}
+            {this.state.copyState === 'failed' && <p className="error-copy-status error-copy-status-failed" role="status">{tNow('Copy failed. Select the details above and copy them manually.')}</p>}
           </div>
         </div>
       </div>

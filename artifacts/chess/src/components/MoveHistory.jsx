@@ -1,7 +1,9 @@
 import { useEffect, useRef, useMemo, memo } from 'react';
 import { toSanHistory } from '../engine/game/moveHistory';
+import { useT } from '../i18n/I18nContext';
 
 function MoveHistory({ history }) {
+  const t = useT();
   const scrollRef = useRef(null);
 
   // Performance Optimization (Bolt ⚡):
@@ -35,10 +37,10 @@ function MoveHistory({ history }) {
 
   return (
     <div className="move-history">
-      <h3>Moves</h3>
+      <h3>{t("Moves")}</h3>
       <div className="moves-container" ref={scrollRef}>
         {movePairs.length === 0 ? (
-          <p className="no-moves">No moves yet</p>
+          <p className="no-moves">{t("No moves yet")}</p>
         ) : (
           <div className="moves-list">
             {movePairs.map((pair) => (
