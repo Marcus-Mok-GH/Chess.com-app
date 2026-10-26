@@ -146,7 +146,7 @@ export default function LoginModal({ onClose, onContinueAsGuest, mode = 'ranked'
                   onKeyDown={(e) => e.key === 'Enter' && handleVerifyCode()}
                 />
                 {error && <span className="error-text">{t(error)}</span>}
-                {!error && successMsg && <span className="success-text">{t(successMsg)}</span>
+                {!error && successMsg && <span className="success-text">{t(successMsg)}</span>}
               </div>
 
               <button

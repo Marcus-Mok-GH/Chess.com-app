@@ -1,3 +1,8 @@
+[2026-10-26] - Stop Vercel function crashes on direct page loads and refreshes
+
+- Direct visits and refreshes on routes such as `/play` and `/puzzles` were failing because Vercel packaged the SSR function without its built HTML template and server renderer, while the renderer left workspace-linked frontend dependencies external. The function now explicitly includes its runtime files, and the SSR build bundles those dependencies so the function can load independently in Vercel.
+- Added a regression test that pins both Vercel's runtime-file inclusion and the self-contained SSR build setting. Fixed a missing JSX closing tag in the translated login modal that otherwise blocked deployment.
+
 [2026-10-25] - PlayChess speaks six languages: English, Chinese (Simplified and Traditional), Malay, Tamil and Hindi
 
 - **Settings → Language** now has a picker with English, 简体中文, 繁體中文, Bahasa Melayu, தமிழ் and हिन्दी. The choice is saved with the rest of the settings for signed-in players and in the browser for guests, and the first visit follows the browser's own language when it is one of the six.

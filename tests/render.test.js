@@ -138,6 +138,17 @@ function extractPayload(html) {
   return JSON.parse(html.slice(html.indexOf('window["__SSR_USER__"]') + 'window["__SSR_USER__"]='.length).split('</script>')[0].replace(/;$/, ''));
 }
 
+describe('Vercel SSR packaging', () => {
+  it('includes the HTML template and a self-contained SSR renderer in the function bundle', () => {
+    const vercelConfig = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'vercel.json'), 'utf8'));
+    const renderFunction = vercelConfig.functions['api/render.js'];
+    const viteConfig = fs.readFileSync(path.join(process.cwd(), 'artifacts', 'chess', 'vite.config.ts'), 'utf8');
+
+    expect(renderFunction.includeFiles).toBe('{dist/index.html,artifacts/chess/dist/server/**}');
+    expect(viteConfig).toMatch(/ssr:\s*\{\s*noExternal:\s*true\s*,?\s*\}/);
+  });
+});
+
 describe('session-aware SSR render handler', () => {
   it('renders the personalized shell for a valid session cookie with private, no-store', async () => {
     mockValidSession();

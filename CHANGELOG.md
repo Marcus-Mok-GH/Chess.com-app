@@ -1,3 +1,6 @@
+### Fixed
+- (2026-10-26) Direct visits and refreshes on routes such as `/play` and `/puzzles` no longer crash the Vercel function. The render function explicitly packages its HTML template and SSR output, and the SSR build bundles workspace-linked frontend dependencies so they resolve in Vercel's isolated function environment. Added a regression test for these deployment requirements. Also fixed a missing JSX closing tag in the translated login modal that had blocked a fresh deployment build. Also fixed a missing JSX closing tag in the translated login modal that blocked the Vercel build.
+
 ### Added
 - Added a six-language interface (English, Simplified Chinese, Traditional Chinese, Malay, Tamil, and Hindi), with saved language selection, translated game and lesson copy, locale-aware dates and numbers, and AI-coach responses in the selected language. The root test suite now checks catalog completeness, placeholders, locale resolution, and coach prompt language.
 
