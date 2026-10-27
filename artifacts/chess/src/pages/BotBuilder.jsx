@@ -39,6 +39,15 @@ function formatNumber(n) {
   return String(n);
 }
 
+function chatFrequencyLabel(value) {
+  if (value === 'low' || value === 'medium' || value === 'high') return value;
+  const frequency = Number(value);
+  if (!Number.isFinite(frequency)) return 'medium';
+  if (frequency < 0.2) return 'low';
+  if (frequency > 0.45) return 'high';
+  return 'medium';
+}
+
 /* ─── Main Component ──────────────────────────────────────────────────────── */
 export default function BotBuilder() {
   const { user } = useUser();
@@ -47,6 +56,11 @@ export default function BotBuilder() {
 
   const [bots, setBots] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [botsError, setBotsError] = useState('');
+  const [botModels, setBotModels] = useState([]);
+  const [modelsLoading, setModelsLoading] = useState(true);
+  const [modelsError, setModelsError] = useState('');
+  const [modelsConnected, setModelsConnected] = useState(false);
   const [toast, setToast] = useState(null);
   const [modal, setModal] = useState(null); // { mode: 'create' | 'edit', bot: Bot | null }
   const [form, setForm] = useState(initialForm());
@@ -77,17 +91,39 @@ export default function BotBuilder() {
     try {
       const data = await api.adminListBots();
       setBots(data.bots || []);
+      setBotsError('');
     } catch (e) {
       console.error('[BotBuilder] loadBots error:', e);
-      showToast(t('Failed to load bots'), 'error');
+      setBotsError(t('Failed to load bots. Please retry.'));
     } finally {
       setLoading(false);
     }
-  }, [showToast, t]);
+  }, [t]);
+
+  const loadBotModels = useCallback(async () => {
+    setModelsLoading(true);
+    try {
+      const result = await api.adminListBotModels();
+      const models = Array.isArray(result.models) ? result.models : [];
+      setBotModels(models);
+      setModelsConnected(Boolean(result.connected));
+      setModelsError('');
+      const defaultModel = models.find((model) => !model.paidOnly)?.id || models[0]?.id || '';
+      if (defaultModel) {
+        setForm((current) => current.model ? current : { ...current, model: defaultModel });
+      }
+    } catch (error) {
+      console.error('[BotBuilder] loadBotModels error:', error);
+      setModelsError(t('Could not load AI models. Retry to try again.'));
+    } finally {
+      setModelsLoading(false);
+    }
+  }, [t]);
 
   useEffect(() => {
     loadBots();
-  }, [loadBots]);
+    loadBotModels();
+  }, [loadBots, loadBotModels]);
 
   /* ─── Form handling ─────────────────────────────────────────────────────── */
   function initialForm() {
@@ -98,7 +134,7 @@ export default function BotBuilder() {
       avatar: '♟️',
       personality: '',
       systemPrompt: '',
-      model: 'gpt-4o-mini',
+      model: '',
       elo: 1500,
       playStyle: 'balanced',
       chatFrequency: 'medium',
@@ -114,6 +150,10 @@ export default function BotBuilder() {
 
   function validateForm() {
     const errors = {};
+    if (!form.model) errors.model = t('Choose an AI model');
+    else if (modal?.mode === 'create' && !botModels.some((model) => model.id === form.model)) {
+      errors.model = t('Select an AI model from the current list');
+    }
     if (!form.username.trim()) errors.username = t('Username is required');
     else if (!/^[a-zA-Z0-9_]{3,20}$/.test(form.username)) {
       errors.username = t('Username must be 3–20 chars (letters, numbers, underscore)');
@@ -132,7 +172,8 @@ export default function BotBuilder() {
   };
 
   const openCreateModal = () => {
-    setForm(initialForm());
+    const defaultModel = botModels.find((model) => !model.paidOnly)?.id || botModels[0]?.id || '';
+    setForm({ ...initialForm(), model: defaultModel });
     setFormErrors({});
     setModal({ mode: 'create', bot: null });
   };
@@ -145,10 +186,10 @@ export default function BotBuilder() {
       avatar: bot.avatar || '♟️',
       personality: bot.personality || '',
       systemPrompt: bot.system_prompt || '',
-      model: bot.model || 'gpt-4o-mini',
+      model: bot.model || '',
       elo: bot.elo || 1500,
       playStyle: bot.play_style || 'balanced',
-      chatFrequency: bot.chat_frequency || 'medium',
+      chatFrequency: chatFrequencyLabel(bot.chat_frequency),
       chatStyle: bot.chat_style || 'friendly',
       joinCommunities: !!bot.join_communities,
       createCommunities: !!bot.create_communities,
@@ -292,7 +333,13 @@ export default function BotBuilder() {
       </header>
 
       {/* Grid / Empty */}
-      {bots.length === 0 ? (
+      {botsError ? (
+        <div className="bot-builder-empty bot-builder-load-error" role="alert">
+          <h2>{t('Failed to load bots')}</h2>
+          <p>{botsError}</p>
+          <button className="btn-primary" onClick={loadBots}>{t('Retry')}</button>
+        </div>
+      ) : bots.length === 0 ? (
         <div className="bot-builder-empty">
           <Bot size={64} style={{ opacity: 0.3 }} />
           <h2>{t('No bots yet')}</h2>
@@ -368,14 +415,27 @@ export default function BotBuilder() {
                 <div className="form-row">
                   <div className="form-group">
                     <label htmlFor="model">{t('AI Model')}</label>
-                    <select id="model" name="model" value={form.model} onChange={handleChange}>
-                      <option value="gpt-4o-mini">GPT-4o mini (fast, cheap)</option>
-                      <option value="gpt-4o">GPT-4o (smartest)</option>
-                      <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                      <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                      <option value="claude-3.5-sonnet">Claude 3.5 Sonnet</option>
-                      <option value="claude-3-haiku">Claude 3 Haiku (fast)</option>
+                    <select id="model" name="model" value={form.model} onChange={handleChange} disabled={modelsLoading}>
+                      <option value="" disabled>{modelsLoading ? t('Loading models…') : t('Choose a model')}</option>
+                      {form.model && !botModels.some((model) => model.id === form.model) && (
+                        <option value={form.model}>{form.model} ({t('no longer listed')})</option>
+                      )}
+                      {botModels.map((model) => (
+                        <option key={model.id} value={model.id}>
+                          {model.title}{model.paidOnly ? ` — ${t('Paid')}` : ''}
+                        </option>
+                      ))}
                     </select>
+                    {formErrors.model && <span className="form-error">{formErrors.model}</span>}
+                    {modelsError && (
+                      <p className="form-error" role="alert">
+                        {modelsError}{' '}
+                        <button type="button" className="link-button" onClick={loadBotModels}>{t('Retry')}</button>
+                      </p>
+                    )}
+                    {!modelsConnected && !modelsError && !modelsLoading && (
+                      <p className="form-hint">{t('Connect Pollinations in AI Coach to enable bot model responses.')}</p>
+                    )}
                   </div>
                   <div className="form-group">
                     <label htmlFor="elo">{t('Starting ELO')} <span style={{color:'#e05252'}}>*</span></label>
@@ -551,7 +611,7 @@ function BotCard({ bot, expanded, onToggleExpand, onEdit, onDelete, onToggleActi
           </div>
           <div className="bot-personality-preview">
             <span className="personality-label">{t('Model:')}</span>
-            <span className="personality-text">{bot.model || 'gpt-4o-mini'}</span>
+            <span className="personality-text">{bot.model || '—'}</span>
           </div>
           <div className="bot-personality-preview">
             <span className="personality-label">{t('Style:')}</span>

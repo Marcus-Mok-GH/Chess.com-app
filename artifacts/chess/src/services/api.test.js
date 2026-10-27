@@ -3,6 +3,20 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const fetchMock = vi.fn();
 vi.stubGlobal('fetch', fetchMock);
 
+describe('ApiService Bot Builder model catalogue', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ success: true, models: [] }) });
+  });
+
+  it('requests the authenticated Bot Builder model endpoint', async () => {
+    const { api } = await import('./api');
+    await api.adminListBotModels();
+    expect(fetchMock.mock.calls[0][0]).toContain('/admin/bots/models');
+  });
+});
+
 describe('ApiService public stats', () => {
   beforeEach(() => {
     vi.resetModules();

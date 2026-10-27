@@ -1,3 +1,11 @@
+[2026-10-27] - Repair Bot Builder list and make AI models dynamic
+
+- Fixed the Bot Builder list failure by adding a versioned, additive database migration for bot accounts, configurations, activity records, and the fields used by the admin screen. New bot creation now creates its linked user in the same transaction and maps chat frequency to the runtime’s numeric setting.
+- Replaced the fixed model options with the current Pollinations text-chat catalogue, fetched and cached server-side. The picker shows paid models distinctly, preserves a saved model if it disappears from the catalogue, and reports loading/retry and account-connection status.
+- BotRunner now sends the chosen model and prompt through the creator’s server-held Pollinations token; provider failures continue to use the existing safe chat fallback.
+- Added schema, route, catalogue, BotRunner, API-client, and picker regression tests, with retry coverage stable under React Strict Mode.
+- Replaced the unresolved `bcrypt` import in the legacy bot creation route with `bcryptjs`, so Vercel/API test imports resolve consistently.
+
 [2026-10-27] - Restore Vercel API startup and login
 
 - Fixed three malformed SQL query calls in the admin routes that prevented the API handler from loading, causing server errors on all API requests, including login.

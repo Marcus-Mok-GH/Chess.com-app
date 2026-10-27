@@ -19,6 +19,7 @@
  */
 
 import express from 'express';
+import bcrypt from 'bcryptjs';
 
 import { query } from '../db.js';
 import { errorResponse, handleRouteError } from '../middleware/errors.js';
@@ -141,7 +142,6 @@ router.post('/', async (req, res) => {
     }
 
     // Create the bot user account
-    const bcrypt = await import('bcrypt');
     const passwordHash = await bcrypt.hash(password, 10);
 
     const userResult = await query(
