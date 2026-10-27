@@ -519,8 +519,8 @@ router.get('/bots/:id/activity', async (req, res) => {
        FROM bot_activity
        WHERE bot_id = $1
        ORDER BY created_at DESC
-       LIMIT $2`
-    }, [botId, limit]);
+       LIMIT $2`,
+      [botId, limit]);
     return res.json({ success: true, activity: result.rows });
   } catch (error) {
     return handleRouteError(res, error, 'Failed to fetch bot activity');
@@ -537,8 +537,8 @@ router.post('/bots/:id/start', async (req, res) => {
     if (existing.rows.length === 0) return errorResponse(res, 404, 'Bot not found');
 
     await query(
-      `UPDATE bots SET is_active = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1`
-    }, [botId]);
+      `UPDATE bots SET is_active = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+      [botId]);
     return res.json({ success: true });
   } catch (error) {
     return handleRouteError(res, error, 'Failed to start bot');
@@ -555,8 +555,8 @@ router.post('/bots/:id/stop', async (req, res) => {
     if (existing.rows.length === 0) return errorResponse(res, 404, 'Bot not found');
 
     await query(
-      `UPDATE bots SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = $1`
-    }, [botId]);
+      `UPDATE bots SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+      [botId]);
     return res.json({ success: true });
   } catch (error) {
     return handleRouteError(res, error, 'Failed to stop bot');

@@ -130,13 +130,13 @@ const cleanupStaleGames = async () => {
 // binding a port is unnecessary and will fail silently. Only start the HTTP
 // listener when running as a standalone process.
 const PORT = process.env.PORT || 3001;
-import { startBotRunner } from './services/botRunner.js';
+import { startAllBots } from './services/botRunner.js';
 
 if (!process.env.VERCEL) {
   (async () => {
     await checkDbConnection();
     setInterval(cleanupStaleGames, 1000 * 60 * 30); // Every 30 minutes
-    startBotRunner(); // Start the bot runner
+    startAllBots().catch((e) => console.error('[BotRunner] Failed to start bots:', e)); // Start the bot runner
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
     });
