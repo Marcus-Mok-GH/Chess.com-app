@@ -4,6 +4,15 @@ import express from 'express';
 
 vi.mock('../db.js', () => ({
   query: vi.fn(),
+  withTransaction: vi.fn(),
+}));
+
+vi.mock('../services/pollinationsModels.js', () => ({
+  getPollinationsTextModels: vi.fn(),
+}));
+
+vi.mock('../coachAuth.js', () => ({
+  getCoachToken: vi.fn(),
 }));
 
 vi.mock('../auth.js', () => ({
@@ -23,8 +32,10 @@ vi.mock('../auth.js', () => ({
   getSessionToken: vi.fn(() => 'test-token'),
 }));
 
-import { query } from '../db.js';
+import { query, withTransaction } from '../db.js';
 import { validateSession } from '../auth.js';
+import { getPollinationsTextModels } from '../services/pollinationsModels.js';
+import { getCoachToken } from '../coachAuth.js';
 import adminRoutes from './admin.js';
 
 // antiCheatService reads this env var per call, so tests can set it directly.
@@ -82,6 +93,10 @@ beforeEach(() => {
   validateSession.mockReset();
   query.mockReset();
   query.mockResolvedValue({ rows: [] });
+  withTransaction.mockReset();
+  getPollinationsTextModels.mockReset();
+  getCoachToken.mockReset();
+  getCoachToken.mockResolvedValue(null);
 });
 
 afterEach(() => {
@@ -109,6 +124,64 @@ describe('admin routes authorization', () => {
     expect(res.body.success).toBe(true);
   });
 });
+
+describe('GET /api/admin/bots/models', () => {
+  it('returns the live model catalogue and connection status without exposing credentials', async () => {
+    const models = [{ id: 'provider/model-a', title: 'Model A', paidOnly: false }];
+    validateSession.mockResolvedValue(ADMIN_ID);
+    getPollinationsTextModels.mockResolvedValue(models);
+    getCoachToken.mockResolvedValue('server-only-token');
+
+    const res = await loopback(buildApp(), 'GET', '/api/admin/bots/models');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ success: true, models, connected: true });
+    expect(JSON.stringify(res.body)).not.toContain('server-only-token');
+  });
+});
+
+describe('GET /api/admin/bots', () => {
+  it('returns bot rows for the builder after the schema is present', async () => {
+    const bots = [{ id: 'bot-1', username: 'nimble_knight', display_name: 'Nimble Knight' }];
+    validateSession.mockResolvedValue(ADMIN_ID);
+    query.mockResolvedValue({ rows: bots });
+
+    const res = await loopback(buildApp(), 'GET', '/api/admin/bots');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ success: true, bots });
+    expect(query.mock.calls[0][0]).toContain('FROM bots');
+  });
+});
+
+describe('POST /api/admin/bots', () => {
+  it('creates the user and bot together and stores the normalized chat frequency', async () => {
+    validateSession.mockResolvedValue(ADMIN_ID);
+    query.mockResolvedValue({ rows: [] });
+    const createdBot = { id: 'bot-1', username: 'nimble_knight' };
+    const client = {
+      query: vi.fn()
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [createdBot] }),
+    };
+    withTransaction.mockImplementation((callback) => callback(client));
+
+    const res = await loopback(buildApp(), 'POST', '/api/admin/bots', {
+      username: 'nimble_knight',
+      display_name: 'Nimble Knight',
+      personality: 'Friendly',
+      model: 'provider/model-a',
+      chat_frequency: 'medium',
+    });
+
+    expect(res.status).toBe(201);
+    expect(client.query).toHaveBeenCalledTimes(2);
+    expect(client.query.mock.calls[0][0]).toContain('INSERT INTO users');
+    expect(client.query.mock.calls[1][0]).toContain('INSERT INTO bots');
+    expect(client.query.mock.calls[1][1][10]).toBe(0.3);
+  });
+});
+
 
 describe('GET /api/admin/users', () => {
   it('requires at least 2 characters for non-empty queries', async () => {

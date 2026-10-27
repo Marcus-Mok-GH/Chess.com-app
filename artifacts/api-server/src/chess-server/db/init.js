@@ -9,7 +9,7 @@ import { LESSON_CATALOG } from '../lessons/lessonCatalog.js';
 // forces a full DDL run (see db/query.js), so a deployment that lands before
 // its migration still repairs itself instead of crashing. Bumping this is
 // what makes that repair happen up front rather than on the first failure.
-export const SCHEMA_VERSION = '8';
+export const SCHEMA_VERSION = '9';
 const SCHEMA_META_KEY = 'schema_version';
 const SCHEMA_META_TABLE = 'schema_meta';
 // Fixed advisory-lock key so concurrent serverless inits serialize instead of
@@ -87,6 +87,10 @@ export async function initDatabase({ force = false } = {}) {
             email VARCHAR(255) UNIQUE,
             email_verified BOOLEAN DEFAULT FALSE,
             image TEXT,
+            avatar VARCHAR(10) DEFAULT '♟️',
+            password_hash TEXT,
+            is_bot BOOLEAN DEFAULT FALSE,
+            bot_config_id VARCHAR(100),
             elo INTEGER DEFAULT 1200,
             rapid_elo INTEGER DEFAULT 1200,
             classical_elo INTEGER DEFAULT 1200,
@@ -112,6 +116,19 @@ export async function initDatabase({ force = false } = {}) {
         await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)');
         await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE');
         await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS image TEXT');
+        await client.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar VARCHAR(10) DEFAULT '♟️'");
+        await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT');
+        await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS is_bot BOOLEAN DEFAULT FALSE');
+        await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS bot_config_id VARCHAR(100)');
+
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS bot_configs (
+            bot_user_id VARCHAR(100) PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+            config JSONB NOT NULL DEFAULT '{}'::JSONB,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+
         await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN DEFAULT FALSE');
         await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS banned_at TIMESTAMP');
         await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS banned_reason TEXT');
@@ -480,12 +497,26 @@ export async function initDatabase({ force = false } = {}) {
             avatar VARCHAR(10) DEFAULT '🤖',
             personality TEXT NOT NULL,
             system_prompt TEXT NOT NULL,
-            model VARCHAR(50) DEFAULT 'gpt-4o-mini',
+            model VARCHAR(255),
             elo INTEGER DEFAULT 1200,
             is_active BOOLEAN DEFAULT TRUE,
             play_style VARCHAR(20) DEFAULT 'balanced',
             chat_frequency DECIMAL(3,2) DEFAULT 0.30,
             community_creator BOOLEAN DEFAULT FALSE,
+            username VARCHAR(20),
+            display_name VARCHAR(50),
+            chat_style VARCHAR(30) DEFAULT 'friendly',
+            join_communities BOOLEAN DEFAULT FALSE,
+            create_communities BOOLEAN DEFAULT FALSE,
+            auto_join_matches BOOLEAN DEFAULT FALSE,
+            is_public BOOLEAN DEFAULT TRUE,
+            games_played INTEGER DEFAULT 0,
+            wins INTEGER DEFAULT 0,
+            losses INTEGER DEFAULT 0,
+            draws INTEGER DEFAULT 0,
+            win_rate DECIMAL(5,2) DEFAULT 0,
+            messages_sent INTEGER DEFAULT 0,
+            communities_joined INTEGER DEFAULT 0,
             created_by VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -495,7 +526,9 @@ export async function initDatabase({ force = false } = {}) {
         await client.query("ALTER TABLE bots ADD COLUMN IF NOT EXISTS avatar VARCHAR(10) DEFAULT '🤖'");
         await client.query("ALTER TABLE bots ADD COLUMN IF NOT EXISTS personality TEXT");
         await client.query("ALTER TABLE bots ADD COLUMN IF NOT EXISTS system_prompt TEXT");
-        await client.query("ALTER TABLE bots ADD COLUMN IF NOT EXISTS model VARCHAR(50) DEFAULT 'gpt-4o-mini'");
+        await client.query('ALTER TABLE bots ADD COLUMN IF NOT EXISTS model VARCHAR(255)');
+        await client.query('ALTER TABLE bots ALTER COLUMN model TYPE VARCHAR(255)');
+        await client.query('ALTER TABLE bots ALTER COLUMN model DROP DEFAULT');
         await client.query("ALTER TABLE bots ADD COLUMN IF NOT EXISTS elo INTEGER DEFAULT 1200");
         await client.query("ALTER TABLE bots ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE");
         await client.query("ALTER TABLE bots ADD COLUMN IF NOT EXISTS play_style VARCHAR(20) DEFAULT 'balanced'");
@@ -504,6 +537,33 @@ export async function initDatabase({ force = false } = {}) {
         await client.query("ALTER TABLE bots ADD COLUMN IF NOT EXISTS created_by VARCHAR(100)");
         await client.query("ALTER TABLE bots ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
         await client.query("ALTER TABLE bots ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+        await client.query('ALTER TABLE bots ADD COLUMN IF NOT EXISTS username VARCHAR(20)');
+        await client.query('ALTER TABLE bots ADD COLUMN IF NOT EXISTS display_name VARCHAR(50)');
+        await client.query("ALTER TABLE bots ADD COLUMN IF NOT EXISTS chat_style VARCHAR(30) DEFAULT 'friendly'");
+        await client.query('ALTER TABLE bots ADD COLUMN IF NOT EXISTS join_communities BOOLEAN DEFAULT FALSE');
+        await client.query('ALTER TABLE bots ADD COLUMN IF NOT EXISTS create_communities BOOLEAN DEFAULT FALSE');
+        await client.query('ALTER TABLE bots ADD COLUMN IF NOT EXISTS auto_join_matches BOOLEAN DEFAULT FALSE');
+        await client.query('ALTER TABLE bots ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT TRUE');
+        await client.query('ALTER TABLE bots ADD COLUMN IF NOT EXISTS games_played INTEGER DEFAULT 0');
+        await client.query('ALTER TABLE bots ADD COLUMN IF NOT EXISTS wins INTEGER DEFAULT 0');
+        await client.query('ALTER TABLE bots ADD COLUMN IF NOT EXISTS losses INTEGER DEFAULT 0');
+        await client.query('ALTER TABLE bots ADD COLUMN IF NOT EXISTS draws INTEGER DEFAULT 0');
+        await client.query('ALTER TABLE bots ADD COLUMN IF NOT EXISTS win_rate DECIMAL(5,2) DEFAULT 0');
+        await client.query('ALTER TABLE bots ADD COLUMN IF NOT EXISTS messages_sent INTEGER DEFAULT 0');
+        await client.query('ALTER TABLE bots ADD COLUMN IF NOT EXISTS communities_joined INTEGER DEFAULT 0');
+        await client.query(`
+          UPDATE bots b
+          SET username = COALESCE(NULLIF(b.username, ''), u.username),
+              display_name = COALESCE(NULLIF(b.display_name, ''), NULLIF(b.name, ''), u.username),
+              name = COALESCE(NULLIF(b.name, ''), NULLIF(b.display_name, ''), u.username),
+              win_rate = CASE WHEN COALESCE(b.games_played, 0) > 0
+                THEN ROUND(100.0 * COALESCE(b.wins, 0) / b.games_played, 2)
+                ELSE 0 END
+          FROM users u
+          WHERE u.id = b.id
+        `);
+        await client.query('UPDATE users SET is_bot = TRUE WHERE id IN (SELECT id FROM bots)');
+
 
         // Bot activity log for debugging
         await client.query(`
@@ -512,10 +572,20 @@ export async function initDatabase({ force = false } = {}) {
             bot_id VARCHAR(100) NOT NULL REFERENCES bots(id) ON DELETE CASCADE,
             action VARCHAR(50) NOT NULL,
             details JSONB,
+            activity_type VARCHAR(50),
+            game_id VARCHAR(100),
+            metadata JSONB,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           )
         `);
 
+
+        await client.query('ALTER TABLE bot_activity ADD COLUMN IF NOT EXISTS activity_type VARCHAR(50)');
+        await client.query('ALTER TABLE bot_activity ADD COLUMN IF NOT EXISTS game_id VARCHAR(100)');
+        await client.query('ALTER TABLE bot_activity ADD COLUMN IF NOT EXISTS metadata JSONB');
+        await client.query('ALTER TABLE bot_activity ALTER COLUMN action DROP NOT NULL');
+        await client.query('UPDATE bot_activity SET activity_type = action WHERE activity_type IS NULL');
+        await client.query('UPDATE bot_activity SET metadata = details WHERE metadata IS NULL');
 
         // Lessons (curated learning content)
         await client.query(`

@@ -11,11 +11,12 @@
 
 import { Chess } from 'chess.js';
 import { query } from '../db.js';
+import { getCoachToken } from '../coachAuth.js';
 import { spawn } from 'node:child_process';
 
 const ENGINE_PATH = process.env.STOCKFISH_PATH || '/usr/games/stockfish';
-
-const DEFAULT_MODEL = 'gpt-4o-mini';
+const BOT_CHAT_API_URL = process.env.BOT_CHAT_API_URL || 'https://gen.pollinations.ai/v1/chat/completions';
+const BOT_CHAT_TIMEOUT_MS = Number.parseInt(process.env.BOT_CHAT_TIMEOUT_MS || '12000', 10);
 
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -75,22 +76,42 @@ async function getEngineMove(fen, depth = 12, nodes = 100000) {
   });
 }
 
-async function callPollinations(prompt, systemPrompt, model = DEFAULT_MODEL) {
-  // Use the existing coachAI/pollinations pattern
-  // The Pollinations API is called via the coach endpoint
+export async function callPollinations(prompt, systemPrompt, model, userId) {
   try {
-    // For now, we'll use a simple fetch to a generic LLM endpoint
-    // In production this would use the configured Pollinations connector
-    const response = await fetch('https://text.pollinations.ai/' + encodeURIComponent(prompt), {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    if (!response.ok) throw new Error(`Pollinations error: ${response.status}`);
-    return await response.text();
-  } catch (e) {
-    console.error('[BotRunner] Pollinations call failed:', e.message);
-    // Fallback to simple responses
+    if (typeof model !== 'string' || !model.trim()) throw new Error('No bot model selected');
+    const token = await getCoachToken(userId);
+    if (!token) throw new Error('Bot creator has no connected Pollinations account');
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), BOT_CHAT_TIMEOUT_MS);
+    try {
+      const response = await fetch(BOT_CHAT_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          model: model.trim(),
+          messages: [
+            { role: 'system', content: systemPrompt || 'You are a friendly and sportsmanlike chess player.' },
+            { role: 'user', content: prompt },
+          ],
+          max_tokens: 180,
+          temperature: 0.8,
+        }),
+      });
+      if (!response.ok) throw new Error(`Pollinations error: ${response.status}`);
+      const data = await response.json();
+      const content = data?.choices?.[0]?.message?.content;
+      if (typeof content !== 'string' || !content.trim()) throw new Error('Pollinations returned no text');
+      return content.trim();
+    } finally {
+      clearTimeout(timeout);
+    }
+  } catch (error) {
+    console.error('[BotRunner] Pollinations call failed:', error?.message || error);
     return getFallbackChat(systemPrompt);
   }
 }
@@ -141,7 +162,7 @@ Game result: ${gameState.result || 'ongoing'}
 
 Generate a brief, natural chat message (max 160 chars):`;
 
-  return await callPollinations(prompt, bot.system_prompt, bot.model);
+  return await callPollinations(prompt, bot.system_prompt || bot.personality, bot.model, bot.created_by);
 }
 
 async function generateCommunityIdea(bot) {
@@ -151,7 +172,7 @@ You're thinking about creating a chess community/club.
 Suggest a creative club name, description, and focus (max 200 chars total).
 Format: NAME | DESCRIPTION | FOCUS`;
 
-  return await callPollinations(prompt, bot.system_prompt, bot.model);
+  return await callPollinations(prompt, bot.system_prompt || bot.personality, bot.model, bot.created_by);
 }
 
 async function createBotUser(bot) {

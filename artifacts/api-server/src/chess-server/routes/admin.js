@@ -17,10 +17,12 @@
 
 import express from 'express';
 
-import { query } from '../db.js';
+import { query, withTransaction } from '../db.js';
 import { errorResponse, handleRouteError } from '../middleware/errors.js';
 import { getSessionToken, validateSession } from '../auth.js';
 import { isIntegrityReviewer } from '../services/antiCheatService.js';
+import { getPollinationsTextModels } from '../services/pollinationsModels.js';
+import { getCoachToken } from '../coachAuth.js';
 
 const router = express.Router();
 
@@ -30,6 +32,12 @@ const USER_ID_RE = /^[A-Za-z0-9-]{6,100}$/;
 
 const ADMIN_COLUMNS = `id, username, email, elo, games_played, wins, losses, draws,
        is_banned, banned_at, banned_reason, created_at`;
+const CHAT_FREQUENCY_VALUES = { low: 0.15, medium: 0.3, high: 0.6 };
+
+function normalizeChatFrequency(value) {
+  if (typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1) return value;
+  return CHAT_FREQUENCY_VALUES[value] ?? null;
+}
 
 function shapeAdminUser(row) {
   return {
@@ -321,6 +329,23 @@ export default router;
 // BOTS ADMIN ROUTES
 // ---------------------------------------------------------------------------
 
+// GET /api/admin/bots/models
+router.get('/bots/models', async (req, res) => {
+  try {
+    const models = await getPollinationsTextModels();
+    let connected = false;
+    try {
+      connected = Boolean(await getCoachToken(req.adminId));
+    } catch (error) {
+      console.warn('[BotBuilder] Could not check Pollinations connection:', error?.message || error);
+    }
+    return res.json({ success: true, models, connected });
+  } catch (error) {
+    console.error('[BotBuilder] Failed to load model catalog:', error?.message || error);
+    return errorResponse(res, 502, 'Could not load available AI models. Please try again.');
+  }
+});
+
 // GET /api/admin/bots
 router.get('/bots', async (req, res) => {
   try {
@@ -350,7 +375,7 @@ router.post('/bots', async (req, res) => {
       avatar = '♟️',
       personality,
       system_prompt = '',
-      model = 'gpt-4o-mini',
+      model,
       elo = 1500,
       play_style = 'balanced',
       chat_frequency = 'medium',
@@ -366,6 +391,9 @@ router.post('/bots', async (req, res) => {
     if (!username || !display_name || !personality) {
       return errorResponse(res, 400, 'username, display_name, and personality are required');
     }
+    if (typeof model !== 'string' || !model.trim()) {
+      return errorResponse(res, 400, 'Choose an available AI model');
+    }
     if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
       return errorResponse(res, 400, 'Username must be 3-20 characters (letters, numbers, underscore)');
     }
@@ -373,38 +401,51 @@ router.post('/bots', async (req, res) => {
       return errorResponse(res, 400, 'ELO must be between 100 and 3000');
     }
 
-    // Check username uniqueness
-    const existing = await query('SELECT 1 FROM bots WHERE username = $1', [username]);
+    const normalizedChatFrequency = normalizeChatFrequency(chat_frequency);
+    if (normalizedChatFrequency === null) {
+      return errorResponse(res, 400, 'Chat frequency must be low, medium, or high');
+    }
+
+    // Usernames are global account identifiers, not just bot labels.
+    const existing = await query('SELECT 1 FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1', [username]);
     if (existing.rows.length > 0) {
       return errorResponse(res, 409, 'Username already taken');
     }
 
     const botId = crypto.randomUUID();
-    const result = await query(
-      `INSERT INTO bots (
-         id, username, display_name, avatar, personality, system_prompt, model,
-         elo, play_style, chat_frequency, chat_style,
+    const bot = await withTransaction(async (client) => {
+      await client.query(
+        `INSERT INTO users (id, username, avatar, elo, is_bot, created_at)
+         VALUES ($1, $2, $3, $4, TRUE, CURRENT_TIMESTAMP)`,
+        [botId, username, avatar, elo]
+      );
+      const result = await client.query(
+        `INSERT INTO bots (
+           id, name, username, display_name, avatar, personality, system_prompt, model,
+           elo, play_style, chat_frequency, chat_style,
+           join_communities, create_communities, auto_join_matches,
+           is_active, is_public, created_by
+         ) VALUES (
+           $1, $2, $3, $4, $5, $6, $7, $8,
+           $9, $10, $11, $12,
+           $13, $14, $15,
+           $16, $17, $18
+         )
+         RETURNING
+           id, username, display_name, avatar, personality, system_prompt, model,
+           elo, play_style, chat_frequency, chat_style,
+           join_communities, create_communities, auto_join_matches,
+           is_active, is_public, created_by, created_at,
+           games_played, wins, losses, draws, win_rate,
+           messages_sent, communities_joined`,
+        [botId, display_name, username, display_name, avatar, personality, system_prompt, model.trim(),
+         elo, play_style, normalizedChatFrequency, chat_style,
          join_communities, create_communities, auto_join_matches,
-         is_active, is_public, created_by
-       ) VALUES (
-         $1, $2, $3, $4, $5, $6, $7,
-         $8, $9, $10, $11,
-         $12, $13, $14,
-         $15, $16, $17
-       )
-       RETURNING
-         id, username, display_name, avatar, personality, system_prompt, model,
-         elo, play_style, chat_frequency, chat_style,
-         join_communities, create_communities, auto_join_matches,
-         is_active, is_public, created_by, created_at,
-         games_played, wins, losses, draws, win_rate,
-         messages_sent, communities_joined`,
-      [botId, username, display_name, avatar, personality, system_prompt, model,
-       elo, play_style, chat_frequency, chat_style,
-       join_communities, create_communities, auto_join_matches,
-       is_active, is_public, req.adminId]
-    );
-    return res.status(201).json({ success: true, bot: result.rows[0] });
+         is_active, is_public, req.adminId]
+      );
+      return result.rows[0];
+    });
+    return res.status(201).json({ success: true, bot });
   } catch (error) {
     return handleRouteError(res, error, 'Failed to create bot');
   }
@@ -448,11 +489,19 @@ router.patch('/bots/:id', async (req, res) => {
       }
     };
 
-    if (display_name !== undefined) addField('display_name', display_name);
+    if (display_name !== undefined) {
+      addField('display_name', display_name);
+      addField('name', display_name);
+    }
     if (avatar !== undefined) addField('avatar', avatar);
     if (personality !== undefined) addField('personality', personality);
     if (system_prompt !== undefined) addField('system_prompt', system_prompt);
-    if (model !== undefined) addField('model', model);
+    if (model !== undefined) {
+      if (typeof model !== 'string' || !model.trim()) {
+        return errorResponse(res, 400, 'Choose an available AI model');
+      }
+      addField('model', model.trim());
+    }
     if (elo !== undefined) {
       if (!Number.isInteger(elo) || elo < 100 || elo > 3000) {
         return errorResponse(res, 400, 'ELO must be a whole number between 100 and 3000');
@@ -460,7 +509,13 @@ router.patch('/bots/:id', async (req, res) => {
       addField('elo', elo);
     }
     if (play_style !== undefined) addField('play_style', play_style);
-    if (chat_frequency !== undefined) addField('chat_frequency', chat_frequency);
+    if (chat_frequency !== undefined) {
+      const normalized = normalizeChatFrequency(chat_frequency);
+      if (normalized === null) {
+        return errorResponse(res, 400, 'Chat frequency must be low, medium, or high');
+      }
+      addField('chat_frequency', normalized);
+    }
     if (chat_style !== undefined) addField('chat_style', chat_style);
     if (join_communities !== undefined) addField('join_communities', join_communities);
     if (create_communities !== undefined) addField('create_communities', create_communities);
@@ -515,7 +570,9 @@ router.get('/bots/:id/activity', async (req, res) => {
 
     const limit = Math.min(Number(req.query.limit) || 50, 200);
     const result = await query(
-      `SELECT action, details, created_at
+      `SELECT COALESCE(activity_type, action) AS action,
+              COALESCE(metadata, details) AS details,
+              created_at
        FROM bot_activity
        WHERE bot_id = $1
        ORDER BY created_at DESC

@@ -234,6 +234,10 @@ class ApiService {
         return this.request("/admin/bots");
     }
 
+    async adminListBotModels() {
+        return this.request("/admin/bots/models");
+    }
+
     async adminGetBot(botId) {
         return this.request(`/admin/bots/${encodeURIComponent(botId)}`);
     }
