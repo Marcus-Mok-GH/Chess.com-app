@@ -1,3 +1,9 @@
+[2026-10-27] - Restore Vercel API startup and login
+
+- Fixed three malformed SQL query calls in the admin routes that prevented the API handler from loading, causing server errors on all API requests, including login.
+- Corrected the standalone server to call the bot runner export that actually exists, avoiding a separate startup failure outside Vercel.
+- Verified the server import chain and live health and OTP endpoints after deployment.
+
 [2026-10-26] - Stop Vercel function crashes on direct page loads and refreshes
 
 - Direct visits and refreshes on routes such as `/play` and `/puzzles` were failing because Vercel packaged the SSR function without its built HTML template and server renderer, while the renderer left workspace-linked frontend dependencies external. The function now explicitly includes its runtime files, and the SSR build bundles those dependencies so the function can load independently in Vercel.
