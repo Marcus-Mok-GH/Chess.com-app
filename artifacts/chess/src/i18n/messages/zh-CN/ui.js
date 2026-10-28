@@ -609,6 +609,13 @@ const ui = {
   "Play against other players live": "与其他玩家实时对弈",
   "The AI coach is powered by Pollinations AI. Sign in to your chess account to connect your personal Pollinations authorization and start improving your game.": "AI 教练由 Pollinations AI 提供支持。登录你的国际象棋账户，连接你的个人 Pollinations 授权并开始提升棋艺。",
   "The chess coach is powered by Pollinations AI using a secure OAuth connection tied to your chess account.": "国际象棋教练由 Pollinations AI 提供支持，并通过与你的棋类账户关联的安全 OAuth 连接运行。",
+  "Free accounts get 1 game review per day. Upgrade for unlimited reviews — {price} {currency}/month.": "免费账户每天可复盘 1 局。升级可无限复盘 — 每月 {price} {currency}。",
+  "Free review {used} of {limit} used today": "今日已用免费复盘 {used}/{limit}",
+  "Free reviews reset at {time}.": "免费复盘将于 {time} 重置。",
+  "Unlimited reviews — subscribed": "无限复盘 — 已订阅",
+  "Upgrade — unlimited reviews": "升级 — 无限复盘",
+  "Upgrades are not available right now.": "升级功能暂时不可用。",
+  "You've used today's free review": "你已用完今天的免费复盘",
 };
 
 export default ui;

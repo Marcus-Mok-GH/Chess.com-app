@@ -609,6 +609,13 @@ const ui = {
   "Play against other players live": "மற்ற வீரர்களுடன் நேரடியாக விளையாடுங்கள்",
   "The AI coach is powered by Pollinations AI. Sign in to your chess account to connect your personal Pollinations authorization and start improving your game.": "AI பயிற்சியாளர் Pollinations AI மூலம் இயங்குகிறது. உங்கள் தனிப்பட்ட Pollinations அங்கீகாரத்தை இணைத்து விளையாட்டை மேம்படுத்தத் தொடங்க, உங்கள் சதுரங்கக் கணக்கில் உள்நுழையுங்கள்.",
   "The chess coach is powered by Pollinations AI using a secure OAuth connection tied to your chess account.": "இந்தச் சதுரங்கப் பயிற்சியாளர், உங்கள் சதுரங்கக் கணக்குடன் இணைக்கப்பட்ட பாதுகாப்பான OAuth இணைப்பைப் பயன்படுத்தி Pollinations AI மூலம் இயங்குகிறது.",
+  "Free accounts get 1 game review per day. Upgrade for unlimited reviews — {price} {currency}/month.": "இலவச கணக்குகளுக்கு ஒரு நாளைக்கு 1 விளையாட்டு மதிப்பாய்வு. வரம்பற்ற மதிப்பாய்வுகளுக்கு மேம்படுத்தவும் — மாதம் {price} {currency}.",
+  "Free review {used} of {limit} used today": "இன்று இலவச மதிப்பாய்வு {used}/{limit} பயன்படுத்தப்பட்டது",
+  "Free reviews reset at {time}.": "இலவச மதிப்பாய்வுகள் {time} அன்று மீட்டமைக்கப்படும்.",
+  "Unlimited reviews — subscribed": "வரம்பற்ற மதிப்பாய்வுகள் — சந்தா செலுத்தப்பட்டது",
+  "Upgrade — unlimited reviews": "மேம்படுத்து — வரம்பற்ற மதிப்பாய்வுகள்",
+  "Upgrades are not available right now.": "மேம்பாடுகள் இப்போது கிடைக்கவில்லை.",
+  "You've used today's free review": "இன்றைய இலவச மதிப்பாய்வை நீங்கள் பயன்படுத்திவிட்டீர்கள்",
 };
 
 export default ui;

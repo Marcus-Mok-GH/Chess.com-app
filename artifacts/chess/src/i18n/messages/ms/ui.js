@@ -609,6 +609,13 @@ const ui = {
   "Play against other players live": "Bermain secara langsung menentang pemain lain",
   "The AI coach is powered by Pollinations AI. Sign in to your chess account to connect your personal Pollinations authorization and start improving your game.": "Jurulatih AI dikuasakan oleh Pollinations AI. Log masuk ke akaun catur anda untuk menyambungkan kebenaran Pollinations peribadi anda dan mula meningkatkan permainan.",
   "The chess coach is powered by Pollinations AI using a secure OAuth connection tied to your chess account.": "Jurulatih catur dikuasakan oleh Pollinations AI melalui sambungan OAuth selamat yang dipautkan kepada akaun catur anda.",
+  "Free accounts get 1 game review per day. Upgrade for unlimited reviews — {price} {currency}/month.": "Akaun percuma mendapat 1 ulasan permainan sehari. Naik taraf untuk ulasan tanpa had — {price} {currency}/bulan.",
+  "Free review {used} of {limit} used today": "Ulasan percuma {used} daripada {limit} digunakan hari ini",
+  "Free reviews reset at {time}.": "Ulasan percuma ditetapkan semula pada {time}.",
+  "Unlimited reviews — subscribed": "Ulasan tanpa had — dilanggan",
+  "Upgrade — unlimited reviews": "Naik taraf — ulasan tanpa had",
+  "Upgrades are not available right now.": "Naik taraf tidak tersedia buat masa ini.",
+  "You've used today's free review": "Anda telah menggunakan ulasan percuma hari ini",
 };
 
 export default ui;

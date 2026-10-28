@@ -9,7 +9,7 @@ import { LESSON_CATALOG } from '../lessons/lessonCatalog.js';
 // forces a full DDL run (see db/query.js), so a deployment that lands before
 // its migration still repairs itself instead of crashing. Bumping this is
 // what makes that repair happen up front rather than on the first failure.
-export const SCHEMA_VERSION = '9';
+export const SCHEMA_VERSION = '10';
 const SCHEMA_META_KEY = 'schema_version';
 const SCHEMA_META_TABLE = 'schema_meta';
 // Fixed advisory-lock key so concurrent serverless inits serialize instead of
@@ -648,6 +648,36 @@ export async function initDatabase({ force = false } = {}) {
         await client.query('ALTER TABLE puzzle_stats ADD COLUMN IF NOT EXISTS best_streak INTEGER NOT NULL DEFAULT 0');
         await client.query('ALTER TABLE puzzle_stats ADD COLUMN IF NOT EXISTS rating INTEGER NOT NULL DEFAULT 400');
         await client.query('ALTER TABLE puzzle_stats ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+        // Daily game-review consumption for the free tier. One row per user per
+        // day; the primary key makes the increment atomic under concurrency.
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS review_usage (
+            user_id VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            usage_date DATE NOT NULL,
+            count INTEGER NOT NULL DEFAULT 0,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (user_id, usage_date)
+          )
+        `);
+
+        // Whop membership mirror. Written only by the signed webhook handler;
+        // a row with status 'active' lifts the daily review limit.
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS subscriptions (
+            user_id VARCHAR(100) PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+            whop_membership_id TEXT UNIQUE,
+            whop_plan_id TEXT,
+            status TEXT NOT NULL DEFAULT 'inactive',
+            current_period_end TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS whop_membership_id TEXT');
+        await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS whop_plan_id TEXT');
+        await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT \'inactive\'');
+        await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS current_period_end TIMESTAMP');
+        await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+        await client.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_subscriptions_membership ON subscriptions(whop_membership_id)');
 
         // Seed the lessons catalog idempotently so progress rows can be tied to
         // known lesson ids even on existing installations.

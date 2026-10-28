@@ -610,6 +610,13 @@ const ui = {
   "Play against other players live": "Play against other players live",
   "The AI coach is powered by Pollinations AI. Sign in to your chess account to connect your personal Pollinations authorization and start improving your game.": "The AI coach is powered by Pollinations AI. Sign in to your chess account to connect your personal Pollinations authorization and start improving your game.",
   "The chess coach is powered by Pollinations AI using a secure OAuth connection tied to your chess account.": "The chess coach is powered by Pollinations AI using a secure OAuth connection tied to your chess account.",
+  "Free accounts get 1 game review per day. Upgrade for unlimited reviews — {price} {currency}/month.": "Free accounts get 1 game review per day. Upgrade for unlimited reviews — {price} {currency}/month.",
+  "Free review {used} of {limit} used today": "Free review {used} of {limit} used today",
+  "Free reviews reset at {time}.": "Free reviews reset at {time}.",
+  "Unlimited reviews — subscribed": "Unlimited reviews — subscribed",
+  "Upgrade — unlimited reviews": "Upgrade — unlimited reviews",
+  "Upgrades are not available right now.": "Upgrades are not available right now.",
+  "You've used today's free review": "You've used today's free review",
 };
 
 export default ui;

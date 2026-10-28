@@ -427,3 +427,68 @@
     max-height: 260px;
   }
 }
+
+/* Review quota + upgrade paywall */
+.review-usage-line {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.review-usage-line-pro {
+  color: #a9d181;
+}
+
+.review-paywall {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(129, 182, 76, 0.35);
+  border-radius: 12px;
+  background: linear-gradient(160deg, rgba(129, 182, 76, 0.14), rgba(129, 182, 76, 0.04));
+}
+
+.review-paywall-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.review-paywall-copy {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.review-paywall-button {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 1.1rem;
+  border-radius: 8px;
+  background: #81b64c;
+  color: #10130d;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.review-paywall-button:hover {
+  background: #93ca5b;
+}
+
+.review-paywall-button:active {
+  transform: translateY(1px);
+}
+
+.review-paywall-reset {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}

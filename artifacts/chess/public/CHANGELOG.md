@@ -1,3 +1,10 @@
+[2026-10-28] - Unlimited Game Reviews subscription via Whop
+
+- Free accounts are limited to **1 AI game review per day**. A successful `/coach/analyze` counts as one review; failed or empty reviews do not consume the allowance. The counter resets at midnight UTC.
+- Subscribers on the PlayChess Whop plan (**S$7.99 / month**) get unlimited reviews. Checkout opens from the Game Review paywall when the daily free review is used up.
+- Membership state is synced through `POST /api/whop/webhook` into a local `subscriptions` table; the review quota service reads that table before every analyze request.
+- Added `review_usage` / `subscriptions` schema (SCHEMA_VERSION 10), usage and subscription coach endpoints, paywall UI copy in all six languages, and regression tests for quota + webhook signature handling.
+
 [2026-10-27] - Repair Bot Builder list and make AI models dynamic
 
 - Fixed the Bot Builder list failure by adding a versioned, additive database migration for bot accounts, configurations, activity records, and the fields used by the admin screen. New bot creation now creates its linked user in the same transaction and maps chat frequency to the runtime’s numeric setting.

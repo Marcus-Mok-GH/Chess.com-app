@@ -4,7 +4,12 @@ import api from '../services/api';
 import { analyzeGamePositions } from '../services/engineReview';
 import ChessBoard from '../components/ChessBoard';
 import { useUser } from '../contexts/UserContext';
-import { analyzeGame, getCoachConnectionUrl } from '../engine/coach/coachAI';
+import {
+  analyzeGame,
+  getCoachConnectionUrl,
+  getReviewUsage,
+  getSubscription,
+} from '../engine/coach/coachAI';
 import {
   buildReviewPositions,
   centipawnLossAt,
@@ -54,7 +59,10 @@ export default function GameReview() {
   const [engineError, setEngineError] = useState('');
   const [bookFlags, setBookFlags] = useState(null);
   const [coachComments, setCoachComments] = useState(null);
-  const [coachState, setCoachState] = useState('loading'); // loading | ready | unavailable | connect
+  const [coachState, setCoachState] = useState('loading'); // loading | ready | unavailable | connect | paywall
+  const [reviewUsage, setReviewUsage] = useState(null);
+  const [subscription, setSubscription] = useState(null);
+  const [checkoutUrl, setCheckoutUrl] = useState(null);
 
   const moveListRef = useRef(null);
   const activeMoveRef = useRef(null);
@@ -71,6 +79,9 @@ export default function GameReview() {
     setEngineError('');
     setCoachComments(null);
     setCoachState('loading');
+    setReviewUsage(null);
+    setSubscription(null);
+    setCheckoutUrl(null);
 
     api.getGameByCode(gameCode)
       .then((record) => {
@@ -211,12 +222,42 @@ export default function GameReview() {
           setCoachState('unavailable');
         }
       })
-      .catch(() => {
-        if (!cancelled) setCoachState('connect');
+      .catch((error) => {
+        if (cancelled) return;
+        if (error?.status === 402 && error?.code === 'REVIEW_LIMIT_REACHED') {
+          setCoachState('paywall');
+        } else {
+          setCoachState('connect');
+        }
       });
 
     return () => { cancelled = true; };
   }, [game]);
+
+  // ── Quota + subscription state (usage line and paywall copy) ─────────────
+  useEffect(() => {
+    let cancelled = false;
+
+    getReviewUsage()
+      .then((usage) => {
+        if (!cancelled) setReviewUsage(usage);
+      })
+      .catch(() => {
+        if (!cancelled) setReviewUsage(null);
+      });
+
+    getSubscription()
+      .then((data) => {
+        if (cancelled) return;
+        setSubscription(data.subscription);
+        setCheckoutUrl(data.offer?.checkoutUrl || null);
+      })
+      .catch(() => {
+        if (!cancelled) setSubscription(null);
+      });
+
+    return () => { cancelled = true; };
+  }, []);
 
   // ── Derived review data ──────────────────────────────────────────────────
   const losses = useMemo(() => {
@@ -444,6 +485,17 @@ export default function GameReview() {
               {accuracyCard(whiteSummary, t(game.white_player_name || 'White'), 'white')}
               {accuracyCard(blackSummary, t(game.black_player_name || 'Black'), 'black')}
             </div>
+            {reviewUsage && !reviewUsage.unlimited && reviewUsage.limit != null && (
+              <p className="review-usage-line">
+                {t("Free review {used} of {limit} used today", {
+                  used: reviewUsage.used ?? 0,
+                  limit: reviewUsage.limit,
+                })}
+              </p>
+            )}
+            {reviewUsage && reviewUsage.unlimited && (
+              <p className="review-usage-line review-usage-line-pro">{t("Unlimited reviews — subscribed")}</p>
+            )}
 
             <div className="review-comment-box">
               <h3 className="review-comment-title">{t("Coach commentary")}</h3>
@@ -462,6 +514,29 @@ export default function GameReview() {
                       {t("The AI coach is not connected.")}{' '}<a href={getCoachConnectionUrl()}>{t("Connect your coach")}</a> {' '}{t("to get move-by-move comments.")}</p>
                   )}
                   {coachState === 'unavailable' && <p className="review-comment-hint">{t("Coach comments are unavailable right now.")}</p>}
+                  {coachState === 'paywall' && (
+                    <div className="review-paywall">
+                      <h4 className="review-paywall-title">{t("You've used today's free review")}</h4>
+                      <p className="review-paywall-copy">
+                        {t("Free accounts get 1 game review per day. Upgrade for unlimited reviews — {price} {currency}/month.", {
+                          price: '7.99',
+                          currency: 'SGD',
+                        })}
+                      </p>
+                      {checkoutUrl ? (
+                        <a className="review-paywall-button" href={checkoutUrl} target="_blank" rel="noopener noreferrer">
+                          {t("Upgrade — unlimited reviews")}
+                        </a>
+                      ) : (
+                        <p className="review-paywall-copy">{t("Upgrades are not available right now.")}</p>
+                      )}
+                      {reviewUsage && reviewUsage.resetsAt && (
+                        <p className="review-paywall-reset">
+                          {t("Free reviews reset at {time}.", { time: new Date(reviewUsage.resetsAt).toLocaleString() })}
+                        </p>
+                      )}
+                    </div>
+                  )}
                   {currentComment && <p className="review-comment-text">{currentComment}</p>}
                 </>
               )}

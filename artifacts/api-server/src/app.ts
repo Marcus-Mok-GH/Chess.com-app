@@ -34,6 +34,17 @@ app.use((_, res, next) => {
   next();
 });
 app.use(cors(corsOptions));
+
+// Whop webhook must be mounted BEFORE the global JSON body parser so the
+// router's express.raw() middleware can verify the Svix HMAC signature over
+// the exact raw bytes Whop sent.
+try {
+  const whopRoutes = (await import("./chess-server/routes/whop.js" as any)).default;
+  app.use("/api/whop", whopRoutes);
+} catch (err) {
+  console.error("Failed to load Whop webhook routes:", err);
+}
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
