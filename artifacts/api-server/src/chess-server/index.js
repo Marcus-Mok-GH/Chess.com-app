@@ -20,6 +20,7 @@ import feedbackRoutes from './routes/feedback.js';
 import notificationRoutes from './routes/notifications.js';
 import adminRoutes from './routes/admin.js';
 import botsRoutes from './routes/bots.js';
+import whopRoutes from './routes/whop.js';
 import { query } from './db.js';
 import { initDatabase } from './db/init.js';
 import { setDatabaseReady } from './db/status.js';
@@ -40,6 +41,12 @@ app.use((_, res, next) => {
   next();
 });
 app.use(cors(corsOptions));
+
+// Whop webhooks must be mounted before the global JSON parser: the handler
+// verifies the signature over the exact raw request bytes, and express.json()
+// would consume and replace the body first.
+app.use('/api/whop', whopRoutes);
+
 app.use(express.json());
 
 // Auth routes perform their own database work through the shared query helper,

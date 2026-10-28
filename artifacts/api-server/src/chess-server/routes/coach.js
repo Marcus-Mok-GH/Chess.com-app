@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { query } from '../db.js';
 import { trimLessonSummary } from '../services/lessonSummary.js';
+import { consumeReview, getDailyLimit, getUsage } from '../services/reviewQuota.js';
 import { languageInstruction } from '../services/outputLanguage.js';
 import { errorResponse, handleRouteError } from '../middleware/errors.js';
 import {
@@ -391,6 +392,17 @@ router.post('/analyze', async (req, res) => {
     const moves = sanMoves.map((san, index) => `${index % 2 === 0 ? `${Math.floor(index / 2) + 1}. ` : ''}${san}`).join(' ');
     if (!sanMoves.length) return errorResponse(res, 400, 'Missing required field: moveHistory (array)');
 
+    // Free accounts get one review per day; subscribers are unlimited. Check
+    // before doing any coach work so a blocked request never costs API tokens.
+    const quota = await getUsage(userId);
+    if (!quota.allowed) {
+      return res.status(402).json({
+        error: 'Daily review limit reached. Subscribe for unlimited game reviews.',
+        code: 'REVIEW_LIMIT_REACHED',
+        usage: quota,
+      });
+    }
+
     // One request per chunk of moves. A single request for the whole game gets
     // truncated by the max_tokens cap mid-JSON, which used to make every coach
     // comment disappear ("Coach comments are unavailable").
@@ -449,11 +461,74 @@ router.post('/analyze', async (req, res) => {
         review: entry?.review || entry?.comment || entry?.analysis || '',
       };
     }).filter((entry) => entry.review);
-    return res.json({ analysis: { format: 'move_review', moves: ordered } });
+    // Only a review that produced real per-move output consumes the daily
+    // allowance; empty/failed reviews are free.
+    const usage = await consumeReview(userId);
+    const limit = await getDailyLimit(userId);
+    return res.json({
+      analysis: { format: 'move_review', moves: ordered },
+      usage: {
+        used: usage,
+        limit: Number.isFinite(limit) ? limit : null,
+        remaining: Number.isFinite(limit) ? Math.max(0, limit - usage) : null,
+        unlimited: !Number.isFinite(limit),
+      },
+    });
   } catch (error) {
     if (error?.status === 402) return res.status(402).json({ error: error.message, code: 'POLLINATIONS_AUTH_REQUIRED' });
     return handleRouteError(res, error, 'Failed to analyze game');
   }
 });
+
+// Subscription state plus the real checkout link for the upgrade paywall.
+// The live Whop checkout configuration for the SGD 7.99/month
+// "Unlimited Game Reviews" plan on the PlayChess business
+// (checkout ch_Ju8R64mv79lfXAd, plan plan_FJAbNB08zlVit). WHOP_CHECKOUT_URL
+// overrides it for other environments; setting it to an empty string
+// disables the upgrade button rather than linking somewhere broken.
+router.get('/subscription', async (req, res) => {
+  try {
+    const userId = await requireCoachUser(req, res);
+    if (!userId) return;
+    const usage = await getUsage(userId);
+    const { rows } = await query(
+      'SELECT status, current_period_end FROM subscriptions WHERE user_id = $1',
+      [userId]
+    );
+    const subscription = rows[0] || null;
+    return res.json({
+      subscription: {
+        active: usage.unlimited,
+        status: subscription?.status || 'inactive',
+        currentPeriodEnd: subscription?.current_period_end || null,
+      },
+      offer: {
+        checkoutUrl:
+          process.env.WHOP_CHECKOUT_URL !== undefined
+            ? process.env.WHOP_CHECKOUT_URL || null
+            : 'https://whop.com/checkout/ch_Ju8R64mv79lfXAd/',
+        price: 7.99,
+        currency: 'SGD',
+        interval: 'month',
+        label: 'Unlimited game reviews',
+      },
+    });
+  } catch (error) {
+    return handleRouteError(res, error, 'Failed to load subscription status');
+  }
+});
+
+// Lightweight quota read for the UI: how many reviews the user has left today.
+router.get('/usage', async (req, res) => {
+  try {
+    const userId = await requireCoachUser(req, res);
+    if (!userId) return;
+    const usage = await getUsage(userId);
+    return res.json({ usage });
+  } catch (error) {
+    return handleRouteError(res, error, 'Failed to load review usage');
+  }
+});
+
 
 export default router;

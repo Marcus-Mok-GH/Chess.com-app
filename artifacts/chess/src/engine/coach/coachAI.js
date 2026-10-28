@@ -112,6 +112,19 @@ export async function getLessonConcept({ fen, sideToMove, theme, hint, lessonTit
   }
 }
 
+export async function getReviewUsage() {
+  const data = await coachRequest('/coach/usage', { headers: { Accept: 'application/json' } });
+  return data.usage || null;
+}
+
+export async function getSubscription() {
+  const data = await coachRequest('/coach/subscription', { headers: { Accept: 'application/json' } });
+  return {
+    subscription: data.subscription || { active: false, status: 'inactive', currentPeriodEnd: null },
+    offer: data.offer || { checkoutUrl: null, price: 7.99, currency: 'SGD', interval: 'month', label: 'Unlimited game reviews' },
+  };
+}
+
 export async function analyzeGame(moveHistory, result, gameId = null) {
   try {
     const data = await coachRequest('/coach/analyze', {
