@@ -616,6 +616,17 @@ const ui = {
   "Upgrade — unlimited reviews": "升级 — 无限复盘",
   "Upgrades are not available right now.": "升级功能暂时不可用。",
   "You've used today's free review": "你已用完今天的免费复盘",
+  "Subscription": "订阅",
+  "Manage purchases and subscriptions": "管理购买与订阅",
+  "View your plan, review usage, and upgrade options.": "查看你的套餐、复盘用量与升级选项。",
+  "Your plan": "你的套餐",
+  "Reviews today": "今日复盘",
+  "Free plan": "免费套餐",
+  "Active": "生效中",
+  "Renews {date}": "{date} 续费",
+  "Manage subscription": "管理订阅",
+  "Sign in to see your plan and upgrade options.": "登录以查看你的套餐与升级选项。",
+  "Free accounts get 1 game review per day.": "免费账户每天可复盘 1 局。",
 };
 
 export default ui;

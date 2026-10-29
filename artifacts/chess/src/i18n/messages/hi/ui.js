@@ -616,6 +616,17 @@ const ui = {
   "Upgrade — unlimited reviews": "अपग्रेड — असीमित समीक्षाएँ",
   "Upgrades are not available right now.": "अपग्रेड अभी उपलब्ध नहीं हैं।",
   "You've used today's free review": "आपने आज की मुफ़्त समीक्षा उपयोग कर ली है",
+  "Subscription": "सदस्यता",
+  "Manage purchases and subscriptions": "खरीदारी और सदस्यताएँ प्रबंधित करें",
+  "View your plan, review usage, and upgrade options.": "अपनी योजना, समीक्षा उपयोग और अपग्रेड विकल्प देखें।",
+  "Your plan": "आपकी योजना",
+  "Reviews today": "आज की समीक्षाएँ",
+  "Free plan": "मुफ़्त योजना",
+  "Active": "सक्रिय",
+  "Renews {date}": "{date} को नवीकरण",
+  "Manage subscription": "सदस्यता प्रबंधित करें",
+  "Sign in to see your plan and upgrade options.": "अपनी योजना और अपग्रेड विकल्प देखने के लिए साइन इन करें।",
+  "Free accounts get 1 game review per day.": "मुफ़्त खातों को प्रतिदिन 1 गेम समीक्षा मिलती है।",
 };
 
 export default ui;

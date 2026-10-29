@@ -616,6 +616,17 @@ const ui = {
   "Upgrade — unlimited reviews": "Naik taraf — ulasan tanpa had",
   "Upgrades are not available right now.": "Naik taraf tidak tersedia buat masa ini.",
   "You've used today's free review": "Anda telah menggunakan ulasan percuma hari ini",
+  "Subscription": "Langganan",
+  "Manage purchases and subscriptions": "Urus pembelian dan langganan",
+  "View your plan, review usage, and upgrade options.": "Lihat pelan, penggunaan ulasan dan pilihan naik taraf anda.",
+  "Your plan": "Pelan anda",
+  "Reviews today": "Ulasan hari ini",
+  "Free plan": "Pelan percuma",
+  "Active": "Aktif",
+  "Renews {date}": "Diperbaharui pada {date}",
+  "Manage subscription": "Urus langganan",
+  "Sign in to see your plan and upgrade options.": "Log masuk untuk melihat pelan dan pilihan naik taraf anda.",
+  "Free accounts get 1 game review per day.": "Akaun percuma mendapat 1 ulasan permainan sehari.",
 };
 
 export default ui;

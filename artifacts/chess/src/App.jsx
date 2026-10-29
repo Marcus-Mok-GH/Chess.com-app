@@ -34,6 +34,7 @@ const Play = lazy(() => import('./pages/Play'))
 const OnlinePlay = lazy(() => import('./pages/OnlinePlay'))
 const GameHistory = lazy(() => import('./pages/GameHistory'))
 const GameReview = lazy(() => import('./pages/GameReview'))
+const Subscription = lazy(() => import('./pages/Subscription'))
 const Game = lazy(() => import('./pages/Game'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Terms = lazy(() => import('./pages/Terms'))
@@ -58,6 +59,7 @@ function getTitle(path) {
   if (path === '/online') return 'Online Play'
   if (path === '/history') return 'Game History'
   if (path === '/settings') return 'Settings'
+  if (path === '/subscription') return 'Subscription'
   if (path === '/terms') return 'Terms of Service'
   if (path === '/privacy') return 'Privacy Policy'
   if (path === '/changelog') return 'Changelog'
@@ -413,6 +415,7 @@ export default function App({ Router = BrowserRouter, routerProps = {}, initialU
                   <Route path="/history" element={<GameHistory />} />
                   <Route path="/review/:gameCode" element={<Suspense fallback={<RouteFallback />}><GameReview /></Suspense>} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="/subscription" element={<Suspense fallback={<RouteFallback />}><Subscription /></Suspense>} />
                   <Route path="/terms" element={<Suspense fallback={<RouteFallback />}><Terms /></Suspense>} />
                   <Route path="/privacy" element={<Suspense fallback={<RouteFallback />}><Privacy /></Suspense>} />
                   <Route path="/changelog" element={<Changelog />} />

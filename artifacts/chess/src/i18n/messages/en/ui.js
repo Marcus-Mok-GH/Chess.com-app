@@ -617,6 +617,17 @@ const ui = {
   "Upgrade — unlimited reviews": "Upgrade — unlimited reviews",
   "Upgrades are not available right now.": "Upgrades are not available right now.",
   "You've used today's free review": "You've used today's free review",
+  "Subscription": "Subscription",
+  "Manage purchases and subscriptions": "Manage purchases and subscriptions",
+  "View your plan, review usage, and upgrade options.": "View your plan, review usage, and upgrade options.",
+  "Your plan": "Your plan",
+  "Reviews today": "Reviews today",
+  "Free plan": "Free plan",
+  "Active": "Active",
+  "Renews {date}": "Renews {date}",
+  "Manage subscription": "Manage subscription",
+  "Sign in to see your plan and upgrade options.": "Sign in to see your plan and upgrade options.",
+  "Free accounts get 1 game review per day.": "Free accounts get 1 game review per day.",
 };
 
 export default ui;

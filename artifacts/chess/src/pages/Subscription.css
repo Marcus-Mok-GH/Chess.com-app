@@ -1,0 +1,215 @@
+.subscription-page {
+  flex: 1;
+  min-height: 100%;
+  padding: 3rem 2rem 4rem;
+  background-color: var(--bg-page);
+  background-image: radial-gradient(ellipse 60% 36% at 50% 0%, rgba(129, 182, 76, 0.09), transparent 68%);
+  color: var(--text-secondary);
+}
+
+.subscription-container {
+  width: min(100%, 720px);
+  margin: 0 auto;
+}
+
+.subscription-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.subscription-header-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(129, 182, 76, 0.32);
+  border-radius: var(--radius-xl);
+  background: rgba(129, 182, 76, 0.1);
+  color: var(--primary);
+}
+
+.subscription-header h1 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.925rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+
+.subscription-subtitle {
+  margin: 0.3rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.subscription-cards {
+  display: grid;
+  gap: 1rem;
+}
+
+.subscription-card {
+  padding: 1.5rem 1.625rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-2xl, 22px);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.012) 60%), var(--card);
+  box-shadow: var(--shadow-sm);
+}
+
+.subscription-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.875rem;
+}
+
+.subscription-card-head h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.subscription-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.subscription-badge-active {
+  border-color: rgba(129, 182, 76, 0.4);
+  background: rgba(129, 182, 76, 0.14);
+  color: var(--primary);
+}
+
+.subscription-card-copy {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.subscription-card-copy + .subscription-card-copy,
+.subscription-card-head + .subscription-card-copy {
+  margin-top: 0.25rem;
+}
+
+.subscription-card-copy-pro {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.subscription-card-note {
+  margin: 0.6rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.subscription-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1rem;
+  padding: 0.65rem 1.25rem;
+  border: 1px solid rgba(129, 182, 76, 0.4);
+  border-radius: var(--radius-lg);
+  background: rgba(129, 182, 76, 0.16);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color 160ms ease-out, transform 160ms ease-out;
+}
+
+.subscription-cta:hover {
+  background: rgba(129, 182, 76, 0.26);
+}
+
+.subscription-cta:active {
+  transform: scale(0.98);
+}
+
+.subscription-cta:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
+.subscription-state {
+  margin: 0;
+  padding: 2.5rem 1.5rem;
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-2xl, 22px);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.subscription-state p {
+  margin: 0 0 1rem;
+}
+
+.subscription-retry {
+  padding: 0.5rem 1.1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.subscription-retry:hover {
+  border-color: rgba(129, 182, 76, 0.4);
+}
+
+@media (max-width: 768px) {
+  .subscription-page {
+    padding: 1.25rem 1rem 6rem;
+  }
+
+  .subscription-header {
+    margin-bottom: 1.25rem;
+  }
+
+  .subscription-header-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+  }
+
+  .subscription-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .subscription-card {
+    padding: 1.125rem;
+    border-radius: var(--radius-lg);
+  }
+}
+
+@media (min-width: 1440px) {
+  .subscription-page {
+    padding: 4rem 3rem;
+  }
+
+  .subscription-container {
+    max-width: 800px;
+  }
+}

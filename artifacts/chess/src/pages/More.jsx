@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { BookOpen, Building2, History, Puzzle, Settings2, ShieldCheck, Trophy, UsersRound, UserRound } from 'lucide-react'
+import { BookOpen, Building2, CreditCard, History, Puzzle, Settings2, ShieldCheck, Trophy, UsersRound, UserRound } from 'lucide-react'
 import { useUser } from '../contexts/UserContext';
 import { RATING_POOLS } from '../utils/timeControls';
 import './More.css'
@@ -34,6 +34,7 @@ const staticOptionGroups = [
     title: 'Your account',
     options: [
       { to: '/history', icon: History, title: 'Game History', description: 'Review your past games' },
+      { to: '/subscription', icon: CreditCard, title: 'Subscription', description: 'Manage purchases and subscriptions' },
       { to: '/settings', icon: Settings2, title: 'Settings', description: 'Manage your preferences' },
     ],
   },

@@ -34,6 +34,7 @@ import {
   Shield,
   Cpu,
   Sparkles,
+  CreditCard,
 } from 'lucide-react';
 import { useI18n, useT } from '../i18n/I18nContext';
 import { SUPPORTED_LOCALES } from '../i18n/locales';
@@ -257,6 +258,7 @@ export default function Settings() {
   const sections = useMemo(() => {
     const list = [];
     if (user) list.push({ id: 'account', label: 'Account' });
+    list.push({ id: 'subscription', label: 'Subscription' });
     list.push({ id: 'language', label: 'Language' });
     list.push({ id: 'display', label: 'Display' });
     list.push({ id: 'gameplay', label: 'Gameplay' });
@@ -663,6 +665,20 @@ export default function Settings() {
             </div>
           </Section>
         )}
+
+        <Section id="subscription" icon={CreditCard} title={t("Subscription")}>
+          <div className="setting-item">
+            <div className="setting-info">
+              <div className="setting-title">
+                <CreditCard className="setting-icon" size={16} aria-hidden="true" />
+                <span>{t("Subscription")}</span>
+              </div>
+              <span className="setting-desc">{t("Manage purchases and subscriptions")}</span>
+            </div>
+            <button className="link-button" type="button" onClick={() => navigate('/subscription')}>
+              {t("View")}</button>
+          </div>
+        </Section>
 
         <Section id="advanced" icon={Bug} title={t("Advanced")}>
           <SettingRow

@@ -616,6 +616,17 @@ const ui = {
   "Upgrade — unlimited reviews": "மேம்படுத்து — வரம்பற்ற மதிப்பாய்வுகள்",
   "Upgrades are not available right now.": "மேம்பாடுகள் இப்போது கிடைக்கவில்லை.",
   "You've used today's free review": "இன்றைய இலவச மதிப்பாய்வை நீங்கள் பயன்படுத்திவிட்டீர்கள்",
+  "Subscription": "சந்தா",
+  "Manage purchases and subscriptions": "வாங்குதல்கள் மற்றும் சந்தாக்களை நிர்வகிக்கவும்",
+  "View your plan, review usage, and upgrade options.": "உங்கள் திட்டம், மதிப்பாய்வு பயன்பாடு மற்றும் மேம்படுத்தல் விருப்பங்களைக் காண்க.",
+  "Your plan": "உங்கள் திட்டம்",
+  "Reviews today": "இன்றைய மதிப்பாய்வுகள்",
+  "Free plan": "இலவச திட்டம்",
+  "Active": "செயலில்",
+  "Renews {date}": "{date} அன்று புதுப்பிக்கப்படும்",
+  "Manage subscription": "சந்தாவை நிர்வகிக்கவும்",
+  "Sign in to see your plan and upgrade options.": "உங்கள் திட்டம் மற்றும் மேம்படுத்தல் விருப்பங்களைக் காண உள்நுழையவும்.",
+  "Free accounts get 1 game review per day.": "இலவச கணக்குகளுக்கு ஒரு நாளைக்கு 1 விளையாட்டு மதிப்பாய்வு கிடைக்கும்.",
 };
 
 export default ui;

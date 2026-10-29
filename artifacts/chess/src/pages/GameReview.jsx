@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
 import { analyzeGamePositions } from '../services/engineReview';
 import ChessBoard from '../components/ChessBoard';
@@ -8,7 +8,6 @@ import {
   analyzeGame,
   getCoachConnectionUrl,
   getReviewUsage,
-  getSubscription,
 } from '../engine/coach/coachAI';
 import {
   buildReviewPositions,
@@ -61,8 +60,6 @@ export default function GameReview() {
   const [coachComments, setCoachComments] = useState(null);
   const [coachState, setCoachState] = useState('loading'); // loading | ready | unavailable | connect | paywall
   const [reviewUsage, setReviewUsage] = useState(null);
-  const [subscription, setSubscription] = useState(null);
-  const [checkoutUrl, setCheckoutUrl] = useState(null);
 
   const moveListRef = useRef(null);
   const activeMoveRef = useRef(null);
@@ -80,8 +77,6 @@ export default function GameReview() {
     setCoachComments(null);
     setCoachState('loading');
     setReviewUsage(null);
-    setSubscription(null);
-    setCheckoutUrl(null);
 
     api.getGameByCode(gameCode)
       .then((record) => {
@@ -234,7 +229,7 @@ export default function GameReview() {
     return () => { cancelled = true; };
   }, [game]);
 
-  // ── Quota + subscription state (usage line and paywall copy) ─────────────
+  // ── Daily quota for the usage line; purchases live on /subscription ─────
   useEffect(() => {
     let cancelled = false;
 
@@ -244,16 +239,6 @@ export default function GameReview() {
       })
       .catch(() => {
         if (!cancelled) setReviewUsage(null);
-      });
-
-    getSubscription()
-      .then((data) => {
-        if (cancelled) return;
-        setSubscription(data.subscription);
-        setCheckoutUrl(data.offer?.checkoutUrl || null);
-      })
-      .catch(() => {
-        if (!cancelled) setSubscription(null);
       });
 
     return () => { cancelled = true; };
@@ -518,18 +503,11 @@ export default function GameReview() {
                     <div className="review-paywall">
                       <h4 className="review-paywall-title">{t("You've used today's free review")}</h4>
                       <p className="review-paywall-copy">
-                        {t("Free accounts get 1 game review per day. Upgrade for unlimited reviews — {price} {currency}/month.", {
-                          price: '7.99',
-                          currency: 'SGD',
-                        })}
+                        {t("Free accounts get 1 game review per day.")}
                       </p>
-                      {checkoutUrl ? (
-                        <a className="review-paywall-button" href={checkoutUrl} target="_blank" rel="noopener noreferrer">
-                          {t("Upgrade — unlimited reviews")}
-                        </a>
-                      ) : (
-                        <p className="review-paywall-copy">{t("Upgrades are not available right now.")}</p>
-                      )}
+                      <Link className="review-paywall-button" to="/subscription">
+                        {t("Manage subscription")}
+                      </Link>
                       {reviewUsage && reviewUsage.resetsAt && (
                         <p className="review-paywall-reset">
                           {t("Free reviews reset at {time}.", { time: new Date(reviewUsage.resetsAt).toLocaleString() })}

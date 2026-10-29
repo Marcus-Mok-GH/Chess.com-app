@@ -28,9 +28,13 @@ vi.mock('../contexts/UserContext', () => ({
 const { mockApi } = vi.hoisted(() => ({ mockApi: { getGameByCode: vi.fn(), getEngineEvaluations: vi.fn(), checkBookMoves: vi.fn() } }));
 vi.mock('../services/api', () => ({ default: mockApi }));
 
-const { mockAnalyzeGame } = vi.hoisted(() => ({ mockAnalyzeGame: vi.fn() }));
+const { mockAnalyzeGame, mockGetReviewUsage } = vi.hoisted(() => ({
+  mockAnalyzeGame: vi.fn(),
+  mockGetReviewUsage: vi.fn(),
+}));
 vi.mock('../engine/coach/coachAI', () => ({
   analyzeGame: mockAnalyzeGame,
+  getReviewUsage: mockGetReviewUsage,
   getCoachConnectionUrl: () => 'https://example.test/coach/connect',
 }));
 
@@ -81,6 +85,13 @@ describe('GameReview page', () => {
         { ply: 1, san: 'e4', review: 'Strong central start.' },
         { ply: 2, san: 'e5', review: 'Fine symmetric reply.' },
       ],
+    });
+    mockGetReviewUsage.mockResolvedValue({
+      used: 0,
+      limit: 1,
+      remaining: 1,
+      unlimited: false,
+      resetsAt: '2026-10-29T00:00:00.000Z',
     });
   });
 
