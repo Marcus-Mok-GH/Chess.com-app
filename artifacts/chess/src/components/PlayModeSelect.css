@@ -2,7 +2,7 @@
 .play-mode-select {
   width: 100%;
   min-width: 0;
-  min-height: 100svh;
+  min-height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -53,7 +53,7 @@
 
 .play-mode-options {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1.25rem;
 }
 
@@ -135,7 +135,7 @@
   .play-mode-subtitle { font-size: 0.95rem; }
   /* Both options stay side-by-side at every screen size. */
   .play-mode-options { gap: 0.75rem; }
-  .play-mode-option { min-height: 0; padding: 1.25rem 1rem; }
+  .play-mode-option { min-width: 0; min-height: 0; padding: 1.25rem 0.75rem; overflow-wrap: anywhere; }
   .play-mode-desc { font-size: 0.875rem; }
 }
 

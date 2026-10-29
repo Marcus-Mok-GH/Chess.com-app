@@ -1,56 +1,48 @@
 :root {
-  --mobile-game-bar-reserve: 178px;
+  /* Includes the bounded quote, actions and spacing; safe area is added separately. */
+  --mobile-game-bar-reserve: 154px;
+  --mobile-game-rail-width: 176px;
 }
 
 .game-bottom-bar {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: auto 0 0;
   z-index: 2000;
-
   display: flex;
+  flex-direction: column;
   gap: 8px;
-  justify-content: space-around;
-  align-items: center;
-  flex-wrap: wrap;
-
-  padding: 12px;
-  padding-bottom: calc(12px + env(safe-area-inset-bottom));
-
+  padding: 8px max(8px, var(--safe-right)) calc(8px + var(--safe-bottom)) max(8px, var(--safe-left));
   background: var(--color-bg-secondary);
   border-top: 2px solid var(--color-accent-primary);
-  box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(12px);
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
 }
 
-/* Hide on desktop — ChessGame has its own sidebar for controls */
-@media (min-width: 769px) {
+/* Short tablet/phone landscape windows use the mobile controls too. */
+@media (min-width: 769px) and (min-height: 501px), (min-width: 1025px) {
   .game-bottom-bar {
-    display: none !important;
+    display: none;
   }
 }
 
 .gbb-bot-message {
   width: 100%;
+  min-width: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  margin-bottom: 8px;
+  gap: 8px;
+  padding: 6px 8px;
   background: rgba(0, 0, 0, 0.3);
   border-left: 3px solid var(--color-accent-primary);
   border-radius: 6px;
 }
 
 .gbb-bot-avatar {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.25rem;
+  display: grid;
+  place-items: center;
+  font-size: 1.1rem;
   flex-shrink: 0;
   background-color: var(--color-bg-primary);
 }
@@ -67,9 +59,14 @@
   font-weight: 800;
   color: var(--color-text-secondary);
   text-transform: uppercase;
+  overflow-wrap: anywhere;
 }
 
 .gbb-bot-quote {
+  max-height: 3.9em;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  overflow-wrap: anywhere;
   font-size: 0.8125rem;
   color: var(--color-text-primary);
   font-style: italic;
@@ -79,24 +76,31 @@
 .gbb-actions {
   width: 100%;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  /* Four actions without hints, five with hints — never leave an empty cell. */
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 4px;
 }
 
 .gbb-btn {
-  flex: 1 1 calc(33.333% - 8px);
   border: 1px solid var(--color-border-default);
   background: var(--color-bg-tertiary);
   color: var(--color-text-primary);
-  padding: 10px 8px;
+  padding: 8px 3px;
   border-radius: 8px;
   cursor: pointer;
+  font-size: 0.75rem;
   font-weight: 700;
+  line-height: 1.25;
   min-height: 44px;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  min-width: 44px;
+  overflow-wrap: anywhere;
+  touch-action: manipulation;
+}
+
+.gbb-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .gbb-btn:disabled {
@@ -108,53 +112,27 @@
   color: #ff6b6b;
 }
 
-@media (max-width: 420px) {
-  :root {
-    --mobile-game-bar-reserve: 238px;
+/* Keep the board tall in landscape rather than shrinking it under a footer. */
+@media (max-width: 1024px) and (max-height: 500px) and (orientation: landscape) {
+  .game-bottom-bar {
+    inset: 0 0 0 auto;
+    width: calc(var(--mobile-game-rail-width) + var(--safe-right));
+    justify-content: center;
+    padding: max(8px, var(--safe-top)) max(8px, var(--safe-right)) max(8px, var(--safe-bottom)) 8px;
+    border-top: 0;
+    border-left: 2px solid var(--color-accent-primary);
   }
 
   .gbb-actions {
+    grid-auto-flow: row;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .gbb-btn {
-    flex: none;
-  }
-}
-
-@media (max-width: 360px) {
-  :root {
-    --mobile-game-bar-reserve: 218px;
-  }
-
-  .game-bottom-bar {
-    gap: 6px;
-    padding: 8px;
-    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0));
-  }
-
-  .gbb-actions {
-    gap: 6px;
-  }
-
-  .gbb-bot-message {
-    padding: 6px 10px;
-    margin-bottom: 6px;
-  }
-
   .gbb-bot-avatar {
-    width: 28px;
-    height: 28px;
-    font-size: 1rem;
+    display: none;
   }
 
   .gbb-bot-quote {
-    font-size: 0.75rem;
-  }
-
-  .gbb-btn {
-    padding: 8px 6px;
-    min-height: 40px;
-    font-size: 0.75rem;
+    max-height: min(3.9em, 20svh);
   }
 }

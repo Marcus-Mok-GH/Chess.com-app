@@ -1,3 +1,11 @@
+[2026-10-28] - Mobile chess layout and touch controls
+
+- Replaced the three-row phone game toolbar with a compact row of at least 44px touch targets. Bot quotes remain scrollable without pushing the controls over the board; short landscape screens use a side rail instead of a tall footer.
+
+- Sized the board around the mobile controls, removed duplicate inline bot quotes on phones, constrained long player names and move-history scrolling, and kept the board usable when rotating to landscape, with room for both player rows.
+- Removed full-viewport minimum heights from the Play setup flow and placed White, Black and Random side by side, reducing unnecessary scrolling before starting a game.
+- Extended mobile navigation to short landscape windows up to 1024px wide, enlarged mobile header targets, respected horizontal safe areas, and kept editable fields at 16px with 44px minimum height to avoid iOS focus zoom.
+
 [2026-10-28] - Unlimited Game Reviews subscription via Whop
 
 - Free accounts are limited to **1 AI game review per day**. A successful `/coach/analyze` counts as one review; failed or empty reviews do not consume the allowance. The counter resets at midnight UTC.

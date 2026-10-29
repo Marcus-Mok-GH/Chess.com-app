@@ -1,7 +1,7 @@
 .play-setup {
   width: 100%;
   min-width: 0;
-  min-height: 100svh;
+  min-height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -54,7 +54,7 @@
   align-items: center;
   gap: 6px;
   padding: 0.5rem 0.75rem;
-  min-height: 40px;
+  min-height: 44px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--bg-elevated);
@@ -176,9 +176,11 @@
   .play-setup-card { padding: 1.75rem; gap: 1.75rem; border-radius: var(--radius-md); }
   .play-setup-title { font-size: 1.875rem; }
   .play-setup-subtitle { font-size: 0.95rem; }
-  .color-choice { grid-template-columns: 1fr; }
-  .color-btn { min-height: 80px; padding: 1rem; }
-  .color-btn-random { min-height: 64px; }
+  .color-choice { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; }
+  .color-btn { min-width: 0; min-height: 72px; padding: 0.75rem 0.25rem; font-size: 0.875rem; overflow-wrap: anywhere; }
+  .color-btn-random { grid-column: auto; min-height: 72px; }
+  .color-btn-emoji { font-size: 1.5rem; }
+  .play-setup-actions { margin-top: 0; padding-top: 1rem; }
   .start-btn { width: 100%; padding: 1rem; font-size: 1rem; }
   .play-setup-actions { flex-direction: column-reverse; }
 }

@@ -300,7 +300,7 @@
 
 /* The app shell owns a fixed mobile nav. Keep the floating trigger clear of
    that bar without moving it on standalone routes such as the landing page. */
-@media (max-width: 768px) {
+@media (max-width: 768px), (max-width: 1024px) and (max-height: 500px) {
   body:has(.bottom-nav) .feedback-trigger-wrapper {
     bottom: calc(76px + var(--safe-bottom));
   }
