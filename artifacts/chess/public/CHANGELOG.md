@@ -1,3 +1,8 @@
+[2026-10-30] - Mobile regression tests and changelog key fix
+
+- Added a browser-based mobile overflow test (tests/mobile-overflow.test.js) that boots the built app and asserts every shell route stays within the viewport (no horizontal scroll or overflow) at 390x844 and 320x568. It runs real Chromium through Playwright, is part of the curated test suite, and skips gracefully when the build or a browser binary is missing.
+- Fixed the Changelog page rendering a duplicate React key when two releases share the same date (several dates repeat in the release history) — each entry now has a stable unique key, with a regression test that fails if the duplicate-key warning ever returns.
+
 [2026-10-30] - Mobile touch-target polish
 
 - Enlarged the floating Feedback control to comfortable 44px touch targets on every screen: the Feedback trigger, its dismiss segment (now also a wider hit area), and the modal close button.

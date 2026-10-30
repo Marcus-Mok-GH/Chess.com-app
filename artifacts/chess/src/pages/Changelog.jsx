@@ -13,7 +13,10 @@ function parseChangelog(markdown) {
       if (current) entries.push(current);
       const heading = line.replace('## ', '').trim();
       const [version, ...dateParts] = heading.split(' - ');
-      current = { version, date: dateParts.join(' - ') || '', items: [] };
+      // `id` gives every entry a unique React key: real changelogs repeat
+      // release dates (several features shipped the same day), so the
+      // version/date heading alone cannot key the list.
+      current = { id: entries.length, version, date: dateParts.join(' - ') || '', items: [] };
       continue;
     }
 
@@ -65,7 +68,7 @@ export default function Changelog() {
 
         <div className="changelog-entries">
           {entries.map((entry) => (
-            <article key={entry.version} className="changelog-entry">
+            <article key={entry.id} className="changelog-entry">
               <header>
                 <h2>{entry.version}</h2>
                 <span>{entry.date}</span>
