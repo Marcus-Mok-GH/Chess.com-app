@@ -165,4 +165,10 @@
     row-gap: 0.2rem;
   }
   .leaderboard-other { grid-column: 3; min-width: 0; }
+
+  /* Touch-friendly refresh control on phones */
+  .leaderboard-refresh {
+    width: 44px;
+    height: 44px;
+  }
 }

@@ -19,6 +19,7 @@
   border: none;
   border-radius: 20px;
   cursor: pointer;
+  min-height: 44px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   transition: all 0.15s;
 }
@@ -37,6 +38,8 @@
   border-left: 1px solid rgba(0, 0, 0, 0.2);
   border-radius: 0 20px 20px 0;
   cursor: pointer;
+  min-height: 44px;
+  min-width: 40px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   transition: all 0.15s;
   display: flex;
@@ -102,8 +105,8 @@
   position: absolute;
   top: 12px;
   right: 12px;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;

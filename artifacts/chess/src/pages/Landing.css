@@ -870,6 +870,7 @@
   font-weight: 700;
   text-decoration: none;
   transition: background 0.15s ease, color 0.15s ease;
+  touch-action: manipulation;
 }
 
 .landing .footer-social-btn:hover {
@@ -1070,7 +1071,24 @@
   }
 
   .landing-footer {
-    padding: 32px max(20px, var(--safe-right)) max(32px, calc(20px + var(--safe-bottom))) max(20px, var(--safe-left));
+    /* Bottom padding clears the floating feedback control (fixed, ~58px up
+       from the bottom) so the last row of social buttons is never covered. */
+    padding: 32px max(20px, var(--safe-right)) calc(72px + var(--safe-bottom)) max(20px, var(--safe-left));
+  }
+
+  /* Larger touch targets for footer links and social buttons on phones */
+  .landing .footer-link,
+  .landing .footer-link-item {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 8px 6px;
+    margin: -8px -6px;
+  }
+
+  .landing .footer-social-btn {
+    width: 40px;
+    height: 40px;
   }
 }
 

@@ -1,3 +1,9 @@
+[2026-10-30] - Mobile touch-target polish
+
+- Enlarged the floating Feedback control to comfortable 44px touch targets on every screen: the Feedback trigger, its dismiss segment (now also a wider hit area), and the modal close button.
+- The Leaderboard refresh icon grows to a 44x44 touch target on phones.
+- The landing footer's social buttons and text links now have full-size touch areas on mobile (40px social buttons, padded link hit zones), and extra bottom clearance so the floating Feedback control no longer covers the social row.
+
 [2026-10-28] - Mobile chess layout and touch controls
 
 - Replaced the three-row phone game toolbar with a compact row of at least 44px touch targets. Bot quotes remain scrollable without pushing the controls over the board; short landscape screens use a side rail instead of a tall footer.
