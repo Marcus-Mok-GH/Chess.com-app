@@ -209,6 +209,28 @@
   color: #ffc107;
 }
 
+@media (max-width: 768px) {
+  .user-badge {
+    min-height: 44px;
+  }
+
+  .login-btn {
+    min-height: 44px;
+  }
+
+  .dropdown-item {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  .user-dropdown {
+    max-height: 80vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 @media (max-width: 480px) {
   .user-name {
     display: none;

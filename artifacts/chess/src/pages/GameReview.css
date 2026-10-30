@@ -492,3 +492,100 @@
   font-size: 0.8rem;
   color: var(--text-muted);
 }
+
+/* ── Small phone (≤480px) ──────────────── */
+@media (max-width: 480px) {
+  .game-review-page {
+    padding: 1rem 0.75rem 5.5rem;
+  }
+
+  .review-heading {
+    font-size: 1.25rem;
+  }
+
+  .review-subtitle {
+    font-size: 0.85rem;
+  }
+
+  .review-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .review-chip {
+    font-size: 0.72rem;
+    padding: 0.2rem 0.55rem;
+  }
+
+  .review-control-btn {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0.5rem;
+  }
+
+  .review-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .review-accuracy-value {
+    font-size: 1.35rem;
+  }
+
+  .review-comment-box {
+    padding: 0.75rem 0.9rem;
+  }
+
+  .review-moves {
+    max-height: 200px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .review-move {
+    font-size: 0.85rem;
+    min-height: 44px;
+  }
+
+  .review-paywall {
+    padding: 0.75rem 0.85rem;
+  }
+
+  .review-paywall-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ── Very small phone (≤390px) ─────────── */
+@media (max-width: 390px) {
+  .game-review-page {
+    padding: 0.75rem 0.5rem 5rem;
+  }
+
+  .review-heading {
+    font-size: 1.1rem;
+  }
+
+  .review-eval-bar {
+    width: 10px;
+  }
+
+  .review-board-wrap {
+    gap: 0.4rem;
+  }
+
+  .review-controls {
+    gap: 0.35rem;
+  }
+
+  .review-ply-indicator {
+    min-width: 4rem;
+    font-size: 0.8rem;
+  }
+
+  .review-legend {
+    font-size: 0.72rem;
+    gap: 0.4rem;
+  }
+}

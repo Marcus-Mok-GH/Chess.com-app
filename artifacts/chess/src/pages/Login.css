@@ -372,3 +372,35 @@
     margin-top: env(safe-area-inset-top);
   }
 }
+
+/* ── Small phone refinements (≤480px) ─── */
+@media (max-width: 480px) {
+  .login-title {
+    font-size: 1.5rem;
+  }
+
+  .login-subtitle {
+    font-size: 0.85rem;
+  }
+
+  .login-btn {
+    min-height: 48px;
+    font-size: 1rem;
+  }
+
+  .login-link-btn {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .login-secondary-actions {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .login-legal {
+    font-size: 0.72rem;
+    margin-top: 1rem;
+  }
+}

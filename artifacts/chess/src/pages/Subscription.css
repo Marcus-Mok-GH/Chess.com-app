@@ -213,3 +213,59 @@
     max-width: 800px;
   }
 }
+
+/* ── Small phone (≤480px) ──────────────── */
+@media (max-width: 480px) {
+  .subscription-page {
+    padding: 1rem 0.75rem 5.5rem;
+  }
+
+  .subscription-header h1 {
+    font-size: 1.3rem;
+  }
+
+  .subscription-subtitle {
+    font-size: 0.8rem;
+  }
+
+  .subscription-card {
+    padding: 1rem 0.875rem;
+  }
+
+  .subscription-cta {
+    width: 100%;
+    justify-content: center;
+    min-height: 44px;
+  }
+
+  .subscription-retry {
+    min-height: 44px;
+  }
+
+  .subscription-state {
+    padding: 2rem 1rem;
+  }
+}
+
+/* ── Very small phone (≤390px) ─────────── */
+@media (max-width: 390px) {
+  .subscription-page {
+    padding: 0.75rem 0.5rem 5rem;
+  }
+
+  .subscription-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .subscription-header h1 {
+    font-size: 1.15rem;
+  }
+
+  .subscription-card-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
+  }
+}

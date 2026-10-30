@@ -271,3 +271,52 @@
 @keyframes streak-spin {
   to { transform: rotate(360deg); }
 }
+
+@media (max-width: 480px) {
+  .daily-puzzle-streak {
+    padding: 1rem;
+    border-radius: var(--radius-md, 10px);
+  }
+
+  .daily-puzzle-streak-title {
+    font-size: 1.1rem;
+  }
+
+  .daily-puzzle-solve-btn {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    min-height: 44px;
+  }
+
+  .daily-puzzle-completed-icon {
+    width: 44px;
+    height: 44px;
+  }
+
+  .daily-puzzle-hint {
+    font-size: 0.78rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .daily-puzzle-streak {
+    padding: 0.75rem;
+  }
+
+  .daily-puzzle-streak-title {
+    font-size: 1rem;
+  }
+
+  .daily-streak-number {
+    font-size: 1.15rem;
+  }
+
+  .daily-puzzle-solve-btn {
+    font-size: 0.85rem;
+  }
+
+  .daily-streak-badge {
+    padding: 3px 8px;
+    font-size: 0.72rem;
+  }
+}

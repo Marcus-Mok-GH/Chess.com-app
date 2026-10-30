@@ -102,3 +102,21 @@
     font-size: 0.8125rem;
   }
 }
+
+@media (max-width: 390px) {
+  .main-nav .nav-content {
+    padding: 0 10px;
+    gap: 6px;
+  }
+
+  .main-nav .logo {
+    font-size: 1rem;
+    gap: 6px;
+  }
+
+  .main-nav .nav-link {
+    padding: 6px 8px;
+    font-size: 0.75rem;
+  }
+}
+

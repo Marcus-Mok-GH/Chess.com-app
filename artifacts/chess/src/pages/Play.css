@@ -87,3 +87,21 @@
     text-overflow: ellipsis;
   }
 }
+
+/* ── Very small phone (≤390px) ─────────── */
+@media (max-width: 390px) {
+  .play-nav .nav-content {
+    padding: 0 8px;
+    gap: 6px;
+    height: 44px;
+  }
+
+  .play-nav .logo {
+    font-size: 0.9rem;
+    gap: 4px;
+  }
+
+  .play-nav .page-title {
+    font-size: 0.75rem;
+  }
+}

@@ -136,3 +136,45 @@
     max-height: min(3.9em, 20svh);
   }
 }
+
+/* ── Small phone ─────────────────────── */
+@media (max-width: 480px) {
+  .game-bottom-bar {
+    gap: 6px;
+    padding: 6px max(6px, var(--safe-right)) calc(6px + var(--safe-bottom)) max(6px, var(--safe-left));
+  }
+
+  .gbb-bot-message {
+    padding: 5px 6px;
+    gap: 6px;
+  }
+
+  .gbb-bot-quote {
+    font-size: 0.75rem;
+    max-height: 3em;
+  }
+
+  .gbb-btn {
+    font-size: 0.7rem;
+    padding: 6px 2px;
+    min-height: 44px;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 390px) {
+  .gbb-btn {
+    font-size: 0.65rem;
+    border-radius: 6px;
+  }
+
+  .gbb-bot-avatar {
+    width: 24px;
+    height: 24px;
+    font-size: 0.95rem;
+  }
+
+  .gbb-bot-name {
+    font-size: 0.625rem;
+  }
+}

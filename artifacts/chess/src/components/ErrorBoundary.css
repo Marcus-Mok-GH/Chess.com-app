@@ -137,6 +137,26 @@
   color: #ff9b9b !important;
 }
 
+@media (max-width: 768px) {
+  .error-boundary {
+    padding: 1rem;
+  }
+
+  .error-container h2 {
+    font-size: clamp(1.25rem, 4vw, 1.75rem);
+  }
+
+  .error-button {
+    min-height: 44px;
+  }
+
+  .error-details-content code {
+    font-size: 0.75rem;
+    max-height: 140px;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 @media (max-width: 480px) {
   .error-actions {
     flex-direction: column;
@@ -144,5 +164,32 @@
 
   .error-button {
     width: 100%;
+  }
+
+  .error-content {
+    padding: 1rem;
+  }
+
+  .error-details summary {
+    padding: 0.75rem 0.75rem;
+  }
+
+  .error-details-content {
+    padding: 0 0.75rem 0.75rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .error-container h2 {
+    font-size: 1.15rem;
+  }
+
+  .error-container p {
+    font-size: 0.85rem;
+  }
+
+  .error-button {
+    font-size: 0.85rem;
+    padding: 0.6rem 0.75rem;
   }
 }

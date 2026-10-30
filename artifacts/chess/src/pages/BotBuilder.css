@@ -510,3 +510,83 @@
     max-width: 100%;
   }
 }
+
+/* ── Small phone (≤480px) ──────────────── */
+@media (max-width: 480px) {
+  .bot-builder-page {
+    padding: 1rem 0.75rem 5.5rem;
+  }
+
+  .bot-builder-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .bot-builder-header .btn-primary {
+    width: 100%;
+    justify-content: center;
+    min-height: 44px;
+  }
+
+  .bot-card {
+    padding: 1rem;
+  }
+
+  .bot-card-header {
+    gap: 0.75rem;
+  }
+
+  .bot-avatar-large {
+    font-size: 2.25rem;
+  }
+
+  .action-btn {
+    min-height: 44px;
+  }
+
+  .bot-builder-modal-header {
+    padding: 1rem 1.25rem;
+  }
+
+  .bot-builder-modal-body {
+    padding: 1.25rem 1rem;
+  }
+
+  .bot-builder-modal-footer {
+    padding: 0.75rem 1rem 1.25rem;
+    flex-direction: column;
+  }
+
+  .bot-builder-modal-footer button {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .form-group input,
+  .form-group textarea,
+  .form-group select {
+    min-height: 44px;
+    font-size: 1rem;
+  }
+}
+
+/* ── Very small phone (≤390px) ─────────── */
+@media (max-width: 390px) {
+  .bot-builder-page {
+    padding: 0.75rem 0.5rem 5rem;
+  }
+
+  .bot-builder-title h1 {
+    font-size: 1.35rem;
+  }
+
+  .stat-value {
+    font-size: 0.95rem;
+  }
+
+  .stat-label {
+    font-size: 0.65rem;
+  }
+}

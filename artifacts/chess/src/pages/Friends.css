@@ -238,3 +238,72 @@
   .friends-add-form { flex-direction: column; }
   .friends-primary-btn { width: 100%; }
 }
+
+/* ── Small phone (≤480px) ──────────────── */
+@media (max-width: 480px) {
+  .friends-page {
+    padding: 1rem 0.75rem 5.5rem;
+  }
+
+  .friends-card {
+    padding: 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .friends-input {
+    min-height: 44px;
+    font-size: 1rem;
+  }
+
+  .friends-primary-btn {
+    min-height: 44px;
+  }
+
+  .friend-row {
+    padding: 0.75rem 0.75rem;
+    gap: 0.65rem;
+  }
+
+  .friend-action {
+    width: 44px;
+    height: 44px;
+  }
+
+  .friends-refresh {
+    width: 44px;
+    height: 44px;
+  }
+
+  .friend-name {
+    font-size: 0.92rem;
+  }
+
+  .friends-empty-card {
+    padding: 2rem 1rem;
+  }
+
+  .friends-tip {
+    padding: 0.75rem 0.9rem;
+    font-size: 0.78rem;
+  }
+}
+
+/* ── Very small phone (≤390px) ─────────── */
+@media (max-width: 390px) {
+  .friends-page {
+    padding: 0.75rem 0.5rem 5rem;
+  }
+
+  .section-title {
+    font-size: 1.1rem;
+  }
+
+  .friend-actions {
+    gap: 0.3rem;
+  }
+
+  .friend-action {
+    width: 40px;
+    height: 40px;
+  }
+}

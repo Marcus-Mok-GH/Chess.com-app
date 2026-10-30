@@ -302,6 +302,46 @@
 }
 
 @media (max-width: 480px) {
+  .admin-page {
+    padding: 1rem 0.75rem 5.5rem;
+  }
+
+  .admin-search {
+    font-size: 1rem;
+    min-height: 44px;
+  }
+
+  .admin-row {
+    padding: 0.75rem;
+  }
+
+  .admin-btn {
+    min-height: 44px;
+    padding: 0.5rem 0.9rem;
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .admin-row-actions {
+    width: 100%;
+  }
+
+  .admin-modal-content {
+    padding: 1.25rem 1rem;
+  }
+
+  .admin-modal-actions {
+    flex-direction: column;
+  }
+
+  .admin-modal-actions button {
+    width: 100%;
+    min-height: 44px;
+  }
+
   .admin-analytics-stats {
     grid-template-columns: 1fr;
   }
@@ -310,5 +350,28 @@
     max-height: 85vh;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ── Very small phone (≤390px) ─────────── */
+@media (max-width: 390px) {
+  .admin-page {
+    padding: 0.75rem 0.5rem 5rem;
+  }
+
+  .admin-title {
+    font-size: 1.35rem;
+  }
+
+  .admin-subtitle {
+    font-size: 0.82rem;
+  }
+
+  .admin-row-name {
+    font-size: 0.9rem;
+  }
+
+  .admin-game-row {
+    font-size: 0.75rem;
   }
 }

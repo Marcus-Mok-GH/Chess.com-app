@@ -66,3 +66,61 @@
   outline: 2px solid var(--primary-hover);
   outline-offset: 2px;
 }
+
+/* ── Mobile ─────────────────────────── */
+@media (max-width: 768px) {
+  .account-required-card {
+    padding: 1.25rem;
+    max-width: 100%;
+  }
+
+  .account-required-card h2 {
+    font-size: 1.05rem;
+  }
+
+  .account-required-card p {
+    font-size: 0.85rem;
+  }
+
+  .account-required-actions button {
+    min-height: 44px;
+    padding: 0.6rem 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .account-required-card {
+    padding: 1rem;
+  }
+
+  .account-required-actions {
+    flex-direction: column;
+  }
+
+  .account-required-actions button {
+    width: 100%;
+  }
+
+  .account-required-icon {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+@media (max-width: 390px) {
+  .account-required-card {
+    padding: 0.75rem;
+  }
+
+  .account-required-card h2 {
+    font-size: 1rem;
+  }
+
+  .account-required-card p {
+    font-size: 0.8rem;
+  }
+
+  .account-required-actions button {
+    font-size: 0.8rem;
+  }
+}

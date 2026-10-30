@@ -101,9 +101,32 @@
   }
 }
 
-@media (max-width: 390px) {
+@media (max-width: 480px) {
   .elo-slider {
     padding: 1rem;
+  }
+
+  .elo-slider-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .elo-number {
+    font-size: 1.5rem;
+  }
+
+  .elo-slider-input::-webkit-slider-thumb {
+    width: 32px;
+    height: 32px;
+  }
+
+  .elo-slider-marks span {
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .elo-slider {
+    padding: 0.75rem;
   }
 
   .elo-slider-header {
@@ -111,10 +134,14 @@
   }
 
   .elo-number {
-    font-size: 1.5rem;
+    font-size: 1.35rem;
   }
 
   .elo-slider-marks span {
     font-size: 0.65rem;
+  }
+
+  .elo-slider-label {
+    font-size: 0.7rem;
   }
 }
