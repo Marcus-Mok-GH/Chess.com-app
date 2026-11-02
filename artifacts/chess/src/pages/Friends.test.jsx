@@ -143,4 +143,25 @@ describe("Friends page", () => {
         unmount();
         expect(stopHeartbeat).toHaveBeenCalled();
     });
+
+    it("shows the shared account notice instead of the page when signed out", () => {
+        mockUseUser.mockReturnValue({
+            user: null,
+            isLoggedIn: false,
+            isLoading: false,
+        });
+
+        renderFriends();
+
+        expect(screen.getByText("Friends are for members")).toBeTruthy();
+        expect(
+            screen.getByText(
+                /adding friends and seeing who is online is tied to your account/i,
+            ),
+        ).toBeTruthy();
+        expect(screen.getByRole("button", { name: /log in/i })).toBeTruthy();
+        expect(screen.getByRole("button", { name: /sign up/i })).toBeTruthy();
+        expect(api.getFriends).not.toHaveBeenCalled();
+        expect(startHeartbeat).not.toHaveBeenCalled();
+    });
 });
