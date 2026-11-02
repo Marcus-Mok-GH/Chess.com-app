@@ -10,8 +10,8 @@ import {
     WifiOff,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useUser } from "../contexts/UserContext";
+import AccountRequired from "../components/AccountRequired";
 import api from "../services/api";
 import { startHeartbeat, stopHeartbeat } from "../services/presence";
 import "./Friends.css";
@@ -22,7 +22,6 @@ const POLL_INTERVAL_MS = 30000;
 
 export default function Friends() {
   const t = useT();
-    const navigate = useNavigate();
     const { user, isLoggedIn, isLoading } = useUser();
 
     const [friends, setFriends] = useState([]);
@@ -126,23 +125,20 @@ export default function Friends() {
         return (
             <div className="friends-page">
                 <div className="friends-container">
-                    <div className="friends-empty-card card-surface">
-                        <Users size={40} />
-                        <h2>{t("Access Restricted")}</h2>
-                        <p
-                            style={{
-                                color: "var(--text-dim)",
-                                marginBottom: "1.5rem",
-                                textAlign: "center",
-                            }}
-                        >
-                            {t("You need to be logged in to access account specific privileges.")}</p>
-                        <button
-                            className="friends-primary-btn"
-                            onClick={() => navigate("/login")}
-                        >
-                            {t("Go to Login")}</button>
-                    </div>
+                    <header className="friends-header">
+                        <div className="friends-eyebrow">
+                            <Users size={13} />
+                            <span>{t("Social")}</span>
+                        </div>
+                        <h1 className="friends-title">{t("Friends")}</h1>
+                        <p className="friends-subtitle">
+                            {t("Add players, see who is online, and jump into games together.")}</p>
+                    </header>
+
+                    <AccountRequired
+                        title={t("Friends are for members")}
+                        message={t("Adding friends and seeing who is online is tied to your account. Log in to get started.")}
+                    />
                 </div>
             </div>
         );
