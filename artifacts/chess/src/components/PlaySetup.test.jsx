@@ -1,9 +1,11 @@
 import { render, screen, fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi } from 'vitest';
 import PlaySetup from './PlaySetup';
 import { BOTS } from '../engine/bots/bots';
 
 const NELSON = BOTS.find((b) => b.id === 'nelson');
+const REX = BOTS.find((b) => b.id === 'rex');
 
 const defaultProps = {
   selectedBot: NELSON,
@@ -14,18 +16,27 @@ const defaultProps = {
   onSelectColor: vi.fn(),
   onStart: vi.fn(),
   isLoggedIn: true,
+  hasSubscription: false,
 };
+
+function renderSetup(props = {}) {
+  return render(
+    <MemoryRouter>
+      <PlaySetup {...defaultProps} {...props} />
+    </MemoryRouter>,
+  );
+}
 
 describe('PlaySetup', () => {
   it('renders White, Black, and Random color options', () => {
-    render(<PlaySetup {...defaultProps} />);
+    renderSetup();
     expect(screen.getByRole('button', { name: /white/i })).toBeDefined();
     expect(screen.getByRole('button', { name: /black/i })).toBeDefined();
     expect(screen.getByRole('button', { name: /random/i })).toBeDefined();
   });
 
   it('marks Random selected and pressed when playerColor is random', () => {
-    render(<PlaySetup {...defaultProps} playerColor="random" />);
+    renderSetup({ playerColor: 'random' });
     const randomBtn = screen.getByRole('button', { name: /random/i });
     expect(randomBtn.className).toContain('selected');
     expect(randomBtn.getAttribute('aria-pressed')).toBe('true');
@@ -33,26 +44,36 @@ describe('PlaySetup', () => {
 
   it('selects Random via onSelectColor and enables Start', () => {
     const onSelectColor = vi.fn();
-    render(<PlaySetup {...defaultProps} onSelectColor={onSelectColor} playerColor="random" />);
+    renderSetup({ onSelectColor, playerColor: 'random' });
     fireEvent.click(screen.getByRole('button', { name: /random/i }));
     expect(onSelectColor).toHaveBeenCalledWith('random');
     expect(screen.getByRole('button', { name: /start game/i }).disabled).toBe(false);
   });
 
   it('keeps Start disabled with no concrete color selected', () => {
-    render(<PlaySetup {...defaultProps} playerColor={null} />);
+    renderSetup({ playerColor: null });
     expect(screen.getByRole('button', { name: /start game/i }).disabled).toBe(true);
+  });
+
+  it('keeps Start disabled when a premium bot is selected without a subscription', () => {
+    renderSetup({ selectedBot: REX, hasSubscription: false });
+    expect(screen.getByRole('button', { name: /start game/i }).disabled).toBe(true);
+  });
+
+  it('enables Start for a premium bot when the user is subscribed', () => {
+    renderSetup({ selectedBot: REX, hasSubscription: true });
+    expect(screen.getByRole('button', { name: /start game/i }).disabled).toBe(false);
   });
 
   it('renders a Back button that calls onBack when provided', () => {
     const onBack = vi.fn();
-    render(<PlaySetup {...defaultProps} onBack={onBack} />);
+    renderSetup({ onBack });
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
   it('hides the Back button when no onBack handler is provided', () => {
-    render(<PlaySetup {...defaultProps} />);
+    renderSetup();
     expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
   });
 });

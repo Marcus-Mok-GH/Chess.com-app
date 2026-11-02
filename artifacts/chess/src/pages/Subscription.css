@@ -98,6 +98,19 @@
   color: var(--primary);
 }
 
+
+.subscription-benefits {
+  margin: 0.75rem 0 0;
+  padding-left: 1.15rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.subscription-benefits li + li {
+  margin-top: 0.3rem;
+}
+
 .subscription-card-copy {
   margin: 0;
   color: var(--text-secondary);

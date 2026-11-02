@@ -482,7 +482,7 @@ router.post('/analyze', async (req, res) => {
 
 // Subscription state plus the real checkout link for the upgrade paywall.
 // The live Whop checkout configuration for the SGD 7.99/month
-// "Unlimited Game Reviews" plan on the PlayChess business
+// "Premium bots + unlimited reviews" plan on the PlayChess business
 // (checkout ch_Ju8R64mv79lfXAd, plan plan_FJAbNB08zlVit). WHOP_CHECKOUT_URL
 // overrides it for other environments; setting it to an empty string
 // disables the upgrade button rather than linking somewhere broken.
@@ -510,7 +510,7 @@ router.get('/subscription', async (req, res) => {
         price: 7.99,
         currency: 'SGD',
         interval: 'month',
-        label: 'Unlimited game reviews',
+        label: 'Premium bots, unlimited reviews, and more',
       },
     });
   } catch (error) {

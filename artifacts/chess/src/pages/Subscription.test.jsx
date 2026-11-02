@@ -34,7 +34,7 @@ const FREE_SUBSCRIPTION = {
     price: 7.99,
     currency: 'SGD',
     interval: 'month',
-    label: 'Unlimited game reviews',
+    label: 'Premium bots, unlimited reviews, and more',
   },
 };
 
@@ -71,8 +71,11 @@ describe('Subscription page', () => {
     expect(
       screen.getByText(/Free accounts get 1 game review per day/),
     ).toBeTruthy();
+    expect(screen.getByText('Access to premium bots Rex and Nadia')).toBeTruthy();
+    expect(screen.getByText('Unlimited game reviews')).toBeTruthy();
+    expect(screen.getByText('More premium features as they ship')).toBeTruthy();
 
-    const upgrade = screen.getByRole('link', { name: /Upgrade — unlimited reviews/ });
+    const upgrade = screen.getByRole('link', { name: /Upgrade — premium bots and more/ });
     expect(upgrade.getAttribute('href')).toBe('https://whop.com/checkout/ch_test/');
     expect(upgrade.getAttribute('target')).toBe('_blank');
 
@@ -88,6 +91,10 @@ describe('Subscription page', () => {
 
     expect(await screen.findByText('Active')).toBeTruthy();
     expect(screen.getByText(/Renews/)).toBeTruthy();
+    expect(screen.getByText('Paid plan unlocked')).toBeTruthy();
+    expect(screen.getByText('Access to premium bots Rex and Nadia')).toBeTruthy();
+    expect(screen.getByText('Unlimited game reviews')).toBeTruthy();
+    expect(screen.getByText('More premium features as they ship')).toBeTruthy();
     expect(screen.getByText(/Unlimited reviews — subscribed/)).toBeTruthy();
     expect(screen.queryByRole('link', { name: /Upgrade/ })).toBeNull();
   });

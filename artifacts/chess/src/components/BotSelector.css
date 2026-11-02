@@ -67,6 +67,73 @@
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(129, 182, 76, 0.12), 0 8px 24px rgba(0,0,0,0.3);
 }
+.bot-card:disabled,
+.bot-card-locked {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.bot-card:disabled:hover,
+.bot-card-locked:hover {
+  border-color: var(--border);
+  transform: none;
+  box-shadow: none;
+}
+
+.bot-card:disabled:hover::before,
+.bot-card-locked:hover::before {
+  opacity: 0;
+}
+
+.bot-name {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.bot-premium-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(218, 165, 32, 0.18);
+  border: 1px solid rgba(218, 165, 32, 0.45);
+  color: #f0d78c;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.bot-premium-hint,
+.coach-login-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-top: 0.25rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.bot-premium-hint-link {
+  color: var(--primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.bot-premium-hint-link:hover {
+  text-decoration: underline;
+}
 
 .bot-avatar {
   font-size: 2.25rem;

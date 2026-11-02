@@ -1,3 +1,9 @@
+[2026-11-02] - Premium bots Rex and Nadia, plus paid benefits
+
+- Free accounts can no longer select or start games against Rex or Nadia. Both bots show a Premium badge, stay disabled in the bot picker, and Start Game stays blocked until an active subscription is detected.
+- Active subscribers unlock Rex and Nadia, unlimited game reviews, and future premium features. The subscription page lists those benefits for free and paid users, and the upgrade CTA promotes bots + reviews + more.
+- Access helpers, selector/setup gating, i18n copy in all six languages, and regression tests cover free vs paid access.
+
 [2026-11-02] - Friends page uses the standard account notice
 
 - Guests who open `/friends` now see the same inline account notice that Clubs, Puzzles, and History use, instead of a one-off "Access Restricted" panel. The notice keeps the page header so guests still know where they are, and offers both Log In and Sign Up rather than a single "Go to Login" button.
