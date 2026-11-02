@@ -10,6 +10,7 @@ import { raj } from './personalities/raj';
 import { theo } from './personalities/theo';
 import { felix } from './personalities/felix';
 import { nadia } from './personalities/nadia';
+import { saitama } from './personalities/saitama';
 import { rex } from './personalities/rex';
 import { custom } from './personalities/custom';
 
@@ -27,6 +28,7 @@ export const BOTS = [
   theo,
   felix,
   nadia,
+  saitama,
   rex,
   custom
 ];

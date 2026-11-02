@@ -1,3 +1,10 @@
+[2026-11-02] - Saitama, the bot that only needs one punch
+
+- Added Saitama to the bot roster: a new opponent who opens with a slow, friendly King's Indian setup and plays deliberately underpowered chess (3-ply search, 4k nodes) while nothing is at stake.
+- The moment you capture one of his pieces or give check, he awakens: from that move on he searches at maximum strength (depth 20, 1M nodes, no blunders) for the rest of the game, and his avatar and quotes switch to match.
+- The phase is derived from the move history rather than stored state, so undo/redo and restored games land in the correct phase automatically; existing bots are unaffected.
+- Added roster and engine tests covering both calm and awakened behaviour, and translated the new bot's banter into all five non-English locales.
+
 [2026-11-02] - Fix stuck "still in a match" after quitting online games
 
 - Settings → Resign all live games now clears every online game that blocks matchmaking, not only ranked games already marked `playing`. Waiting private game codes and friendly live games are abandoned/resigned too, matchmaking queue rows for the account are removed, and the online KV cache is cleared.

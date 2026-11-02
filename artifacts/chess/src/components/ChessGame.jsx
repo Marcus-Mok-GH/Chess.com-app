@@ -12,6 +12,7 @@ import DebugPanel from './DebugPanel';
 import AnimatedPiece from './AnimatedPiece';
 import CoachingTip from './CoachingTip';
 import { BOTS, getRandomQuote, createCustomBot, getBotRatingDisplay } from '../engine/bots/bots';
+import { resolveActiveBot, hasProvocationTriggered } from '../engine/bots/awakening';
 import { getCoachingFeedback } from '../engine/coach/coachAI';
 import { generateGameId } from '../engine/game/gameId';
 import { normalizeMoveHistory, toSanHistory, toStoredMoveHistory, buildGameFromHistory } from '../engine/game/moveHistory';
@@ -378,6 +379,13 @@ function ChessGame(
     let bot = selectedBotRef.current;
     if (bot.id === 'custom') {
       bot = createCustomBot(customEloRef.current);
+    } else {
+      // Phase bots (e.g. Saitama) awaken mid-game once the opponent captures a
+      // piece or gives check, so the effective strength comes from the history.
+      bot = resolveActiveBot(bot, {
+        moveHistory: moveHistoryRef.current,
+        playerColor: playerColorRef.current,
+      });
     }
 
     const fen = gameRef.current.fen();
@@ -659,9 +667,16 @@ function ChessGame(
         setSelectedSquare(null);
         setPossibleMoves([]);
 
-        const bot = selectedBotRef.current;
+        const baseBot = selectedBotRef.current;
+        const botColor = playerColor === 'w' ? 'b' : 'w';
+        const awakenedNow =
+          Boolean(baseBot?.awakening) &&
+          !hasProvocationTriggered(moveHistory, botColor) &&
+          hasProvocationTriggered(nextHistory, botColor);
+        const bot = resolveActiveBot(baseBot, { moveHistory: nextHistory, playerColor });
         if (gameCopy.isCheckmate()) setBotMessage(getRandomQuote(bot, 'lose'));
         else if (gameCopy.isDraw()) setBotMessage(getRandomQuote(bot, 'draw'));
+        else if (awakenedNow) setBotMessage(getRandomQuote(bot, 'awakened'));
         else if (move.captured) setBotMessage(getRandomQuote(bot, 'capture'));
 
         playSoundEffect(settingsRef.current, { type: move.captured ? 'capture' : 'move' });
@@ -776,7 +791,12 @@ function ChessGame(
   const handleResign = useCallback(() => {
     if (hasResigned || game.isGameOver()) return;
     setHasResigned(true);
-    setBotMessage(getRandomQuote(selectedBot, 'win'));
+    setBotMessage(
+      getRandomQuote(
+        resolveActiveBot(selectedBot, { moveHistory: moveHistoryRef.current, playerColor }),
+        'win',
+      ),
+    );
     // Player resigned → opponent (bot) wins
     const winner = playerColor === 'w' ? 'black' : 'white';
     saveGameToDatabase('resigned', winner);
@@ -911,13 +931,15 @@ function ChessGame(
     };
   }
 
+  const displayBot = resolveActiveBot(selectedBot, { moveHistory, playerColor });
+
   const topPlayer = boardOrientation === 'white' 
-    ? { name: selectedBot?.id === 'custom' ? `Custom Bot (${customElo})` : selectedBot?.name, avatar: selectedBot?.avatar, rating: selectedBot?.id === 'custom' ? customElo : getBotRatingDisplay(selectedBot), isBot: true, color: 'b', botColor: selectedBot?.color, isCoach: selectedBot?.isCoach }
+    ? { name: displayBot?.id === 'custom' ? `Custom Bot (${customElo})` : displayBot?.name, avatar: displayBot?.avatar, rating: displayBot?.id === 'custom' ? customElo : getBotRatingDisplay(displayBot), isBot: true, color: 'b', botColor: displayBot?.color, isCoach: displayBot?.isCoach }
     : { name: 'You', avatar: '👤', rating: '???', isBot: false, color: 'w', isCoach: false };
   
   const bottomPlayer = boardOrientation === 'white'
     ? { name: 'You', avatar: '👤', rating: '???', isBot: false, color: 'w', isCoach: false }
-    : { name: selectedBot?.id === 'custom' ? `Custom Bot (${customElo})` : selectedBot?.name, avatar: selectedBot?.avatar, rating: selectedBot?.id === 'custom' ? customElo : getBotRatingDisplay(selectedBot), isBot: true, color: 'b', botColor: selectedBot?.color, isCoach: selectedBot?.isCoach };
+    : { name: displayBot?.id === 'custom' ? `Custom Bot (${customElo})` : displayBot?.name, avatar: displayBot?.avatar, rating: displayBot?.id === 'custom' ? customElo : getBotRatingDisplay(displayBot), isBot: true, color: 'b', botColor: displayBot?.color, isCoach: displayBot?.isCoach };
 
   return (
     <div className="chess-game">
@@ -978,7 +1000,7 @@ function ChessGame(
               gameStatus={getGameStatus}
               turn={game.turn()}
               playerColor={playerColor}
-              selectedBot={selectedBot}
+              selectedBot={displayBot}
               botMessage={botMessage}
               onNewGame={handleNewGame}
               onUndo={handleUndo}
