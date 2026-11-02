@@ -1,3 +1,8 @@
+[2026-11-02] - Fix stuck "still in a match" after quitting online games
+
+- Settings → Resign all live games now clears every online game that blocks matchmaking, not only ranked games already marked `playing`. Waiting private game codes and friendly live games are abandoned/resigned too, matchmaking queue rows for the account are removed, and the online KV cache is cleared.
+- Leaving a private online game now matches seats by account identity, so a session-suffixed seat id no longer leaves a waiting game stuck and blocking new matches.
+- Regression coverage covers resign-all for waiting/friendly leftovers and account-aware leave behavior.
 [2026-11-02] - Premium bots Rex and Nadia, plus paid benefits
 
 - Free accounts can no longer select or start games against Rex or Nadia. Both bots show a Premium badge, stay disabled in the bot picker, and Start Game stays blocked until an active subscription is detected.

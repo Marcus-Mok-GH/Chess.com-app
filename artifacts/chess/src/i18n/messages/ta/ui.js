@@ -355,7 +355,7 @@ const ui = {
   "Reset": "மீட்டமை",
   "Reset preferences": "விருப்பங்களை மீட்டமை",
   "Resign": "விலகு",
-  "Resign every ongoing game started through online matchmaking.": "ஆன்லைன் இணைப்பின் மூலம் தொடங்கிய எல்லா நடப்பு ஆட்டங்களிலிருந்தும் விலகுங்கள்.",
+  "Resign or abandon every online match still blocking matchmaking, including waiting game codes.": "பொருத்தத்தைத் தடுக்கும் அனைத்து ஆன்லைன் ஆட்டங்களையும் விட்டுவிடுங்கள் அல்லது ரத்து செய்யுங்கள், காத்திருக்கும் ஆட்டக் குறியீடுகளும் அடங்கும்.",
   "Restoring game": "ஆட்டத்தை மீட்டெடுக்கிறது",
   "Resume game": "ஆட்டத்தைத் தொடரு",
   "Resume your game against": "எதிரான ஆட்டத்தைத் தொடரு",

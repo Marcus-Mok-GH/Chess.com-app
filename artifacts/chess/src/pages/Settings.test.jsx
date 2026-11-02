@@ -274,7 +274,7 @@ describe('Settings page', () => {
       });
 
       expect(clearOnlineSession).toHaveBeenCalledTimes(1);
-      expect(await screen.findByText('Resigned 2 live games.')).toBeTruthy();
+      expect(await screen.findByText('Cleared 2 live games.')).toBeTruthy();
     });
 
     it('reports a negative result without games', async () => {
@@ -284,7 +284,7 @@ describe('Settings page', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Resign all live games' }));
       fireEvent.click(screen.getByRole('button', { name: 'Confirm resign all' }));
 
-      expect(await screen.findByText(/No ongoing online matchmaking games found/i)).toBeTruthy();
+      expect(await screen.findByText(/No blocking online games found/i)).toBeTruthy();
     });
 
     it('shows resign failures as alerts', async () => {

@@ -355,7 +355,7 @@ const ui = {
   "Reset": "重置",
   "Reset preferences": "重置偏好设置",
   "Resign": "认输",
-  "Resign every ongoing game started through online matchmaking.": "认输并结束通过在线匹配开始的所有进行中对局。",
+  "Resign or abandon every online match still blocking matchmaking, including waiting game codes.": "认输或放弃仍会阻止匹配的所有在线对局，包括等待中的对局码。",
   "Restoring game": "正在恢复对局",
   "Resume game": "继续对局",
   "Resume your game against": "继续与以下对手的对局：",

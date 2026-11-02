@@ -356,7 +356,7 @@ const ui = {
   "Reset": "Reset",
   "Reset preferences": "Reset preferences",
   "Resign": "Resign",
-  "Resign every ongoing game started through online matchmaking.": "Resign every ongoing game started through online matchmaking.",
+  "Resign or abandon every online match still blocking matchmaking, including waiting game codes.": "Resign or abandon every online match still blocking matchmaking, including waiting game codes.",
   "Restoring game": "Restoring game",
   "Resume game": "Resume game",
   "Resume your game against": "Resume your game against",

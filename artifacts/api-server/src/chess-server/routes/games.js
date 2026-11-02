@@ -1,6 +1,6 @@
 import express from 'express';
 import { query, withTransaction } from '../db.js';
-import { activeGameMatchesAccount, findActiveGameForAccount, lockAccounts } from '../services/activeGameGuard.js';
+import { accountIdForPlayer, activeGameMatchesAccount, findActiveGameForAccount, lockAccounts } from '../services/activeGameGuard.js';
 import crypto from 'crypto';
 import { Chess } from 'chess.js';
 import { errorResponse, handleRouteError } from '../middleware/errors.js';
@@ -552,22 +552,47 @@ router.post('/online/join', async (req, res) => {
   }
 });
 
-// Leave a friendly online game
+// Leave/abandon a friendly online game seat.
+// Match by account identity so session-suffixed player ids still clear waiting codes.
 router.post('/online/leave', async (req, res) => {
   try {
     const { gameCode, playerId } = req.body;
     if (!gameCode || !playerId) return errorResponse(res, 400, 'Game code and player id are required');
     const normalizedGameCode = gameCode.toUpperCase();
-    await withTransaction(async (client) => {
+    const outcome = await withTransaction(async (client) => {
       await lockAccounts(client, [playerId]);
-      await client.query(
-        `UPDATE active_games SET status = 'ended', updated_at = CURRENT_TIMESTAMP
-         WHERE game_id = $1 AND (white_player_id = $2 OR black_player_id = $2)`,
-        [normalizedGameCode, playerId]
+      const existing = await client.query(
+        `SELECT game_id, white_player_id, black_player_id, status
+         FROM active_games
+         WHERE game_id = $1
+         FOR UPDATE`,
+        [normalizedGameCode],
       );
+      if (existing.rows.length === 0) return { action: 'missing' };
+
+      const game = existing.rows[0];
+      if (!activeGameMatchesAccount(game, playerId)) return { action: 'forbidden' };
+      if (game.status !== 'waiting' && game.status !== 'playing') return { action: 'inactive' };
+
+      await client.query(
+        `UPDATE active_games
+         SET status = 'ended',
+             end_reason = COALESCE(end_reason, 'abandoned'),
+             updated_at = CURRENT_TIMESTAMP
+         WHERE game_id = $1 AND status IN ('waiting', 'playing')`,
+        [normalizedGameCode],
+      );
+      return { action: 'left' };
     });
 
-    await getOnlineGameKv().del(normalizedGameCode);
+    if (outcome?.action === 'forbidden') {
+      return errorResponse(res, 403, 'Unauthorized — not your game');
+    }
+
+    if (outcome?.action === 'left') {
+      await getOnlineGameKv().del(normalizedGameCode);
+    }
+
     res.json({ success: true });
   } catch (error) {
     return handleRouteError(res, error, 'Failed to leave online game');
@@ -994,7 +1019,9 @@ router.post('/:gameId/move', async (req, res) => {
 });
 
 
-// Resign all active rated games created through matchmaking for the authenticated user.
+// Clear every active online game that still blocks matchmaking for this account.
+// Waiting friendly codes and in-progress ranked/friendly games all count, because
+// findActiveGameForAccount treats any playing/waiting seat as a lock.
 router.post('/resign-all-live', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -1006,37 +1033,72 @@ router.post('/resign-all-live', async (req, res) => {
     const authUserId = await validateSession(sessionToken);
     if (!authUserId) return errorResponse(res, 401, 'Invalid or expired session');
 
-    // Matchmaking games are stored as ranked active games. Friendly game-code
-    // matches are intentionally excluded from this bulk action.
+    const accountId = String(authUserId);
+    const service = getGameService();
+    const kv = getOnlineGameKv();
+    const clearedGameIds = [];
+
     const activeGames = await query(
-      `SELECT game_id, white_player_id, black_player_id
+      `SELECT game_id, white_player_id, black_player_id, status, game_mode
        FROM active_games
-       WHERE status = 'playing' AND game_mode = 'ranked'`,
+       WHERE status IN ('playing', 'waiting')
+       ORDER BY created_at ASC`,
     );
 
-    const userGames = activeGames.rows.filter((game) => {
-      const whiteUserId = userIdFromPlayerId(game.white_player_id);
-      const blackUserId = userIdFromPlayerId(game.black_player_id);
-      return [whiteUserId, blackUserId].some(
-        (playerUserId) => playerUserId != null && String(playerUserId) === String(authUserId)
-      );
-    });
+    const userGames = activeGames.rows.filter((game) => activeGameMatchesAccount(game, accountId));
 
-    const service = getGameService();
-    const resignedGameIds = [];
     for (const game of userGames) {
-      const whiteUserId = userIdFromPlayerId(game.white_player_id);
-      const winner = whiteUserId != null && String(whiteUserId) === String(authUserId)
-        ? 'black'
-        : 'white';
-      const endedGame = await service.endGame(game.game_id, winner);
-      if (endedGame) resignedGameIds.push(game.game_id);
+      if (game.status === 'playing') {
+        const whiteAccount = accountIdForPlayer(game.white_player_id);
+        const winner = whiteAccount != null && String(whiteAccount) === accountId
+          ? 'black'
+          : 'white';
+        const endedGame = await service.endGame(game.game_id, winner);
+        if (!endedGame) continue;
+
+        await query(
+          `UPDATE active_games
+           SET end_reason = 'resignation', updated_at = CURRENT_TIMESTAMP
+           WHERE game_id = $1`,
+          [game.game_id],
+        );
+        await kv.del(game.game_id);
+        clearedGameIds.push(game.game_id);
+        continue;
+      }
+
+      // Waiting seats (usually abandoned friendly codes) never went live, so
+      // cancel without a result or Elo change.
+      const cancelled = await query(
+        `UPDATE active_games
+         SET status = 'ended',
+             end_reason = 'abandoned',
+             result = NULL,
+             clock_running_since = NULL,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE game_id = $1 AND status = 'waiting'
+         RETURNING game_id`,
+        [game.game_id],
+      );
+      if (cancelled.rowCount > 0) {
+        await kv.del(game.game_id);
+        clearedGameIds.push(game.game_id);
+      }
     }
+
+    // Drop leftover queue seats for bare ids and session-suffixed player ids.
+    await query(
+      `DELETE FROM matchmaking_queue
+       WHERE player_id = $1
+          OR player_id = $2
+          OR player_id LIKE $3`,
+      [accountId, `user_${accountId}`, `user_${accountId}_%`],
+    );
 
     return res.json({
       success: true,
-      resignedCount: resignedGameIds.length,
-      gameIds: resignedGameIds,
+      resignedCount: clearedGameIds.length,
+      gameIds: clearedGameIds,
     });
   } catch (error) {
     return handleRouteError(res, error, 'Failed to resign live games');

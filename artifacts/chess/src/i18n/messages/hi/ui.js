@@ -355,7 +355,7 @@ const ui = {
   "Reset": "रीसेट करें",
   "Reset preferences": "सेटिंग रीसेट करें",
   "Resign": "हार मानें",
-  "Resign every ongoing game started through online matchmaking.": "ऑनलाइन मैचमेकिंग से शुरू हुए सभी जारी गेम छोड़ें।",
+  "Resign or abandon every online match still blocking matchmaking, including waiting game codes.": "मैचमेकिंग रोकने वाले हर ऑनलाइन मैच को छोड़ें या रद्द करें, जिसमें प्रतीक्षा में गेम कोड भी शामिल हैं।",
   "Restoring game": "गेम वापस लाया जा रहा है",
   "Resume game": "गेम जारी रखें",
   "Resume your game against": "इसके साथ अपना गेम जारी रखें",
