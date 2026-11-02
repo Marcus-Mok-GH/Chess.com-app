@@ -355,7 +355,7 @@ const ui = {
   "Reset": "Tetapkan semula",
   "Reset preferences": "Tetapkan semula pilihan",
   "Resign": "Menyerah",
-  "Resign every ongoing game started through online matchmaking.": "Menyerah dalam semua permainan yang sedang berlangsung hasil padanan dalam talian.",
+  "Resign or abandon every online match still blocking matchmaking, including waiting game codes.": "Menyerah atau batalkan setiap perlawanan dalam talian yang masih menyekat padanan, termasuk kod permainan menunggu.",
   "Restoring game": "Memulihkan permainan",
   "Resume game": "Sambung semula permainan",
   "Resume your game against": "Sambung semula permainan anda menentang",

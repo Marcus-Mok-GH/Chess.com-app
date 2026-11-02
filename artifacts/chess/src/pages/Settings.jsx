@@ -240,8 +240,8 @@ export default function Settings() {
       setResignMessage({
         type: 'success',
         text: count === 0
-          ? 'No ongoing online matchmaking games found.'
-          : `Resigned ${count} live game${count === 1 ? '' : 's'}.`,
+          ? 'No blocking online games found.'
+          : `Cleared ${count} live game${count === 1 ? '' : 's'}.`,
       });
     } catch (error) {
       setResignMessage({ type: 'error', text: error.message || 'Unable to resign live games.' });
@@ -383,7 +383,7 @@ export default function Settings() {
                   <Flag className="setting-icon" size={16} aria-hidden="true" />
                   <span>{t("Live games")}</span>
                 </div>
-                <span className="setting-desc">{t("Resign every ongoing game started through online matchmaking.")}</span>
+                <span className="setting-desc">{t("Resign or abandon every online match still blocking matchmaking, including waiting game codes.")}</span>
                 {resignMessage && (
                   <span
                     className={`setting-feedback ${resignMessage.type}`}
