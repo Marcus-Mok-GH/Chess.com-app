@@ -97,6 +97,17 @@ export function getBotById(id) {
   return BOTS.find((bot) => bot.id === id) || BOTS[0];
 }
 
+/** Bots locked behind an active Whop subscription (free accounts cannot start them). */
+export function botRequiresSubscription(bot) {
+  return Boolean(bot?.requiresSubscription);
+}
+
+/** Whether the current account may select / start a game against this bot. */
+export function canAccessBot(bot, hasSubscription = false) {
+  if (!botRequiresSubscription(bot)) return true;
+  return Boolean(hasSubscription);
+}
+
 // Resolve the rating to show in the UI. A bot may hide its true rating behind a
 // display override (like Rex's "???" on chess.com) while keeping the numeric
 // rating for matchmaking and ELO math.

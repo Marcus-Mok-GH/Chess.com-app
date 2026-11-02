@@ -1,6 +1,7 @@
 import { ArrowLeft } from 'lucide-react';
 
 import BotSelector from './BotSelector';
+import { canAccessBot } from '../engine/bots/bots';
 
 import './PlaySetup.css';
 import { useT } from '../i18n/I18nContext';
@@ -15,9 +16,11 @@ export default function PlaySetup({
   onStart,
   onBack,
   isLoggedIn,
+  hasSubscription = false,
 }) {
   const t = useT();
-  const canStart = Boolean(selectedBot) && Boolean(playerColor);
+  const botAllowed = canAccessBot(selectedBot, hasSubscription);
+  const canStart = Boolean(selectedBot) && Boolean(playerColor) && botAllowed;
 
   return (
     <div className="play-setup">
@@ -44,6 +47,7 @@ export default function PlaySetup({
             customElo={customElo}
             onCustomEloChange={onCustomEloChange}
             isLoggedIn={isLoggedIn}
+            hasSubscription={hasSubscription}
           />
         </div>
 

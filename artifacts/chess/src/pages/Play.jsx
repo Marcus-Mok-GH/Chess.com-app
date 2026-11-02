@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import ChessGame from '../components/ChessGame';
@@ -7,7 +7,8 @@ import { useUser } from '../contexts/UserContext';
 import GameBottomBar from '../components/GameBottomBar';
 import PlayModeSelect from '../components/PlayModeSelect';
 import PlaySetup from '../components/PlaySetup';
-import { BOTS, createCustomBot } from '../engine/bots/bots';
+import { BOTS, canAccessBot, createCustomBot } from '../engine/bots/bots';
+import { getSubscription } from '../engine/coach/coachAI';
 import { generateGameId } from '../engine/game/gameId';
 import { resolvePlayerColor } from '../utils/playerColor';
 import api from '../services/api';
@@ -40,6 +41,25 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
   const navigate = useNavigate();
   const { settings } = useSettings();
   const { user, isLoggedIn, isOnline } = useUser();
+  const [hasSubscription, setHasSubscription] = useState(false);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setHasSubscription(false);
+      return undefined;
+    }
+    let cancelled = false;
+    getSubscription()
+      .then((data) => {
+        if (!cancelled) setHasSubscription(Boolean(data?.subscription?.active));
+      })
+      .catch(() => {
+        if (!cancelled) setHasSubscription(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoggedIn, user?.id]);
 
   const resumedFromStorage = useMemo(
     () => (initialGameId ? loadLocalGame(initialGameId) : null),
@@ -83,6 +103,9 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
   );
 
   async function handleStart() {
+    if (!canAccessBot(selectedBot, hasSubscription)) {
+      return;
+    }
     // 'random' resolves to a concrete color at start (rerolled on every New Game)
     const resolvedColor = resolvePlayerColor(playerColor);
     if (!user) {
@@ -210,6 +233,7 @@ export default function Play({ initialGameId = null, initialSetup = null }) {
             onStart={handleStart}
             onBack={() => setPlayMode(null)}
             isLoggedIn={isLoggedIn}
+            hasSubscription={hasSubscription}
           />
         ) : (
           <PlayModeSelect

@@ -3,6 +3,7 @@ export const nadia = {
     name: 'Nadia',
     rating: 2000,
     avatar: '🌑',
+    requiresSubscription: true,
     color: '#4A148C',
     depth: 6,
     nodes: 250000,

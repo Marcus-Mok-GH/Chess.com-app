@@ -69,7 +69,7 @@ export default function Subscription() {
           </span>
           <div>
             <h1>{t('Subscription')}</h1>
-            <p className="subscription-subtitle">{t('View your plan, review usage, and upgrade options.')}</p>
+            <p className="subscription-subtitle">{t('View your plan, premium bots, review usage, and upgrade options.')}</p>
           </div>
         </header>
 
@@ -107,25 +107,40 @@ export default function Subscription() {
                 </span>
               </div>
               {active ? (
-                validRenewDate && (
-                  <p className="subscription-card-copy">
-                    {t('Renews {date}', {
-                      date: validRenewDate.toLocaleDateString(locale, {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      }),
-                    })}
+                <>
+                  {validRenewDate && (
+                    <p className="subscription-card-copy">
+                      {t('Renews {date}', {
+                        date: validRenewDate.toLocaleDateString(locale, {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        }),
+                      })}
+                    </p>
+                  )}
+                  <p className="subscription-card-copy subscription-card-copy-pro">
+                    {t('Paid plan unlocked')}
                   </p>
-                )
+                  <ul className="subscription-benefits">
+                    <li>{t('Access to premium bots Rex and Nadia')}</li>
+                    <li>{t('Unlimited game reviews')}</li>
+                    <li>{t('More premium features as they ship')}</li>
+                  </ul>
+                </>
               ) : (
                 <>
                   <p className="subscription-card-copy">
-                    {t('Free accounts get 1 game review per day. Upgrade for unlimited reviews — {price} {currency}/month.', {
+                    {t('Free accounts get 1 game review per day. Upgrade for premium bots, unlimited reviews, and more — {price} {currency}/month.', {
                       price: offer?.price ?? 7.99,
                       currency: offer?.currency ?? 'SGD',
                     })}
                   </p>
+                  <ul className="subscription-benefits">
+                    <li>{t('Access to premium bots Rex and Nadia')}</li>
+                    <li>{t('Unlimited game reviews')}</li>
+                    <li>{t('More premium features as they ship')}</li>
+                  </ul>
                   {offer?.checkoutUrl ? (
                     <a
                       className="subscription-cta"
@@ -133,7 +148,7 @@ export default function Subscription() {
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      {t('Upgrade — unlimited reviews')}
+                      {t('Upgrade — premium bots and more')}
                     </a>
                   ) : (
                     <p className="subscription-card-copy">{t('Upgrades are not available right now.')}</p>

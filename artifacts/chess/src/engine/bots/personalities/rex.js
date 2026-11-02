@@ -3,6 +3,7 @@ export const rex = {
     name: 'Rex',
     rating: 2900,
     ratingDisplay: '???',
+    requiresSubscription: true,
     avatar: '🤴',
     color: '#8A2BE2',
     depth: 20,

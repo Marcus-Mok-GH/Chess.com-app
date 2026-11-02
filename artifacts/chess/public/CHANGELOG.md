@@ -1,3 +1,9 @@
+[2026-11-02] - Premium bots Rex and Nadia, plus paid benefits
+
+- Free accounts can no longer select or start games against Rex or Nadia. Both bots show a Premium badge, stay disabled in the bot picker, and Start Game stays blocked until an active subscription is detected.
+- Active subscribers unlock Rex and Nadia, unlimited game reviews, and future premium features. The subscription page lists those benefits for free and paid users, and the upgrade CTA promotes bots + reviews + more.
+- Access helpers, selector/setup gating, i18n copy in all six languages, and regression tests cover free vs paid access.
+
 [2026-10-30] - Mobile regression tests and changelog key fix
 
 - Added a browser-based mobile overflow test (tests/mobile-overflow.test.js) that boots the built app and asserts every shell route stays within the viewport (no horizontal scroll or overflow) at 390x844 and 320x568. It runs real Chromium through Playwright, is part of the curated test suite, and skips gracefully when the build or a browser binary is missing.
