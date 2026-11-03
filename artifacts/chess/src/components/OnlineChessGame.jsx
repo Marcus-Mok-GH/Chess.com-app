@@ -95,7 +95,10 @@ export default function OnlineChessGame({
     const terminalSyncDoneRef = useRef(false);
     const chatTickRef = useRef(0);
     const presenceTickRef = useRef(0);
-    const boardOrientation = playerColor || "white";
+    const [boardOrientation, setBoardOrientation] = useState(playerColor || "white");
+    useEffect(() => {
+        setBoardOrientation(playerColor || "white");
+    }, [gameId, playerColor]);
     const liveClock = useLiveClock(serverClock);
 
     // Premoves are only available while the game is live; the queued move is
@@ -668,6 +671,7 @@ export default function OnlineChessGame({
                 onPieceDrop={handlePieceDrop}
                 canDragPiece={canDragPiece}
                 boardOrientation={boardOrientation}
+                onFlipBoard={() => setBoardOrientation((current) => current === "white" ? "black" : "white")}
                 customSquareStyles={customSquareStyles}
                 settings={settings}
                 animatingPieces={animatingPieces}

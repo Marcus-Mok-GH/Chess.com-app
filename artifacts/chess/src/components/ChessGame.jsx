@@ -934,13 +934,14 @@ function ChessGame(
 
   const displayBot = resolveActiveBot(selectedBot, { moveHistory, playerColor });
 
-  const topPlayer = boardOrientation === 'white' 
-    ? { name: displayBot?.id === 'custom' ? `Custom Bot (${customElo})` : displayBot?.name, avatar: displayBot?.avatar, rating: displayBot?.id === 'custom' ? customElo : getBotRatingDisplay(displayBot), isBot: true, color: 'b', botColor: displayBot?.color, isCoach: displayBot?.isCoach }
-    : { name: 'You', avatar: '👤', rating: '???', isBot: false, color: 'w', isCoach: false };
-  
+  const player = { name: 'You', avatar: '👤', rating: '???', isBot: false, color: playerColor, isCoach: false };
+  const bot = { name: displayBot?.id === 'custom' ? `Custom Bot (${customElo})` : displayBot?.name, avatar: displayBot?.avatar, rating: displayBot?.id === 'custom' ? customElo : getBotRatingDisplay(displayBot), isBot: true, color: playerColor === 'w' ? 'b' : 'w', botColor: displayBot?.color, isCoach: displayBot?.isCoach };
+  const topPlayer = boardOrientation === 'white'
+    ? (playerColor === 'w' ? bot : player)
+    : (playerColor === 'w' ? player : bot);
   const bottomPlayer = boardOrientation === 'white'
-    ? { name: 'You', avatar: '👤', rating: '???', isBot: false, color: 'w', isCoach: false }
-    : { name: displayBot?.id === 'custom' ? `Custom Bot (${customElo})` : displayBot?.name, avatar: displayBot?.avatar, rating: displayBot?.id === 'custom' ? customElo : getBotRatingDisplay(displayBot), isBot: true, color: 'b', botColor: displayBot?.color, isCoach: displayBot?.isCoach };
+    ? (playerColor === 'w' ? player : bot)
+    : (playerColor === 'w' ? bot : player);
 
   return (
     <div className="chess-game">
@@ -949,7 +950,7 @@ function ChessGame(
           <div className="board-section">
             <PlayerBar
               {...topPlayer}
-              isActive={game.turn() === (boardOrientation === 'white' ? 'b' : 'w')}
+              isActive={game.turn() === topPlayer.color}
               capturedPieces={capturedPieces[topPlayer.color === 'w' ? 'b' : 'w']}
               botMessage={topPlayer.isBot ? botMessage : null}
             />
@@ -984,7 +985,7 @@ function ChessGame(
             </div>
             <PlayerBar
               {...bottomPlayer}
-              isActive={game.turn() === (boardOrientation === 'white' ? 'w' : 'b')}
+              isActive={game.turn() === bottomPlayer.color}
               capturedPieces={capturedPieces[bottomPlayer.color === 'w' ? 'b' : 'w']}
               botMessage={bottomPlayer.isBot ? botMessage : null}
             />

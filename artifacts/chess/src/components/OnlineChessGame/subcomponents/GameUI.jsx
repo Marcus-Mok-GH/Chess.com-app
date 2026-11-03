@@ -18,7 +18,7 @@ import { tNow } from '../../../i18n/translate';
 
 export default function GameUI({
   topPlayer, bottomPlayer, game, onSquareClick, onPieceDrop, canDragPiece,
-  boardOrientation, customSquareStyles, settings, animatingPieces,
+  boardOrientation, onFlipBoard, customSquareStyles, settings, animatingPieces,
   removeAnimation, showVictory, gameId, opponentStatus, eloChange,
   moveError, getStatusMessage, drawOffered, handleRespondDraw,
   handleSendReaction, reactionBursts = [], moveHistory, gameStatus,
@@ -72,7 +72,7 @@ export default function GameUI({
       <div className="board-section">
         <PlayerBar
           {...topPlayer}
-          isActive={game.turn() === (boardOrientation === 'white' ? 'b' : 'w')}
+          isActive={game.turn() === topPlayer.color}
           capturedPieces={capturedPieces[topPlayer.color === 'w' ? 'b' : 'w']}
           {...clockFor(topPlayer.color)}
         />
@@ -112,10 +112,11 @@ export default function GameUI({
         </div>
         <PlayerBar
           {...bottomPlayer}
-          isActive={game.turn() === (boardOrientation === 'white' ? 'w' : 'b')}
+          isActive={game.turn() === bottomPlayer.color}
           capturedPieces={capturedPieces[bottomPlayer.color === 'w' ? 'b' : 'w']}
           {...clockFor(bottomPlayer.color)}
         />
+        <button type="button" className="online-action-btn online-action-btn--flip" onClick={() => { haptics.button(); onFlipBoard(); }} aria-label={t("Flip Board")}>{t("Flip Board")}</button>
       </div>
 
       <div className="sidebar">

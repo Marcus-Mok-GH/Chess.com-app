@@ -656,6 +656,14 @@
 }
 
 
+.board-section .online-action-btn--flip {
+  width: auto;
+  min-height: 40px;
+  align-self: flex-end;
+  margin-top: -0.5rem;
+  padding: 0.45rem 0.85rem;
+}
+
 /* Online game action controls */
 .controls {
   display: grid;
