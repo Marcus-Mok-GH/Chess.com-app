@@ -92,10 +92,7 @@ const TIMEOUT_MS = (() => {
   return 10000;
 })();
 
-// Full-strength search budget for maxStrength bots: burn most of the request
-// timeout on the search, but always leave headroom for engine boot so the
-// hard timeout (which degrades to a weak fallback move) never fires.
-const MAX_STRENGTH_MOVETIME_MS = Math.min(9000, Math.max(2000, TIMEOUT_MS - 3500));
+const MAX_STRENGTH_MOVETIME_MS = Math.min(1800, Math.max(300, TIMEOUT_MS - 3500));
 
 const router = Router();
 
@@ -105,15 +102,11 @@ function isValidFen(fen) {
 }
 
 export function getSearchParams(bot) {
-  if (!bot) return 'go depth 10';
-  // maxStrength bots (e.g. Rex) skip the node/depth caps for a full
-  // movetime-bounded search at the default maximum Skill Level.
+  if (!bot) return 'go movetime 900';
   if (bot.maxStrength) return `go movetime ${MAX_STRENGTH_MOVETIME_MS}`;
-  let nodes = Math.min(Math.max(Number(bot.nodes) || 10000, 0), 1_000_000);
-  let depth = Math.min(Math.max(Number(bot.depth) || 10, 1), 20);
-  if (nodes < 5000)  return `go nodes ${nodes}`;
-  if (nodes < 50000) return `go movetime ${Math.min(Math.floor(nodes / 10), 1000)}`;
-  return `go depth ${Math.min(depth, 12)}`;
+  const nodes = Math.min(Math.max(Number(bot.nodes) || 10000, 1), 1_000_000);
+  if (nodes < 5000) return `go nodes ${nodes}`;
+  return `go movetime ${Math.min(Math.max(Math.floor(nodes / 100), 150), 1200)}`;
 }
 function getFallbackMove(fen) {
   const chess = new Chess(fen);
@@ -205,13 +198,14 @@ function runEngine(fen, searchParams, bot, timeoutMs) {
       settle(() => reject(new Error(`Worker exited with code ${code} before bestmove`)));
     });
 
-    // Send UCI commands over stdin
+    // Send UCI commands over stdin (keep stdin open — the worker exits
+    // itself when stdin closes, which would kill the search mid-flight)
     const commands = [
-      'setoption name Hash value 16',
+      'setoption name Hash value 8',
       'setoption name Threads value 1',
     ];
     if (bot?.playStyle) {
-      let safeDepth = Math.min(Math.max(Number(bot.depth) || 1, 1), 20);
+      const safeDepth = Math.min(Math.max(Number(bot.depth) || 1, 1), 20);
       commands.push(`setoption name Skill Level value ${Math.min(20, Math.floor(safeDepth * 3.33))}`);
     }
     commands.push('uci', 'ucinewgame', `position fen ${fen}`, searchParams);
@@ -222,7 +216,7 @@ function runEngine(fen, searchParams, bot, timeoutMs) {
 export async function computeManagedBotMove(fen, elo = 1200) {
   const depth = Math.max(2, Math.min(10, Math.floor(Number(elo) / 200) || 6));
   try {
-    const result = await runEngine(fen, `go movetime 800`, { depth, playStyle: 'balanced' }, 2000);
+    const result = await runEngine(fen, 'go movetime 450', { depth, playStyle: 'balanced' }, 2500);
     return result.bestMove;
   } catch (error) {
     console.warn('[Engine] Managed bot using legal fallback:', error?.message);

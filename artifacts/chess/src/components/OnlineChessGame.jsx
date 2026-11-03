@@ -6,6 +6,7 @@ import { useT } from "../i18n/I18nContext";
 import {
     buildGameFromHistory,
     normalizeMoveHistory,
+    lastMoveSquareStyles,
 } from "../engine/game/moveHistory";
 import api from "../services/api";
 import { startHeartbeat, stopHeartbeat } from "../services/presence";
@@ -593,7 +594,7 @@ export default function OnlineChessGame({
     );
 
     const customSquareStyles = useMemo(() => {
-        const styles = {};
+        const styles = settings.highlightMoves ? lastMoveSquareStyles(moveHistory, game) : {};
         if (selectedSquare)
             styles[selectedSquare] = {
                 backgroundColor: "rgba(255, 255, 0, 0.4)",
@@ -617,7 +618,7 @@ export default function OnlineChessGame({
             styles[premove.to] = { backgroundColor: "rgba(155, 199, 0, 0.55)" };
         }
         return styles;
-    }, [selectedSquare, possibleMoves, game, premove]);
+    }, [selectedSquare, possibleMoves, game, premove, moveHistory, settings.highlightMoves]);
 
     const capturedPieces = useMemo(() => {
         const current = {

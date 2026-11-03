@@ -140,8 +140,9 @@ describe('getSearchParams', () => {
   });
 
   it('keeps the existing strength mapping for other bots', () => {
-    expect(getSearchParams(null)).toBe('go depth 10');
-    expect(getSearchParams({ name: 'Magnus', depth: 5, nodes: 100000 })).toBe('go depth 5');
+    expect(getSearchParams(null)).toBe('go movetime 900');
+    expect(getSearchParams({ name: 'Magnus', depth: 5, nodes: 100000 })).toBe('go movetime 1000');
     expect(getSearchParams({ name: 'Pip', depth: 1, nodes: 60 })).toBe('go nodes 60');
+    expect(getSearchParams({ name: 'Saitama', depth: 20, nodes: 1000000 })).toBe('go movetime 1200');
   });
 });
