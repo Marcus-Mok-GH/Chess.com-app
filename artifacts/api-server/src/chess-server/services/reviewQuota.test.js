@@ -24,6 +24,7 @@ function pastDate(days = 1) {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  delete process.env.CHESS_REVIEW_ADMIN_IDS;
 });
 
 describe('subscriptionIsActive', () => {
@@ -58,6 +59,12 @@ describe('subscriptionIsActive', () => {
 });
 
 describe('getDailyLimit', () => {
+  it('grants admins unlimited reviews without a subscription row', async () => {
+    process.env.CHESS_REVIEW_ADMIN_IDS = 'admin-1,admin-2';
+    await expect(getDailyLimit('admin-1')).resolves.toBe(Infinity);
+    expect(query).not.toHaveBeenCalled();
+  });
+
   it('returns Infinity for an active subscriber', async () => {
     query.mockResolvedValueOnce({ rows: [{ status: 'active', current_period_end: futureDate() }] });
     await expect(getDailyLimit('user-1')).resolves.toBe(Infinity);
@@ -108,6 +115,15 @@ describe('consumeReview', () => {
 });
 
 describe('getUsage', () => {
+  it('reports unlimited usage for admins without a subscription', async () => {
+    process.env.CHESS_REVIEW_ADMIN_IDS = 'admin-1';
+    query.mockResolvedValueOnce({ rows: [{ count: 3 }] });
+
+    await expect(getUsage('admin-1')).resolves.toMatchObject({
+      used: 3, limit: null, remaining: null, unlimited: true, allowed: true,
+    });
+  });
+
   it('reports a free account that still has its review', async () => {
     query
       .mockResolvedValueOnce({ rows: [] })
@@ -139,6 +155,16 @@ describe('getUsage', () => {
       unlimited: false,
       allowed: false,
     });
+  });
+
+  it('allows an admin past the free quota with no subscription row', async () => {
+    process.env.CHESS_REVIEW_ADMIN_IDS = 'admin-1';
+    query.mockResolvedValueOnce({ rows: [{ count: 3 }] });
+
+    const usage = await getUsage('admin-1');
+
+    expect(usage).toMatchObject({ used: 3, limit: null, remaining: null, unlimited: true, allowed: true });
+    expect(query).toHaveBeenCalledTimes(1);
   });
 
   it('never blocks and omits counters for a subscriber', async () => {

@@ -1,3 +1,9 @@
+[2026-11-03] - Admin access to subscription benefits
+
+- Accounts listed in `CHESS_REVIEW_ADMIN_IDS` now receive the same premium-bot and unlimited-review access as subscribers, without needing a paid Whop membership.
+- The Subscription page labels that access as Admin rather than a paid plan or renewal, and does not offer checkout to admins. Other accounts keep their existing subscription gates.
+- Added entitlement, API response, and Subscription page regression tests for admin and non-admin accounts.
+
 [2026-11-03] - End-of-game result popup
 
 - Bot and online games now show a dismissible “You won!” or “You lost” popup when a player resigns or a checkmate occurs, based on the winner and the player’s side.

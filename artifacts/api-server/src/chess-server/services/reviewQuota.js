@@ -16,6 +16,7 @@
  */
 
 import { query } from '../db.js';
+import { isIntegrityReviewer } from './antiCheatService.js';
 
 export const FREE_DAILY_LIMIT = 1;
 
@@ -59,6 +60,7 @@ async function getSubscriptionRow(userId) {
  * @returns {Promise<number>}
  */
 export async function getDailyLimit(userId) {
+  if (isIntegrityReviewer(userId)) return Infinity;
   const row = await getSubscriptionRow(userId);
   return subscriptionIsActive(row) ? Infinity : FREE_DAILY_LIMIT;
 }

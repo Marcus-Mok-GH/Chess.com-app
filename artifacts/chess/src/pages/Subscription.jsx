@@ -55,6 +55,7 @@ export default function Subscription() {
 
   const locale = getActiveLocale();
   const active = Boolean(subscription?.active);
+  const adminAccess = subscription?.status === 'admin';
   const renewsAt = active && subscription?.currentPeriodEnd
     ? new Date(subscription.currentPeriodEnd)
     : null;
@@ -103,7 +104,7 @@ export default function Subscription() {
               <div className="subscription-card-head">
                 <h2 id="subscription-plan-title">{t('Your plan')}</h2>
                 <span className={`subscription-badge ${active ? 'subscription-badge-active' : ''}`}>
-                  {active ? t('Active') : t('Free plan')}
+                  {adminAccess ? t('Admin') : active ? t('Active') : t('Free plan')}
                 </span>
               </div>
               {active ? (
@@ -119,9 +120,11 @@ export default function Subscription() {
                       })}
                     </p>
                   )}
-                  <p className="subscription-card-copy subscription-card-copy-pro">
-                    {t('Paid plan unlocked')}
-                  </p>
+                  {!adminAccess && (
+                    <p className="subscription-card-copy subscription-card-copy-pro">
+                      {t('Paid plan unlocked')}
+                    </p>
+                  )}
                   <ul className="subscription-benefits">
                     <li>{t('Access to premium bots Rex and Nadia')}</li>
                     <li>{t('Unlimited game reviews')}</li>
@@ -165,7 +168,7 @@ export default function Subscription() {
                 <p className="subscription-card-copy">{t('Something went wrong')}</p>
               ) : usage.unlimited ? (
                 <p className="subscription-card-copy subscription-card-copy-pro">
-                  {t('Unlimited reviews — subscribed')}
+                  {adminAccess ? t('Unlimited game reviews') : t('Unlimited reviews — subscribed')}
                 </p>
               ) : (
                 <p className="subscription-card-copy">
