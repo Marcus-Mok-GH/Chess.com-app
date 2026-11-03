@@ -111,6 +111,18 @@ describe('ChessGame premoves', () => {
     expect(h.bars.at(-1).name).toBe('You');
   });
 
+  it('highlights both squares of the most recent player and bot move', async () => {
+    render(<ChessGame initialSelectedBot={NELSON} initialPlayerColor="w" onUiStateChange={vi.fn()} />);
+    expect(h.board.customSquareStyles.e2).toBeUndefined();
+    act(() => h.board.onPieceDrop('e2', 'e4'));
+    expect(h.board.customSquareStyles.e2?.backgroundColor).toBeTruthy();
+    expect(h.board.customSquareStyles.e4?.backgroundColor).toBeTruthy();
+    await settleTurn();
+    expect(h.board.customSquareStyles.e7?.backgroundColor).toBeTruthy();
+    expect(h.board.customSquareStyles.e5?.backgroundColor).toBeTruthy();
+    expect(h.board.customSquareStyles.e2).toBeUndefined();
+  });
+
   it('auto-plays a queued premove once the bot turn returns', async () => {
     render(
       <ChessGame
@@ -142,7 +154,8 @@ describe('ChessGame premoves', () => {
     expect(board.get('e5')).toMatchObject({ type: 'p', color: 'b' });
     expect(board.get('d4')).toMatchObject({ type: 'p', color: 'w' });
     expect(board.get('d2')).toBeUndefined();
-    expect(h.board.customSquareStyles.d2).toBeFalsy();
+    // The premove cleared and d2->d4 now shows as the last move.
+    expect(h.board.customSquareStyles.d2).toEqual({ backgroundColor: 'rgba(255, 215, 0, 0.42)' });
   });
 
   it('discards a queued premove that is illegal when the turn returns', async () => {

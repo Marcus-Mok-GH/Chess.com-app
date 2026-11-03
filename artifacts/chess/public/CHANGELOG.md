@@ -1,3 +1,8 @@
+[2026-11-03] - Faster bot replies and last-move highlights
+
+- Bounded local bot searches by time rather than potentially long depth searches; reduced the strongest bot's search budget and the managed online bot's budget while keeping Stockfish strength settings and legal-move fallback.
+- Bot and online boards highlight the origin and destination of the most recent move when move highlighting is enabled, including restored games, without obscuring checks, hints, or premoves.
+
 [2026-11-03] - Flip the board in bot and online games
 
 - Bot games keep the existing Flip controls while correctly placing the player and bot on the board after either side is flipped, without changing turn ownership.

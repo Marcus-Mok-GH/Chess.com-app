@@ -138,6 +138,14 @@ export function getMoveFromEntry(entry) {
   return null;
 }
 
+export function lastMoveSquareStyles(history, game) {
+  const last = history?.[history.length - 1];
+  const move = last?.from && last?.to ? last : game?.history?.({ verbose: true })?.at(-1);
+  if (!move?.from || !move?.to) return {};
+  const highlight = { backgroundColor: 'rgba(255, 215, 0, 0.42)' };
+  return { [move.from]: highlight, [move.to]: highlight };
+}
+
 export function toDetailedMoveHistory(history) {
   const normalized = normalizeMoveHistory(history);
   return normalized

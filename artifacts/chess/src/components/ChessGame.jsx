@@ -15,7 +15,7 @@ import { BOTS, getRandomQuote, createCustomBot, getBotRatingDisplay } from '../e
 import { resolveActiveBot, hasProvocationTriggered } from '../engine/bots/awakening';
 import { getCoachingFeedback } from '../engine/coach/coachAI';
 import { generateGameId } from '../engine/game/gameId';
-import { normalizeMoveHistory, toSanHistory, toStoredMoveHistory, buildGameFromHistory } from '../engine/game/moveHistory';
+import { normalizeMoveHistory, toSanHistory, toStoredMoveHistory, buildGameFromHistory, lastMoveSquareStyles } from '../engine/game/moveHistory';
 import { useUser } from '../contexts/UserContext';
 import api from '../services/api';
 import {
@@ -885,7 +885,7 @@ function ChessGame(
     );
   }
 
-  const customSquareStyles = {};
+  const customSquareStyles = settings.highlightMoves ? lastMoveSquareStyles(moveHistory, game) : {};
 
   if (settings.highlightMoves) {
     if (selectedSquare) {
