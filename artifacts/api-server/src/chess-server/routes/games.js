@@ -6,6 +6,7 @@ import { Chess } from 'chess.js';
 import { errorResponse, handleRouteError } from '../middleware/errors.js';
 import { userIdFromPlayerId } from '../services/gameUtils.js';
 import { getGameService } from '../services/gameService.js';
+import { playManagedBotTurn } from '../services/managedBots.js';
 import { getSessionCookieToken, getSessionToken, validateSession } from '../auth.js';
 import { getIntegrityReviews, isIntegrityReviewer, scheduleGameAnalysis, recordIntegrityDecision } from '../services/antiCheatService.js';
 import { getOnlineGameKv } from '../kv/onlineGameKv.js';
@@ -709,7 +710,7 @@ router.get('/by-code/:gameCode', async (req, res) => {
     let dbRow = null;
     try {
       const activeResult = await query(
-        `SELECT game_id AS game_code, result, fen, move_history,
+        `SELECT game_id, game_id AS game_code, result, fen, move_history,
                 game_mode, status, created_at, end_reason,
                 white_player_id, black_player_id,
                 white_player_name, black_player_name,
@@ -732,7 +733,7 @@ router.get('/by-code/:gameCode', async (req, res) => {
           const winner = await finishGameOnTimeout(normalizedCode, dbRow, clock.flagged);
           if (winner) {
             const settled = await query(
-              `SELECT game_id AS game_code, result, fen, move_history,
+              `SELECT game_id, game_id AS game_code, result, fen, move_history,
                       game_mode, status, created_at, end_reason,
                       white_player_id, black_player_id,
                       white_player_name, black_player_name,
@@ -753,6 +754,13 @@ router.get('/by-code/:gameCode', async (req, res) => {
     }
 
     if (dbRow) {
+      if (dbRow.status === 'playing') {
+        try {
+          dbRow = await playManagedBotTurn(dbRow);
+        } catch (error) {
+          console.error('[Games] Managed bot turn failed:', error);
+        }
+      }
       if (kvState && typeof kvState.move_count === 'number' && typeof dbRow.move_count === 'number') {
         if (kvState.status !== dbRow.status) {
           await kv.set(normalizedCode, dbRow);

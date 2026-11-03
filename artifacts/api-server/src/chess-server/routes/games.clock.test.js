@@ -341,7 +341,7 @@ describe('GET /api/games/by-code/:gameCode with a rapid clock', () => {
         settled = true;
         return { rows: [{ ...live, status: 'ended', result: 'black' }] };
       }
-      if (s.includes('SELECT game_id AS game_code')) {
+      if (s.includes('game_id AS game_code')) {
         return { rows: [settled ? ended : live] };
       }
       return { rows: [] };
