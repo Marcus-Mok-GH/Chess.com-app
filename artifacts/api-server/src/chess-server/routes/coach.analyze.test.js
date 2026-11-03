@@ -78,6 +78,31 @@ beforeEach(async () => {
   await loadRoutes();
 });
 
+describe('GET /api/coach/subscription', () => {
+  it('grants an authenticated admin premium access without recording a paid subscription', async () => {
+    process.env.CHESS_REVIEW_ADMIN_IDS = 'user-1';
+    try {
+      const res = await loopback(buildApp(), '/api/coach/subscription', 'GET');
+      expect(res.status).toBe(200);
+      expect(res.body.subscription).toEqual({ active: true, status: 'admin', currentPeriodEnd: null });
+      expect(query.mock.calls.filter(([sql]) => /FROM subscriptions/.test(sql))).toHaveLength(0);
+    } finally {
+      delete process.env.CHESS_REVIEW_ADMIN_IDS;
+    }
+  });
+
+  it('does not grant admin access to another account', async () => {
+    process.env.CHESS_REVIEW_ADMIN_IDS = 'someone-else';
+    try {
+      const res = await loopback(buildApp(), '/api/coach/subscription', 'GET');
+      expect(res.status).toBe(200);
+      expect(res.body.subscription).toEqual({ active: false, status: 'inactive', currentPeriodEnd: null });
+    } finally {
+      delete process.env.CHESS_REVIEW_ADMIN_IDS;
+    }
+  });
+});
+
 describe('POST /api/coach/analyze', () => {
   it('repairs a truncated JSON array so partial coach comments still load', async () => {
     global.fetch = vi.fn().mockResolvedValue({

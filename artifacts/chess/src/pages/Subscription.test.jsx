@@ -99,6 +99,24 @@ describe('Subscription page', () => {
     expect(screen.queryByRole('link', { name: /Upgrade/ })).toBeNull();
   });
 
+  it('shows admin benefits without a paid plan or checkout', async () => {
+    mockSubState.user = { username: 'admin', id: 'admin-1', isAdmin: true };
+    mockGetSubscription.mockResolvedValue({
+      ...ACTIVE_SUBSCRIPTION,
+      subscription: { active: true, status: 'admin', currentPeriodEnd: null },
+    });
+    mockGetReviewUsage.mockResolvedValue({ ...FREE_USAGE, unlimited: true, limit: null, remaining: null });
+
+    renderPage();
+
+    expect(await screen.findByText('Admin')).toBeTruthy();
+    expect(screen.getAllByText('Unlimited game reviews').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Access to premium bots Rex and Nadia')).toBeTruthy();
+    expect(screen.queryByText('Paid plan unlocked')).toBeNull();
+    expect(screen.queryByText(/Renews/)).toBeNull();
+    expect(screen.queryByRole('link', { name: /Upgrade/ })).toBeNull();
+  });
+
   it('prompts guests to sign in instead of showing a price', async () => {
     mockSubState.user = null;
 

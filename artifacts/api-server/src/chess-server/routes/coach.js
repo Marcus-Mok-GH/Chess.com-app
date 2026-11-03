@@ -3,6 +3,7 @@ import { query } from '../db.js';
 import { trimLessonSummary } from '../services/lessonSummary.js';
 import { consumeReview, getDailyLimit, getUsage } from '../services/reviewQuota.js';
 import { languageInstruction } from '../services/outputLanguage.js';
+import { isIntegrityReviewer } from '../services/antiCheatService.js';
 import { errorResponse, handleRouteError } from '../middleware/errors.js';
 import {
   authenticatedUserId,
@@ -491,16 +492,16 @@ router.get('/subscription', async (req, res) => {
     const userId = await requireCoachUser(req, res);
     if (!userId) return;
     const usage = await getUsage(userId);
-    const { rows } = await query(
+    const isAdmin = isIntegrityReviewer(userId);
+    const subscription = isAdmin ? null : (await query(
       'SELECT status, current_period_end FROM subscriptions WHERE user_id = $1',
       [userId]
-    );
-    const subscription = rows[0] || null;
+    )).rows[0] || null;
     return res.json({
       subscription: {
         active: usage.unlimited,
-        status: subscription?.status || 'inactive',
-        currentPeriodEnd: subscription?.current_period_end || null,
+        status: isAdmin ? 'admin' : subscription?.status || 'inactive',
+        currentPeriodEnd: isAdmin ? null : subscription?.current_period_end || null,
       },
       offer: {
         checkoutUrl:
