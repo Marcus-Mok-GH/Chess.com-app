@@ -4,7 +4,7 @@ import { Chess } from 'chess.js';
 
 // Shared handles captured from the mocked board and engine so the test can
 // drive real drag/click handlers and control the bot's reply.
-const h = vi.hoisted(() => ({ board: null, engineMove: 'e7e5' }));
+const h = vi.hoisted(() => ({ board: null, controls: null, bars: [], engineMove: 'e7e5' }));
 
 vi.mock('react-router-dom', () => ({ useNavigate: () => vi.fn() }));
 
@@ -15,9 +15,9 @@ vi.mock('./ChessBoard', () => ({
   },
 }));
 
-vi.mock('./GameControls', () => ({ default: () => <div /> }));
+vi.mock('./GameControls', () => ({ default: (props) => { h.controls = props; return <div />; } }));
 vi.mock('./MoveHistory', () => ({ default: () => <div /> }));
-vi.mock('./PlayerBar', () => ({ default: () => <div /> }));
+vi.mock('./PlayerBar', () => ({ default: (props) => { h.bars.push(props); return <div />; } }));
 vi.mock('./DebugPanel', () => ({ default: () => <div /> }));
 vi.mock('./AnimatedPiece', () => ({ default: () => <div /> }));
 vi.mock('./CoachingTip', () => ({ default: () => <div /> }));
@@ -84,11 +84,31 @@ describe('ChessGame premoves', () => {
     vi.useFakeTimers();
     h.engineMove = 'e7e5';
     h.board = null;
+    h.controls = null;
+    h.bars = [];
   });
 
   afterEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();
+  });
+
+  it.each(['w', 'b'])('flips a %s bot game without changing the player side or position', (color) => {
+    render(<ChessGame initialSelectedBot={NELSON} initialPlayerColor={color} onUiStateChange={vi.fn()} />);
+    const initialFen = fenOf(h.board.position);
+    expect(h.board.boardOrientation).toBe(color === 'w' ? 'white' : 'black');
+    expect(h.bars.at(-1).name).toBe('You');
+
+    act(() => h.controls.onFlipBoard());
+    expect(h.board.boardOrientation).toBe(color === 'w' ? 'black' : 'white');
+    expect(fenOf(h.board.position)).toBe(initialFen);
+    expect(h.controls.playerColor).toBe(color);
+    expect(h.bars.at(-2).name).toBe('You');
+    expect(h.bars.at(-2).color).toBe(color);
+
+    act(() => h.controls.onFlipBoard());
+    expect(h.board.boardOrientation).toBe(color === 'w' ? 'white' : 'black');
+    expect(h.bars.at(-1).name).toBe('You');
   });
 
   it('auto-plays a queued premove once the bot turn returns', async () => {

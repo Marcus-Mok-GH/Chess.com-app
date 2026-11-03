@@ -1,3 +1,9 @@
+[2026-11-03] - Flip the board in bot and online games
+
+- Bot games keep the existing Flip controls while correctly placing the player and bot on the board after either side is flipped, without changing turn ownership.
+- Online games now offer a Flip Board button below the board. It swaps the viewing perspective and player bars without altering the position, assigned side, or active clock; the view resets to your side for a different game.
+- Added regression coverage for both colours and online turn indicators.
+
 [2026-11-03] - Managed bots respond in online games
 
 - Active, public bots with Auto-join enabled can pair with a waiting online player in the same time-control and ranked/friendly pool, instead of relying on a background loop that cannot run on Vercel.
