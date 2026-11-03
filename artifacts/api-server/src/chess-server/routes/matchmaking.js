@@ -1,4 +1,5 @@
 import express from 'express';
+import { queueAvailableBot } from '../services/managedBots.js';
 import { query, withTransaction } from '../db.js';
 import { findActiveGameForAccount, lockAccounts } from '../services/activeGameGuard.js';
 import { processMatchmakingOnce } from '../services/matchmakingService.js';
@@ -160,6 +161,14 @@ router.post('/join', requireSession, async (req, res) => {
       await processMatchmakingOnce().catch(err => {
         console.error('[Matchmaking/HTTP] Error processing matchmaking on join:', err);
       });
+      try {
+        const stillWaiting = await query('SELECT 1 FROM matchmaking_queue WHERE player_id = $1', [playerId]);
+        if (stillWaiting.rows.length && await queueAvailableBot(timeControlValue, isRankedValue, playerId, serverElo)) {
+          await processMatchmakingOnce();
+        }
+      } catch (error) {
+        console.error('[Matchmaking/HTTP] Managed bot pairing failed:', error);
+      }
     }
 
     // Log queue size for monitoring

@@ -324,7 +324,7 @@ export default function BotBuilder() {
           <Bot className="bot-icon" size={28} />
           <div>
             <h1>{t('Bot Builder')}</h1>
-            <p>{t('Create and manage AI bots that play, chat, and build communities')}</p>
+            <p>{t('Create bots that can join online matchmaking and respond during games')}</p>
           </div>
         </div>
         <button className="btn-primary" onClick={openCreateModal}>
@@ -333,6 +333,8 @@ export default function BotBuilder() {
       </header>
 
       {/* Grid / Empty */}
+      <p className="bot-builder-note">{t('To join games, a bot must be Active and Public with Auto-join open matches enabled. Bots move while a player has the game open; background chat and community actions are not available on this deployment.')}</p>
+
       {botsError ? (
         <div className="bot-builder-empty bot-builder-load-error" role="alert">
           <h2>{t('Failed to load bots')}</h2>
@@ -343,7 +345,7 @@ export default function BotBuilder() {
         <div className="bot-builder-empty">
           <Bot size={64} style={{ opacity: 0.3 }} />
           <h2>{t('No bots yet')}</h2>
-          <p>{t('Create your first AI bot to join matches, chat with players, and build communities.')}</p>
+          <p>{t('Create your first bot and enable Auto-join open matches to play against waiting players.')}</p>
           <button className="btn-primary" onClick={openCreateModal} style={{ marginTop: '0.5rem' }}>
             <Plus size={18} /> {t('Create Bot')}
           </button>
@@ -517,7 +519,7 @@ export default function BotBuilder() {
                 <div className="form-group checkbox-group">
                   <label>
                     <input type="checkbox" name="isActive" checked={form.isActive} onChange={handleChange} />
-                    {t('Bot is active (can play, chat, join matches)')}
+                    {t('Bot is active (can join matches and play)')}
                   </label>
                 </div>
                 <div className="form-group checkbox-group">

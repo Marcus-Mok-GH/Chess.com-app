@@ -1,3 +1,9 @@
+[2026-11-03] - Managed bots respond in online games
+
+- Active, public bots with Auto-join enabled can pair with a waiting online player in the same time-control and ranked/friendly pool, instead of relying on a background loop that cannot run on Vercel.
+- A game poll now triggers an engine-backed bot move, with legal fallback, clock checks, move-count protection, history persistence, and normal game completion.
+- Bot Builder now explains which settings are required and that unattended chat and community activity are not supported by the serverless deployment. Added managed-bot regression coverage.
+
 [2026-11-03] - Admin access to subscription benefits
 
 - Accounts listed in `CHESS_REVIEW_ADMIN_IDS` now receive the same premium-bot and unlimited-review access as subscribers, without needing a paid Whop membership.

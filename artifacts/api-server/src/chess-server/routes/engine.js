@@ -219,6 +219,17 @@ function runEngine(fen, searchParams, bot, timeoutMs) {
   });
 }
 
+export async function computeManagedBotMove(fen, elo = 1200) {
+  const depth = Math.max(2, Math.min(10, Math.floor(Number(elo) / 200) || 6));
+  try {
+    const result = await runEngine(fen, `go movetime 800`, { depth, playStyle: 'balanced' }, 2000);
+    return result.bestMove;
+  } catch (error) {
+    console.warn('[Engine] Managed bot using legal fallback:', error?.message);
+    return getFallbackMove(fen);
+  }
+}
+
 // Local bot games are intentionally available to guests. The concurrency
 // guard still protects the serverless engine from unbounded parallel work.
 router.post('/move', engineConcurrency, async (req, res) => {
