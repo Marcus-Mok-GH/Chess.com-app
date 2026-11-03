@@ -564,6 +564,58 @@
   cursor: pointer;
 }
 
+.game-result-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.game-result-dialog {
+  width: min(100%, 360px);
+  padding: 2rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+}
+
+.game-result-symbol {
+  font-size: 3rem;
+  line-height: 1;
+  color: var(--text-dim);
+}
+
+.game-result-symbol.won { color: var(--primary); }
+
+.game-result-dialog h2 {
+  margin: 1rem 0 1.5rem;
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.game-result-dialog button {
+  min-width: 120px;
+  min-height: 44px;
+  padding: 0.65rem 1.25rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: var(--primary-foreground, #fff);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.game-result-dialog button:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 3px;
+}
+
 /* ── Victory effects ──────────────── */
 .victory-burst {
   position: absolute;

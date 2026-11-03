@@ -1,3 +1,9 @@
+[2026-11-03] - End-of-game result popup
+
+- Bot and online games now show a dismissible “You won!” or “You lost” popup when a player resigns or a checkmate occurs, based on the winner and the player’s side.
+- The online game refresh path now reads the server’s winner and ending reason, so both players see the correct result; draws and other endings keep their existing presentation.
+- Added regression tests for wins, losses, dismissal, and non-checkmate endings.
+
 [2026-11-02] - Saitama, the bot that only needs one punch
 
 - Added Saitama to the bot roster: a new opponent who opens with a slow, friendly King's Indian setup and plays deliberately underpowered chess (3-ply search, 4k nodes) while nothing is at stake.

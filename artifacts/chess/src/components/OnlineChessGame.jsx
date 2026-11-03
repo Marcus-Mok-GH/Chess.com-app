@@ -21,6 +21,7 @@ import { isPremoveLegal, premoveTargets } from "../engine/game/premoves";
 import { useGameCore } from "./OnlineChessGame/hooks/useGameCore";
 import { useLiveClock } from "./OnlineChessGame/hooks/useLiveClock";
 import GameUI from "./OnlineChessGame/subcomponents/GameUI";
+import GameResultDialog, { onlineGameOutcome } from "./GameResultDialog";
 import {
     REACTION_BURST_MS,
     findNewReactionMessages,
@@ -146,6 +147,8 @@ export default function OnlineChessGame({
                 setMoveHistory(history);
                 if (data.status === "ended" || data.status === "completed") {
                     setGameStatus("ended");
+                    if (data.result) setWinner(data.result);
+                    setEndReason(data.end_reason || (data.result === "draw" ? "draw" : null));
                 } else if (data.status) {
                     setGameStatus(
                         data.status === "playing" ||
@@ -246,7 +249,7 @@ export default function OnlineChessGame({
                     if (data.result) setWinner(data.result);
                     // The server now records why a game ended (timeout, resignation,
                     // …) so the result line can name it for both players.
-                    if (data.end_reason) setEndReason(data.end_reason);
+                    setEndReason(data.end_reason || (data.result === "draw" ? "draw" : null));
                     clearOnlineSession();
 
                     // Elo change: fetch profile after game ends (once)
@@ -273,9 +276,6 @@ export default function OnlineChessGame({
                             /* non-fatal */
                         }
                     }
-                    // endReason: set to result if draw; otherwise leave null (resign shows "X wins")
-                    if (!endReason)
-                        setEndReason(data.result === "draw" ? "draw" : null);
                     // Terminal snapshot fully applied — stop polling.
                     terminalSyncDoneRef.current = true;
                 } else if (
@@ -651,6 +651,7 @@ export default function OnlineChessGame({
 
     return (
         <div className="online-chess-game">
+            <GameResultDialog gameId={gameId} outcome={onlineGameOutcome(gameStatus, winner, playerColor, endReason)} />
             <GameUI
                 topPlayer={
                     boardOrientation === "white"
@@ -752,6 +753,9 @@ export default function OnlineChessGame({
                             reason: "resignation",
                             token: localStorage.getItem("chess_user_token"),
                         });
+                        setWinner(opponentColor);
+                        setEndReason("resignation");
+                        setGameStatus("ended");
                         clearOnlineSession();
                         if (gameId) clearOnlineGameState(gameId);
                     } catch (e) {

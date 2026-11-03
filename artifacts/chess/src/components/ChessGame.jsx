@@ -30,6 +30,7 @@ import { useCapturedPieces, usePieceAnimations } from './ChessGame/hooks';
 import { usePremove } from '../hooks/usePremove';
 import { isPremoveLegal, premoveTargets } from '../engine/game/premoves';
 import GameStatus from './ChessGame/subcomponents/GameStatus';
+import GameResultDialog, { botGameOutcome } from './GameResultDialog';
 import './ChessGame.css';
 import { useT } from '../i18n/I18nContext';
 import { tNow } from '../i18n/translate';
@@ -943,6 +944,7 @@ function ChessGame(
 
   return (
     <div className="chess-game">
+      <GameResultDialog gameId={gameId} outcome={botGameOutcome(game, playerColor, hasResigned)} />
       <div className="game-container">
           <div className="board-section">
             <PlayerBar
