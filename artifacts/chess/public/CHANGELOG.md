@@ -1,3 +1,10 @@
+[2026-11-05] - No more jumpy pages in online games and reviews
+
+- Online game chat now scrolls its own message list when a message arrives, instead of using scrollIntoView, which also scrolled the surrounding page and jumped to the bottom of the game screen.
+- Game review keeps the active move in view by scrolling only the move list, so stepping through moves no longer drags the page down.
+- Chat history is bounded to a scrolling panel, so long conversations no longer stretch the board screen.
+- Added regression tests asserting that neither screen scrolls the window.
+
 [2026-11-05] - Mr. Brilliant, the bot that only plays brilliancies
 
 - Added Mr. Brilliant to the bot roster: a 2000-rated opponent who skips the objectively best move whenever a sound sacrifice is on the board.
