@@ -1,3 +1,10 @@
+[2026-11-05] - Mr. Brilliant, the bot that only plays brilliancies
+
+- Added Mr. Brilliant to the bot roster: a 2000-rated opponent who skips the objectively best move whenever a sound sacrifice is on the board.
+- His turns are chosen from the top five engine lines; each candidate is priced with a capture-only search for the material it gives away, and the largest sacrifice that stays within 60 centipawns of the best move wins. A forced mate is always played as-is, and when nothing is worth giving up he plays the engine's top move.
+- Landing one switches his banter to a dedicated "brilliant" quote set. Every other bot keeps the plain single-line search and the engine's best move, so nothing else changes.
+- Translated his banter and description into all five non-English locales, and added roster, brilliancy-detection, and engine-route tests.
+
 [2026-11-03] - Faster bot replies and last-move highlights
 
 - Bounded local bot searches by time rather than potentially long depth searches; reduced the strongest bot's search budget and the managed online bot's budget while keeping Stockfish strength settings and legal-move fallback.
