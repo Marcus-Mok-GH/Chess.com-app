@@ -408,11 +408,12 @@ function ChessGame(
           maxStrength: bot.maxStrength,
           scriptedOpening: bot.scriptedOpening,
           playStyle: bot.playStyle,
+          brilliant: bot.brilliant,
         },
         debug: settingsRef.current.debugMode,
       });
 
-      const { bestMove, debugInfo: newDebugInfo } = response;
+      const { bestMove, brilliant: playedBrilliant, debugInfo: newDebugInfo } = response;
 
       busyRetryCountRef.current = 0;
       setEngineError(null);
@@ -464,6 +465,9 @@ function ChessGame(
               setBotMessage(getRandomQuote(bot, "check"));
             } else if (moveResult.captured) {
               setBotMessage(getRandomQuote(bot, "capture"));
+            } else if (playedBrilliant) {
+              const brilliantQuote = getRandomQuote(bot, "brilliant");
+              if (brilliantQuote) setBotMessage(brilliantQuote);
             } else if (Math.random() < 0.15) {
               const categories = ["thinking", "blunder", "goodMove"];
               setBotMessage(getRandomQuote(bot, categories[Math.floor(Math.random() * categories.length)]));

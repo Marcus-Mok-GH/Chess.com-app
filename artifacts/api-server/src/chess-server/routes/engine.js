@@ -7,6 +7,7 @@ import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { errorResponse, handleRouteError } from '../middleware/errors.js';
 import { computeScriptedMove } from '../../../../chess/src/engine/bots/scriptedMoves.js';
+import { selectBrilliantMove } from '../../../../chess/src/engine/bots/brilliantMove.js';
 
 // Resolve paths at module load time so they survive esbuild bundling.
 const _require = createRequire(import.meta.url);
@@ -94,6 +95,10 @@ const TIMEOUT_MS = (() => {
 
 const MAX_STRENGTH_MOVETIME_MS = Math.min(1800, Math.max(300, TIMEOUT_MS - 3500));
 
+// Root moves scored for a brilliancy hunt: enough to find the good sacrifices
+// without diluting the search depth on each line.
+const BRILLIANT_MULTIPV = 5;
+
 const router = Router();
 
 function isValidFen(fen) {
@@ -127,7 +132,7 @@ function shouldUseFallback(error) {
   return /stockfish|worker|wasm|enoent|spawn/.test(message);
 }
 
-function runEngine(fen, searchParams, bot, timeoutMs) {
+function runEngine(fen, searchParams, bot, timeoutMs, { multiPv = 0 } = {}) {
   return new Promise((resolve, reject) => {
     if (!STOCKFISH_BIN || !WORKER_SCRIPT) {
       return reject(new Error(`Stockfish binary or worker script not found. BIN: ${STOCKFISH_BIN}, WORKER: ${WORKER_SCRIPT}`));
@@ -208,6 +213,9 @@ function runEngine(fen, searchParams, bot, timeoutMs) {
       const safeDepth = Math.min(Math.max(Number(bot.depth) || 1, 1), 20);
       commands.push(`setoption name Skill Level value ${Math.min(20, Math.floor(safeDepth * 3.33))}`);
     }
+    // Brilliancy hunting needs the scores of the runner-up moves, not just the
+    // best one, so the search reports the top few root moves.
+    if (multiPv > 1) commands.push(`setoption name MultiPV value ${Math.min(Math.trunc(multiPv), 5)}`);
     commands.push('uci', 'ucinewgame', `position fen ${fen}`, searchParams);
     for (const cmd of commands) child.stdin.write(cmd + '\n');
   });
@@ -246,14 +254,24 @@ router.post('/move', engineConcurrency, async (req, res) => {
     }
 
     const searchParams = getSearchParams(bot);
+    const multiPv = bot?.brilliant ? BRILLIANT_MULTIPV : 0;
     if (debug) console.log('[Engine] FEN:', fen, '| Search:', searchParams);
 
-    const result = await runEngine(fen, searchParams, bot, TIMEOUT_MS);
+    const result = await runEngine(fen, searchParams, bot, TIMEOUT_MS, { multiPv });
+
+    // Mr. Brilliant plays the flashiest sacrifice the evaluation can afford
+    // (multiPv > 0); every other bot keeps the engine's top move.
+    const pick = multiPv > 0 ? selectBrilliantMove(fen, result.candidates) : null;
+    const bestMove = pick?.move || result.bestMove;
 
     return res.json({
       type: 'result',
       ...result,
-      debugInfo: debug ? { fen, searchParams, botName: bot?.name } : null,
+      bestMove,
+      brilliant: Boolean(pick?.brilliant),
+      debugInfo: debug
+        ? { fen, searchParams, botName: bot?.name, multiPv, brilliant: pick ?? null }
+        : null,
     });
   } catch (error) {
     if (shouldUseFallback(error)) {
