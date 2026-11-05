@@ -42,10 +42,15 @@ export default function GameUI({
   const [reportReason, setReportReason] = React.useState('engine_assistance');
   const [reportDetails, setReportDetails] = React.useState('');
   const [reportStatus, setReportStatus] = React.useState('');
-  const chatEndRef = React.useRef(null);
+  const chatMessagesRef = React.useRef(null);
 
+  // Keep the newest message visible by scrolling the message list itself. We
+  // deliberately avoid scrollIntoView: it also scrolls every scrollable
+  // ancestor, which yanked the whole page down to the chat panel.
   React.useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const list = chatMessagesRef.current;
+    if (!list) return;
+    list.scrollTop = list.scrollHeight;
   }, [chatMessages]);
 
   const onReport = async () => {
@@ -161,7 +166,7 @@ export default function GameUI({
 
         <MoveHistory history={moveHistory} />
         <div className="chat-container">
-          <div className="chat-messages">
+          <div className="chat-messages" ref={chatMessagesRef}>
             {chatMessages
               .filter((msg) => !reactionEmoji(msg.message))
               .map((msg, i) => (
@@ -170,7 +175,6 @@ export default function GameUI({
                   <span className="chat-text">{displayChatBody(msg.message)}</span>
                 </div>
               ))}
-            <div ref={chatEndRef} />
           </div>
           {chatEnabled && (
             <form onSubmit={onSend} className="chat-input-form">

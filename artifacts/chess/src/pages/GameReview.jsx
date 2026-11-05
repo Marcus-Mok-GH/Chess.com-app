@@ -341,9 +341,21 @@ export default function GameReview() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [totalPlies]);
 
+  // Scroll only the move list itself. scrollIntoView also scrolls every
+  // scrollable ancestor (including the window), which dragged the page down to
+  // the move list whenever the position changed.
   useEffect(() => {
-    if (activeMoveRef.current?.scrollIntoView) {
-      activeMoveRef.current.scrollIntoView({ block: 'nearest' });
+    const list = moveListRef.current;
+    const active = activeMoveRef.current;
+    if (!list || !active) return;
+    const listRect = list.getBoundingClientRect();
+    const activeRect = active.getBoundingClientRect();
+    const activeTop = activeRect.top - listRect.top + list.scrollTop;
+    const activeBottom = activeTop + activeRect.height;
+    if (activeTop < list.scrollTop) {
+      list.scrollTop = activeTop;
+    } else if (activeBottom > list.scrollTop + list.clientHeight) {
+      list.scrollTop = activeBottom - list.clientHeight;
     }
   }, [currentPly]);
 
