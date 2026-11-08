@@ -62,3 +62,8 @@
     gap: 0.4rem;
   }
 }
+
+.club-join:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

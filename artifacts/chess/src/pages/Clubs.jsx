@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Building2, Plus, Users, LogIn, LogOut, Loader2 } from 'lucide-react'
+import { Building2, Plus, Users, LogIn, Check, Loader2 } from 'lucide-react'
 import { useUser } from '../contexts/UserContext'
 import api from '../services/api'
 import AccountRequired from '../components/AccountRequired'
@@ -20,6 +20,7 @@ export default function Clubs() {
   const [showCreate, setShowCreate] = useState(false)
   const [form, setForm] = useState({ name: '', description: '' })
   const [saving, setSaving] = useState(false)
+  const [joining, setJoining] = useState({})
   const [notice, setNotice] = useState('')
 
   async function loadClubs() {
@@ -40,7 +41,7 @@ export default function Clubs() {
     setSaving(true)
     try {
       const data = await api.createClub(form)
-      setClubs((current) => [data.club, ...current])
+      setClubs((current) => [{ ...data.club, memberCount: 1, isMember: true }, ...current])
       setForm({ name: '', description: '' })
       setShowCreate(false)
       setNotice(tNow('Club created.'))
@@ -49,11 +50,21 @@ export default function Clubs() {
   }
 
   async function toggleMembership(club) {
+    // One join at a time per club: the button is disabled while a request
+    // is in flight, and members (from the list or a just-completed join)
+    // cannot join again, so spamming it cannot inflate the count.
+    if (!club?.slug || club.isMember || joining[club.slug]) return
+    setJoining((current) => ({ ...current, [club.slug]: true }))
     try {
-      await api.joinClub(club.slug)
+      const data = await api.joinClub(club.slug)
       setNotice(tNow('Joined {club}.', { club: club.name }))
-      setClubs((current) => current.map((item) => item.slug === club.slug ? { ...item, memberCount: (item.memberCount || 0) + 1 } : item))
+      setClubs((current) => current.map((item) => item.slug === club.slug
+        // The server reports whether this request added the membership;
+        // only count it when it did.
+        ? { ...item, isMember: true, memberCount: (item.memberCount || 0) + (data?.joined ? 1 : 0) }
+        : item))
     } catch (err) { setError(err.message || 'Failed to join club') }
+    finally { setJoining((current) => ({ ...current, [club.slug]: false })) }
   }
 
   if (isLoading) return <div className="clubs-page"><div className="clubs-container clubs-loading">{t("Loading…")}</div></div>
@@ -71,7 +82,7 @@ export default function Clubs() {
       {notice && <p className="clubs-notice" role="status">{notice}</p>}
       {showCreate && <form className="clubs-create card-surface" onSubmit={createClub}><input aria-label={t("Club name")} placeholder={t("Club name")} value={form.name} maxLength={80} onChange={(event) => setForm({ ...form, name: event.target.value })} /><textarea aria-label={t("Club description")} placeholder={t("What is this club about?")} value={form.description} maxLength={500} onChange={(event) => setForm({ ...form, description: event.target.value })} /><button className="clubs-primary" disabled={saving}>{saving ? <Loader2 className="spin" size={16} /> : <Plus size={16} />} {' '}{t("Create")}</button></form>}
       {error && <p className="clubs-error" role="alert">{t(error)}</p>}
-      {loading ? <div className="clubs-loading"><Loader2 className="spin" /> {' '}{t("Loading clubs…")}</div> : clubs.length === 0 ? <div className="clubs-empty card-surface"><Users size={36} /><p>{t("No clubs yet. Create the first one.")}</p></div> : <div className="clubs-grid">{clubs.map((club) => <article className="club-card card-surface" key={club.slug}><div className="club-card-icon"><Building2 size={20} /></div><h2>{club.name}</h2><p>{club.description}</p><div className="club-meta"><span><Users size={14} /> {tCount(club.memberCount || 0, '{count} member', '{count} members')}</span><button className="club-join" onClick={() => toggleMembership(club)}><LogIn size={14} /> {' '}{t("Join")}</button></div></article>)}</div>}
+      {loading ? <div className="clubs-loading"><Loader2 className="spin" /> {' '}{t("Loading clubs…")}</div> : clubs.length === 0 ? <div className="clubs-empty card-surface"><Users size={36} /><p>{t("No clubs yet. Create the first one.")}</p></div> : <div className="clubs-grid">{clubs.map((club) => <article className="club-card card-surface" key={club.slug}><div className="club-card-icon"><Building2 size={20} /></div><h2>{club.name}</h2><p>{club.description}</p><div className="club-meta"><span><Users size={14} /> {tCount(club.memberCount || 0, '{count} member', '{count} members')}</span><button className="club-join" onClick={() => toggleMembership(club)} disabled={Boolean(club.isMember || joining[club.slug])}>{joining[club.slug] ? <Loader2 className="spin" size={14} /> : club.isMember ? <Check size={14} /> : <LogIn size={14} />} {' '}{club.isMember ? t("Joined") : t("Join")}</button></div></article>)}</div>}
     </div></div>
   )
 }

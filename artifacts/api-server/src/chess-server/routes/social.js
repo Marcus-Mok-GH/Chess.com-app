@@ -317,13 +317,19 @@ router.get("/presence/:userId", async (req, res) => {
 // --- Clubs ---
 router.get("/clubs", async (req, res) => {
     try {
+        // Optional auth: the list stays public, but signed-in callers get
+        // isMember so the UI never offers Join for a club they already
+        // belong to (e.g. after a refresh).
+        const userId = await authenticatedUserId(req).catch(() => null);
         const result = await query(
             `SELECT c.id, c.slug, c.name, c.description, c.created_by, c.created_at,
-              COUNT(cm.user_id) AS member_count
+              COUNT(cm.user_id) AS member_count,
+              COALESCE(MAX(CASE WHEN cm.user_id = $1 THEN 1 ELSE 0 END), 0) AS is_member
        FROM clubs c
        LEFT JOIN club_members cm ON cm.club_id = c.id
        GROUP BY c.id
        ORDER BY c.created_at DESC`,
+            [userId || null],
         );
 
         const clubs = result.rows.map((row) => ({
@@ -334,6 +340,7 @@ router.get("/clubs", async (req, res) => {
             createdBy: row.created_by,
             createdAt: row.created_at,
             memberCount: parseInt(row.member_count, 10),
+            isMember: Number(row.is_member) === 1,
         }));
 
         res.json({ clubs, count: clubs.length });
@@ -463,21 +470,27 @@ router.post("/clubs/:slug/join", async (req, res) => {
         if (clubResult.rowCount === 0)
             return errorResponse(res, 404, "Club not found");
 
+        // Idempotent by the (club_id, user_id) primary key: repeat joins
+        // insert nothing. RETURNING tells the caller whether this request
+        // actually added a membership, so the UI only counts it once.
+        let joined = false;
         try {
-            await query(
+            const insertResult = await query(
                 `INSERT INTO club_members (club_id, user_id, role)
          VALUES ($1, $2, 'member')
-         ON CONFLICT (club_id, user_id) DO NOTHING`,
+         ON CONFLICT (club_id, user_id) DO NOTHING
+         RETURNING club_id`,
                 [clubResult.rows[0].id, userId],
             );
+            joined = insertResult.rowCount > 0;
         } catch (error) {
             if (error?.code === "23505") {
-                return res.json({ success: true, message: "Already a member" });
+                return res.json({ success: true, joined: false, club: clubResult.rows[0] });
             }
             throw error;
         }
 
-        res.json({ success: true, club: clubResult.rows[0] });
+        res.json({ success: true, joined, club: clubResult.rows[0] });
     } catch (error) {
         handleRouteError(res, error, "Failed to join club");
     }
