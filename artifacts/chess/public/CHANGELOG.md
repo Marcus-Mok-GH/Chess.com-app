@@ -1,3 +1,9 @@
+[2026-11-08] - Club joining can no longer be spammed
+
+- The Join button now disables while a join request is in flight and switches to a disabled "Joined" state once you're a member, so repeated clicks can't inflate a club's member count — the count previously went up by one on every click even though the server only ever added the membership once.
+- The join endpoint now reports whether the request actually added the membership (`joined`), and the club list includes `isMember` for signed-in users so the correct state survives a page refresh. The list itself stays public for anonymous visitors.
+- A newly created club now shows its creator as a member with 1 member instead of "Join" and 0 members.
+
 [2026-11-08] - Stallfish takes his place in the bot roster order
 
 - Moved Stallfish from the end of the bot list to sit with the other 1600-rated bot, Isabella, so the bot picker lists him at his rating instead of after the 2900-rated Rex.
