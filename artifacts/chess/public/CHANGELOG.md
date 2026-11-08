@@ -1,3 +1,7 @@
+[2026-11-08] - Stallfish takes his place in the bot roster order
+
+- Moved Stallfish from the end of the bot list to sit with the other 1600-rated bot, Isabella, so the bot picker lists him at his rating instead of after the 2900-rated Rex.
+
 [2026-11-08] - Stallfish, the bot that refuses to let the game end
 
 - Added Stallfish to the bot roster: a 1600-rated opponent with aggression 0 whose only goal is to keep the game alive as long as possible.

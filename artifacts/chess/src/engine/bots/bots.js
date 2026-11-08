@@ -4,6 +4,7 @@ import { nelson } from './personalities/nelson';
 import { elena } from './personalities/elena';
 import { viktor } from './personalities/viktor';
 import { isabella } from './personalities/isabella';
+import { stallfish } from './personalities/stallfish';
 import { magnus } from './personalities/magnus';
 import { dolores } from './personalities/dolores';
 import { raj } from './personalities/raj';
@@ -13,7 +14,6 @@ import { nadia } from './personalities/nadia';
 import { saitama } from './personalities/saitama';
 import { rex } from './personalities/rex';
 import { brilliant } from './personalities/brilliant';
-import { stallfish } from './personalities/stallfish';
 import { custom } from './personalities/custom';
 
 // Bot personalities with different difficulty levels
@@ -24,6 +24,7 @@ export const BOTS = [
   elena,
   viktor,
   isabella,
+  stallfish,
   magnus,
   dolores,
   raj,
@@ -33,7 +34,6 @@ export const BOTS = [
   saitama,
   rex,
   brilliant,
-  stallfish,
   custom
 ];
 
