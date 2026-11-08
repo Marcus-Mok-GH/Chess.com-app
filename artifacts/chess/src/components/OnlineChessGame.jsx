@@ -194,7 +194,8 @@ export default function OnlineChessGame({
     // HTTP polling — primary source of truth for opponent moves.
     // Local player's own moves are confirmed via the POST response, but opponent
     // moves arrive only through this poll.  The interval avoids overlapping polls
-    // via the inFlight guard and stops when the game ends.
+    // via the inFlight guard and stops when the game ends. The 500ms tick keeps
+    // opponent moves feeling near-instant.
     const gameStatusRef = useRef(gameStatus);
 
     useEffect(() => {
@@ -292,7 +293,7 @@ export default function OnlineChessGame({
                 // ── Throttled sub-polls (run only every N ticks to avoid flooding) ─────────
                 const tick = ++chatTickRef.current; // monotonically increments every poll cycle
 
-                // Draw offer — every ~4 ticks (~6s)
+                // Draw offer — every ~4 ticks (~2s)
                 if (tick % 4 === 0) {
                     try {
                         const draw = await api.getDrawOffer(gameId);
@@ -305,7 +306,7 @@ export default function OnlineChessGame({
                     }
                 }
 
-                // Chat — every ~4 ticks (~6s). Guests have no session and the
+                // Chat — every ~4 ticks (~2s). Guests have no session and the
                 // server chat routes 401 without one, so skip for guests.
                 if (tick % 4 === 0 && user) {
                     try {
@@ -358,7 +359,7 @@ export default function OnlineChessGame({
                     }
                 }
 
-                // Opponent presence — every ~10 ticks (~15s), only if logged in
+                // Opponent presence — every ~10 ticks (~5s), only if logged in
                 if (++presenceTickRef.current % 10 === 0 && user) {
                     try {
                         const oppId =
@@ -404,7 +405,7 @@ export default function OnlineChessGame({
             } finally {
                 inFlight = false;
             }
-        }, 1500);
+        }, 500);
 
         return () => {
             cancelled = true;

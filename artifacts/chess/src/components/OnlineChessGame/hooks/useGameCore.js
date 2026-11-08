@@ -111,6 +111,30 @@ export function useGameCore(gameId, playerId, playerColor, settings) {
 
     moveInFlightRef.current = true;
 
+    // Optimistic update: the move appears on the board immediately instead
+    // of after the server round-trip. The snapshot below is restored if
+    // the server rejects the move, and the poll re-syncs from the server
+    // either way.
+    const prevGame = game;
+    const prevHistory = moveHistory;
+    const prevMoveCount = moveCountRef.current;
+    const optimisticHistory = [...moveHistory, move];
+    setGame(gameCopy);
+    setMoveHistory(optimisticHistory);
+    moveCountRef.current = optimisticHistory.length;
+    turnStartedAtRef.current = Date.now();
+    hiddenMsRef.current = 0;
+    hiddenStartedAtRef.current = typeof document !== 'undefined' && document.visibilityState === 'hidden' ? Date.now() : null;
+    focusLossesRef.current = 0;
+    playSoundEffect(settings, { type: move.captured ? 'capture' : 'move' });
+    if (gameCopy.inCheck()) playSoundEffect(settings, { type: 'check' });
+
+    const rollback = () => {
+      setGame(prevGame);
+      setMoveHistory(prevHistory);
+      moveCountRef.current = prevMoveCount;
+    };
+
     const hiddenMs = hiddenMsRef.current + (hiddenStartedAtRef.current === null ? 0 : Math.max(0, Date.now() - hiddenStartedAtRef.current));
     const fairPlaySignals = {
       thinkTimeMs: Math.max(0, Date.now() - turnStartedAtRef.current),
@@ -126,14 +150,16 @@ export function useGameCore(gameId, playerId, playerColor, settings) {
         gameId,
         move: { from: move.from, to: move.to, promotion: move.promotion || 'q', san: move.san },
         playerId,
-        expectedMoveCount: moveCountRef.current,
+        expectedMoveCount: prevMoveCount,
         fairPlaySignals,
         token: getAuthToken(),
       });
 
       // The server refuses a move that arrives after the mover's clock ran
-      // out and ends the game instead, so the board must not be updated.
+      // out and ends the game instead, so the optimistic move is rolled
+      // back and the server's terminal state stands.
       if (result.timedOut) {
+        rollback();
         moveInFlightRef.current = false;
         setGameStatus('ended');
         setEndReason(result.endReason || 'timeout');
@@ -147,16 +173,12 @@ export function useGameCore(gameId, playerId, playerColor, settings) {
       const serverHistory = normalizeMoveHistory(result.moveHistory);
       const newGame = buildGameFromHistory(serverHistory, result.fen);
 
+      // Server confirmed: reconcile the optimistic board with the
+      // authoritative history (sound and clock trackers already ran on
+      // the optimistic apply above).
       setGame(newGame);
       setMoveHistory(serverHistory);
       moveCountRef.current = serverHistory.length;
-      turnStartedAtRef.current = Date.now();
-      hiddenMsRef.current = 0;
-      hiddenStartedAtRef.current = typeof document !== 'undefined' && document.visibilityState === 'hidden' ? Date.now() : null;
-      focusLossesRef.current = 0;
-
-      playSoundEffect(settings, { type: move.captured ? 'capture' : 'move' });
-      if (newGame.inCheck()) playSoundEffect(settings, { type: 'check' });
 
       if (newGame.isGameOver()) {
         let result2 = 'draw';
@@ -197,6 +219,9 @@ export function useGameCore(gameId, playerId, playerColor, settings) {
       moveInFlightRef.current = false;
       return true;
     } catch (err) {
+      // Rejected or unreachable: roll the optimistic move back; the poll
+      // will deliver the server's version of the position.
+      rollback();
       const msg = err?.message || 'Move could not be sent';
       setMoveError(msg);
       if (moveErrorTimeoutRef.current) clearTimeout(moveErrorTimeoutRef.current);

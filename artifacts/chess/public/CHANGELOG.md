@@ -1,3 +1,8 @@
+[2026-11-08] - Online moves appear instantly
+
+- Your own moves in online games are now optimistic: the piece moves on the board immediately instead of waiting for the server round-trip, and the move is rolled back if the server rejects it (including a timeout loss). Sounds and clock trackers run on the same instant apply.
+- Opponent moves now arrive on a 500ms poll instead of 1500ms, so they show up near-instantly too. Chat, draw-offer, and presence sub-polls follow the faster tick (about 2s, 2s, and 5s).
+
 [2026-11-08] - Club joining can no longer be spammed
 
 - The Join button now disables while a join request is in flight and switches to a disabled "Joined" state once you're a member, so repeated clicks can't inflate a club's member count — the count previously went up by one on every click even though the server only ever added the membership once.
