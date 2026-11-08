@@ -323,10 +323,10 @@ class ApiService {
             headers,
         });
     }
-    async getEngineMove({ fen, bot }) {
+    async getEngineMove({ fen, bot, debug, history }) {
         return this.request("/engine/move", {
             method: "POST",
-            body: JSON.stringify({ fen, bot }),
+            body: JSON.stringify({ fen, bot, debug, history }),
         });
     }
 

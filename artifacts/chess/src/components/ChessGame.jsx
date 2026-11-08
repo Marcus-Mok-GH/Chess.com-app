@@ -409,11 +409,13 @@ function ChessGame(
           scriptedOpening: bot.scriptedOpening,
           playStyle: bot.playStyle,
           brilliant: bot.brilliant,
+          stall: bot.stall,
         },
         debug: settingsRef.current.debugMode,
+        history: toSanHistory(moveHistoryRef.current),
       });
 
-      const { bestMove, brilliant: playedBrilliant, debugInfo: newDebugInfo } = response;
+      const { bestMove, brilliant: playedBrilliant, refusedEnding, debugInfo: newDebugInfo } = response;
 
       busyRetryCountRef.current = 0;
       setEngineError(null);
@@ -465,6 +467,11 @@ function ChessGame(
               setBotMessage(getRandomQuote(bot, "check"));
             } else if (moveResult.captured) {
               setBotMessage(getRandomQuote(bot, "capture"));
+            } else if (refusedEnding) {
+              // Stallfish declined an ending (mate, stalemate, draw, ...)
+              // the engine wanted to play.
+              const stallQuote = getRandomQuote(bot, "stall");
+              if (stallQuote) setBotMessage(stallQuote);
             } else if (playedBrilliant) {
               const brilliantQuote = getRandomQuote(bot, "brilliant");
               if (brilliantQuote) setBotMessage(brilliantQuote);

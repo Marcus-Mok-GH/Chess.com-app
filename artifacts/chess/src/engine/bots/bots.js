@@ -13,6 +13,7 @@ import { nadia } from './personalities/nadia';
 import { saitama } from './personalities/saitama';
 import { rex } from './personalities/rex';
 import { brilliant } from './personalities/brilliant';
+import { stallfish } from './personalities/stallfish';
 import { custom } from './personalities/custom';
 
 // Bot personalities with different difficulty levels
@@ -32,6 +33,7 @@ export const BOTS = [
   saitama,
   rex,
   brilliant,
+  stallfish,
   custom
 ];
 

@@ -1,3 +1,10 @@
+[2026-11-08] - Stallfish, the bot that refuses to let the game end
+
+- Added Stallfish to the bot roster: a 1600-rated opponent with aggression 0 whose only goal is to keep the game alive as long as possible.
+- His turns are chosen from every legal move, not just the engine's top lines. Any move that ends the game is vetoed outright — delivering checkmate or stalemate, an insufficient-material or fifty-move draw, a threefold repetition, or leaving the opponent a mate in one — and among the survivors the quietest, most reversible shuffle wins: no checks, no captures, no pawn pushes until the halfmove clock needs resetting, no hanging material, and plenty of legal replies left for the opponent.
+- The board now sends the SAN history with each bot request so repetition detection follows the real game, and when Stallfish declines an ending the engine wanted, a dedicated "stall" quote set says so. When Stockfish is unavailable his fallback is stall-safe too, instead of the capture/check-first fallback other bots use.
+- Translated his banter and description into all five non-English locales, and added roster, stall-detection, and engine-route tests.
+
 [2026-11-05] - No more jumpy pages in online games and reviews
 
 - Online game chat now scrolls its own message list when a message arrives, instead of using scrollIntoView, which also scrolled the surrounding page and jumped to the bottom of the game screen.
