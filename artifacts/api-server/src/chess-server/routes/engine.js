@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { errorResponse, handleRouteError } from '../middleware/errors.js';
 import { computeScriptedMove } from '../../../../chess/src/engine/bots/scriptedMoves.js';
 import { selectBrilliantMove } from '../../../../chess/src/engine/bots/brilliantMove.js';
+import { selectStallMove } from '../../../../chess/src/engine/bots/stallMove.js';
 
 // Resolve paths at module load time so they survive esbuild bundling.
 const _require = createRequire(import.meta.url);
@@ -99,6 +100,11 @@ const MAX_STRENGTH_MOVETIME_MS = Math.min(1800, Math.max(300, TIMEOUT_MS - 3500)
 // without diluting the search depth on each line.
 const BRILLIANT_MULTIPV = 5;
 
+// Root moves scored for Stallfish: its real candidate pool is every legal
+// move (see below), and the engine scores are only a tiebreak, so the same
+// top-lines budget is plenty.
+const STALL_MULTIPV = 5;
+
 const router = Router();
 
 function isValidFen(fen) {
@@ -124,6 +130,28 @@ function getFallbackMove(fen) {
   // worker is available.
   const move = moves.find((candidate) => candidate.captured || candidate.san?.includes('+')) || moves[0];
   return move.from + move.to + (move.promotion || '');
+}
+
+/** Every legal move in the position as UCI strings, for Stallfish to judge. */
+function legalMoveCandidates(fen) {
+  const chess = new Chess(fen);
+  return chess.moves({ verbose: true }).map((move) => move.from + move.to + (move.promotion || ''));
+}
+
+/**
+ * Stallfish's candidate pool: the engine's scored lines plus every other
+ * legal move (unscored). A quiet shuffle the engine ranks ninth can still
+ * be the move that keeps the game alive, so it must be on the table.
+ */
+function stallCandidates(fen, engineCandidates = []) {
+  const byMove = new Map();
+  for (const candidate of engineCandidates) {
+    if (candidate && typeof candidate.move === 'string') byMove.set(candidate.move, candidate);
+  }
+  for (const move of legalMoveCandidates(fen)) {
+    if (!byMove.has(move)) byMove.set(move, { move, score: null, depth: 0 });
+  }
+  return [...byMove.values()];
 }
 
 function shouldUseFallback(error) {
@@ -235,8 +263,15 @@ export async function computeManagedBotMove(fen, elo = 1200) {
 // Local bot games are intentionally available to guests. The concurrency
 // guard still protects the serverless engine from unbounded parallel work.
 router.post('/move', engineConcurrency, async (req, res) => {
+  const { fen, bot, debug } = req.body || {};
+  // SAN moves played so far, for stall bots to avoid threefold repetition.
+  // Sanitised and capped; anything else is ignored.
+  const history = Array.isArray(req.body?.history)
+    ? req.body.history.filter((entry) => typeof entry === 'string' && entry).slice(-400)
+    : [];
+  // Hoisted so the fallback path below can report it in debugInfo.
+  const searchParams = getSearchParams(bot);
   try {
-    const { fen, bot, debug } = req.body;
     if (!fen) return errorResponse(res, 400, 'Missing required field: fen');
     if (!isValidFen(fen)) return errorResponse(res, 400, 'Invalid FEN string');
 
@@ -253,15 +288,20 @@ router.post('/move', engineConcurrency, async (req, res) => {
       });
     }
 
-    const searchParams = getSearchParams(bot);
-    const multiPv = bot?.brilliant ? BRILLIANT_MULTIPV : 0;
+    const multiPv = bot?.brilliant ? BRILLIANT_MULTIPV : bot?.stall ? STALL_MULTIPV : 0;
     if (debug) console.log('[Engine] FEN:', fen, '| Search:', searchParams);
 
     const result = await runEngine(fen, searchParams, bot, TIMEOUT_MS, { multiPv });
 
     // Mr. Brilliant plays the flashiest sacrifice the evaluation can afford
-    // (multiPv > 0); every other bot keeps the engine's top move.
-    const pick = multiPv > 0 ? selectBrilliantMove(fen, result.candidates) : null;
+    // (multiPv > 0); Stallfish plays the move that keeps the game alive,
+    // judging every legal move, not just the engine's lines; every other
+    // bot keeps the engine's top move.
+    const pick = bot?.brilliant
+      ? selectBrilliantMove(fen, result.candidates)
+      : bot?.stall
+        ? selectStallMove(fen, stallCandidates(fen, result.candidates), { history })
+        : null;
     const bestMove = pick?.move || result.bestMove;
 
     return res.json({
@@ -269,12 +309,43 @@ router.post('/move', engineConcurrency, async (req, res) => {
       ...result,
       bestMove,
       brilliant: Boolean(pick?.brilliant),
+      stall: Boolean(pick?.stall),
+      refusedEnding: bot?.stall ? (pick?.refusedEnding ?? null) : null,
       debugInfo: debug
-        ? { fen, searchParams, botName: bot?.name, multiPv, brilliant: pick ?? null }
+        ? {
+            fen,
+            searchParams,
+            botName: bot?.name,
+            multiPv,
+            brilliant: bot?.brilliant ? (pick ?? null) : null,
+            stall: bot?.stall ? (pick ?? null) : null,
+          }
         : null,
     });
   } catch (error) {
     if (shouldUseFallback(error)) {
+      // Stallfish stalls even without the engine: the generic fallback
+      // prefers captures and checks, which is the opposite of stalling.
+      if (bot?.stall) {
+        const stallPick = selectStallMove(
+          fen,
+          legalMoveCandidates(fen).map((move) => ({ move, score: null, depth: 0 })),
+          { history },
+        );
+        if (stallPick?.move) {
+          console.warn('[Engine] Stockfish unavailable; returning a stall-safe fallback move:', error.message);
+          return res.json({
+            type: 'result',
+            bestMove: stallPick.move,
+            stall: Boolean(stallPick.stall),
+            refusedEnding: stallPick.refusedEnding ?? null,
+            engineFallback: true,
+            debugInfo: debug
+              ? { fen, searchParams, botName: bot?.name, engineFallback: true, stall: stallPick }
+              : null,
+          });
+        }
+      }
       const bestMove = getFallbackMove(fen);
       if (bestMove) {
         console.warn('[Engine] Stockfish unavailable; returning a legal fallback move:', error.message);
