@@ -1,3 +1,7 @@
+[2026-11-08] - README brought up to date
+
+- Rewrote the README in the repo's existing style to match the current app: the full bot roster (including Mr. Brilliant, Stallfish, Saitama, and premium Rex/Nadia), clubs and social, near-instant online moves, game review with book moves, puzzles/lessons/AI coach, premium via Whop, and six-language support. Corrected the tech stack (React 19, HTTP polling instead of Socket.IO) and the changelog path in the workflow notes.
+
 [2026-11-08] - Online moves appear instantly
 
 - Your own moves in online games are now optimistic: the piece moves on the board immediately instead of waiting for the server round-trip, and the move is rolled back if the server rejects it (including a timeout loss). Sounds and clock trackers run on the same instant apply.

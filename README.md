@@ -10,11 +10,13 @@ Challenge delightfully unhinged AI personalities, battle real players in real-ti
 
 ## ✨ Why You'll Love It
 
-- **13+ unforgettable AI opponents** — Each bot has a unique personality, voice, and trash-talking style. Play against a conspiracy theorist who thinks the pawns are plotting against him, a ruthless 2200-rated monster who will destroy your ego, or a friendly coach who actually wants you to improve.
-- **Real-time online play** — Jump into ranked matchmaking or create private friendly games with shareable codes. Live queues, instant match-found animations, and smooth Socket.IO gameplay.
-- **Deep post-game analysis** — Step through every move on an interactive board. Review your games with detailed move lists and insights.
+- **15 unforgettable AI opponents** — Each bot has a unique personality, voice, and trash-talking style. Play against a conspiracy theorist who thinks the pawns are plotting against him, a bot that only plays sacrifices, a fish that refuses to let the game end, or a friendly coach who actually wants you to improve.
+- **Real-time online play** — Jump into ranked matchmaking or create private friendly games with shareable codes. Moves appear near-instantly (optimistic local play + a fast poll), with live clocks, premoves, chat, and draw offers.
+- **Deep post-game analysis** — Step through every move on an interactive board. Review your games with engine evaluations, opening-book classification, puzzles, lessons, and an AI coach that explains what actually happened.
+- **A social layer** — Friends, clubs, leaderboards, and notifications. Find your people, or found a club and start recruiting.
 - **Real progression** — Earn a live ELO rating. Track your wins, losses, draws, and win rate. Your stats actually mean something.
 - **Play anywhere** — Gorgeous desktop sidebar + fully optimized mobile experience. Works beautifully on phones, tablets, and big screens.
+- **Speaks your language** — Full interface in English, Simplified Chinese, Traditional Chinese, Malay, Tamil, and Hindi.
 - **No friction sign-in** — Just enter your email and get a 6-digit code. No passwords, no hassle.
 
 ---
@@ -23,10 +25,11 @@ Challenge delightfully unhinged AI personalities, battle real players in real-ti
 
 | Mode          | Description                              | Perfect for                  |
 |---------------|------------------------------------------|------------------------------|
-| **Play vs AI**    | Pick from 13 unique bots with different skill levels | Practicing, having a laugh, learning |
+| **Play vs AI**    | Pick from 15 unique bots with different skill levels | Practicing, having a laugh, learning |
 | **Online Ranked** | Matchmaking against real players at your level | Competitive play & rating climbs |
 | **Friendly Games** | Create or join private games with codes | Playing with friends |
-| **Analysis**      | Deep dive into any finished game         | Improving your chess         |
+| **Clubs**     | Create or join communities of players | Finding your people |
+| **Analysis**      | Deep dive into any finished game, with engine scores and book moves | Improving your chess         |
 | **History**       | Replay all your past games               | Nostalgia + learning         |
 
 ---
@@ -36,10 +39,15 @@ Challenge delightfully unhinged AI personalities, battle real players in real-ti
 - **Pip (250)** — Absolute-beginner buddy. Just learned the rules and just wants a friend to practice with.
 - **Nelson (400)** — Conspiracy theorist. Blames the Illuminati when he loses. Hilarious.
 - **Magnus (2200)** — Ruthless trash-talker. Will mock you while destroying your position.
+- **Mr. Brilliant (2000)** — Only plays sacrifices. Hands you material, keeps the evaluation, and dares you to take it.
+- **Stallfish (1600)** — 🐟 Aggression zero. Refuses checkmate, stalemate, and draws, and shuffles pieces until the game outlives you both.
+- **Saitama (2500)** — Plays it cool until you take his material or check his king. Then one punch ends the game.
+- **Rex (2900)** — *Premium.* Opens with the Bongcloud, donates his queen, then plays like Stockfish itself.
 - **Coach** — Actually helpful. Gives good advice (sometimes).
-- **Dolores, Raj, Nadia, Felix** and more — Each with their own voice, ego, and play style.
 
 Every bot reacts to checks, captures, blunders, wins, and draws with unique, memorable lines. It's half chess, half comedy.
+
+**Premium bots** — Rex and Nadia are unlocked with a Whop subscription, which also unlocks unlimited game reviews.
 
 ---
 
@@ -58,6 +66,8 @@ cd artifacts/chess && pnpm dev
 
 Then open http://localhost:5173 (or whatever port Vite chooses).
 
+Run the full test suite with `pnpm test`.
+
 **Production deployment** is set up for Vercel (see `vercel.json`).
 
 ### Required Environment
@@ -69,13 +79,14 @@ Then open http://localhost:5173 (or whatever port Vite chooses).
 ## 🛠 Tech Stack
 
 **Frontend**
-- React 18 + Vite 7
+- React 19 + Vite 7
 - react-chessboard v5
-- Real-time with Socket.IO (with polling fallback)
+- Real-time with HTTP polling (500ms game sync, optimistic own moves)
 
 **Backend**
-- Express 5 + Socket.IO
+- Express 5
 - PostgreSQL + Drizzle ORM
+- Stockfish for bot and review engines
 - Email OTP authentication (no passwords)
 
 **Infrastructure**
@@ -92,7 +103,7 @@ chess.com-app/
 ├── api/                    # Vercel serverless entry
 ├── artifacts/
 │   ├── chess/              # React frontend (the beautiful UI)
-│   └── api-server/         # Express backend + Socket.IO
+│   └── api-server/         # Express backend
 ├── lib/
 │   ├── db/                 # Shared database layer
 │   └── api-spec/           # OpenAPI + Zod schemas
@@ -103,8 +114,8 @@ chess.com-app/
 
 ## 🛠 Workflow Notes
 
-- Always update `CHANGELOG.md` after meaningful changes.
-- The project uses a monorepo with pnpm workspaces.
+- Always update `artifacts/chess/public/CHANGELOG.md` after meaningful changes.
+- The project uses a monorepo with pnpm workspaces (pnpm only — npm/yarn hard-fail).
 - Auth flow is fully custom (email + 6-digit OTP) — no external auth providers at runtime.
 
 ---
@@ -136,7 +147,7 @@ The callback must be registered exactly in the Pollinations App Key, including s
 
 **Ready to play?**
 
-Clone it. Run it. Challenge Nelson. Get destroyed by Magnus. Then analyze why it happened.
+Clone it. Run it. Challenge Nelson. Get destroyed by Magnus. Then analyze why it happened — but watch out for Stallfish, because that game might never end.
 
 Chess has never been this entertaining.
 
