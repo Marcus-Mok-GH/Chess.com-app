@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chess-app-v3';
+const CACHE_NAME = 'chess-app-v4';
 
 // Immutable, fingerprinted assets (hashed filenames) can be cached
 // aggressively. The app shell ('/', '/index.html') is intentionally NOT
@@ -6,6 +6,11 @@ const CACHE_NAME = 'chess-app-v3';
 // deploy, and a stale cached shell serves HTML that links to dead asset
 // URLs (the "unstyled page" bug).
 const OFFLINE_FALLBACKS = [
+  '/favicon.png',
+  '/logo.png',
+  '/logo-small.png',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
   '/favicon.svg',
   // Legacy paths
   '/pieces/wK.svg',

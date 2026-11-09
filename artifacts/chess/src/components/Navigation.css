@@ -38,6 +38,12 @@
   font-family: inherit;
 }
 
+/* The logo mark is a rendered 3D scene — a rounded chip keeps it crisp on the dark nav bar. */
+.chess-logo-icon {
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px var(--color-border-default);
+}
+
 .main-nav .logo:hover {
   color: var(--color-accent-primary);
 }

@@ -27,5 +27,5 @@ export default function ChessPieceIcon({ piece, color, size = 24, className = ''
 }
 
 export function LogoIcon({ size = 28, className = '' }) {
-  return <IconImage className={`chess-logo-icon ${className}`} size={size} src={PIECE_IMAGE_PATHS.bN} />;
+  return <IconImage className={`chess-logo-icon ${className}`} size={size} src="/logo-small.png" />;
 }
