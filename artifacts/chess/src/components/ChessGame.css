@@ -664,6 +664,55 @@
   padding: 0.45rem 0.85rem;
 }
 
+.fair-play-report {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-2);
+}
+
+.fair-play-report__title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.fair-play-report select,
+.fair-play-report textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--background);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.fair-play-report select:focus-visible,
+.fair-play-report textarea:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.fair-play-report textarea {
+  min-height: 5.5rem;
+  resize: vertical;
+}
+
+.fair-play-report .status-message {
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
 /* Online game action controls */
 .controls {
   display: grid;
@@ -721,6 +770,17 @@
 }
 
 .online-action-btn--review:hover:not(:disabled) {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.online-action-btn--report {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.online-action-btn--report:hover:not(:disabled) {
   background: var(--accent);
   border-color: var(--accent);
 }

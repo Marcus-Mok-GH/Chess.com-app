@@ -1,3 +1,7 @@
+[2026-11-09] - Fair-play reporting gets a clear match panel
+
+- Styled the post-game fair-play report as a distinct, accessible section with a proper heading, visible fields, and a prominent submit action.
+
 [2026-11-08] - New 3D logo across the app
 
 - Replaced the flat knight favicon with an AI-rendered 3D chess-scene logo. The full render (`/logo.png`) is the PWA icon alongside the 192/512 PNGs — the manifest previously pointed at icon files that were never generated — and the tab favicon now uses a tight green-king crop that stays legible at 16-64px.

@@ -45,4 +45,31 @@ describe('online game board flip', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Flip Board' }));
     expect(onFlipBoard).toHaveBeenCalledOnce();
   });
+
+  it('presents the post-game fair-play report as a clearly labelled section', () => {
+    render(
+      <GameUI
+        game={new Chess()}
+        boardOrientation="white"
+        onFlipBoard={vi.fn()}
+        topPlayer={{ name: 'Black player', color: 'b' }}
+        bottomPlayer={{ name: 'White player', color: 'w' }}
+        capturedPieces={{ w: [], b: [] }}
+        settings={{}}
+        animatingPieces={[]}
+        chatMessages={[]}
+        moveHistory={[]}
+        getStatusMessage={() => 'Game over'}
+        gameStatus="ended"
+        opponentStatus="connected"
+        eloChange={null}
+        gameId="example"
+        canLeave
+      />,
+    );
+
+    expect(screen.getByRole('region', { name: 'Report fair-play concern' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 3, name: 'Report fair-play concern' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Submit private report' })).toBeTruthy();
+  });
 });
