@@ -192,8 +192,8 @@ export default function GameUI({
 
 
         {gameStatus === 'ended' && (
-          <div className="fair-play-report">
-            <strong>{t("Report fair-play concern")}</strong>
+          <section className="fair-play-report" aria-labelledby="fair-play-report-title">
+            <h3 id="fair-play-report-title" className="fair-play-report__title">{t("Report fair-play concern")}</h3>
             <select value={reportReason} onChange={(event) => setReportReason(event.target.value)}>
               <option value="engine_assistance">{t("Engine assistance")}</option>
               <option value="outside_help">{t("Outside help")}</option>
@@ -202,9 +202,9 @@ export default function GameUI({
               <option value="other">{t("Other")}</option>
             </select>
             <textarea value={reportDetails} onChange={(event) => setReportDetails(event.target.value)} maxLength={1000} placeholder={t("Optional details")} />
-            <button className="online-action-btn" onClick={onReport}>{t("Submit private report")}</button>
-            {reportStatus && <div className="status-message">{reportStatus}</div>}
-          </div>
+            <button className="online-action-btn online-action-btn--report" onClick={onReport}>{t("Submit private report")}</button>
+            {reportStatus && <div className="status-message" role="status">{reportStatus}</div>}
+          </section>
         )}
 
         <div className="controls">
