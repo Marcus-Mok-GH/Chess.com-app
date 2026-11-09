@@ -1,3 +1,10 @@
+[2026-11-08] - New 3D logo across the app
+
+- Replaced the flat knight favicon with an AI-rendered 3D chess-scene logo. The full render (`/logo.png`) is the PWA icon alongside the 192/512 PNGs — the manifest previously pointed at icon files that were never generated — and the tab favicon now uses a tight green-king crop that stays legible at 16-64px.
+- The header logo button shows the green-king mark as a rounded 24px chip instead of the old piece glyph.
+- Cleaned the source render before shipping: removed the generator watermark and blended the corner into the studio vignette. Assets live in `artifacts/chess/public` (`logo.png`, `logo-small.png`, `favicon.png`, `icons/`).
+- The service worker caches the new assets (cache bumped to v4) so offline starts keep the new branding.
+
 [2026-11-08] - README brought up to date
 
 - Rewrote the README in the repo's existing style to match the current app: the full bot roster (including Mr. Brilliant, Stallfish, Saitama, and premium Rex/Nadia), clubs and social, near-instant online moves, game review with book moves, puzzles/lessons/AI coach, premium via Whop, and six-language support. Corrected the tech stack (React 19, HTTP polling instead of Socket.IO) and the changelog path in the workflow notes.
