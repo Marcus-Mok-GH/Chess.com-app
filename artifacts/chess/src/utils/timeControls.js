@@ -170,15 +170,19 @@ export function formatClock(ms) {
   return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
 
+function findTimeControl(timeControl) {
+  return TIME_CONTROLS.find((control) => control.id === timeControl);
+}
+
 /** Human label for a time-control id (falls back to Unlimited). */
 export function timeControlLabel(timeControl) {
-  const found = TIME_CONTROLS.find((t) => t.id === timeControl);
+  const found = findTimeControl(timeControl);
   return found ? found.label : TIME_CONTROLS[0].label;
 }
 
 /** Human description for a time-control id, or null when unknown. */
 export function timeControlDescription(timeControl) {
-  const found = TIME_CONTROLS.find((t) => t.id === timeControl);
+  const found = findTimeControl(timeControl);
   return found ? found.description : null;
 }
 

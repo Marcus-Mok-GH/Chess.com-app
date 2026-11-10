@@ -1,3 +1,8 @@
+[2026-11-10] - Simplified shared frontend helpers
+
+- Consolidated the bot-game and online-game colour-choice logic into one helper, preserving the same direct selections and random fallback.
+- Reused one time-control lookup for labels and descriptions. No gameplay, API, or authentication behaviour changed.
+
 [2026-11-09] - Fair-play reporting gets a clear match panel
 
 - Styled the post-game fair-play report as a distinct, accessible section with a proper heading, visible fields, and a prominent submit action.

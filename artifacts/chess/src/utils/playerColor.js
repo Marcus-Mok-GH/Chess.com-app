@@ -7,9 +7,13 @@
 
 const COLORS = ['w', 'b'];
 
+function resolveColorChoice(color, colors) {
+  if (color === colors[0] || color === colors[1]) return color;
+  return colors[Math.floor(Math.random() * colors.length)];
+}
+
 export function resolvePlayerColor(color) {
-  if (color === 'w' || color === 'b') return color;
-  return COLORS[Math.floor(Math.random() * COLORS.length)];
+  return resolveColorChoice(color, COLORS);
 }
 
 /**
@@ -22,6 +26,5 @@ export function resolvePlayerColor(color) {
 const ONLINE_COLORS = ['white', 'black'];
 
 export function resolveOnlinePlayerColor(color) {
-  if (color === 'white' || color === 'black') return color;
-  return ONLINE_COLORS[Math.floor(Math.random() * ONLINE_COLORS.length)];
+  return resolveColorChoice(color, ONLINE_COLORS);
 }
