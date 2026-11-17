@@ -134,12 +134,11 @@ Configure the API server with:
 - `POLLINATIONS_REDIRECT_URI`: the exact registered callback URI, normally `https://<your-api-host>/api/coach/callback`.
 - `POLLINATIONS_TOKEN_ENCRYPTION_KEY`: a long random server secret used to encrypt delegated `sk_...` keys at rest. `BETTER_AUTH_SECRET` is accepted as a fallback, but a separate secret is recommended.
 - `POLLINATIONS_COACH_BUDGET`: optional default budget shown in the consent screen; defaults to `5` Pollen.
-- `POLLINATIONS_COACH_EXPIRY_DAYS`: optional authorization lifetime; defaults to `7` days.
+- `POLLINATIONS_COACH_EXPIRY_DAYS`: optional authorization lifetime in days; defaults to `30`.
 - `POLLINATIONS_COACH_MODELS`: optional comma-separated model restriction forwarded to Pollinations OAuth; when unset, no model restriction is sent.
-- `COACH_MODEL`: optional primary model sent to the Pollinations OpenAI-compatible endpoint; defaults to `openai`.
-- `COACH_FREE_MODEL`: optional free fallback model used when the primary model returns an affordability/balance error; defaults to `laguna`.
+- `COACH_MODEL`: the model sent to the Pollinations OpenAI-compatible endpoint; defaults to `community/YoannDev90/vercel-nemotron-3.5-lightning:free`.
 
-If the primary coach model returns HTTP 402 because the user's approved Pollen budget is unavailable, the server retries the request with `COACH_FREE_MODEL`. Set `POLLINATIONS_COACH_MODELS` when you want OAuth to restrict the connection to specific model IDs.
+There is no fallback model: when the coach model fails, or the user's approved budget is unavailable, the request returns an error and the player sees it. Set `POLLINATIONS_COACH_MODELS` (to the same id) when you want OAuth to restrict the connection to specific model IDs.
 
 The callback must be registered exactly in the Pollinations App Key, including scheme, hostname, path, and any query string. The database migration creates short-lived PKCE state records and encrypted per-user coach tokens. Tokens are never sent to the frontend.
 

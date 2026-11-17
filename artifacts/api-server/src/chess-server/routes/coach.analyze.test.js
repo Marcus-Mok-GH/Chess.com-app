@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import http from 'node:http';
+import crypto from 'node:crypto';
 import express from 'express';
 
 vi.mock('../db.js', () => ({
@@ -58,6 +59,21 @@ function loopback(app, path, method = 'POST', body = null) {
   });
 }
 
+
+// The coach needs a connected Pollinations account now that the free fallback
+// is gone, so give the route a decryptable stored token.
+const TEST_ENCRYPTION_KEY = 'coach-test-key';
+function encryptedToken(token) {
+  const key = crypto.createHash('sha256').update(TEST_ENCRYPTION_KEY).digest();
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const ciphertext = Buffer.concat([cipher.update(token, 'utf8'), cipher.final()]);
+  return [iv, cipher.getAuthTag(), ciphertext].map((part) => part.toString('base64url')).join('.');
+}
+function coachTokenRow() {
+  return { rows: [{ encrypted_token: encryptedToken('sk_test'), expires_at: new Date(Date.now() + 86400000) }] };
+}
+
 function coachResponse(content) {
   return { choices: [{ message: { content } }] };
 }
@@ -69,10 +85,9 @@ beforeEach(async () => {
   validateSession.mockResolvedValue('user-1');
   getSessionToken.mockReturnValue('session-token');
   // The user has a connected Pollinations token.
+  process.env.POLLINATIONS_TOKEN_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY;
   query.mockImplementation(async (sql) => {
-    if (/pollinations_coach_tokens/.test(sql)) {
-      return { rows: [] };
-    }
+    if (/FROM pollinations_coach_tokens/.test(sql)) return coachTokenRow();
     return { rows: [] };
   });
   await loadRoutes();

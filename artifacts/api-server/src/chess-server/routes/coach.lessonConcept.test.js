@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import http from 'node:http';
+import crypto from 'node:crypto';
 import express from 'express';
 
 vi.mock('../db.js', () => ({
@@ -58,6 +59,21 @@ function loopback(app, path, method = 'POST', body = null) {
   });
 }
 
+
+// The coach needs a connected Pollinations account now that the free fallback
+// is gone, so give the route a decryptable stored token.
+const TEST_ENCRYPTION_KEY = 'coach-test-key';
+function encryptedToken(token) {
+  const key = crypto.createHash('sha256').update(TEST_ENCRYPTION_KEY).digest();
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const ciphertext = Buffer.concat([cipher.update(token, 'utf8'), cipher.final()]);
+  return [iv, cipher.getAuthTag(), ciphertext].map((part) => part.toString('base64url')).join('.');
+}
+function coachTokenRow() {
+  return { rows: [{ encrypted_token: encryptedToken('sk_test'), expires_at: new Date(Date.now() + 86400000) }] };
+}
+
 function coachResponse(content) {
   return { ok: true, json: async () => ({ choices: [{ message: { content } }] }) };
 }
@@ -68,7 +84,11 @@ beforeEach(async () => {
   // resetAllMocks clears the factory implementations; re-establish them.
   validateSession.mockResolvedValue('user-1');
   getSessionToken.mockReturnValue('session-token');
-  query.mockImplementation(async () => ({ rows: [] }));
+  process.env.POLLINATIONS_TOKEN_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY;
+  query.mockImplementation(async (sql) => {
+    if (/FROM pollinations_coach_tokens/.test(sql)) return coachTokenRow();
+    return { rows: [] };
+  });
   await loadRoutes();
 });
 
@@ -113,28 +133,17 @@ describe('POST /api/coach/lesson-concept', () => {
     expect(prompt).not.toContain('description');
   });
 
-  it('asks the free fallback model when the connected coach fails, still trimming output', async () => {
-    let calls = 0;
-    global.fetch = vi.fn().mockImplementation(async () => {
-      calls += 1;
-      if (calls === 1) {
-        // First call (connected model) fails hard so the route falls back.
-        return { ok: false, status: 500, text: async () => 'boom' };
-      }
-      return coachResponse(
-        'White is down a rook and must find a check. The back rank is weak because the king has no escape squares and the pawns do not help at all.'
-      );
-    });
+  it('uses one model only and surfaces a failure instead of switching models', async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500, text: async () => 'boom' });
 
     const res = await loopback(buildApp(), '/api/coach/lesson-concept', 'POST', baseBody);
 
-    expect(res.status).toBe(200);
-    expect(global.fetch.mock.calls.length).toBeGreaterThanOrEqual(2);
-    expect(res.body.concept.split(' ').length).toBeLessThanOrEqual(22);
-    expect(res.body.concept).toMatch(/White is down a rook/);
+    expect(res.status).toBe(500);
+    const models = new Set(global.fetch.mock.calls.map(([, init]) => JSON.parse(init.body).model));
+    expect(models.size).toBe(1);
   });
 
-  it('surfaces 402 as POLLINATIONS_AUTH_REQUIRED when both models refuse', async () => {
+  it('surfaces 402 as POLLINATIONS_AUTH_REQUIRED when the model refuses', async () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 402, text: async () => 'payment required' });
 
     const res = await loopback(buildApp(), '/api/coach/lesson-concept', 'POST', baseBody);

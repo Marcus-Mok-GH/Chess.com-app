@@ -19,8 +19,6 @@ import {
 const router = Router();
 const COACH_API_URL = process.env.COACH_API_URL || 'https://gen.pollinations.ai/v1/chat/completions';
 const COACH_MODEL = process.env.COACH_MODEL || 'community/YoannDev90/vercel-nemotron-3.5-lightning:free';
-const COACH_FREE_MODEL = process.env.COACH_FREE_MODEL || 'laguna';
-const COACH_MODELS = [...new Set([COACH_MODEL, COACH_FREE_MODEL])];
 const COACH_TIMEOUT_MS = parseInt(process.env.COACH_TIMEOUT_MS || '12000', 10);
 const COACH_MAX_RETRIES = parseInt(process.env.COACH_MAX_RETRIES || '2', 10);
 const SYSTEM_PROMPT = `You are an expert chess coach with deep strategic knowledge. Think carefully about each position before responding.
@@ -54,51 +52,18 @@ async function callCoach(messages, options = {}) {
   }
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
   let lastError;
-  for (const model of COACH_MODELS) {
-    for (let attempt = 1; attempt <= COACH_MAX_RETRIES; attempt += 1) {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), COACH_TIMEOUT_MS);
-      try {
-        const response = await fetch(COACH_API_URL, {
-          method: 'POST', headers, signal: controller.signal,
-          body: JSON.stringify({ model, messages, max_tokens: maxTokens, temperature }),
-        });
-        clearTimeout(timeout);
-        if (!response.ok) {
-          const upstreamStatus = response.status;
-          const error = new Error(`Coach API error: ${upstreamStatus} - ${await response.text()}`);
-          error.status = upstreamStatus === 402 ? 402 : 502;
-          throw error;
-        }
-        return response;
-      } catch (err) {
-        clearTimeout(timeout);
-        lastError = err;
-        if (err.status === 402 || attempt === COACH_MAX_RETRIES) break;
-        await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
-      }
-    }
-    if (lastError?.status === 402) break;
-  }
-  throw lastError;
-}
-
-async function callCoachFree(messages, options = {}) {
-  const { maxTokens = 500, temperature = 0.7 } = options;
-  const headers = { 'Content-Type': 'application/json' };
-  let lastError;
   for (let attempt = 1; attempt <= COACH_MAX_RETRIES; attempt += 1) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), COACH_TIMEOUT_MS);
     try {
       const response = await fetch(COACH_API_URL, {
         method: 'POST', headers, signal: controller.signal,
-        body: JSON.stringify({ model: COACH_FREE_MODEL, messages, max_tokens: maxTokens, temperature }),
+        body: JSON.stringify({ model: COACH_MODEL, messages, max_tokens: maxTokens, temperature }),
       });
       clearTimeout(timeout);
       if (!response.ok) {
         const upstreamStatus = response.status;
-        const error = new Error(`Coach API error (free fallback): ${upstreamStatus} - ${await response.text()}`);
+        const error = new Error(`Coach API error: ${upstreamStatus} - ${await response.text()}`);
         error.status = upstreamStatus === 402 ? 402 : 502;
         throw error;
       }
@@ -273,7 +238,6 @@ router.get('/status', async (req, res) => {
       configured: coachConfigurationStatus(),
       connected: Boolean(token),
       model: COACH_MODEL,
-      fallbackModel: COACH_FREE_MODEL,
       provider: 'pollinations-ai',
       billing: 'user-pays-with-free-fallback',
     });
@@ -304,12 +268,7 @@ router.post('/feedback', async (req, res) => {
       { role: 'system', content: coachSystemPrompt(req) },
       { role: 'user', content: `A student just played ${playerMove} in this position.\n\nPosition (FEN before move): ${fen}\nMove history: ${moves}\nLast move: ${playerMove}\n\nGive short, encouraging feedback (1-2 sentences, max 30 words). Explain why the move is good, or gently suggest a better move, and mention one tactical or positional concept. No greetings or sign-offs.` },
     ];
-    let response;
-    try {
-      response = await callCoach(feedbackMessages, { userId });
-    } catch (coachErr) {
-      response = await callCoachFree(feedbackMessages, {});
-    }
+    const response = await callCoach(feedbackMessages, { userId });
     const data = await response.json();
     return res.json({ feedback: stripThinkingBlocks(data.choices?.[0]?.message?.content || '') });
   } catch (error) {
@@ -331,12 +290,7 @@ router.post('/explain', async (req, res) => {
       { role: 'system', content: coachSystemPrompt(req) },
       { role: 'user', content: explanationPrompt },
     ];
-    let response;
-    try {
-      response = await callCoach(explainMessages, { userId });
-    } catch (coachErr) {
-      response = await callCoachFree(explainMessages, {});
-    }
+    const response = await callCoach(explainMessages, { userId });
     const data = await response.json();
     return res.json({ explanation: stripThinkingBlocks(data.choices?.[0]?.message?.content || '') });
   } catch (error) {
@@ -355,12 +309,7 @@ router.post('/lesson-concept', async (req, res) => {
       { role: 'system', content: coachSystemPrompt(req) },
       { role: 'user', content: `A student is about to solve this specific chess puzzle. Describe the concrete idea of THIS position in 1 or 2 short sentences, 22 words maximum total. Name the side to move and the tactical motif this exact position contains (for example an undefended piece, a back-rank weakness, a mating net, or a promotion race). Do NOT reveal or suggest the winning move or any specific squares; the student must still find it. Return only the concept text.\nPuzzle from lesson: ${lessonTitle}\nTopic: ${lessonTopic || 'Chess'}\nPosition (FEN): ${fen}\nSide to move: ${sideToMove || 'unknown'}\nPuzzle theme: ${theme || 'tactics'}\nPuzzle hint (context only, do not copy verbatim): ${hint || 'none'}` },
     ];
-    let response;
-    try {
-      response = await callCoach(conceptMessages, { userId, maxTokens: 80, temperature: 0.3 });
-    } catch (coachErr) {
-      response = await callCoachFree(conceptMessages, { maxTokens: 80, temperature: 0.3 });
-    }
+    const response = await callCoach(conceptMessages, { userId, maxTokens: 80, temperature: 0.3 });
     const data = await response.json();
     return res.json({ concept: trimLessonSummary(stripThinkingBlocks(data.choices?.[0]?.message?.content || '')) });
   } catch (error) {
@@ -420,12 +369,7 @@ router.post('/analyze', async (req, res) => {
       ];
       const analyzeOptions = { maxTokens: Math.min(4000, Math.max(800, 200 + slice.length * 90)), temperature: 0.7 };
       try {
-        let response;
-        try {
-          response = await callCoach(analyzeMessages, { userId, ...analyzeOptions });
-        } catch (coachErr) {
-          response = await callCoachFree(analyzeMessages, analyzeOptions);
-        }
+        const response = await callCoach(analyzeMessages, { userId, ...analyzeOptions });
         const data = await response.json();
         const content = stripThinkingBlocks(data.choices?.[0]?.message?.content || '');
         if (content) lastContent = content;
