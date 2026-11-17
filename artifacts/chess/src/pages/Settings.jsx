@@ -285,6 +285,27 @@ export default function Settings() {
     return list;
   }, [user]);
 
+  // Keeps the index in step with what you are reading. The band is narrow so
+  // only the section crossing the upper third of the screen can claim it.
+  const [activeSection, setActiveSection] = useState(null);
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') return undefined;
+    const elements = sections
+      .map((section) => document.getElementById(section.id))
+      .filter(Boolean);
+    if (!elements.length) return undefined;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) setActiveSection(entry.target.id);
+        });
+      },
+      { rootMargin: '-35% 0px -55% 0px' },
+    );
+    elements.forEach((element) => observer.observe(element));
+    return () => observer.disconnect();
+  }, [sections]);
+
   const handleNavClick = useCallback((event, id) => {
     const element = document.getElementById(id);
     if (!element) return;
@@ -324,7 +345,7 @@ export default function Settings() {
           {sections.map((section) => (
             <a
               key={section.id}
-              className="settings-nav-chip"
+              className={`settings-nav-chip${activeSection === section.id ? ' active' : ''}`}
               href={`#${section.id}`}
               onClick={(e) => handleNavClick(e, section.id)}
             >

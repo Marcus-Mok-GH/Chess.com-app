@@ -1077,3 +1077,412 @@
   border-radius: 50%;
   background: var(--primary-hover, #81b64c);
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   v2 layout — a quiet sidebar index and tight, hairline-divided cards.
+   The old page stacked very tall cards with the section label floating in
+   its own row; everything now lives in one column of rows so the eye moves
+   straight down, and the index stays with you while you scroll.
+   ══════════════════════════════════════════════════════════════════════ */
+.settings-page {
+  padding: 2.5rem 2rem 4rem;
+  /* `main` owns the scroll now; a second scroll container here made the
+     sticky index scroll away with the content. */
+  overflow: visible;
+}
+
+.settings-container {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  column-gap: 2.5rem;
+  align-items: start;
+  max-width: 1020px;
+}
+
+.settings-header {
+  grid-column: 1 / -1;
+  margin: 0 0 1.75rem;
+  gap: 0.9rem;
+}
+
+.settings-header-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+}
+
+.settings-container h1 {
+  font-size: 1.75rem;
+}
+
+.settings-subtitle {
+  font-size: 0.85rem;
+}
+
+/* ── Sticky index ──────────────────────────────────────────────────── */
+.settings-quick-nav {
+  grid-column: 1;
+  grid-row: 2 / span 40;
+  position: sticky;
+  top: 1rem;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0.1rem;
+  margin: 0;
+  padding: 0.4rem;
+  background: var(--card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+}
+
+.settings-nav-chip {
+  padding: 0.5rem 0.7rem;
+  border-radius: 9px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: left;
+}
+
+.settings-nav-chip:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: transparent;
+}
+
+.settings-nav-chip.active {
+  color: var(--primary);
+  background: rgba(129, 182, 76, 0.12);
+  border-color: transparent;
+}
+
+/* ── Right column ──────────────────────────────────────────────────── */
+.settings-guest-note,
+.settings-section,
+.settings-footer {
+  grid-column: 2;
+}
+
+.settings-guest-note {
+  margin: 0 0 1rem;
+  padding: 0.9rem 1.1rem;
+  border-radius: 14px;
+  font-size: 0.85rem;
+}
+
+.settings-section {
+  padding: 0;
+  margin: 0 0 1rem;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--card);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  scroll-margin-top: 1.5rem;
+  transition: border-color 0.2s ease;
+}
+
+.settings-section:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: rgba(129, 182, 76, 0.22);
+}
+
+.section-header {
+  margin: 0;
+  padding: 0.8rem 1.15rem;
+  gap: 0.6rem;
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.section-header::before {
+  display: none;
+}
+
+.section-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+}
+
+.settings-section h2 {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.1em;
+  font-weight: 800;
+}
+
+/* ── Rows ──────────────────────────────────────────────────────────── */
+.setting-item {
+  padding: 0.95rem 1.15rem;
+  gap: 1.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.setting-item:first-of-type,
+.setting-item:last-child {
+  padding-top: 0.95rem;
+  padding-bottom: 0.95rem;
+}
+
+.setting-item:last-child {
+  border-bottom: none;
+}
+
+.setting-item:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.setting-title {
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.15rem;
+  letter-spacing: 0;
+}
+
+.setting-desc {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  max-width: 52ch;
+}
+
+.setting-item-vertical {
+  gap: 0.75rem;
+}
+
+/* Controls keep their size; only the copy is allowed to shrink. */
+.setting-item > .toggle,
+.setting-item > .select-field,
+.setting-item > .link-button,
+.setting-item > .confirm-action-group,
+.setting-item > .danger-btn {
+  flex-shrink: 0;
+}
+
+/* ── Account stats ─────────────────────────────────────────────────── */
+.account-grid {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1px;
+  margin: 0;
+  background: var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.account-grid .account-row,
+.account-grid .account-row:last-child,
+.account-grid .account-row:nth-last-child(2) {
+  border-bottom: none;
+}
+
+.account-row {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 0.15rem;
+  padding: 0.85rem 1.15rem;
+  background: var(--card);
+}
+
+.account-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.account-value {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.account-row-wide {
+  grid-column: 1 / -1;
+}
+
+.account-value.record .rec-w,
+.account-value.record .rec-d,
+.account-value.record .rec-l {
+  font-size: 0.72rem;
+  padding: 0.1rem 0.45rem;
+}
+
+/* ── Logout sits inside the account card ───────────────────────────── */
+.settings-section > .logout-btn {
+  width: auto;
+  margin: 0 1.15rem 1.15rem;
+  padding: 0.6rem 1.1rem;
+  font-size: 0.85rem;
+  border-radius: 10px;
+  background: transparent;
+  color: #e0705f;
+  border: 1px solid rgba(231, 76, 60, 0.35);
+  box-shadow: none;
+}
+
+.settings-section > .logout-btn:hover {
+  transform: none;
+  background: rgba(231, 76, 60, 0.1);
+  box-shadow: none;
+}
+
+/* ── Theme picker ──────────────────────────────────────────────────── */
+.theme-selector {
+  gap: 0.5rem;
+}
+
+.theme-option {
+  padding: 0.45rem 0.55rem 0.4rem;
+  border-radius: 10px;
+}
+
+.theme-preview {
+  width: 34px;
+  height: 34px;
+  border-radius: 7px;
+}
+
+.theme-name {
+  font-size: 0.7rem;
+}
+
+/* ── Footer ────────────────────────────────────────────────────────── */
+.settings-footer {
+  margin: 0.25rem 0 0;
+  padding: 0.95rem 1.15rem;
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: none;
+}
+
+.footer-title {
+  font-size: 0.88rem;
+}
+
+/* ── Narrow screens: one column, index turns into a scroll strip ───── */
+@media (max-width: 900px) {
+  .settings-container {
+    display: block;
+    max-width: 720px;
+  }
+
+  .settings-page {
+    padding: 1.25rem 1rem 5.5rem;
+    overflow: visible;
+  }
+
+  .settings-header {
+    margin-bottom: 1.25rem;
+  }
+
+  .settings-quick-nav {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 0.25rem;
+    padding: 0.35rem;
+    margin: 0 0 1rem;
+    border-radius: 12px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .settings-quick-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .settings-nav-chip {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    text-align: center;
+    padding: 0.45rem 0.75rem;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .settings-section,
+  .settings-guest-note,
+  .settings-footer {
+    margin-bottom: 0.75rem;
+    border-radius: 12px;
+    scroll-margin-top: 4.25rem;
+  }
+
+  .setting-item {
+    padding: 0.9rem 1rem;
+    gap: 0.85rem;
+  }
+
+  .setting-item:first-of-type,
+  .setting-item:last-child {
+    padding-top: 0.9rem;
+    padding-bottom: 0.9rem;
+  }
+
+  .account-row {
+    padding: 0.75rem 1rem;
+  }
+
+  .settings-section > .logout-btn {
+    margin: 0 1rem 1rem;
+    width: calc(100% - 2rem);
+  }
+
+  .settings-footer {
+    padding: 0.9rem 1rem;
+  }
+}
+
+/* Keep the volume slider a control, not a page-wide rule. */
+.setting-item-vertical .volume-slider {
+  max-width: 380px;
+}
+
+/* Mobile rows: give the copy the width it needs, cap wide controls so the
+   language select stops squeezing the label into a three-line sliver. */
+@media (max-width: 900px) {
+  .setting-item {
+    flex-wrap: wrap;
+  }
+
+  .setting-info {
+    flex: 1 1 60%;
+  }
+
+  .setting-item > .toggle {
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+
+  .setting-item > .select-field {
+    flex: 0 0 auto;
+    width: 150px;
+  }
+
+  .setting-item > .select-field select {
+    width: 100%;
+  }
+
+  .setting-item > .theme-selector {
+    flex: 1 1 100%;
+  }
+
+  .setting-item > .link-button,
+  .setting-item > .confirm-action-group,
+  .setting-item > .danger-btn,
+  .setting-item > .reset-btn {
+    flex: 0 0 auto;
+  }
+
+  .setting-desc {
+    max-width: none;
+  }
+}
