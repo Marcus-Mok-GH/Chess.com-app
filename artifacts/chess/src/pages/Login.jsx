@@ -4,6 +4,7 @@ import { useUser } from '../contexts/UserContext';
 import './Login.css';
 import { useT } from '../i18n/I18nContext';
 import { tNow } from '../i18n/translate';
+import { consumePostLoginPath } from '../utils/postLoginPath';
 
 /**
  * Render the sign-in page that collects an email and initiates an OTP request.
@@ -26,10 +27,11 @@ export default function Login() {
   const isSignupIntent = searchParams.get('mode') === 'signup';
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Redirect if already logged in
+  // Redirect if already logged in — back to the page a guest was blocked from,
+  // or /home when the visit was a plain sign-in.
   useEffect(() => {
     if (!isLoading && isLoggedIn) {
-      navigate('/home', { replace: true });
+      navigate(consumePostLoginPath(), { replace: true });
     }
   }, [isLoading, isLoggedIn, navigate]);
 

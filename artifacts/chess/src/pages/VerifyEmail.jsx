@@ -4,6 +4,7 @@ import { useUser } from '../contexts/UserContext';
 import './Login.css';
 import { useT } from '../i18n/I18nContext';
 import { tNow } from '../i18n/translate';
+import { consumePostLoginPath } from '../utils/postLoginPath';
 
 const PENDING_OTP_KEY = 'chess_pending_otp';
 
@@ -21,6 +22,9 @@ export default function VerifyEmail() {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Read once on mount: the path a guest was blocked from, if any. Held in
+  // state because the sessionStorage entry is cleared on read.
+  const [postLoginPath] = useState(consumePostLoginPath);
 
   // Guard: if not awaiting verification AND not mid-submit, redirect.
   // isSubmitting is checked as a safety net: verifyEmailOtp() clears
@@ -30,7 +34,7 @@ export default function VerifyEmail() {
   // isAwaitingVerification=false but user=null, causing a premature redirect
   // to /login. Suppressing the guard while still submitting closes that window.
   if (!isAwaitingVerification && !isSubmitting) {
-    return <Navigate to={isLoggedIn ? '/home' : '/login'} replace />;
+    return <Navigate to={isLoggedIn ? postLoginPath : '/login'} replace />;
   }
 
   const getPendingData = () => {

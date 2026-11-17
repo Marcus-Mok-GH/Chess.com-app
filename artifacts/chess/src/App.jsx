@@ -7,6 +7,7 @@ import { useT } from './i18n/I18nContext'
 import { FeedbackPanel } from './components/FeedbackPanel'
 import NotificationBell from './components/NotificationBell'
 import ErrorBoundary from './components/ErrorBoundary'
+import RequireAuth from './components/RequireAuth'
 import SetUsernameModal from './components/SetUsernameModal'
 import PollinationsCoachPrompt from './components/PollinationsCoachPrompt'
 import api from './services/api'
@@ -412,7 +413,7 @@ export default function App({ Router = BrowserRouter, routerProps = {}, initialU
                   <Route path="/online" element={<OnlinePlay />} />
                   <Route path="/online/:gameId" element={<OnlinePlay />} />
                   <Route path="/game/:gameId" element={<Game />} />
-                  <Route path="/history" element={<GameHistory />} />
+                  <Route path="/history" element={<RequireAuth fallback={<RouteFallback />}><GameHistory /></RequireAuth>} />
                   <Route path="/review/:gameCode" element={<Suspense fallback={<RouteFallback />}><GameReview /></Suspense>} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/subscription" element={<Suspense fallback={<RouteFallback />}><Subscription /></Suspense>} />
@@ -422,8 +423,8 @@ export default function App({ Router = BrowserRouter, routerProps = {}, initialU
                   <Route path="/puzzles" element={<Suspense fallback={<RouteFallback />}><Puzzles /></Suspense>} />
                   <Route path="/openings" element={<Suspense fallback={<RouteFallback />}><Openings /></Suspense>} />
                   <Route path="/lessons" element={<LessonsRedirect />} />
-                  <Route path="/friends" element={<Suspense fallback={<RouteFallback />}><Friends /></Suspense>} />
-                  <Route path="/clubs" element={<Suspense fallback={<RouteFallback />}><Clubs /></Suspense>} />
+                  <Route path="/friends" element={<RequireAuth fallback={<RouteFallback />}><Suspense fallback={<RouteFallback />}><Friends /></Suspense></RequireAuth>} />
+                  <Route path="/clubs" element={<RequireAuth fallback={<RouteFallback />}><Suspense fallback={<RouteFallback />}><Clubs /></Suspense></RequireAuth>} />
                   <Route path="/leaderboard" element={<Suspense fallback={<RouteFallback />}><Leaderboard /></Suspense>} />
                   <Route path="/more" element={<More />} />
                   <Route path="/admin" element={<Suspense fallback={<RouteFallback />}><RequireAdmin><Admin /></RequireAdmin></Suspense>} />
