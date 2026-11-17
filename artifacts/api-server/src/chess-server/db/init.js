@@ -660,6 +660,19 @@ export async function initDatabase({ force = false } = {}) {
           )
         `);
 
+        // Daily puzzle consumption for the free tier. Owner keys are
+        // `user:<id>` or `anon:<device id>`; one row per owner per day and the
+        // primary key makes the increment atomic under concurrency.
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS puzzle_usage (
+            owner_key VARCHAR(140) NOT NULL,
+            usage_date DATE NOT NULL,
+            count INTEGER NOT NULL DEFAULT 0,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (owner_key, usage_date)
+          )
+        `);
+
         // Whop membership mirror. Written only by the signed webhook handler;
         // a row with status 'active' lifts the daily review limit.
         await client.query(`

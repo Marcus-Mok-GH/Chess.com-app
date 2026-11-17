@@ -25,6 +25,8 @@ class ApiService {
                     `HTTP error ${response.status}`;
                 const error = new Error(errorMessage);
                 error.status = response.status;
+                error.code = data?.code || null;
+                error.payload = data;
                 throw error;
             }
 
@@ -340,6 +342,11 @@ class ApiService {
     // ── Puzzle Stats ───────────────────────────────────────────────────────────
     async getPuzzleStats() {
         return this.request("/puzzles/stats/user");
+    }
+
+    // Daily puzzle allowance for the current account or device.
+    async getPuzzleUsage() {
+        return this.request("/puzzles/usage");
     }
 
     async savePuzzleStats(stats) {

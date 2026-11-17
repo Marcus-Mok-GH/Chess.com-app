@@ -72,6 +72,9 @@ vi.mock('../contexts/UserContext', () => ({
 vi.mock('../services/api', () => ({
   default: {
     getPuzzleStats: vi.fn(() => Promise.resolve({ success: true, stats: null })),
+    getPuzzleUsage: vi.fn(() =>
+      Promise.resolve({ success: true, usage: { used: 0, limit: 3, remaining: 3, unlimited: false, allowed: true } }),
+    ),
     savePuzzleStats: vi.fn(() => Promise.resolve({ success: true, stats: {} })),
     generateLessonPuzzle: vi.fn(() => Promise.resolve({ success: true, puzzle: null })),
   },
@@ -622,5 +625,50 @@ describe('Server-side lesson puzzle generation', () => {
     const trimmed = trimToShortConcept('局面说明'.repeat(40));
     expect(Array.from(trimmed).length).toBeLessThanOrEqual(110);
     expect(trimmed.endsWith('…')).toBe(true);
+  });
+});
+
+describe('Puzzles page free daily allowance', () => {
+  it('shows the paywall instead of the board once the three are used', async () => {
+    api.getPuzzleUsage.mockResolvedValue({
+      success: true,
+      usage: { used: 3, limit: 3, remaining: 0, unlimited: false, allowed: false, resetsAt: new Date(Date.now() + 3600_000).toISOString() },
+    });
+
+    renderPuzzles();
+
+    await waitFor(() => {
+      expect(screen.getByText("That's all three puzzles for today")).toBeTruthy();
+    });
+    expect(screen.queryByTestId('chessboard')).toBeNull();
+    expect(screen.getByText('3 of 3 free puzzles used today')).toBeTruthy();
+  });
+
+  it('keeps the board when the allowance is used but not exhausted', async () => {
+    api.getPuzzleUsage.mockResolvedValue({
+      success: true,
+      usage: { used: 1, limit: 3, remaining: 2, unlimited: false, allowed: true, resetsAt: new Date(Date.now() + 3600_000).toISOString() },
+    });
+
+    renderPuzzles();
+
+    await waitForPuzzleOnBoard();
+    expect(screen.getByText('2 of 3 free puzzles left today')).toBeTruthy();
+  });
+
+  it('treats a 402 from the generator as the paywall, not a generator error', async () => {
+    const refusal = Object.assign(new Error('You have used your three free puzzles for today.'), {
+      status: 402,
+      code: 'PUZZLE_LIMIT_REACHED',
+      payload: { usage: { used: 3, limit: 3, remaining: 0, unlimited: false, allowed: false } },
+    });
+    api.generateLessonPuzzle.mockRejectedValue(refusal);
+
+    renderPuzzles();
+
+    await waitFor(() => {
+      expect(screen.getByText("That's all three puzzles for today")).toBeTruthy();
+    });
+    expect(screen.queryByText('Unable to create lesson puzzle.')).toBeNull();
   });
 });

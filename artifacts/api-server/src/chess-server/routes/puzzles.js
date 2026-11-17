@@ -16,6 +16,7 @@ import {
   DEFAULT_LESSON_PUZZLE_DIFFICULTY,
 } from '../puzzles/lessonPuzzle.js';
 import { createRateLimiter, requestIp } from '../middleware/rateLimit.js';
+import { consumePuzzle, getUsage, ownerKeyFor } from '../services/puzzleQuota.js';
 
 const router = Router();
 
@@ -41,6 +42,39 @@ async function requirePuzzleUser(req, res, requestedUserId = null) {
   if (!userId) { res.status(401).json({ success: false, error: { message: 'Authentication required' } }); return null; }
   if (requestedUserId != null && String(requestedUserId) !== String(userId)) { res.status(403).json({ success: false, error: { message: 'You can only access your own puzzles' } }); return null; }
   return String(userId);
+}
+
+/**
+ * Gate one puzzle handout against the free daily allowance and charge it.
+ *
+ * Returns the caller's usage after the puzzle was counted, or `false` when the
+ * 402 was already written to the response. A quota lookup that fails (cold
+ * database, transient error) never blocks play: the puzzle is served with
+ * `usage: null` and the player is simply not charged.
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<object|null|false>}
+ */
+async function chargeDailyPuzzle(req, res) {
+  try {
+    const ownerKey = await ownerKeyFor(req, res);
+    const before = await getUsage(ownerKey);
+    if (!before.allowed) {
+      res.status(402).json({
+        success: false,
+        code: 'PUZZLE_LIMIT_REACHED',
+        error: { message: 'You have used your three free puzzles for today. Subscribe for unlimited puzzles.' },
+        usage: before,
+      });
+      return false;
+    }
+    await consumePuzzle(ownerKey);
+    return await getUsage(ownerKey);
+  } catch (error) {
+    console.error('Puzzle quota unavailable:', error);
+    return null;
+  }
 }
 
 /**
@@ -99,10 +133,15 @@ router.get('/random', async (req, res) => {
         error: { message: 'Puzzle not found' }
       });
     }
-    
+
+    // Free players get three puzzles a day; subscribers are unlimited.
+    const usage = await chargeDailyPuzzle(req, res);
+    if (usage === false) return;
+
     res.json({
       success: true,
-      puzzle
+      puzzle,
+      usage
     });
     
   } catch (error) {
@@ -239,6 +278,23 @@ router.post('/validate', async (req, res) => {
 });
 
 /**
+ * GET /api/puzzles/usage
+ * Public. How many puzzles the caller has left today, plus the reset time.
+ * Signed-in callers are counted per account and get unlimited usage when
+ * their subscription is active; guests are counted per device cookie.
+ */
+router.get('/usage', async (req, res) => {
+  try {
+    const ownerKey = await ownerKeyFor(req, res);
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, usage: await getUsage(ownerKey) });
+  } catch (error) {
+    console.error('Get puzzle usage error:', error);
+    res.status(500).json({ success: false, error: { message: 'Failed to load puzzle usage' } });
+  }
+});
+
+/**
  * GET /api/puzzles/stats
  * Get puzzle statistics
  */
@@ -315,7 +371,7 @@ router.put('/stats/user', async (req, res) => {
  * Query params: lesson (catalog id, required), difficulty
  * (beginner|easy|intermediate|advanced, default beginner), seed (optional int)
  */
-router.get('/lesson', lessonPuzzleRateLimit, (req, res) => {
+router.get('/lesson', lessonPuzzleRateLimit, async (req, res) => {
   try {
     const lessonId = typeof req.query.lesson === 'string' ? req.query.lesson.trim() : '';
     if (!lessonId) {
@@ -354,9 +410,15 @@ router.get('/lesson', lessonPuzzleRateLimit, (req, res) => {
       difficulty: requestedDifficulty,
     });
 
+    // Free players get three puzzles a day; subscribers and reviewers are
+    // unlimited. Charged only once a puzzle actually exists, so a bad request
+    // or a generator failure never costs the player one of their three.
+    const usage = await chargeDailyPuzzle(req, res);
+    if (usage === false) return;
+
     // Fresh position per request (and, with a seed, deterministic).
     res.setHeader('Cache-Control', 'no-store');
-    res.json({ success: true, puzzle });
+    res.json({ success: true, puzzle, usage });
   } catch (error) {
     console.error('Generate lesson puzzle error:', error);
     res.status(500).json({ success: false, error: { message: 'Failed to generate lesson puzzle' } });

@@ -11,6 +11,7 @@ import {
 import api from "../services/api";
 import { useUser } from "../contexts/UserContext";
 import AccountRequired from "../components/AccountRequired";
+import PuzzleLimitNotice from "../components/PuzzleLimitNotice";
 import { LESSON_CATALOG } from "../engine/lessons/lessonCatalog";
 import { explainCoachMove, getLessonConcept } from "../engine/coach/coachAI";
 import {
@@ -123,13 +124,21 @@ async function requestLessonPuzzle({ lesson, seed, difficulty }) {
       difficulty,
     });
     const candidate = data?.puzzle;
-    if (isPlayablePuzzle(candidate)) return candidate;
-  } catch {
-    // Fall through to local generation.
+    if (isPlayablePuzzle(candidate)) {
+      return { puzzle: candidate, usage: data?.usage ?? null };
+    }
+  } catch (error) {
+    // A daily-limit refusal is a decision, not an outage: generating the
+    // puzzle locally instead would quietly hand out the fourth puzzle.
+    if (error?.status === 402) throw error;
+    // Any other failure falls through to local generation.
   }
-  return generatePuzzleForThemesAsync(lesson.puzzleThemes || [], seed, {
-    difficulty,
-  });
+  return {
+    puzzle: await generatePuzzleForThemesAsync(lesson.puzzleThemes || [], seed, {
+      difficulty,
+    }),
+    usage: null,
+  };
 }
 
 /**
@@ -351,6 +360,11 @@ export default function Puzzles() {
   // stop the pending response from restoring it.
   const statsStatusRef = useRef(isLoggedIn ? "loading" : "ready");
 
+  // Free players get three puzzles a day. The server is the source of truth;
+  // this mirrors it so the counter and the paywall can be shown immediately.
+  const [dailyUsage, setDailyUsage] = useState(null);
+  const [limitReached, setLimitReached] = useState(false);
+
   const [solvedCount, setSolvedCount] = useState(0);
   const [attemptedCount, setAttemptedCount] = useState(0);
   const [streak, setStreak] = useState(0);
@@ -414,6 +428,27 @@ export default function Puzzles() {
     };
   }, [isLoggedIn]);
 
+  // Load the allowance up front so a player who is already out of puzzles sees
+  // the paywall instead of briefly getting another board.
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .getPuzzleUsage()
+      .then((data) => {
+        if (cancelled) return;
+        const usage = data?.usage || null;
+        setDailyUsage(usage);
+        if (usage && !usage.unlimited && !usage.allowed) setLimitReached(true);
+      })
+      .catch(() => {
+        // Usage is advisory on failure: the server still refuses the next
+        // puzzle, and that refusal is handled where puzzles are loaded.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoggedIn]);
+
   function persistPuzzleStats(stats) {
     api
       .savePuzzleStats(stats)
@@ -458,7 +493,11 @@ export default function Puzzles() {
 
     try {
       const difficulty = difficultyForRating(puzzleRating);
-      const freshPuzzle = await requestLessonPuzzle({ lesson, seed, difficulty });
+      const { puzzle: freshPuzzle, usage } = await requestLessonPuzzle({ lesson, seed, difficulty });
+      if (usage) {
+        setDailyUsage(usage);
+        setLimitReached(!usage.unlimited && !usage.allowed);
+      }
 
       if (generationRequestRef.current !== requestId) return false;
 
@@ -478,11 +517,18 @@ export default function Puzzles() {
       return true;
     } catch (error) {
       if (generationRequestRef.current === requestId) {
-        setGenerationError(
-          error instanceof Error
-            ? error.message
-            : "The puzzle generator could not prepare a puzzle for this lesson.",
-        );
+        if (error?.status === 402) {
+          // Out of free puzzles: the server said no, so show the paywall.
+          setDailyUsage(error.payload?.usage || null);
+          setLimitReached(true);
+          setGenerationError(null);
+        } else {
+          setGenerationError(
+            error instanceof Error
+              ? error.message
+              : "The puzzle generator could not prepare a puzzle for this lesson.",
+          );
+        }
       }
       return false;
     } finally {
@@ -912,6 +958,9 @@ export default function Puzzles() {
         </header>
 
         {/* ── Main Puzzle Layout ─────────────────────────── */}
+        {limitReached ? (
+          <PuzzleLimitNotice usage={dailyUsage} />
+        ) : (
         <div className="puzzles-layout">
           <div className="puzzles-board-wrap">
             {puzzle ? (
@@ -961,6 +1010,14 @@ export default function Puzzles() {
               {attemptedCount > 0 && (
                 <div className="status-accuracy">
                   {Math.round((solvedCount / attemptedCount) * 100)}{t("% accuracy")}</div>
+              )}
+              {dailyUsage && !dailyUsage.unlimited && (
+                <div className="status-accuracy puzzle-quota-line">
+                  {t("{remaining} of {limit} free puzzles left today", {
+                    remaining: dailyUsage.remaining,
+                    limit: dailyUsage.limit,
+                  })}
+                </div>
               )}
             </div>
             ) : (
@@ -1035,6 +1092,7 @@ export default function Puzzles() {
             </div>
           </aside>
         </div>
+        )}
       </div>
     </div>
   );

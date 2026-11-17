@@ -1,0 +1,9 @@
+.puzzle-limit {
+  padding: 2rem 0 1rem;
+}
+
+.puzzle-limit-count {
+  margin-top: 1rem;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
