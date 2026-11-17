@@ -896,52 +896,58 @@ function ChessGame(
     );
   }
 
-  const customSquareStyles = settings.highlightMoves ? lastMoveSquareStyles(moveHistory, game) : {};
+  // Memoised: the board skips repainting when none of these inputs changed,
+  // which is most of the time during a bot game (thinking, chat, reactions).
+  const customSquareStyles = useMemo(() => {
+    const styles = settings.highlightMoves ? lastMoveSquareStyles(moveHistory, game) : {};
 
-  if (settings.highlightMoves) {
-    if (selectedSquare) {
-      customSquareStyles[selectedSquare] = {
-        backgroundColor: 'rgba(247, 247, 105, 0.5)',
+    if (settings.highlightMoves) {
+      if (selectedSquare) {
+        styles[selectedSquare] = {
+          backgroundColor: 'rgba(247, 247, 105, 0.5)',
+        };
+      }
+
+      possibleMoves.forEach((square) => {
+        const piece = game.get(square);
+        styles[square] = {
+          background: piece
+            ? 'radial-gradient(circle, rgba(0, 0, 0, 0.1) 85%, transparent 85%)'
+            : 'radial-gradient(circle, rgba(0, 0, 0, 0.1) 25%, transparent 25%)',
+          borderRadius: '50%',
+        };
+      });
+    }
+
+    if (game.inCheck()) {
+      const kingSquare = findKingSquare(game, game.turn());
+      if (kingSquare) {
+        styles[kingSquare] = {
+          backgroundColor: 'rgba(255, 0, 0, 0.5)',
+        };
+      }
+    }
+
+    if (hintMove && settings.showHints) {
+      styles[hintMove.from] = {
+        backgroundColor: 'rgba(0, 255, 0, 0.5)',
+      };
+      styles[hintMove.to] = {
+        backgroundColor: 'rgba(0, 255, 0, 0.5)',
       };
     }
 
-    possibleMoves.forEach((square) => {
-      const piece = game.get(square);
-      customSquareStyles[square] = {
-        background: piece
-          ? 'radial-gradient(circle, rgba(0, 0, 0, 0.1) 85%, transparent 85%)'
-          : 'radial-gradient(circle, rgba(0, 0, 0, 0.1) 25%, transparent 25%)',
-        borderRadius: '50%',
+    if (premove) {
+      styles[premove.from] = {
+        backgroundColor: 'rgba(155, 199, 0, 0.55)',
       };
-    });
-  }
-
-  if (game.inCheck()) {
-    const kingSquare = findKingSquare(game, game.turn());
-    if (kingSquare) {
-      customSquareStyles[kingSquare] = {
-        backgroundColor: 'rgba(255, 0, 0, 0.5)',
+      styles[premove.to] = {
+        backgroundColor: 'rgba(155, 199, 0, 0.55)',
       };
     }
-  }
 
-  if (hintMove && settings.showHints) {
-    customSquareStyles[hintMove.from] = {
-      backgroundColor: 'rgba(0, 255, 0, 0.5)',
-    };
-    customSquareStyles[hintMove.to] = {
-      backgroundColor: 'rgba(0, 255, 0, 0.5)',
-    };
-  }
-
-  if (premove) {
-    customSquareStyles[premove.from] = {
-      backgroundColor: 'rgba(155, 199, 0, 0.55)',
-    };
-    customSquareStyles[premove.to] = {
-      backgroundColor: 'rgba(155, 199, 0, 0.55)',
-    };
-  }
+    return styles;
+  }, [settings.highlightMoves, settings.showHints, moveHistory, game, selectedSquare, possibleMoves, hintMove, premove]);
 
   const displayBot = resolveActiveBot(selectedBot, { moveHistory, playerColor });
 

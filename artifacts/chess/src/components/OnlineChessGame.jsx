@@ -20,7 +20,6 @@ import { findKingSquare } from "./ChessGame/utils";
 import { usePremove } from "../hooks/usePremove";
 import { isPremoveLegal, premoveTargets } from "../engine/game/premoves";
 import { useGameCore } from "./OnlineChessGame/hooks/useGameCore";
-import { useLiveClock } from "./OnlineChessGame/hooks/useLiveClock";
 import GameUI from "./OnlineChessGame/subcomponents/GameUI";
 import GameResultDialog, { onlineGameOutcome } from "./GameResultDialog";
 import {
@@ -100,7 +99,8 @@ export default function OnlineChessGame({
     useEffect(() => {
         setBoardOrientation(playerColor || "white");
     }, [gameId, playerColor]);
-    const liveClock = useLiveClock(serverClock);
+    // The clock is read inside TimedPlayerBar, so its 250 ms tick no longer
+    // re-renders the board and side panels.
 
     // Premoves are only available while the game is live; the queued move is
     // applied on the player's turn (see the effect next to handlePieceDrop).
@@ -684,7 +684,7 @@ export default function OnlineChessGame({
                 }
                 showVictory={showVictory}
                 reactionBursts={reactionBursts}
-                liveClock={liveClock}
+                serverClock={serverClock}
                 timeControl={serverClock?.timeControl || null}
                 gameId={gameId}
                 opponentStatus={opponentStatus}

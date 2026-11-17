@@ -1,6 +1,6 @@
 import haptics from '../../../utils/haptics';
 import React from 'react';
-import PlayerBar from '../../PlayerBar';
+import TimedPlayerBar from './TimedPlayerBar';
 import ChessBoard from '../../ChessBoard';
 import AnimatedPiece from '../../AnimatedPiece';
 import ChessPieceIcon from '../../ChessPieceIcon';
@@ -24,19 +24,9 @@ export default function GameUI({
   handleSendReaction, reactionBursts = [], moveHistory, gameStatus,
   capturedPieces, chatMessages, handleSendMessage, playerId,
   handleOfferDraw, handleResign, onLeave, canLeave, chatEnabled,
-  liveClock = null, timeControl = null,
+  serverClock = null, timeControl = null,
 }) {
   const t = useT();
-  // Only timed games show clocks, and each player bar shows the clock for the
-  // color it represents (the bars swap with the board orientation).
-  const clockFor = (playerColor) => {
-    if (!liveClock?.limited) return { clockMs: null, clockActive: false };
-    const isWhite = playerColor === 'w';
-    return {
-      clockMs: isWhite ? liveClock.whiteMs : liveClock.blackMs,
-      clockActive: gameStatus === 'playing' && liveClock.side === (isWhite ? 'white' : 'black'),
-    };
-  };
 
   const [chatInput, setChatInput] = React.useState('');
   const [reportReason, setReportReason] = React.useState('engine_assistance');
@@ -75,11 +65,12 @@ export default function GameUI({
   return (
     <div className="game-container">
       <div className="board-section">
-        <PlayerBar
-          {...topPlayer}
+        <TimedPlayerBar
+          player={topPlayer}
+          serverClock={serverClock}
+          gameStatus={gameStatus}
           isActive={game.turn() === topPlayer.color}
           capturedPieces={capturedPieces[topPlayer.color === 'w' ? 'b' : 'w']}
-          {...clockFor(topPlayer.color)}
         />
         <div className="board-wrapper">
           <ChessBoard
@@ -115,11 +106,12 @@ export default function GameUI({
           ))}
           {showVictory && <div className="victory-burst">{t("Checkmate!")}</div>}
         </div>
-        <PlayerBar
-          {...bottomPlayer}
+        <TimedPlayerBar
+          player={bottomPlayer}
+          serverClock={serverClock}
+          gameStatus={gameStatus}
           isActive={game.turn() === bottomPlayer.color}
           capturedPieces={capturedPieces[bottomPlayer.color === 'w' ? 'b' : 'w']}
-          {...clockFor(bottomPlayer.color)}
         />
         <button type="button" className="online-action-btn online-action-btn--flip" onClick={() => { haptics.button(); onFlipBoard(); }} aria-label={t("Flip Board")}>{t("Flip Board")}</button>
       </div>

@@ -1,5 +1,9 @@
 import { Chessboard } from 'react-chessboard';
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
+
+// Stable, module-level defaults. Inline `{}` / `[]` defaults allocate a new
+// reference on every render, which defeats the memoised options below.
+const EMPTY_SQUARE_STYLES = Object.freeze({});
 
 const PIECE_IMAGES = {
   wK: '/custom-pieces/wK.svg',
@@ -53,13 +57,13 @@ const themeColors = {
  * @param {'green'|'brown'|'blue'|'purple'} [props.boardTheme='green'] - Board palette; unknown values use green colors.
  * @returns {import('react').ReactElement} The board inside its styled wrapper.
  */
-export default function ChessBoard({
+function ChessBoard({
   position,
   onSquareClick,
   onPieceDrop,
   canDragPiece,
   boardOrientation = 'white',
-  customSquareStyles = {},
+  customSquareStyles = EMPTY_SQUARE_STYLES,
   showCoordinates = true,
   boardTheme = 'green',
 }) {
@@ -131,3 +135,9 @@ export default function ChessBoard({
     </div>
   );
 }
+
+// The board is the most expensive subtree in a game screen: every parent
+// repaint (a clock tick, a chat message, a reaction) would otherwise rebuild
+// all 64 squares. Props come from stable callbacks and memoised styles, so a
+// shallow compare is enough to skip those repaints.
+export default memo(ChessBoard);

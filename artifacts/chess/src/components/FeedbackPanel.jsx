@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import './FeedbackPanel.css';
 import { useT } from '../i18n/I18nContext';
 
@@ -6,6 +7,10 @@ const REAPPEAR_DELAY = 30000; // 30 seconds
 
 export function FeedbackPanel() {
   const t = useT();
+  const { pathname } = useLocation();
+  // A game screen on a landscape phone has no free corner: the controls move
+  // to a right rail and the pill would sit on top of the player row.
+  const inGame = pathname.startsWith('/game/') || pathname.startsWith('/online/');
   const [isOpen, setIsOpen] = useState(false);
   const [isHidden, setIsHidden] = useState(false);
   const [feedbackType, setFeedbackType] = useState('suggestion');
@@ -90,7 +95,7 @@ export function FeedbackPanel() {
 
   return (
     <>
-      <div className="feedback-trigger-wrapper">
+      <div className={`feedback-trigger-wrapper${inGame ? ' feedback-trigger-wrapper--in-game' : ''}`}>
         <button
           className="feedback-trigger"
           onClick={() => { setSubmitError(''); setIsOpen(true); }}

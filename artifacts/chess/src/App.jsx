@@ -8,6 +8,7 @@ import { FeedbackPanel } from './components/FeedbackPanel'
 import NotificationBell from './components/NotificationBell'
 import ErrorBoundary from './components/ErrorBoundary'
 import RequireAuth from './components/RequireAuth'
+import ScrollToTop from './components/ScrollToTop'
 import SetUsernameModal from './components/SetUsernameModal'
 import PollinationsCoachPrompt from './components/PollinationsCoachPrompt'
 import api from './services/api'
@@ -371,6 +372,7 @@ function AppShell() {
   
   return (
     <div className={`app ${isGameRoute ? 'hide-bottom-nav' : ''}`}>
+      <ScrollToTop />
       <AppHeader isGameRoute={isGameRoute} />
       <main>
         <Suspense fallback={<RouteFallback />}>
