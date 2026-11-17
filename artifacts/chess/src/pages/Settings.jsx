@@ -294,13 +294,20 @@ export default function Settings() {
       .map((section) => document.getElementById(section.id))
       .filter(Boolean);
     if (!elements.length) return undefined;
+    // Track every section inside the band and light up the topmost one, so
+    // the index follows the section you just scrolled into rather than
+    // whichever callback happened to fire last.
+    const onScreen = new Map();
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) setActiveSection(entry.target.id);
+          if (entry.isIntersecting) onScreen.set(entry.target.id, entry.boundingClientRect.top);
+          else onScreen.delete(entry.target.id);
         });
+        const topmost = [...onScreen.entries()].sort((a, b) => a[1] - b[1])[0];
+        if (topmost) setActiveSection(topmost[0]);
       },
-      { rootMargin: '-35% 0px -55% 0px' },
+      { rootMargin: '-25% 0px -55% 0px' },
     );
     elements.forEach((element) => observer.observe(element));
     return () => observer.disconnect();
