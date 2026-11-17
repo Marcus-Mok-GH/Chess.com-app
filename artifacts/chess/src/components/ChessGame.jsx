@@ -11,7 +11,7 @@ import PlayerBar from './PlayerBar';
 import DebugPanel from './DebugPanel';
 import AnimatedPiece from './AnimatedPiece';
 import CoachingTip from './CoachingTip';
-import { BOTS, getRandomQuote, createCustomBot, getBotRatingDisplay } from '../engine/bots/bots';
+import { BOTS, getRandomQuote, createCustomBot } from '../engine/bots/bots';
 import { resolveActiveBot, hasProvocationTriggered } from '../engine/bots/awakening';
 import { getCoachingFeedback } from '../engine/coach/coachAI';
 import { generateGameId } from '../engine/game/gameId';
@@ -951,8 +951,10 @@ function ChessGame(
 
   const displayBot = resolveActiveBot(selectedBot, { moveHistory, playerColor });
 
-  const player = { name: 'You', avatar: '👤', rating: '???', isBot: false, color: playerColor, isCoach: false };
-  const bot = { name: displayBot?.id === 'custom' ? `Custom Bot (${customElo})` : displayBot?.name, avatar: displayBot?.avatar, rating: displayBot?.id === 'custom' ? customElo : getBotRatingDisplay(displayBot), isBot: true, color: playerColor === 'w' ? 'b' : 'w', botColor: displayBot?.color, isCoach: displayBot?.isCoach };
+  // Bot games don't show Elo: your rating isn't on the line here and the bot's
+  // strength is picked from the roster, so both player rows stay rating-free.
+  const player = { name: 'You', avatar: '👤', isBot: false, color: playerColor, isCoach: false };
+  const bot = { name: displayBot?.id === 'custom' ? 'Custom Bot' : displayBot?.name, avatar: displayBot?.avatar, isBot: true, color: playerColor === 'w' ? 'b' : 'w', botColor: displayBot?.color, isCoach: displayBot?.isCoach };
   const topPlayer = boardOrientation === 'white'
     ? (playerColor === 'w' ? bot : player)
     : (playerColor === 'w' ? player : bot);

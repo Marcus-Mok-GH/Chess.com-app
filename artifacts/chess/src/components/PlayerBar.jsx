@@ -29,7 +29,9 @@ export default function PlayerBar({
       </div>
       <div className="player-details">
         <span className="player-name">{name}</span>
-        <span className="player-rating">({rating})</span>
+        {rating != null && rating !== '' && (
+          <span className="player-rating">({rating})</span>
+        )}
       </div>
       {isBot && botMessage && (
         <div className={`bot-message-inline ${isCoach ? 'coach-message' : ''}`}>
