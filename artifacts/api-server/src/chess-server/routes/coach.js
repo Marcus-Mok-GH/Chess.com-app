@@ -239,7 +239,7 @@ router.get('/status', async (req, res) => {
       connected: Boolean(token),
       model: COACH_MODEL,
       provider: 'pollinations-ai',
-      billing: 'user-pays-with-free-fallback',
+      billing: 'user-pays',
     });
   } catch (error) {
     return handleRouteError(res, error, 'Failed to check AI coach status');

@@ -1,3 +1,6 @@
+### Changed
+- (2026-11-17) The AI coach runs on a single model: `COACH_MODEL` defaults to `community/YoannDev90/vercel-nemotron-3.5-lightning:free`, and the `laguna` fallback (`COACH_FREE_MODEL`, the no-account free path, and the retry-on-502 behaviour) is gone — a failed or over-budget coach call now returns an error instead of quietly answering from a different model. The status payload reports the one model and `billing: user-pays`. The Pollinations authorisation lifetime also defaults to 30 days instead of 7.
+
 ### Fixed
 - (2026-10-26) Direct visits and refreshes on routes such as `/play` and `/puzzles` no longer crash the Vercel function. The render function explicitly packages its HTML template and SSR output, and the SSR build bundles workspace-linked frontend dependencies so they resolve in Vercel's isolated function environment. Added a regression test for these deployment requirements. Also fixed a missing JSX closing tag in the translated login modal that had blocked a fresh deployment build. Also fixed a missing JSX closing tag in the translated login modal that blocked the Vercel build.
 

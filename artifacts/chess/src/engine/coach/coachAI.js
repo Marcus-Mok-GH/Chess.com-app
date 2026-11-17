@@ -40,7 +40,7 @@ export async function getCoachStatus(force = false) {
     return coachStatus;
   } catch (error) {
     console.error('[CoachAI] Status check failed:', error);
-    coachStatus = { available: false, connected: false, billing: 'user-pays-with-free-fallback' };
+    coachStatus = { available: false, connected: false, billing: 'user-pays' };
     return coachStatus;
   }
 }
