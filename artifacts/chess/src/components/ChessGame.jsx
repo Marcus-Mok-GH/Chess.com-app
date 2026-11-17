@@ -971,7 +971,6 @@ function ChessGame(
               {...topPlayer}
               isActive={game.turn() === topPlayer.color}
               capturedPieces={capturedPieces[topPlayer.color === 'w' ? 'b' : 'w']}
-              botMessage={topPlayer.isBot ? botMessage : null}
             />
             <div className="board-wrapper">
               <ChessBoard
@@ -1006,7 +1005,6 @@ function ChessGame(
               {...bottomPlayer}
               isActive={game.turn() === bottomPlayer.color}
               capturedPieces={capturedPieces[bottomPlayer.color === 'w' ? 'b' : 'w']}
-              botMessage={bottomPlayer.isBot ? botMessage : null}
             />
             <GameStatus engineError={engineError} />
             {settings.debugMode && (

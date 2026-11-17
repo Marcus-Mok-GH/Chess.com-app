@@ -11,8 +11,6 @@ export default function PlayerBar({
   capturedPieces,
   color,
   botColor,
-  botMessage,
-  isCoach = false,
   clockMs = null,
   clockActive = false,
 }) {
@@ -33,11 +31,6 @@ export default function PlayerBar({
           <span className="player-rating">({rating})</span>
         )}
       </div>
-      {isBot && botMessage && (
-        <div className={`bot-message-inline ${isCoach ? 'coach-message' : ''}`}>
-          <span className={`bot-quote ${isCoach ? 'coach-quote' : ''}`}>"{t(botMessage)}"</span>
-        </div>
-      )}
       {showClock && (
         <div
           className={`player-clock ${clockActive ? 'active' : ''} ${isLowTime(clockMs) ? 'low' : ''}`}
