@@ -5,7 +5,10 @@ import { getSessionToken, validateSession } from './auth.js';
 const POLLINATIONS_ISSUER = 'https://enter.pollinations.ai';
 const STATE_TTL_MS = 10 * 60 * 1000;
 const DEFAULT_BUDGET = process.env.POLLINATIONS_COACH_BUDGET || '5';
-const DEFAULT_EXPIRY_DAYS = process.env.POLLINATIONS_COACH_EXPIRY_DAYS || '7';
+// Pollinations issues a 7-day key unless the authorize URL asks for longer.
+// A month keeps the coach connected through a normal playing month; the
+// spending budget below is still the hard stop.
+const DEFAULT_EXPIRY_DAYS = process.env.POLLINATIONS_COACH_EXPIRY_DAYS || '30';
 function getAuthorizedCoachModels() {
   return (process.env.POLLINATIONS_COACH_MODELS || '')
     .split(',')
@@ -143,7 +146,10 @@ export async function completeAuthorization(code, state) {
   const token = await response.json().catch(() => ({}));
   if (!response.ok || !token.access_token) throw new Error(`Pollinations token exchange failed (${response.status}).`);
 
-  const expiresIn = Number(token.expires_in) > 0 ? Number(token.expires_in) * 1000 : 7 * 24 * 60 * 60 * 1000;
+  const expiryDays = Number(DEFAULT_EXPIRY_DAYS) > 0 ? Number(DEFAULT_EXPIRY_DAYS) : 30;
+  const expiresIn = Number(token.expires_in) > 0
+    ? Number(token.expires_in) * 1000
+    : expiryDays * 24 * 60 * 60 * 1000;
   await query(
     `INSERT INTO pollinations_coach_tokens (user_id, encrypted_token, expires_at, scope, updated_at)
      VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
