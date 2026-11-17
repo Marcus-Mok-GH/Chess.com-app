@@ -84,48 +84,18 @@ function getStreakState(userId) {
   return reset;
 }
 
-function mergeStreakData(local, remote) {
-  if (!remote) return local;
+// Accounts keep their streak in the database (see /api/puzzles/streak), so it
+// follows the player across devices and browsers. The localStorage helpers
+// below exist for signed-out play only: a guest still gets a streak for the
+// session's device, and it is dropped the moment they sign in.
 
-  // Normalize remote count for date staleness (getStreakState-style)
-  // If remote lastDate is older than yesterday, treat remote count as 0 for comparison
-  let effectiveRemoteCount = remote.count || 0;
-  if (remote.lastDate) {
-    const today = getTodayDateString();
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, "0")}-${String(yesterday.getDate()).padStart(2, "0")}`;
-    if (remote.lastDate !== today && remote.lastDate !== yesterdayStr) {
-      // Remote streak is stale — treat count as 0 for comparison purposes
-      effectiveRemoteCount = 0;
-    }
-  }
-
-  // Take whichever has the higher effective streak count as source of truth
-  if (effectiveRemoteCount > local.count) {
-    return {
-      lastDate: remote.lastDate || local.lastDate,
-      count: remote.count,
-      bestStreak: Math.max(remote.bestStreak || 0, local.bestStreak || 0),
-      completedToday: remote.completedToday ?? local.completedToday,
-    };
-  }
-  return {
-    ...local,
-    bestStreak: Math.max(local.bestStreak || 0, remote.bestStreak || 0),
-  };
-}
-
+// Device-local streak for signed-out play. Accounts read theirs from the
+// database through GET /api/puzzles/streak, so this hook is guest-scoped by
+// design and takes no user id.
 export function useStreakData() {
-  const { user } = useUser();
-  const userId = user?.id || null;
-  const [streak, setStreak] = useState(() => getStreakState(userId));
+  const [streak, setStreak] = useState(() => getStreakState(null));
 
-  useEffect(() => {
-    setStreak(getStreakState(userId));
-  }, [userId]);
-
-  return { streak, refresh: () => setStreak(getStreakState(userId)) };
+  return { streak, refresh: () => setStreak(getStreakState(null)) };
 }
 
 export default function DailyPuzzleStreak({ compact = false, linkToPuzzles = false }) {
@@ -137,7 +107,11 @@ export default function DailyPuzzleStreak({ compact = false, linkToPuzzles = fal
 
   const today = getTodayDateString();
   const puzzle = useMemo(() => getDailyPuzzle(today), [today]);
-  const [streakData, setStreakData] = useState(() => getStreakState(userId));
+  const [streakData, setStreakData] = useState(() => (
+    isLoggedIn
+      ? { lastDate: "", count: 0, bestStreak: 0, completedToday: false }
+      : getStreakState(null)
+  ));
   const [showBoard, setShowBoard] = useState(false);
   const [position, setPosition] = useState(puzzle.fen);
   const [solved, setSolved] = useState(streakData.completedToday);
@@ -146,19 +120,27 @@ export default function DailyPuzzleStreak({ compact = false, linkToPuzzles = fal
   const timerRef = useRef(null);
   const prevUserIdRef = useRef(userId);
 
-  // Reload streak data when user logs in/out
+  // Signing out drops the account's numbers immediately; signing in blanks
+  // them until the server answers, so a device-local guest streak is never
+  // shown as if it were the account's.
   useEffect(() => {
     if (prevUserIdRef.current !== userId) {
       prevUserIdRef.current = userId;
-      const newState = getStreakState(userId);
-      setStreakData(newState);
-      setSolved(newState.completedToday);
+      if (userId) {
+        setStreakData({ lastDate: "", count: 0, bestStreak: 0, completedToday: false });
+        setSolved(false);
+      } else {
+        const guestState = getStreakState(null);
+        setStreakData(guestState);
+        setSolved(guestState.completedToday);
+      }
     }
   }, [userId]);
 
-  // Sync with backend on mount when logged in, and when user changes
+  // Accounts read the streak from the database, so a phone and a laptop show
+  // the same number. Guests keep the device-local streak from localStorage.
   useEffect(() => {
-    if (!isLoggedIn || !username || !token) {
+    if (!isLoggedIn || !userId) {
       setSyncLoading(false);
       return;
     }
@@ -166,43 +148,31 @@ export default function DailyPuzzleStreak({ compact = false, linkToPuzzles = fal
     let cancelled = false;
     setSyncLoading(true);
 
-    async function syncFromBackend() {
-      try {
-        const response = await api.getUserSettings(username, token);
+    api
+      .getPuzzleStreak()
+      .then((data) => {
         if (cancelled) return;
-        const remote = response?.settings?.puzzleStreak || null;
-        const local = getStreakState(userId);
-        const merged = mergeStreakData(local, remote);
-
-        // Apply streak-state logic to merged data (handles day transitions)
-        const todayStr = getTodayDateString();
-        let finalState = merged;
-        if (merged.lastDate !== todayStr) {
-          const yesterday = new Date();
-          yesterday.setDate(yesterday.getDate() - 1);
-          const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, "0")}-${String(yesterday.getDate()).padStart(2, "0")}`;
-          if (merged.lastDate === yesterdayStr) {
-            finalState = { ...merged, completedToday: false };
-          } else {
-            finalState = { lastDate: merged.lastDate, count: 0, bestStreak: merged.bestStreak, completedToday: false };
-          }
-        }
-
-        saveStreakData(finalState, userId);
-        if (!cancelled) {
-          setStreakData(finalState);
-          setSolved(finalState.completedToday);
-        }
-      } catch {
-        // Backend unavailable — use local cache (already loaded)
-      } finally {
+        const remote = data?.streak;
+        if (!remote) return;
+        setStreakData({
+          lastDate: remote.lastSolvedOn || "",
+          count: Number(remote.currentStreak) || 0,
+          bestStreak: Number(remote.bestStreak) || 0,
+          completedToday: Boolean(remote.solvedToday),
+        });
+        setSolved(Boolean(remote.solvedToday));
+      })
+      .catch(() => {
+        // Unreachable backend: show what we have rather than a wrong number.
+      })
+      .finally(() => {
         if (!cancelled) setSyncLoading(false);
-      }
-    }
+      });
 
-    syncFromBackend();
-    return () => { cancelled = true; };
-  }, [isLoggedIn, username, token, userId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoggedIn, userId]);
 
   useEffect(() => {
     return () => {
@@ -210,46 +180,58 @@ export default function DailyPuzzleStreak({ compact = false, linkToPuzzles = fal
     };
   }, []);
 
-  const persistStreak = useCallback((data) => {
-    // Always write to localStorage
-    saveStreakData(data, userId);
-
-    // If logged in, also persist to backend (fetch existing settings first to avoid full-replace wipe)
-    if (isLoggedIn && username && token) {
-      api.getUserSettings(username, token).then((response) => {
-        const currentSettings = response?.settings || {};
-        return api.updateUserSettings(username, {
-          ...currentSettings,
-          puzzleStreak: {
-            count: data.count,
-            bestStreak: data.bestStreak,
-            lastDate: data.lastDate,
-            completedToday: data.completedToday,
-          },
-        }, token);
-      }).catch(() => {
-        // Silently fail — localStorage is the fallback
-      });
-    }
-  }, [userId, isLoggedIn, username, token]);
-
   const handleSolve = useCallback(() => {
     const todayStr = getTodayDateString();
-    const current = getStreakState(userId);
-    if (current.completedToday) return;
 
+    if (isLoggedIn && userId) {
+      if (streakData.completedToday) return;
+      // Optimistic bump so the counter moves with the move on the board; the
+      // server's response replaces it a moment later.
+      setStreakData((current) => {
+        const nextCount = current.completedToday ? current.count : current.count + 1;
+        return {
+          lastDate: todayStr,
+          count: nextCount,
+          bestStreak: Math.max(current.bestStreak, nextCount),
+          completedToday: true,
+        };
+      });
+      setSolved(true);
+      api
+        .recordPuzzleStreak()
+        .then((data) => {
+          const remote = data?.streak;
+          if (!remote) return;
+          setStreakData({
+            lastDate: remote.lastSolvedOn || todayStr,
+            count: Number(remote.currentStreak) || 0,
+            bestStreak: Number(remote.bestStreak) || 0,
+            completedToday: Boolean(remote.solvedToday),
+          });
+        })
+        .catch((error) => {
+          // The streak now lives on the account, so a failed write is reported
+          // instead of being silently swallowed: the UI keeps the optimistic
+          // number and the next visit re-reads the server.
+          console.warn("[DailyPuzzleStreak] Failed to record streak:", error?.message || error);
+        });
+      return;
+    }
+
+    // Guest: device-local streak only.
+    const current = getStreakState(null);
+    if (current.completedToday) return;
     const newCount = current.count + 1;
-    const newBest = Math.max(current.bestStreak, newCount);
     const updated = {
       lastDate: todayStr,
       count: newCount,
-      bestStreak: newBest,
+      bestStreak: Math.max(current.bestStreak, newCount),
       completedToday: true,
     };
-    persistStreak(updated);
+    saveStreakData(updated, null);
     setStreakData(updated);
     setSolved(true);
-  }, [userId, persistStreak]);
+  }, [isLoggedIn, userId, streakData.completedToday]);
 
   function handlePieceDrop(sourceSquare, targetSquare) {
     if (solved || streakData.completedToday) return false;

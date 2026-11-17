@@ -349,6 +349,16 @@ class ApiService {
         return this.request("/puzzles/usage");
     }
 
+    // Account-level daily puzzle streak (stored in the database, not the device).
+    async getPuzzleStreak() {
+        return this.request("/puzzles/streak");
+    }
+
+    // Record today's daily-puzzle solve. Idempotent per day.
+    async recordPuzzleStreak() {
+        return this.request("/puzzles/streak", { method: "POST" });
+    }
+
     async savePuzzleStats(stats) {
         return this.request("/puzzles/stats/user", {
             method: "PUT",

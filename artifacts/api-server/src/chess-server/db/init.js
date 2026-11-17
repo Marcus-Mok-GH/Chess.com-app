@@ -673,6 +673,19 @@ export async function initDatabase({ force = false } = {}) {
           )
         `);
 
+        // Account-level daily puzzle streak. One row per user: the current run,
+        // the best run ever, and the day of the last counted solve. Kept in the
+        // database rather than device storage so it follows the account.
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS puzzle_streak (
+            user_id VARCHAR(100) PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+            current_streak INTEGER NOT NULL DEFAULT 0,
+            best_streak INTEGER NOT NULL DEFAULT 0,
+            last_solved_on DATE,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+
         // Whop membership mirror. Written only by the signed webhook handler;
         // a row with status 'active' lifts the daily review limit.
         await client.query(`

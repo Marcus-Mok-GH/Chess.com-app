@@ -17,6 +17,7 @@ import {
 } from '../puzzles/lessonPuzzle.js';
 import { createRateLimiter, requestIp } from '../middleware/rateLimit.js';
 import { consumePuzzle, getUsage, ownerKeyFor } from '../services/puzzleQuota.js';
+import { getStreak, recordSolve } from '../services/puzzleStreakService.js';
 
 const router = Router();
 
@@ -274,6 +275,43 @@ router.post('/validate', async (req, res) => {
       success: false,
       error: { message: 'Failed to validate solution' }
     });
+  }
+});
+
+/**
+ * GET /api/puzzles/streak
+ * Authenticated. The account's daily puzzle streak as it stands today.
+ */
+router.get('/streak', async (req, res) => {
+  try {
+    const userId = await authenticatedUserId(req);
+    if (!userId) {
+      return res.status(401).json({ success: false, error: { message: 'Authentication required' } });
+    }
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, streak: await getStreak(userId) });
+  } catch (error) {
+    console.error('Get puzzle streak error:', error);
+    res.status(500).json({ success: false, error: { message: 'Failed to load puzzle streak' } });
+  }
+});
+
+/**
+ * POST /api/puzzles/streak
+ * Authenticated. Records today's daily-puzzle solve. Idempotent: calling it
+ * twice on the same day returns the same streak instead of counting twice.
+ */
+router.post('/streak', async (req, res) => {
+  try {
+    const userId = await authenticatedUserId(req);
+    if (!userId) {
+      return res.status(401).json({ success: false, error: { message: 'Authentication required' } });
+    }
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, streak: await recordSolve(userId) });
+  } catch (error) {
+    console.error('Record puzzle streak error:', error);
+    res.status(500).json({ success: false, error: { message: 'Failed to record puzzle streak' } });
   }
 });
 

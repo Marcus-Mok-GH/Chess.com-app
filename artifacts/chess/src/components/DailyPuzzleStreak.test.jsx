@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, act, waitFor } from '@testing-library/react';
+import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 
 // ── Module-level mocks (factories must not reference outer variables) ──────────
@@ -9,10 +9,26 @@ vi.mock('../services/api', () => ({
   default: {
     getUserSettings: vi.fn().mockResolvedValue({ settings: {} }),
     updateUserSettings: vi.fn().mockResolvedValue({ success: true }),
+    getPuzzleStreak: vi.fn().mockResolvedValue({
+      success: true,
+      streak: { currentStreak: 0, bestStreak: 0, lastSolvedOn: null, solvedToday: false },
+    }),
+    recordPuzzleStreak: vi.fn().mockResolvedValue({
+      success: true,
+      streak: { currentStreak: 1, bestStreak: 1, lastSolvedOn: '2026-11-17', solvedToday: true },
+    }),
   },
   api: {
     getUserSettings: vi.fn().mockResolvedValue({ settings: {} }),
     updateUserSettings: vi.fn().mockResolvedValue({ success: true }),
+    getPuzzleStreak: vi.fn().mockResolvedValue({
+      success: true,
+      streak: { currentStreak: 0, bestStreak: 0, lastSolvedOn: null, solvedToday: false },
+    }),
+    recordPuzzleStreak: vi.fn().mockResolvedValue({
+      success: true,
+      streak: { currentStreak: 1, bestStreak: 1, lastSolvedOn: '2026-11-17', solvedToday: true },
+    }),
   },
 }));
 
@@ -21,7 +37,14 @@ vi.mock('../contexts/UserContext', () => ({
 }));
 
 vi.mock('./ChessBoard', () => ({
-  default: () => <div data-testid="chessboard">Board</div>,
+  default: ({ onPieceDrop }) => (
+    <div data-testid="chessboard">
+      Board
+      <button data-testid="solve-c3c4" onClick={() => onPieceDrop && onPieceDrop('e5', 'f7')}>
+        solve
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock('../engine/puzzles/puzzleGenerator', () => ({
@@ -67,6 +90,14 @@ describe('DailyPuzzleStreak persistence', () => {
     vi.clearAllMocks();
     api.getUserSettings.mockResolvedValue({ settings: {} });
     api.updateUserSettings.mockResolvedValue({ success: true });
+    api.getPuzzleStreak.mockResolvedValue({
+      success: true,
+      streak: { currentStreak: 0, bestStreak: 0, lastSolvedOn: null, solvedToday: false },
+    });
+    api.recordPuzzleStreak.mockResolvedValue({
+      success: true,
+      streak: { currentStreak: 1, bestStreak: 1, lastSolvedOn: '2026-11-17', solvedToday: true },
+    });
   });
 
   afterEach(() => {
@@ -179,7 +210,7 @@ describe('DailyPuzzleStreak persistence', () => {
   describe('Component rendering with user context', () => {
     it('shows loading spinner when sync is in progress for logged-in user', async () => {
       // Make API call hang forever
-      api.getUserSettings.mockReturnValue(new Promise(() => {}));
+      api.getPuzzleStreak.mockReturnValue(new Promise(() => {}));
       mockUserLoggedIn();
 
       const { default: DailyPuzzleStreak } = await import('./DailyPuzzleStreak');
@@ -205,9 +236,12 @@ describe('DailyPuzzleStreak persistence', () => {
       expect(container.querySelector('.daily-puzzle-streak-spinner')).toBeNull();
     });
 
-    it('calls getUserSettings when logged in', async () => {
+    it('reads the streak from the account endpoint when logged in', async () => {
       mockUserLoggedIn();
-      api.getUserSettings.mockResolvedValue({ settings: { puzzleStreak: { count: 5, bestStreak: 8, lastDate: getTodayDateString(), completedToday: true } } });
+      api.getPuzzleStreak.mockResolvedValue({
+        success: true,
+        streak: { currentStreak: 5, bestStreak: 8, lastSolvedOn: getTodayDateString(), solvedToday: true },
+      });
 
       const { default: DailyPuzzleStreak } = await import('./DailyPuzzleStreak');
       await act(async () => {
@@ -218,10 +252,12 @@ describe('DailyPuzzleStreak persistence', () => {
       );
       });
 
-      expect(api.getUserSettings).toHaveBeenCalledWith('testplayer', 'tok-abc');
+      expect(api.getPuzzleStreak).toHaveBeenCalled();
+      expect(screen.getByText('5')).toBeTruthy();
+      expect(screen.getByText(/Great job/)).toBeTruthy();
     });
 
-    it('does not call getUserSettings for guest', async () => {
+    it('does not call the account endpoint for a guest', async () => {
       mockUserGuest();
 
       const { default: DailyPuzzleStreak } = await import('./DailyPuzzleStreak');
@@ -233,16 +269,17 @@ describe('DailyPuzzleStreak persistence', () => {
       );
       });
 
-      expect(api.getUserSettings).not.toHaveBeenCalled();
+      expect(api.getPuzzleStreak).not.toHaveBeenCalled();
     });
   });
 
-  describe('merge logic', () => {
-    it('uses remote data when remote streak count is higher', async () => {
+  describe('account streak is the source of truth', () => {
+    it('shows the account streak even when this device has a different one cached', async () => {
       const today = getTodayDateString();
       saveStreakData({ lastDate: today, count: 2, bestStreak: 3, completedToday: false }, 'user-123');
-      api.getUserSettings.mockResolvedValue({
-        settings: { puzzleStreak: { count: 10, bestStreak: 12, lastDate: today, completedToday: true } },
+      api.getPuzzleStreak.mockResolvedValue({
+        success: true,
+        streak: { currentStreak: 10, bestStreak: 12, lastSolvedOn: today, solvedToday: true },
       });
       mockUserLoggedIn();
 
@@ -256,19 +293,46 @@ describe('DailyPuzzleStreak persistence', () => {
       });
 
       await waitFor(() => {
-        const stored = loadStreakData('user-123');
-        expect(stored.count).toBe(10);
-        expect(stored.bestStreak).toBe(12);
+        expect(screen.getByText('10')).toBeTruthy();
+        expect(screen.getByText(/Best:/)).toBeTruthy();
+      });
+      // The device cache is not promoted or merged into the account view.
+      expect(loadStreakData('user-123').count).toBe(2);
+    });
+
+    it('does not let a high device-local streak override the account', async () => {
+      const today = getTodayDateString();
+      saveStreakData({ lastDate: today, count: 40, bestStreak: 40, completedToday: true }, null);
+      api.getPuzzleStreak.mockResolvedValue({
+        success: true,
+        streak: { currentStreak: 3, bestStreak: 4, lastSolvedOn: today, solvedToday: false },
+      });
+      mockUserLoggedIn();
+
+      const { default: DailyPuzzleStreak } = await import('./DailyPuzzleStreak');
+      await act(async () => {
+        render(
+        <MemoryRouter>
+          <DailyPuzzleStreak />
+        </MemoryRouter>
+      );
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('3')).toBeTruthy();
       });
     });
 
-    it('keeps local data when local streak count is higher', async () => {
-      const today = getTodayDateString();
-      saveStreakData({ lastDate: today, count: 8, bestStreak: 9, completedToday: true }, 'user-123');
-      api.getUserSettings.mockResolvedValue({
-        settings: { puzzleStreak: { count: 3, bestStreak: 4, lastDate: today, completedToday: false } },
-      });
+    it('writes a solve to the server and takes the returned numbers', async () => {
       mockUserLoggedIn();
+      api.getPuzzleStreak.mockResolvedValue({
+        success: true,
+        streak: { currentStreak: 6, bestStreak: 6, lastSolvedOn: '2026-11-16', solvedToday: false },
+      });
+      api.recordPuzzleStreak.mockResolvedValue({
+        success: true,
+        streak: { currentStreak: 7, bestStreak: 9, lastSolvedOn: getTodayDateString(), solvedToday: true },
+      });
 
       const { default: DailyPuzzleStreak } = await import('./DailyPuzzleStreak');
       await act(async () => {
@@ -279,20 +343,17 @@ describe('DailyPuzzleStreak persistence', () => {
       );
       });
 
+      fireEvent.click(screen.getByRole('button', { name: /Solve Today's Puzzle/i }));
+      fireEvent.click(await screen.findByTestId('solve-c3c4'));
+
       await waitFor(() => {
-        const stored = loadStreakData('user-123');
-        expect(stored.count).toBe(8);
-        expect(stored.bestStreak).toBe(9);
+        expect(api.recordPuzzleStreak).toHaveBeenCalledTimes(1);
+        expect(screen.getByText('7')).toBeTruthy();
       });
     });
 
-    it('takes max bestStreak from both local and remote', async () => {
-      const today = getTodayDateString();
-      saveStreakData({ lastDate: today, count: 5, bestStreak: 20, completedToday: false }, 'user-123');
-      api.getUserSettings.mockResolvedValue({
-        settings: { puzzleStreak: { count: 10, bestStreak: 15, lastDate: today, completedToday: true } },
-      });
-      mockUserLoggedIn();
+    it('keeps guests on device storage and never calls the server', async () => {
+      mockUserGuest();
 
       const { default: DailyPuzzleStreak } = await import('./DailyPuzzleStreak');
       await act(async () => {
@@ -303,11 +364,13 @@ describe('DailyPuzzleStreak persistence', () => {
       );
       });
 
+      fireEvent.click(screen.getByRole('button', { name: /Solve Today's Puzzle/i }));
+      fireEvent.click(await screen.findByTestId('solve-c3c4'));
+
       await waitFor(() => {
-        const stored = loadStreakData('user-123');
-        expect(stored.count).toBe(10);
-        expect(stored.bestStreak).toBe(20);
+        expect(loadStreakData(null).completedToday).toBe(true);
       });
+      expect(api.recordPuzzleStreak).not.toHaveBeenCalled();
     });
   });
 });

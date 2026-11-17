@@ -75,6 +75,12 @@ vi.mock('../services/api', () => ({
     getPuzzleUsage: vi.fn(() =>
       Promise.resolve({ success: true, usage: { used: 0, limit: 3, remaining: 3, unlimited: false, allowed: true } }),
     ),
+    getPuzzleStreak: vi.fn(() =>
+      Promise.resolve({ success: true, streak: { currentStreak: 0, bestStreak: 0, lastSolvedOn: null, solvedToday: false } }),
+    ),
+    recordPuzzleStreak: vi.fn(() =>
+      Promise.resolve({ success: true, streak: { currentStreak: 1, bestStreak: 1, lastSolvedOn: null, solvedToday: true } }),
+    ),
     savePuzzleStats: vi.fn(() => Promise.resolve({ success: true, stats: {} })),
     generateLessonPuzzle: vi.fn(() => Promise.resolve({ success: true, puzzle: null })),
   },
