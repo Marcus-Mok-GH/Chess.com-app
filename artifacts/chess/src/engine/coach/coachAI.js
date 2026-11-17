@@ -122,6 +122,9 @@ export async function getSubscription() {
   return {
     subscription: data.subscription || { active: false, status: 'inactive', currentPeriodEnd: null },
     offer: data.offer || { checkoutUrl: null, price: 7.99, currency: 'SGD', interval: 'month', label: 'Unlimited game reviews' },
+    // Server-computed plan and what it unlocks. Admins come back as the
+    // highest plan, so the UI never has to guess.
+    entitlements: data.entitlements || null,
   };
 }
 

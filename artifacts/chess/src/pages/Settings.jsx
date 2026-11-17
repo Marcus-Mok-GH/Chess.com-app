@@ -23,22 +23,11 @@ import {
   Zap,
   Languages,
   Bot,
-  Plus,
-  Trash2,
-  Edit,
-  ToggleLeft,
-  ToggleRight,
-  Users,
-  MessageSquare,
-  Crown as CrownIcon,
-  Shield,
-  Cpu,
-  Sparkles,
   CreditCard,
 } from 'lucide-react';
 import { useI18n, useT } from '../i18n/I18nContext';
 import { SUPPORTED_LOCALES } from '../i18n/locales';
-import { connectCoach, disconnectCoach, getCoachStatus } from '../engine/coach/coachAI';
+import { connectCoach, disconnectCoach, getCoachStatus, getSubscription } from '../engine/coach/coachAI';
 import api from '../services/api';
 import { clearOnlineSession } from '../utils/gamePersistence';
 import './Settings.css';
@@ -181,6 +170,31 @@ export default function Settings() {
   const [coachError, setCoachError] = useState(null);
   const [resigningGames, setResigningGames] = useState(false);
   const [resignMessage, setResignMessage] = useState(null);
+  const [plan, setPlan] = useState(null);
+
+  // Plan and limits for the subscription block. Admins come back as the top
+  // plan from the server, so this block never guesses.
+  useEffect(() => {
+    if (!user) { setPlan(null); return undefined; }
+    let cancelled = false;
+    getSubscription()
+      .then((data) => {
+        if (cancelled) return;
+        const entitlements = data?.entitlements;
+        if (entitlements) {
+          setPlan(entitlements);
+          return;
+        }
+        // Older server without entitlements: fall back to the plan flag.
+        const active = Boolean(data?.subscription?.active);
+        setPlan({
+          plan: data?.subscription?.status === 'admin' ? 'admin' : active ? 'premium' : 'free',
+          unlocks: active ? ['Unlimited puzzles', 'Unlimited game reviews', 'Premium bots'] : ['3 puzzles a day', '1 game review a day'],
+        });
+      })
+      .catch(() => { if (!cancelled) setPlan(null); });
+    return () => { cancelled = true; };
+  }, [user]);
 
   useEffect(() => {
     let isMounted = true;
@@ -258,7 +272,7 @@ export default function Settings() {
   const sections = useMemo(() => {
     const list = [];
     if (user) list.push({ id: 'account', label: 'Account' });
-    list.push({ id: 'subscription', label: 'Subscription' });
+    list.push({ id: 'subscription', label: 'Plan' });
     list.push({ id: 'language', label: 'Language' });
     list.push({ id: 'display', label: 'Display' });
     list.push({ id: 'gameplay', label: 'Gameplay' });
@@ -266,8 +280,8 @@ export default function Settings() {
     list.push({ id: 'pollinations', label: 'AI coach' });
     if (user?.isAdmin) list.push({ id: 'bot-builder', label: 'Bot Builder' });
     list.push({ id: 'advanced', label: 'Advanced' });
+    list.push({ id: 'legal', label: 'Legal' });
     list.push({ id: 'about', label: 'About' });
-    list.push({ id: 'legal', label: 'Privacy & terms' });
     return list;
   }, [user]);
 
@@ -337,7 +351,7 @@ export default function Settings() {
                 <span className="account-value">{user.username}</span>
               </div>
               <div className="account-row">
-                <span className="account-label">{t("Unlimited")}</span>
+                <span className="account-label">{t("Overall rating")}</span>
                 <span className="account-value account-value-elo">{user.elo}</span>
               </div>
               <div className="account-row">
@@ -410,6 +424,48 @@ export default function Settings() {
             </button>
           </Section>
         )}
+
+        <Section id="subscription" icon={CreditCard} title={t("Plan")}>
+          <div className="setting-item plan-summary">
+            <div className="setting-info">
+              <div className="setting-title">
+                <CreditCard className="setting-icon" size={16} aria-hidden="true" />
+                <span>{t("Your plan")}</span>
+                {plan && (
+                  <span
+                    className={`plan-badge plan-badge--${plan.plan || 'free'}`}
+                    role="status"
+                  >
+                    {plan.plan === 'admin'
+                      ? t('Admin')
+                      : plan.plan === 'premium'
+                        ? t('Premium')
+                        : t('Free')}
+                  </span>
+                )}
+              </div>
+              <span className="setting-desc">
+                {!plan
+                  ? t("Manage purchases and subscriptions")
+                  : plan.plan === 'admin'
+                    ? t("Admin account: every feature is unlocked and nothing is limited.")
+                    : plan.plan === 'premium'
+                      ? t("Everything is unlocked while your subscription is active.")
+                      : t("You are on the free plan. Upgrading removes the daily limits.")}
+              </span>
+              {plan?.unlocks?.length > 0 && (
+                <ul className="plan-unlocks">
+                  {plan.unlocks.map((item) => (
+                    <li key={item}>{t(item)}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <button className="link-button" type="button" onClick={() => navigate('/subscription')}>
+              {plan?.plan === 'free' ? t("See plans") : t("Manage plan")}
+            </button>
+          </div>
+        </Section>
 
         <Section id="language" icon={Languages} title={t('Language')}>
           <SettingRow
@@ -666,20 +722,6 @@ export default function Settings() {
           </Section>
         )}
 
-        <Section id="subscription" icon={CreditCard} title={t("Subscription")}>
-          <div className="setting-item">
-            <div className="setting-info">
-              <div className="setting-title">
-                <CreditCard className="setting-icon" size={16} aria-hidden="true" />
-                <span>{t("Subscription")}</span>
-              </div>
-              <span className="setting-desc">{t("Manage purchases and subscriptions")}</span>
-            </div>
-            <button className="link-button" type="button" onClick={() => navigate('/subscription')}>
-              {t("View")}</button>
-          </div>
-        </Section>
-
         <Section id="advanced" icon={Bug} title={t("Advanced")}>
           <SettingRow
             id="setting-debug"
@@ -694,20 +736,6 @@ export default function Settings() {
               onChange={(v) => updateSettings({ debugMode: v })}
             />
           </SettingRow>
-        </Section>
-
-        <Section id="about" icon={ScrollText} title={t("About")}>
-          <div className="setting-item">
-            <div className="setting-info">
-              <div className="setting-title">
-                <ScrollText className="setting-icon" size={16} aria-hidden="true" />
-                <span>{t("Changelog")}</span>
-              </div>
-              <span className="setting-desc">{t("See recent updates and fixes")}</span>
-            </div>
-            <button className="link-button" type="button" onClick={() => navigate('/changelog')}>
-              {t("View")}</button>
-          </div>
         </Section>
 
         <Section id="legal" icon={ShieldCheck} title={t("Privacy & Terms")}>
@@ -732,6 +760,20 @@ export default function Settings() {
               <span className="setting-desc">{t("Read the full Terms of Service on its dedicated page.")}</span>
             </div>
             <button className="link-button" type="button" onClick={() => navigate('/terms')}>
+              {t("View")}</button>
+          </div>
+        </Section>
+
+        <Section id="about" icon={ScrollText} title={t("About")}>
+          <div className="setting-item">
+            <div className="setting-info">
+              <div className="setting-title">
+                <ScrollText className="setting-icon" size={16} aria-hidden="true" />
+                <span>{t("Changelog")}</span>
+              </div>
+              <span className="setting-desc">{t("See recent updates and fixes")}</span>
+            </div>
+            <button className="link-button" type="button" onClick={() => navigate('/changelog')}>
               {t("View")}</button>
           </div>
         </Section>

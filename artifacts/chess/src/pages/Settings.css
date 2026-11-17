@@ -1021,3 +1021,59 @@
   width: min(240px, 100%);
   margin: 0;
 }
+
+/* ── Plan summary ──────────────────────────────────────────────── */
+.plan-summary {
+  align-items: flex-start;
+}
+
+.plan-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.5rem;
+  border-radius: var(--radius-full, 999px);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--surface-subtle, rgba(255, 255, 255, 0.08));
+  color: var(--text-secondary, #b9c0c8);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+}
+
+.plan-badge--premium {
+  color: #1f2d12;
+  background: #b9e07a;
+  border-color: #b9e07a;
+}
+
+.plan-badge--admin {
+  color: #10131a;
+  background: #8fd0ff;
+  border-color: #8fd0ff;
+}
+
+.plan-unlocks {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  margin: 0.55rem 0 0;
+  padding: 0;
+}
+
+.plan-unlocks li {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.plan-unlocks li::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--primary-hover, #81b64c);
+}

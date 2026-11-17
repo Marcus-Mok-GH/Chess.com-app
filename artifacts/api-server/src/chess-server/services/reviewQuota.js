@@ -16,53 +16,24 @@
  */
 
 import { query } from '../db.js';
-import { isIntegrityReviewer } from './antiCheatService.js';
+import { FREE_REVIEW_LIMIT, getEntitlements, subscriptionIsActive } from './entitlements.js';
 
-export const FREE_DAILY_LIMIT = 1;
+export const FREE_DAILY_LIMIT = FREE_REVIEW_LIMIT;
 
-/** Statuses that grant unlimited reviews. */
-const ENTITLED_STATUSES = new Set(['active', 'trialing', 'past_due']);
-
-/**
- * Whether a subscription row currently entitles the user to unlimited reviews.
- *
- * @param {{status?: string, current_period_end?: string|Date|null}|null|undefined} row
- * @returns {boolean}
- */
-export function subscriptionIsActive(row) {
-  if (!row || !ENTITLED_STATUSES.has(String(row.status || '').toLowerCase())) {
-    return false;
-  }
-  if (!row.current_period_end) return true;
-  const end = new Date(row.current_period_end);
-  if (Number.isNaN(end.getTime())) return true;
-  return end.getTime() > Date.now();
-}
+// Kept as a re-export: callers have been importing the check from here.
+export { subscriptionIsActive };
 
 /**
- * Reads the user's subscription row, if any.
- *
- * @param {string} userId
- * @returns {Promise<{status: string, current_period_end: string|Date|null}|null>}
- */
-async function getSubscriptionRow(userId) {
-  const { rows } = await query(
-    'SELECT status, current_period_end FROM subscriptions WHERE user_id = $1',
-    [userId]
-  );
-  return rows[0] || null;
-}
-
-/**
- * Daily review limit for a user: `Infinity` when subscribed, else 1.
+ * Daily review limit for a user: `Infinity` on a premium plan or an admin
+ * account, else the free allowance. The decision lives in entitlements so a
+ * plan change is applied in one place.
  *
  * @param {string} userId
  * @returns {Promise<number>}
  */
 export async function getDailyLimit(userId) {
-  if (isIntegrityReviewer(userId)) return Infinity;
-  const row = await getSubscriptionRow(userId);
-  return subscriptionIsActive(row) ? Infinity : FREE_DAILY_LIMIT;
+  const entitlements = await getEntitlements(userId);
+  return entitlements.reviewLimit ?? Infinity;
 }
 
 /**

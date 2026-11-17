@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { query } from '../db.js';
 import { trimLessonSummary } from '../services/lessonSummary.js';
 import { consumeReview, getDailyLimit, getUsage } from '../services/reviewQuota.js';
+import { getEntitlements } from '../services/entitlements.js';
 import { languageInstruction } from '../services/outputLanguage.js';
 import { isIntegrityReviewer } from '../services/antiCheatService.js';
 import { errorResponse, handleRouteError } from '../middleware/errors.js';
@@ -493,11 +494,13 @@ router.get('/subscription', async (req, res) => {
     if (!userId) return;
     const usage = await getUsage(userId);
     const isAdmin = isIntegrityReviewer(userId);
+    const entitlements = await getEntitlements(userId);
     const subscription = isAdmin ? null : (await query(
       'SELECT status, current_period_end FROM subscriptions WHERE user_id = $1',
       [userId]
     )).rows[0] || null;
     return res.json({
+      entitlements,
       subscription: {
         active: usage.unlimited,
         status: isAdmin ? 'admin' : subscription?.status || 'inactive',

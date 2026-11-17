@@ -6,7 +6,7 @@ import Settings from './Settings';
 import { useSettings } from '../contexts/SettingsContext';
 import { useUser } from '../contexts/UserContext';
 import api from '../services/api';
-import { getCoachStatus } from '../engine/coach/coachAI';
+import { getCoachStatus, getSubscription } from '../engine/coach/coachAI';
 import { clearOnlineSession } from '../utils/gamePersistence';
 import { I18nProvider } from '../i18n/I18nContext';
 
@@ -27,6 +27,7 @@ vi.mock('../engine/coach/coachAI', () => ({
   getCoachStatus: vi.fn(),
   connectCoach: vi.fn(),
   disconnectCoach: vi.fn(),
+  getSubscription: vi.fn(),
 }));
 
 vi.mock('../utils/gamePersistence', () => ({
@@ -89,6 +90,14 @@ describe('Settings page', () => {
     });
     useUser.mockReturnValue({ user: null, logout: vi.fn() });
     getCoachStatus.mockResolvedValue({ available: true, connected: true, configured: true });
+    getSubscription.mockResolvedValue({
+      subscription: { active: false, status: 'inactive', currentPeriodEnd: null },
+      offer: { checkoutUrl: null },
+      entitlements: {
+        plan: 'free',
+        unlocks: ['3 puzzles a day', '1 game review a day', 'Standard bots'],
+      },
+    });
   });
 
   it('renders section navigation and the main section headings', () => {
@@ -259,6 +268,49 @@ describe('Settings page', () => {
 
       fireEvent.click(screen.getByRole('button', { name: /log out/i }));
       expect(logout).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows the plan and what it unlocks', async () => {
+      renderSettings();
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Plan' })).toBeTruthy();
+        expect(screen.getByText('3 puzzles a day')).toBeTruthy();
+      });
+      expect(screen.getByText('Free')).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'See plans' })).toBeTruthy();
+    });
+
+    it('shows an admin as the top plan with everything unlocked', async () => {
+      getSubscription.mockResolvedValue({
+        subscription: { active: true, status: 'admin', currentPeriodEnd: null },
+        offer: { checkoutUrl: null },
+        entitlements: {
+          plan: 'admin',
+          unlocks: ['Unlimited puzzles', 'Unlimited game reviews', 'Premium bots', 'Full analysis'],
+        },
+      });
+      renderSettings();
+
+      await waitFor(() => {
+        expect(screen.getByText('Admin')).toBeTruthy();
+      });
+      expect(screen.getByText(/every feature is unlocked/i)).toBeTruthy();
+      expect(screen.getByText('Unlimited puzzles')).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Manage plan' })).toBeTruthy();
+    });
+
+    it('falls back to the subscription flag when entitlements are absent', async () => {
+      getSubscription.mockResolvedValue({
+        subscription: { active: true, status: 'active', currentPeriodEnd: null },
+        offer: { checkoutUrl: null },
+      });
+      renderSettings();
+
+      await waitFor(() => {
+        expect(screen.getByText('Premium')).toBeTruthy();
+      });
+      expect(screen.getByText('Unlimited game reviews')).toBeTruthy();
     });
 
     it('resigns all live games only after armed confirmation', async () => {

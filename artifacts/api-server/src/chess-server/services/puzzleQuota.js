@@ -18,10 +18,9 @@
 import crypto from 'node:crypto';
 import { query } from '../db.js';
 import { authenticatedUserId } from '../coachAuth.js';
-import { isIntegrityReviewer } from './antiCheatService.js';
-import { subscriptionIsActive } from './reviewQuota.js';
+import { FREE_PUZZLE_LIMIT, getEntitlements } from './entitlements.js';
 
-export const FREE_DAILY_LIMIT = 3;
+export const FREE_DAILY_LIMIT = FREE_PUZZLE_LIMIT;
 export const VISITOR_COOKIE = 'chess_visitor';
 
 const VISITOR_ID_PATTERN = /^[a-f0-9]{32}$/;
@@ -89,12 +88,8 @@ export async function ownerKeyFor(req, res) {
 export async function getDailyLimit(ownerKey) {
   if (!String(ownerKey).startsWith(USER_PREFIX)) return FREE_DAILY_LIMIT;
   const userId = String(ownerKey).slice(USER_PREFIX.length);
-  if (isIntegrityReviewer(userId)) return Infinity;
-  const { rows } = await query(
-    'SELECT status, current_period_end FROM subscriptions WHERE user_id = $1',
-    [userId]
-  );
-  return subscriptionIsActive(rows[0]) ? Infinity : FREE_DAILY_LIMIT;
+  const entitlements = await getEntitlements(userId);
+  return entitlements.puzzleLimit ?? Infinity;
 }
 
 /**
