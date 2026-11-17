@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { BookOpen, Building2, CreditCard, History, Puzzle, Settings2, ShieldCheck, Trophy, UsersRound, UserRound } from 'lucide-react'
+import { BookOpen, Building2, CreditCard, History, MessageSquare, Puzzle, Settings2, ShieldCheck, Trophy, UsersRound, UserRound } from 'lucide-react'
 import { useUser } from '../contexts/UserContext';
 import { RATING_POOLS } from '../utils/timeControls';
 import './More.css'
@@ -82,6 +82,24 @@ export default function More() {
               </div>
             </section>
           ))}
+
+          <section className="more-group" aria-labelledby="more-support">
+            <h2 id="more-support">{t("Support")}</h2>
+            <div className="more-options">
+              <button
+                type="button"
+                className="more-option more-option--button"
+                onClick={() => window.dispatchEvent(new CustomEvent('chess:open-feedback'))}
+              >
+                <span className="more-option-icon" aria-hidden="true"><MessageSquare size={18} /></span>
+                <span className="more-option-copy">
+                  <span className="more-option-title">{t("Send feedback")}</span>
+                  <span className="more-option-description">{t("Report a bug or tell us what to improve")}</span>
+                </span>
+                <span className="more-option-arrow" aria-hidden="true">›</span>
+              </button>
+            </div>
+          </section>
         </div>
       </div>
     </section>

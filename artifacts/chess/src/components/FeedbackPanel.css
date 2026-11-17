@@ -301,11 +301,28 @@
   font-size: 0.875rem;
 }
 
+/* On desktop the sidebar runs the full height and its Settings row sits in
+   the bottom-left corner — exactly where the trigger parks, so the pill
+   covered the nav label. Park it just inside the content column instead. */
+@media (min-width: 769px) and (min-height: 501px), (min-width: 1025px) {
+  body:has(.sidebar-nav) .feedback-trigger-wrapper {
+    left: calc(248px + 18px);
+  }
+}
+
+@media (min-width: 1440px) {
+  body:has(.sidebar-nav) .feedback-trigger-wrapper {
+    left: calc(264px + 18px);
+  }
+}
+
 /* The app shell owns a fixed mobile nav. Keep the floating trigger clear of
    that bar without moving it on standalone routes such as the landing page. */
+/* On phones the pill floated over page text (rows, labels, the Settings nav
+   item). It is replaced there by a Send feedback row on the More page. */
 @media (max-width: 768px), (max-width: 1024px) and (max-height: 500px) {
-  body:has(.bottom-nav) .feedback-trigger-wrapper {
-    bottom: calc(76px + var(--safe-bottom));
+  .feedback-trigger-wrapper {
+    display: none;
   }
 }
 

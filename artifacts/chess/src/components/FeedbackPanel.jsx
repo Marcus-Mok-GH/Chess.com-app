@@ -29,6 +29,17 @@ export function FeedbackPanel() {
     };
   }, []);
 
+  // Phones have no floating trigger (it covered page text), so /more opens the
+  // panel through this event instead.
+  useEffect(() => {
+    const open = () => {
+      setSubmitError('');
+      setIsOpen(true);
+    };
+    window.addEventListener('chess:open-feedback', open);
+    return () => window.removeEventListener('chess:open-feedback', open);
+  }, []);
+
   const handleDismiss = (e) => {
     e.stopPropagation();
     setIsHidden(true);

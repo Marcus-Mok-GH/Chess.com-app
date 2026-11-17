@@ -222,6 +222,11 @@
 
   .more-option-description {
     font-size: 0.75rem;
+    /* One line truncated most descriptions mid-phrase on a phone. */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    white-space: normal;
   }
 }
 
@@ -233,4 +238,12 @@
   .more-container {
     max-width: 800px;
   }
+}
+
+/* A non-link row (Send feedback) keeps the same shape as the link rows. */
+.more-option--button {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
