@@ -18,7 +18,7 @@ import {
 
 const router = Router();
 const COACH_API_URL = process.env.COACH_API_URL || 'https://gen.pollinations.ai/v1/chat/completions';
-const COACH_MODEL = process.env.COACH_MODEL || 'openai';
+const COACH_MODEL = process.env.COACH_MODEL || 'community/YoannDev90/vercel-nemotron-3.5-lightning:free';
 const COACH_FREE_MODEL = process.env.COACH_FREE_MODEL || 'laguna';
 const COACH_MODELS = [...new Set([COACH_MODEL, COACH_FREE_MODEL])];
 const COACH_TIMEOUT_MS = parseInt(process.env.COACH_TIMEOUT_MS || '12000', 10);
