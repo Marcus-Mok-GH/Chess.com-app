@@ -8,6 +8,7 @@ import { stallfish } from './personalities/stallfish';
 import { magnus } from './personalities/magnus';
 import { dolores } from './personalities/dolores';
 import { raj } from './personalities/raj';
+import { mimic } from './personalities/mimic';
 import { theo } from './personalities/theo';
 import { felix } from './personalities/felix';
 import { nadia } from './personalities/nadia';
@@ -28,6 +29,7 @@ export const BOTS = [
   magnus,
   dolores,
   raj,
+  mimic,
   theo,
   felix,
   nadia,

@@ -137,6 +137,10 @@ function ChessGame(
   const engineErrorRef = useRef(false);
   const busyRetryCountRef = useRef(0);
 
+  // Mimic announces its style shift once per game, not on every style-phase
+  // move; tracks the last mimic mode so the quote fires only on the change.
+  const lastMimicModeRef = useRef(null);
+
   // Tracks a scheduled bot-move application that has not run yet, so a second
   // bot move can never be requested or applied while one is in flight.
   const botApplyPendingRef = useRef(false);
@@ -410,12 +414,13 @@ function ChessGame(
           playStyle: bot.playStyle,
           brilliant: bot.brilliant,
           stall: bot.stall,
+          mimic: bot.mimic,
         },
         debug: settingsRef.current.debugMode,
         history: toSanHistory(moveHistoryRef.current),
       });
 
-      const { bestMove, brilliant: playedBrilliant, refusedEnding, debugInfo: newDebugInfo } = response;
+      const { bestMove, brilliant: playedBrilliant, refusedEnding, mimic: mimicInfo, debugInfo: newDebugInfo } = response;
 
       busyRetryCountRef.current = 0;
       setEngineError(null);
@@ -475,6 +480,19 @@ function ChessGame(
             } else if (playedBrilliant) {
               const brilliantQuote = getRandomQuote(bot, "brilliant");
               if (brilliantQuote) setBotMessage(brilliantQuote);
+            } else if (mimicInfo) {
+              if (mimicInfo.mode === "style") {
+                // Announce the switch to the user's style once, when it happens.
+                if (lastMimicModeRef.current !== "style") {
+                  lastMimicModeRef.current = "style";
+                  const styleQuote = getRandomQuote(bot, "styleShift");
+                  if (styleQuote) setBotMessage(styleQuote);
+                }
+              } else if (Math.random() < 0.15) {
+                lastMimicModeRef.current = "mirror";
+                const mirrorQuote = getRandomQuote(bot, "mirror");
+                if (mirrorQuote) setBotMessage(mirrorQuote);
+              }
             } else if (Math.random() < 0.15) {
               const categories = ["thinking", "blunder", "goodMove"];
               setBotMessage(getRandomQuote(bot, categories[Math.floor(Math.random() * categories.length)]));
@@ -783,6 +801,7 @@ function ChessGame(
     setEngineError(null);
     engineErrorRef.current = false;
     busyRetryCountRef.current = 0;
+    lastMimicModeRef.current = null;
     // Allow persistence for the new game after state settles
     setTimeout(() => {
       suppressPersistRef.current = false;
@@ -825,6 +844,7 @@ function ChessGame(
     setSelectedSquare(null);
     setPossibleMoves([]);
     clearPremove();
+    lastMimicModeRef.current = null;
   }, [game, moveHistory, persistGame, clearPremove]);
 
   const handleFlipBoard = useCallback(() => {

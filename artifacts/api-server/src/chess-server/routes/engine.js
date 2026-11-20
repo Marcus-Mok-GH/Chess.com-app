@@ -9,6 +9,7 @@ import { errorResponse, handleRouteError } from '../middleware/errors.js';
 import { computeScriptedMove } from '../../../../chess/src/engine/bots/scriptedMoves.js';
 import { selectBrilliantMove } from '../../../../chess/src/engine/bots/brilliantMove.js';
 import { selectStallMove } from '../../../../chess/src/engine/bots/stallMove.js';
+import { selectMimicMove, MIMIC_MULTIPV } from '../../../../chess/src/engine/bots/mimicMove.js';
 
 // Resolve paths at module load time so they survive esbuild bundling.
 const _require = createRequire(import.meta.url);
@@ -288,20 +289,40 @@ router.post('/move', engineConcurrency, async (req, res) => {
       });
     }
 
-    const multiPv = bot?.brilliant ? BRILLIANT_MULTIPV : bot?.stall ? STALL_MULTIPV : 0;
+    // Mimic answers from pure logic whenever it is in the mirror phase and
+    // has a move to copy: the engine is not consulted at all, which also
+    // keeps serverless deployments that lost their Stockfish assets
+    // fully playable for its copycat phase.
+    if (bot?.mimic) {
+      const quick = selectMimicMove(fen, [], { history });
+      if (quick?.move) {
+        if (debug) console.log('[Engine] FEN:', fen, '| Mimic fast path:', quick.move, `(${quick.mimic.mode})`);
+        return res.json({
+          type: 'result',
+          bestMove: quick.move,
+          mimic: quick.mimic,
+          debugInfo: debug ? { fen, botName: bot?.name, fastPath: true, mimic: quick } : null,
+        });
+      }
+    }
+
+    const multiPv = bot?.brilliant ? BRILLIANT_MULTIPV : bot?.stall ? STALL_MULTIPV : bot?.mimic ? MIMIC_MULTIPV : 0;
     if (debug) console.log('[Engine] FEN:', fen, '| Search:', searchParams);
 
     const result = await runEngine(fen, searchParams, bot, TIMEOUT_MS, { multiPv });
 
     // Mr. Brilliant plays the flashiest sacrifice the evaluation can afford
     // (multiPv > 0); Stallfish plays the move that keeps the game alive,
-    // judging every legal move, not just the engine's lines; every other
-    // bot keeps the engine's top move.
+    // judging every legal move, not just the engine's lines; Mimic plays
+    // the user's own style back at them from the engine's top candidates;
+    // every other bot keeps the engine's top move.
     const pick = bot?.brilliant
       ? selectBrilliantMove(fen, result.candidates)
       : bot?.stall
         ? selectStallMove(fen, stallCandidates(fen, result.candidates), { history })
-        : null;
+        : bot?.mimic
+          ? selectMimicMove(fen, result.candidates, { history })
+          : null;
     const bestMove = pick?.move || result.bestMove;
 
     return res.json({
@@ -311,6 +332,7 @@ router.post('/move', engineConcurrency, async (req, res) => {
       brilliant: Boolean(pick?.brilliant),
       stall: Boolean(pick?.stall),
       refusedEnding: bot?.stall ? (pick?.refusedEnding ?? null) : null,
+      mimic: bot?.mimic ? (pick?.mimic ?? { mode: null, mirrorOf: null }) : null,
       debugInfo: debug
         ? {
             fen,
@@ -319,6 +341,7 @@ router.post('/move', engineConcurrency, async (req, res) => {
             multiPv,
             brilliant: bot?.brilliant ? (pick ?? null) : null,
             stall: bot?.stall ? (pick ?? null) : null,
+            mimic: bot?.mimic ? (pick ?? null) : null,
           }
         : null,
     });
@@ -342,6 +365,27 @@ router.post('/move', engineConcurrency, async (req, res) => {
             engineFallback: true,
             debugInfo: debug
               ? { fen, searchParams, botName: bot?.name, engineFallback: true, stall: stallPick }
+              : null,
+          });
+        }
+      }
+      if (bot?.mimic) {
+        // Mirror logic is pure; the style phase judges whatever legal moves
+        // exist, so Mimic stays on personality even without the engine.
+        const mimicPick = selectMimicMove(
+          fen,
+          legalMoveCandidates(fen).map((move) => ({ move, score: null, depth: 0 })),
+          { history },
+        );
+        if (mimicPick?.move) {
+          console.warn('[Engine] Stockfish unavailable; returning a mimic fallback move:', error.message);
+          return res.json({
+            type: 'result',
+            bestMove: mimicPick.move,
+            mimic: mimicPick.mimic,
+            engineFallback: true,
+            debugInfo: debug
+              ? { fen, searchParams, botName: bot?.name, engineFallback: true, mimic: mimicPick }
               : null,
           });
         }

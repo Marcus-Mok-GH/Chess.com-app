@@ -1,3 +1,10 @@
+[2026-11-20] - Mimic, the copycat bot
+
+- New free bot (rating 1400) that copies your last move exactly — mirrored onto its own half of the board, castling and en passant included — until it has been down at least eight points of material. When the exact mirror is illegal it plays the closest legal move with the same piece type.
+- Once it falls eight points behind, the copying stops for good: Mimic profiles your play (favorite piece, capture/check habits, pawn pushes, preferred zone) from the whole game history and plays your own style back at you, choosing from the engine's top candidates so it still fights for the win.
+- The mirror phase answers from pure logic without consulting the engine, and both phases keep working on deployments where Stockfish is unavailable.
+- Mimic announces the switch to your style once per game, with new mirror and style-shift banter translated into all six locales.
+
 [2026-11-10] - Simplified shared frontend helpers
 
 - Consolidated the bot-game and online-game colour-choice logic into one helper, preserving the same direct selections and random fallback.
