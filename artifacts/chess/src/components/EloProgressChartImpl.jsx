@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Dot } from 'recharts';
 import './EloProgressChart.css';
 import { useT } from '../i18n/I18nContext';
-import { getActiveLocale } from '../i18n/translate';
+import { formatChartDate } from './chartUtils';
 
 const RESULT_COLORS = Object.freeze({
   win: '#81b64c',
@@ -13,13 +13,9 @@ const RESULT_COLORS = Object.freeze({
   default: '#81b64c',
 });
 
-const formatDate = (dateString) =>
-  new Date(dateString).toLocaleDateString(getActiveLocale(), { month: 'short', day: 'numeric' });
-
 const getResultColor = (result) => RESULT_COLORS[result] ?? RESULT_COLORS.default;
 
 const CustomDot = (props) => {
-  const t = useT();
   const { payload } = props;
   const isEndpoint = payload.result === 'start' || payload.result === 'current';
   const isCurrent = payload.result === 'current';
@@ -59,7 +55,7 @@ const CustomTooltip = ({ active, payload }) => {
           <span className="game-code">vs {data.opponentElo}</span>
         </div>
       )}
-      <div className="tooltip-date">{formatDate(data.date)}</div>
+      <div className="tooltip-date">{formatChartDate(data.date)}</div>
     </div>
   );
 };

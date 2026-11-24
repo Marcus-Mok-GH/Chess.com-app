@@ -2,10 +2,7 @@ import { useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import './WinRateChart.css';
 import { useT } from '../i18n/I18nContext';
-import { getActiveLocale } from '../i18n/translate';
-
-const formatDate = (dateString) =>
-  new Date(dateString).toLocaleDateString(getActiveLocale(), { month: 'short', day: 'numeric' });
+import { formatChartDate } from './chartUtils';
 
 const getLineColor = (winRate) => {
   if (winRate >= 60) return '#81b64c';
@@ -39,7 +36,7 @@ const CustomTooltip = ({ active, payload }) => {
           <span className="game-code">vs {data.opponentElo}</span>
         </div>
       )}
-      <div className="tooltip-date">{formatDate(data.date)}</div>
+      <div className="tooltip-date">{formatChartDate(data.date)}</div>
     </div>
   );
 };

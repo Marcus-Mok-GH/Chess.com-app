@@ -1,40 +1,26 @@
 import { Chessboard } from 'react-chessboard';
 import { memo, useMemo } from 'react';
+import { PIECE_IMAGE_PATHS } from './pieceImages';
 
 // Stable, module-level defaults. Inline `{}` / `[]` defaults allocate a new
 // reference on every render, which defeats the memoised options below.
 const EMPTY_SQUARE_STYLES = Object.freeze({});
 
-const PIECE_IMAGES = {
-  wK: '/custom-pieces/wK.svg',
-  wQ: '/custom-pieces/wQ.svg',
-  wR: '/custom-pieces/wR.svg',
-  wB: '/custom-pieces/wB.svg',
-  wN: '/custom-pieces/wN.svg',
-  wP: '/custom-pieces/wP.svg',
-  bK: '/custom-pieces/bK.svg',
-  bQ: '/custom-pieces/bQ.svg',
-  bR: '/custom-pieces/bR.svg',
-  bB: '/custom-pieces/bB.svg',
-  bN: '/custom-pieces/bN.svg',
-  bP: '/custom-pieces/bP.svg',
-};
-
-// Performance Optimization (Bolt ⚡):
-// Define static custom piece components outside render to avoid allocating
-// new React component functions and object references on every component instantiation or re-render.
-// Passing a stable object reference as `pieces` prevents unnecessary options re-computations and board re-renders.
-const CUSTOM_PIECES = Object.entries(PIECE_IMAGES).reduce((acc, [piece, src]) => {
-  acc[piece] = ({ svgStyle }) => (
-    <img
-      src={src}
-      alt={piece}
-      style={{ ...svgStyle, display: 'block', pointerEvents: 'none' }}
-      draggable={false}
-    />
-  );
-  return acc;
-}, {});
+// Define static custom piece components outside render so the board receives
+// one stable `pieces` object and never rebuilds its 64 squares on a repaint.
+const CUSTOM_PIECES = Object.fromEntries(
+  Object.entries(PIECE_IMAGE_PATHS).map(([piece, src]) => [
+    piece,
+    ({ svgStyle }) => (
+      <img
+        src={src}
+        alt={piece}
+        style={{ ...svgStyle, display: 'block', pointerEvents: 'none' }}
+        draggable={false}
+      />
+    ),
+  ]),
+);
 
 const themeColors = {
   green: { light: '#ebecd0', dark: '#779556' },

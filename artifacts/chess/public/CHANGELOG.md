@@ -1,3 +1,9 @@
+[2026-11-24] - Simplified shared frontend helpers
+
+- De-duplicated the chessboard's piece image map: `ChessBoard` now reuses the shared `PIECE_IMAGE_PATHS` from `pieceImages.js` instead of keeping a second copy of the same 12 paths, and builds its custom piece components with `Object.fromEntries`. Board rendering, piece images, and interaction handling are unchanged.
+- Extracted the duplicated knight logo markup on the Login and Verify email pages into one shared `BrandLogo` component. Both pages render exactly the same 64px green knight SVG as before.
+- Moved the identical chart date formatter used by the ELO progress and win-rate charts into a shared `chartUtils.js` helper, and removed an unused `useT()` hook call from the ELO chart's custom dot. Chart output is unchanged.
+
 [2026-11-20] - Mimic, the copycat bot
 
 - New free bot (rating 1400) that copies your last move exactly — mirrored onto its own half of the board, castling and en passant included — until it has been down at least eight points of material. When the exact mirror is illegal it plays the closest legal move with the same piece type.
