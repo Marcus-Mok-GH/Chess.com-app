@@ -21,19 +21,10 @@ import {
 import './GameReview.css';
 import { useT } from '../i18n/I18nContext';
 import { tNow } from '../i18n/translate';
-import { getActiveLocale } from '../i18n/translate';
+import { formatGameDate as formatDate } from '../utils/dateFormat';
 
 // The openings API caps book-move batches at 64 pairs per request.
 const BOOK_BATCH_SIZE = 64;
-
-function formatDate(dateString) {
-  if (!dateString) return '';
-  return new Date(dateString).toLocaleDateString(getActiveLocale(), {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-}
 
 function resultText(result, orientation, t, isParticipant = true) {
   if (result === 'white') return isParticipant ? t(orientation === 'white' ? 'You won' : 'You lost') : t('White wins');

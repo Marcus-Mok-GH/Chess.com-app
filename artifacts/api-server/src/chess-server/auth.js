@@ -4,7 +4,7 @@ import { query } from './db/query.js';
 const SESSION_DAYS = 7;
 export const SESSION_COOKIE_NAME = 'chess_session';
 
-function getCookieValue(cookieHeader, name) {
+export function getCookieValue(cookieHeader, name) {
   if (typeof cookieHeader !== 'string') return null;
   for (const part of cookieHeader.split(';')) {
     const [key, ...valueParts] = part.trim().split('=');

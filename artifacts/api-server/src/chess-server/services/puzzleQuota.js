@@ -16,6 +16,7 @@
  */
 
 import crypto from 'node:crypto';
+import { getCookieValue } from '../auth.js';
 import { query } from '../db.js';
 import { authenticatedUserId } from '../coachAuth.js';
 import { FREE_PUZZLE_LIMIT, getEntitlements } from './entitlements.js';
@@ -29,16 +30,6 @@ const VISITOR_COOKIE_MAX_AGE_MS = 365 * 24 * 60 * 60 * 1000;
 const USER_PREFIX = 'user:';
 const ANON_PREFIX = 'anon:';
 
-function readCookie(cookieHeader, name) {
-  if (typeof cookieHeader !== 'string') return null;
-  for (const part of cookieHeader.split(';')) {
-    const [key, ...valueParts] = part.trim().split('=');
-    if (key !== name) continue;
-    try { return decodeURIComponent(valueParts.join('=')); } catch { return valueParts.join('='); }
-  }
-  return null;
-}
-
 /**
  * Stable anonymous identity for a guest, created on first use.
  *
@@ -51,7 +42,7 @@ function readCookie(cookieHeader, name) {
  * @returns {string} 32 hex characters.
  */
 export function visitorId(req, res) {
-  const existing = readCookie(req?.headers?.cookie, VISITOR_COOKIE);
+  const existing = getCookieValue(req?.headers?.cookie, VISITOR_COOKIE);
   if (existing && VISITOR_ID_PATTERN.test(existing)) return existing;
 
   const id = crypto.randomBytes(16).toString('hex');

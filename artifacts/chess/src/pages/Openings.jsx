@@ -4,7 +4,7 @@ import ChessBoard from '../components/ChessBoard';
 import api from '../services/api';
 import './Openings.css';
 import { useT } from '../i18n/I18nContext';
-import { getActiveLocale } from '../i18n/translate';
+import { formatNumber, getActiveLocale } from '../i18n/translate';
 
 function sideToMove(fen) {
   return fen.split(' ')[1] === 'b' ? 'black' : 'white';
@@ -305,6 +305,5 @@ function MoveBar({ stats }) {
 }
 
 function formatGames(n) {
-  if (!n) return '0';
-  return new Intl.NumberFormat(getActiveLocale()).format(n);
+  return formatNumber(getActiveLocale(), n || 0);
 }

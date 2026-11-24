@@ -1,3 +1,9 @@
+[2026-11-24] - Further shared-helper cleanup
+
+- Reused the session cookie parser from auth for the puzzle visitor cookie instead of a second copy of the same loop.
+- Extracted the identical puzzle difficulty→rating map used by the AI and Stockfish puzzle generators into one `ratingForDifficulty` helper.
+- Centralised safe localStorage get/set/remove and the common locale date/time formatters used by game history, game review, notifications, and charts. Display output is unchanged for valid dates.
+
 [2026-11-24] - Simplified shared backend and page helpers
 
 - Extracted the identical admin gate used by the `/api/admin` and `/api/admin/bots` routers into one shared `requireIntegrityReviewer` middleware. Session validation, the integrity-reviewer check, error messages, and the `req.adminId` exposure are byte-for-byte the same behaviour.

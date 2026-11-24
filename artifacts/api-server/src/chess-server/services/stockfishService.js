@@ -9,6 +9,7 @@
 
 import { Chess } from "chess.js";
 import { runEngine, isStockfishConfigured } from "./engineWorker.js";
+import { ratingForDifficulty } from "./puzzleDifficulty.js";
 
 const DEFAULT_TIMEOUT_MS = 6000;
 
@@ -219,10 +220,6 @@ function materialiseMateInOnePuzzle(fen, analysis, difficulty) {
   } catch {
     return null;
   }
-}
-
-function ratingForDifficulty(difficulty) {
-  return { easy: 900, medium: 1300, hard: 1700, expert: 2100 }[difficulty] ?? 1300;
 }
 
 function themeForType(type) {

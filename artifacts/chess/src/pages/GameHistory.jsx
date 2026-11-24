@@ -8,17 +8,7 @@ import WinRateChart from '../components/WinRateChart';
 import './GameHistory.css';
 import { useI18n } from '../i18n/I18nContext';
 import { tNow } from '../i18n/translate';
-import { getActiveLocale } from '../i18n/translate';
-
-function formatDate(dateString) {
-  return new Date(dateString).toLocaleDateString(getActiveLocale(), {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-}
+import { formatGameDateTime as formatDate } from '../utils/dateFormat';
 
 function getResultText(result, t) {
   switch (result) {

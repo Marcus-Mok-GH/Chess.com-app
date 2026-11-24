@@ -5,6 +5,8 @@
  * is an immediate, offline-capable fallback.
  */
 
+import { safeGet, safeRemove, safeSet as writeStorage } from './safeStorage';
+
 const LOCAL_GAME_PREFIX = 'chess_local_game:';
 const LOCAL_ACTIVE_KEY = 'chess_active_local_game_id';
 const ONLINE_SESSION_KEY = 'chess_active_online_session';
@@ -12,30 +14,8 @@ const ONLINE_GAME_PREFIX = 'chess_online_game:';
 
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-function safeGet(key) {
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
 function safeSet(key, value) {
-  try {
-    localStorage.setItem(key, value);
-    return true;
-  } catch (err) {
-    console.warn('[gamePersistence] Failed to write localStorage:', err);
-    return false;
-  }
-}
-
-function safeRemove(key) {
-  try {
-    localStorage.removeItem(key);
-  } catch {
-    // ignore
-  }
+  return writeStorage(key, value, { warn: true, label: 'gamePersistence' });
 }
 
 function parseJson(raw) {

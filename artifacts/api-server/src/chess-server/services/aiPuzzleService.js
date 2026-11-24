@@ -18,6 +18,7 @@ import {
   validateGeneratedPuzzle,
 } from "../puzzles/puzzleGenerator.js";
 import { languageInstruction } from "./outputLanguage.js";
+import { ratingForDifficulty } from "./puzzleDifficulty.js";
 
 const PUZZLE_AI_API_URL =
   process.env.PUZZLE_AI_API_URL ||
@@ -243,10 +244,6 @@ function materialiseAIPuzzle(ai, description, difficulty, type, seed) {
   } catch {
     return null;
   }
-}
-
-function ratingForDifficulty(difficulty) {
-  return { easy: 900, medium: 1300, hard: 1700, expert: 2100 }[difficulty] ?? 1300;
 }
 
 function themeForType(type) {

@@ -28,6 +28,7 @@ import {
   UsersRound,
   ShieldCheck,
 } from 'lucide-react'
+import { safeGet, safeSet } from './utils/safeStorage'
 import './App.css'
 
 const Home = lazy(() => import('./pages/Home'))
@@ -271,16 +272,6 @@ function GlobalVerificationGuard() {
   return null;
 }
 
-function safeLocalStorageGet(key) {
-  try { return localStorage.getItem(key); }
-  catch { return null; }
-}
-
-function safeLocalStorageSet(key, value) {
-  try { localStorage.setItem(key, value); }
-  catch { /* noop */ }
-}
-
 export function PollinationsCoachGate() {
   const t = useT();
   const { user, token, isLoggedIn, isLoading } = useUser();
@@ -312,7 +303,7 @@ export function PollinationsCoachGate() {
     let cancelled = false;
     async function checkPrompt() {
       try {
-        const localSeen = safeLocalStorageGet(localKey);
+        const localSeen = safeGet(localKey);
         if (localSeen) { if (!cancelled) setChecked(true); return; }
         if (isLoggedIn && user?.username && token) {
           const settings = await api.getUserSettings(user.username, token);
@@ -333,7 +324,7 @@ export function PollinationsCoachGate() {
   }, [checked, isLoading, isLoggedIn, token, user?.username, localKey]);
 
   async function markPromptSeen() {
-    safeLocalStorageSet(localKey, 'true');
+    safeSet(localKey, 'true');
     try {
       if (isLoggedIn && user?.username && token) {
         const current = await api.getUserSettings(user.username, token);

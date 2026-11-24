@@ -8,21 +8,10 @@ import {
   useNotifications,
 } from '../hooks/useNotifications';
 import { useT } from '../i18n/I18nContext';
-import { getActiveLocale } from '../i18n/translate';
+import { formatNotificationWhen as formatWhen } from '../utils/dateFormat';
 
 const PANEL_WIDTH = 340;
 const PANEL_MAX_HEIGHT = 420;
-
-function formatWhen(value) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString(getActiveLocale(), {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 /**
  * Inbox bell for the app shell./**
