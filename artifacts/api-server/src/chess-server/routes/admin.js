@@ -23,6 +23,7 @@ import { getSessionToken, validateSession } from '../auth.js';
 import { isIntegrityReviewer } from '../services/antiCheatService.js';
 import { getPollinationsTextModels } from '../services/pollinationsModels.js';
 import { getCoachToken } from '../coachAuth.js';
+import requireIntegrityReviewer from './adminGuard.js';
 
 const router = express.Router();
 
@@ -58,17 +59,7 @@ function shapeAdminUser(row) {
 }
 
 // Every admin route requires a valid session owned by an admin.
-router.use(async (req, res, next) => {
-  try {
-    const userId = await validateSession(getSessionToken(req));
-    if (!userId) return errorResponse(res, 401, 'Authentication required');
-    if (!isIntegrityReviewer(userId)) return errorResponse(res, 403, 'Admin access required');
-    req.adminId = String(userId);
-    return next();
-  } catch (error) {
-    return handleRouteError(res, error, 'Admin authorization failed');
-  }
-});
+router.use(requireIntegrityReviewer());
 
 function validateUserId(id) {
   return USER_ID_RE.test(String(id || '').trim());

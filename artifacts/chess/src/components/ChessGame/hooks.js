@@ -38,36 +38,23 @@ export function usePieceAnimations() {
   const triggerAnimation = useCallback((moveData) => {
     const animations = [];
 
-    if (moveData.flags && moveData.flags.includes('k')) {
-      const kingFrom = moveData.from;
-      const kingTo = moveData.to;
-      const rookFrom = moveData.color === 'w' ? 'h1' : 'h8';
-      const rookTo = moveData.color === 'w' ? 'f1' : 'f8';
+    // Castling is the only move that animates two pieces; the king-side ('k')
+    // and queen-side ('q') rook squares are the only difference between them.
+    const isCastle = moveData.flags && (moveData.flags.includes('k') || moveData.flags.includes('q'));
+    if (isCastle) {
+      const queenSide = moveData.flags.includes('q');
+      const rookFrom = moveData.color === 'w'
+        ? (queenSide ? 'a1' : 'h1')
+        : (queenSide ? 'a8' : 'h8');
+      const rookTo = moveData.color === 'w'
+        ? (queenSide ? 'd1' : 'f1')
+        : (queenSide ? 'd8' : 'f8');
 
       animations.push({
         id: animationIdRef.current++,
         piece: { type: 'k', color: moveData.color },
-        fromSquare: kingFrom,
-        toSquare: kingTo,
-      });
-
-      animations.push({
-        id: animationIdRef.current++,
-        piece: { type: 'r', color: moveData.color },
-        fromSquare: rookFrom,
-        toSquare: rookTo,
-      });
-    } else if (moveData.flags && moveData.flags.includes('q')) {
-      const kingFrom = moveData.from;
-      const kingTo = moveData.to;
-      const rookFrom = moveData.color === 'w' ? 'a1' : 'a8';
-      const rookTo = moveData.color === 'w' ? 'd1' : 'd8';
-
-      animations.push({
-        id: animationIdRef.current++,
-        piece: { type: 'k', color: moveData.color },
-        fromSquare: kingFrom,
-        toSquare: kingTo,
+        fromSquare: moveData.from,
+        toSquare: moveData.to,
       });
 
       animations.push({

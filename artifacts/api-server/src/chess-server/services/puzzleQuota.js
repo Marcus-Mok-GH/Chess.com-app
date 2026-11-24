@@ -19,6 +19,7 @@ import crypto from 'node:crypto';
 import { query } from '../db.js';
 import { authenticatedUserId } from '../coachAuth.js';
 import { FREE_PUZZLE_LIMIT, getEntitlements } from './entitlements.js';
+import { buildUsageSummary } from './usageSummary.js';
 
 export const FREE_DAILY_LIMIT = FREE_PUZZLE_LIMIT;
 export const VISITOR_COOKIE = 'chess_visitor';
@@ -133,17 +134,5 @@ export async function consumePuzzle(ownerKey) {
  */
 export async function getUsage(ownerKey) {
   const [limit, used] = await Promise.all([getDailyLimit(ownerKey), getUsedToday(ownerKey)]);
-  const unlimited = !Number.isFinite(limit);
-
-  const tomorrow = new Date();
-  tomorrow.setUTCHours(24, 0, 0, 0);
-
-  return {
-    used,
-    limit: unlimited ? null : limit,
-    remaining: unlimited ? null : Math.max(0, limit - used),
-    unlimited,
-    allowed: unlimited || used < limit,
-    resetsAt: tomorrow.toISOString(),
-  };
+  return buildUsageSummary(limit, used);
 }

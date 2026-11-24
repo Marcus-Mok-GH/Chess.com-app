@@ -1,3 +1,13 @@
+[2026-11-24] - Simplified shared backend and page helpers
+
+- Extracted the identical admin gate used by the `/api/admin` and `/api/admin/bots` routers into one shared `requireIntegrityReviewer` middleware. Session validation, the integrity-reviewer check, error messages, and the `req.adminId` exposure are byte-for-byte the same behaviour.
+- Consolidated the two identical local-game authentication blocks in the game routes (Bearer header with httpOnly cookie fallback, identity check, and account lookup) into one `authenticateLocalPlayer` helper used by both `/api/games/save` and `/api/games/local/create`. Error messages and responses are unchanged.
+- Merged the copy-pasted POST and GET `/api/puzzles/generate` handlers into one shared function; the POST still reads its body and the GET its query string.
+- Replaced the duplicated friend username→id lookup in the social routes' add/remove friend endpoints with one `resolveUserIdByUsername` helper. Status codes and error messages are unchanged.
+- Extracted the identical daily-quota usage summary (used, limit, remaining, unlimited, allowed, resetsAt) from the puzzle and review quota services into a shared `buildUsageSummary` helper.
+- Merged the king-side and queen-side castling branches in the chessboard's piece-animation hook into one branch that only varies the rook squares; both sides still animate the king and rook exactly as before.
+- Collapsed the bot create/update payload duplication in the admin bot builder into a single shared payload object; the create request still adds the username.
+
 [2026-11-24] - Simplified shared frontend helpers
 
 - De-duplicated the chessboard's piece image map: `ChessBoard` now reuses the shared `PIECE_IMAGE_PATHS` from `pieceImages.js` instead of keeping a second copy of the same 12 paths, and builds its custom piece components with `Object.fromEntries`. Board rendering, piece images, and interaction handling are unchanged.

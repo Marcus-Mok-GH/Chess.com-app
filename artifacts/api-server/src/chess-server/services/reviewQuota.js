@@ -17,6 +17,7 @@
 
 import { query } from '../db.js';
 import { FREE_REVIEW_LIMIT, getEntitlements, subscriptionIsActive } from './entitlements.js';
+import { buildUsageSummary } from './usageSummary.js';
 
 export const FREE_DAILY_LIMIT = FREE_REVIEW_LIMIT;
 
@@ -77,17 +78,5 @@ export async function consumeReview(userId) {
  */
 export async function getUsage(userId) {
   const [limit, used] = await Promise.all([getDailyLimit(userId), getUsedToday(userId)]);
-  const unlimited = !Number.isFinite(limit);
-
-  const tomorrow = new Date();
-  tomorrow.setUTCHours(24, 0, 0, 0);
-
-  return {
-    used,
-    limit: unlimited ? null : limit,
-    remaining: unlimited ? null : Math.max(0, limit - used),
-    unlimited,
-    allowed: unlimited || used < limit,
-    resetsAt: tomorrow.toISOString(),
-  };
+  return buildUsageSummary(limit, used);
 }

@@ -98,6 +98,44 @@ function seatedPlayerId(game, requestUid, playerId) {
   return null;
 }
 
+// Shared authentication for the local-game endpoints. Prefers the Bearer
+// header, but falls back to the httpOnly session cookie: browser clients
+// authenticate with the cookie on every credentialed request, and some clients
+// mirror a stale/truncated session id as a Bearer token, so a failed Bearer
+// must not lock the player out when the cookie is valid. Writes the error
+// response itself and returns null when the caller should stop; otherwise
+// returns { authUserId, username } for the authenticated account.
+async function authenticateLocalPlayer(req, res, requestedUserId) {
+  const authHeader = req.headers.authorization;
+  const bearerToken = authHeader?.startsWith('Bearer ')
+    ? authHeader.slice(7).trim()
+    : null;
+  const cookieToken = getSessionCookieToken(req);
+  if (!bearerToken && !cookieToken) {
+    errorResponse(res, 401, 'Authentication required');
+    return null;
+  }
+  let authUserId = bearerToken ? await validateSession(bearerToken) : null;
+  if (authUserId == null && cookieToken && cookieToken !== bearerToken) {
+    authUserId = await validateSession(cookieToken);
+  }
+  if (!authUserId) {
+    errorResponse(res, 401, 'Invalid or expired session');
+    return null;
+  }
+  if (requestedUserId != null && String(requestedUserId) !== String(authUserId)) {
+    errorResponse(res, 403, 'Session identity does not match player');
+    return null;
+  }
+
+  const accountResult = await query('SELECT username FROM users WHERE id = $1', [authUserId]);
+  if (accountResult.rows.length === 0) {
+    errorResponse(res, 401, 'Authenticated user not found');
+    return null;
+  }
+  return { authUserId, username: accountResult.rows[0].username };
+}
+
 // Integrity review endpoints are restricted to CHESS_REVIEW_ADMIN_IDS.
 router.get('/integrity/reviews', async (req, res) => {
   try {
@@ -192,30 +230,11 @@ router.post('/save', async (req, res) => {
     if (gameMode !== 'local') return errorResponse(res, 400, 'Only local games can be saved through this endpoint');
     if (!['white', 'black'].includes(playerColor)) return errorResponse(res, 400, 'Invalid player color');
 
-    const authHeader = req.headers.authorization;
-    // Prefer the Bearer header, but fall back to the httpOnly session cookie:
-    // browser clients authenticate with the cookie on every credentialed request.
-    // Some clients mirror a stale/truncated session id as a Bearer token; a
-    // failed Bearer must not lock the player out when the cookie is valid.
-    const bearerToken = authHeader?.startsWith('Bearer ')
-      ? authHeader.slice(7).trim()
-      : null;
-    const cookieToken = getSessionCookieToken(req);
-    if (!bearerToken && !cookieToken) return errorResponse(res, 401, 'Authentication required');
-    let authUserId = bearerToken ? await validateSession(bearerToken) : null;
-    if (authUserId == null && cookieToken && cookieToken !== bearerToken) {
-      authUserId = await validateSession(cookieToken);
-    }
-    if (!authUserId) return errorResponse(res, 401, 'Invalid or expired session');
-    if (requestedUserId != null && String(requestedUserId) !== String(authUserId)) {
-      return errorResponse(res, 403, 'Session identity does not match player');
-    }
-
-    const accountResult = await query('SELECT username FROM users WHERE id = $1', [authUserId]);
-    if (accountResult.rows.length === 0) return errorResponse(res, 401, 'Authenticated user not found');
+    const auth = await authenticateLocalPlayer(req, res, requestedUserId);
+    if (!auth) return;
+    const { authUserId, username } = auth;
 
     const gameCode = (requestedGameCode || generateGameCode()).toString().toUpperCase();
-    const username = accountResult.rows[0].username;
     const whiteName = playerColor === 'white' ? username : opponentName;
     const blackName = playerColor === 'black' ? username : opponentName;
     const whiteId = playerColor === 'white' ? authUserId : null;
@@ -272,30 +291,11 @@ router.post('/local/create', async (req, res) => {
 
     if (!['white', 'black'].includes(playerColor)) return errorResponse(res, 400, 'Invalid player color');
 
-    const authHeader = req.headers.authorization;
-    // Prefer the Bearer header, but fall back to the httpOnly session cookie:
-    // browser clients authenticate with the cookie on every credentialed request.
-    // Some clients mirror a stale/truncated session id as a Bearer token; a
-    // failed Bearer must not lock the player out when the cookie is valid.
-    const bearerToken = authHeader?.startsWith('Bearer ')
-      ? authHeader.slice(7).trim()
-      : null;
-    const cookieToken = getSessionCookieToken(req);
-    if (!bearerToken && !cookieToken) return errorResponse(res, 401, 'Authentication required');
-    let authUserId = bearerToken ? await validateSession(bearerToken) : null;
-    if (authUserId == null && cookieToken && cookieToken !== bearerToken) {
-      authUserId = await validateSession(cookieToken);
-    }
-    if (!authUserId) return errorResponse(res, 401, 'Invalid or expired session');
-    if (requestedUserId != null && String(requestedUserId) !== String(authUserId)) {
-      return errorResponse(res, 403, 'Session identity does not match player');
-    }
-
-    const accountResult = await query('SELECT username FROM users WHERE id = $1', [authUserId]);
-    if (accountResult.rows.length === 0) return errorResponse(res, 401, 'Authenticated user not found');
+    const auth = await authenticateLocalPlayer(req, res, requestedUserId);
+    if (!auth) return;
+    const { authUserId, username } = auth;
 
     const gameCode = (requestedGameCode || generateGameCode()).toString().toUpperCase();
-    const username = accountResult.rows[0].username;
     const whiteName = playerColor === 'white' ? username : opponentName;
     const blackName = playerColor === 'black' ? username : opponentName;
     const whiteId = playerColor === 'white' ? authUserId : null;

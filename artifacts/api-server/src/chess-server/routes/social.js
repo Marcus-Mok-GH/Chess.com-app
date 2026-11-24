@@ -15,6 +15,24 @@ async function resolveUserId(req, res) {
     if (!userId) errorResponse(res, 401, "Authentication required");
     return userId;
 }
+// Resolves a :username route param to the user's id, writing the error
+// response itself and returning null when the username is missing or unknown.
+async function resolveUserIdByUsername(req, res) {
+    const username = req.params.username;
+    if (!username || typeof username !== "string") {
+        errorResponse(res, 400, "Username is required");
+        return null;
+    }
+    const target = await query(
+        "SELECT id FROM users WHERE LOWER(username) = LOWER($1)",
+        [username.trim()],
+    );
+    if (target.rowCount === 0) {
+        errorResponse(res, 404, "User not found");
+        return null;
+    }
+    return { username: username.trim(), id: target.rows[0].id };
+}
 
 function normalizeRoom(room) {
     if (typeof room !== "string") return "";
@@ -107,18 +125,10 @@ router.post("/friends/:username", async (req, res) => {
         const userId = await resolveUserId(req, res);
         if (!userId) return;
 
-        const username = req.params.username;
-        if (!username || typeof username !== "string")
-            return errorResponse(res, 400, "Username is required");
+        const target = await resolveUserIdByUsername(req, res);
+        if (!target) return;
 
-        const target = await query(
-            "SELECT id FROM users WHERE LOWER(username) = LOWER($1)",
-            [username.trim()],
-        );
-        if (target.rowCount === 0)
-            return errorResponse(res, 404, "User not found");
-
-        const friendId = target.rows[0].id;
+        const { username, id: friendId } = target;
         if (friendId === userId)
             return errorResponse(
                 res,
@@ -163,17 +173,10 @@ router.delete("/friends/:username", async (req, res) => {
         const userId = await resolveUserId(req, res);
         if (!userId) return;
 
-        const username = req.params.username;
-        if (!username || typeof username !== "string")
-            return errorResponse(res, 400, "Username is required");
+        const target = await resolveUserIdByUsername(req, res);
+        if (!target) return;
 
-        const target = await query(
-            "SELECT id FROM users WHERE LOWER(username) = LOWER($1)",
-            [username.trim()],
-        );
-        if (target.rowCount === 0)
-            return errorResponse(res, 404, "User not found");
-        const friendId = target.rows[0].id;
+        const friendId = target.id;
 
         await query(
             `DELETE FROM friends WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)`,

@@ -23,8 +23,7 @@ import bcrypt from 'bcryptjs';
 
 import { query } from '../db.js';
 import { errorResponse, handleRouteError } from '../middleware/errors.js';
-import { getSessionToken, validateSession } from '../auth.js';
-import { isIntegrityReviewer } from '../services/antiCheatService.js';
+import requireIntegrityReviewer from './adminGuard.js';
 
 const router = express.Router();
 
@@ -38,17 +37,7 @@ const BOT_COLUMNS = `b.id, b.name, b.avatar, b.personality, b.system_prompt, b.m
        u.username as bot_username, u.email as bot_email, u.is_banned as bot_is_banned`;
 
 // Every bot route requires a valid admin session.
-router.use(async (req, res, next) => {
-  try {
-    const userId = await validateSession(getSessionToken(req));
-    if (!userId) return errorResponse(res, 401, 'Authentication required');
-    if (!isIntegrityReviewer(userId)) return errorResponse(res, 403, 'Admin access required');
-    req.adminId = String(userId);
-    return next();
-  } catch (error) {
-    return handleRouteError(res, error, 'Admin authorization failed');
-  }
-});
+router.use(requireIntegrityReviewer());
 
 function validateBotId(id) {
   return BOT_ID_RE.test(String(id || '').trim());

@@ -159,7 +159,13 @@ router.get('/random', async (req, res) => {
  * Generate a new puzzle with specified options
  * Body: { method, difficulty, type, description, provider, userId }
  */
-router.post('/generate', async (req, res) => {
+router.post('/generate', (req, res) => generatePuzzleResponse(req.body, res));
+
+/**
+ * Shared by the POST and GET /generate routes; `params` is the request body
+ * or query string respectively.
+ */
+async function generatePuzzleResponse(params, res) {
   try {
     const {
       method = 'auto',
@@ -168,8 +174,8 @@ router.post('/generate', async (req, res) => {
       description = '',
       provider = 'default',
       userId = null
-    } = req.body;
-    
+    } = params;
+
     const puzzle = await puzzleService.generatePuzzle({
       method,
       difficulty,
@@ -178,19 +184,18 @@ router.post('/generate', async (req, res) => {
       provider,
       userId
     });
-    
+
     if (!puzzle) {
       return res.status(500).json({
         success: false,
         error: { message: 'Failed to generate puzzle' }
       });
     }
-    
+
     res.json({
       success: true,
       puzzle
     });
-    
   } catch (error) {
     console.error('Generate puzzle error:', error);
     res.status(500).json({
@@ -198,53 +203,14 @@ router.post('/generate', async (req, res) => {
       error: { message: error.message || 'Failed to generate puzzle' }
     });
   }
-});
+}
 
 /**
  * GET /api/puzzles/generate
  * Generate a new puzzle (GET version for simple clients)
  * Query params: method, difficulty, type, description, provider, userId
  */
-router.get('/generate', async (req, res) => {
-  try {
-    const {
-      method = 'auto',
-      difficulty = 'medium',
-      type = 'tactics',
-      description = '',
-      provider = 'default',
-      userId = null
-    } = req.query;
-    
-    const puzzle = await puzzleService.generatePuzzle({
-      method,
-      difficulty,
-      type,
-      description,
-      provider,
-      userId
-    });
-    
-    if (!puzzle) {
-      return res.status(500).json({
-        success: false,
-        error: { message: 'Failed to generate puzzle' }
-      });
-    }
-    
-    res.json({
-      success: true,
-      puzzle
-    });
-    
-  } catch (error) {
-    console.error('Generate puzzle error:', error);
-    res.status(500).json({
-      success: false,
-      error: { message: error.message || 'Failed to generate puzzle' }
-    });
-  }
-});
+router.get('/generate', (req, res) => generatePuzzleResponse(req.query, res));
 
 /**
  * POST /api/puzzles/validate

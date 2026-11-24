@@ -67,6 +67,24 @@ export default function BotBuilder() {
   const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [expandedIds, setExpandedIds] = useState(new Set());
+  // The create and update payloads share every editable field; create adds
+  // the username.
+  const botPayload = () => ({
+    display_name: form.displayName,
+    avatar: form.avatar,
+    personality: form.personality,
+    system_prompt: form.systemPrompt,
+    model: form.model,
+    elo: form.elo,
+    play_style: form.playStyle,
+    chat_frequency: form.chatFrequency,
+    chat_style: form.chatStyle,
+    join_communities: form.joinCommunities,
+    create_communities: form.createCommunities,
+    auto_join_matches: form.autoJoinMatches,
+    is_active: form.isActive,
+    is_public: form.isPublic,
+  });
 
   /* ─── Auth check ────────────────────────────────────────────────────────── */
   const isAdmin = user?.isAdmin === true;
@@ -214,41 +232,10 @@ export default function BotBuilder() {
     setSubmitting(true);
     try {
       if (modal.mode === 'create') {
-        await api.adminCreateBot({
-          username: form.username,
-          display_name: form.displayName,
-          avatar: form.avatar,
-          personality: form.personality,
-          system_prompt: form.systemPrompt,
-          model: form.model,
-          elo: form.elo,
-          play_style: form.playStyle,
-          chat_frequency: form.chatFrequency,
-          chat_style: form.chatStyle,
-          join_communities: form.joinCommunities,
-          create_communities: form.createCommunities,
-          auto_join_matches: form.autoJoinMatches,
-          is_active: form.isActive,
-          is_public: form.isPublic,
-        });
+        await api.adminCreateBot({ username: form.username, ...botPayload() });
         showToast(t('Bot created successfully'));
       } else {
-        await api.adminUpdateBot(form.id, {
-          display_name: form.displayName,
-          avatar: form.avatar,
-          personality: form.personality,
-          system_prompt: form.systemPrompt,
-          model: form.model,
-          elo: form.elo,
-          play_style: form.playStyle,
-          chat_frequency: form.chatFrequency,
-          chat_style: form.chatStyle,
-          join_communities: form.joinCommunities,
-          create_communities: form.createCommunities,
-          auto_join_matches: form.autoJoinMatches,
-          is_active: form.isActive,
-          is_public: form.isPublic,
-        });
+        await api.adminUpdateBot(form.id, botPayload());
         showToast(t('Bot updated successfully'));
       }
       closeModal();
