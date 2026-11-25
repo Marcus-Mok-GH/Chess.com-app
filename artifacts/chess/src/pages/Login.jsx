@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Cpu } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import './Login.css';
 import { useT } from '../i18n/I18nContext';
@@ -143,6 +144,23 @@ export default function Login() {
             <a href="/privacy" target="_blank" rel="noopener noreferrer">{t("Privacy Policy")}</a>.
           </div>
         </form>
+
+        {/* The account wall is not a dead end: the board works without an
+            account, so a visitor who only came to try the site keeps playing
+            instead of bouncing at the email box. */}
+        <div className="login-guest">
+          <p className="login-guest-copy">
+            {t("Just want to try it? Play a bot now, no account needed.")}
+          </p>
+          <button
+            type="button"
+            className="login-guest-btn"
+            onClick={() => navigate('/play')}
+          >
+            <Cpu size={16} />
+            {t("Play a bot now")}
+          </button>
+        </div>
       </div>
     </div>
   );

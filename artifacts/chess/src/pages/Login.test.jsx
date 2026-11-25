@@ -65,6 +65,20 @@ describe('Login Page', () => {
 
     expect(requestOtp).toHaveBeenCalledWith({ email: 'test@example.com' });
   });
+
+  it('lets a guest leave the account wall and play a bot', () => {
+    render(
+      <MemoryRouter initialEntries={['/login?mode=signup']}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /play a bot now/i }));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/play');
+  });
 });
 
 describe('VerifyEmail Page', () => {

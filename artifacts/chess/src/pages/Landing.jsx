@@ -337,20 +337,24 @@ export default function Landing() {
             </p>
 
             <div className="hero-actions">
+              {/* A guest gets a playable board from the first click; signing up
+                  stays one click away on the secondary button and in the
+                  sidebar, so nothing about the funnel is lost. */}
               <button
                 className="btn-green btn-lg"
-                onClick={() => goTo(isLoggedIn ? '/online' : '/login?mode=signup')}
+                onClick={() => goTo(isLoggedIn ? '/online' : '/play')}
                 type="button"
               >
-                {t("Get Started")}<ArrowRight size={18} />
+                {isLoggedIn ? null : <Cpu size={18} />}
+                {t(isLoggedIn ? 'Get Started' : 'Play a Bot')}<ArrowRight size={18} />
               </button>
               <button
                 className="btn-ghost btn-lg"
-                onClick={() => goTo('/play')}
+                onClick={() => goTo(isLoggedIn ? '/play' : '/login?mode=signup')}
                 type="button"
               >
-                <Cpu size={18} />
-                {t("Play a Bot")}</button>
+                {isLoggedIn ? <Cpu size={18} /> : <UserPlus size={18} />}
+                {t(isLoggedIn ? 'Play a Bot' : 'Create an account')}</button>
             </div>
           </div>
         </section>
@@ -434,7 +438,7 @@ export default function Landing() {
               onClick={() => goTo(isLoggedIn ? '/home' : '/login?mode=signup')}
               type="button"
             >
-              {t(isLoggedIn ? 'Open Dashboard' : 'Get Started')}
+              {t(isLoggedIn ? 'Open Dashboard' : 'Create an account')}
               <ArrowRight size={18} />
             </button>
           </div>
@@ -445,10 +449,10 @@ export default function Landing() {
           <h2 className="final-cta-title">{t("Set up the board.")}</h2>
           <button
             className="btn-green btn-xl"
-            onClick={() => goTo(isLoggedIn ? '/online' : '/login?mode=signup')}
+            onClick={() => goTo(isLoggedIn ? '/online' : '/play')}
             type="button"
           >
-            {t("Get Started")}<ArrowRight size={20} />
+            {t(isLoggedIn ? 'Get Started' : 'Play a Bot')}<ArrowRight size={20} />
           </button>
         </section>
 
