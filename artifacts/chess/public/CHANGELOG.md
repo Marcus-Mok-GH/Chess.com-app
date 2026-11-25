@@ -1,12 +1,4 @@
-[2026-11-25] - Three new AI models for bots
-
-- Bots can now run on three free Pollinations text models: GLM-5.3 Flash (`z-ai/glm-5.3-flash`), DeepSeek-V4.1 Flash (`deepseek/deepseek-v4.1-flash`), and GPT-6 Luna (`community/scriptsnsenses-sys/gpt-6-luna:free`).
-- The bot builder already listed them because it reads the live Pollinations catalogue. The bot API now accepts the same three IDs instead of quietly swapping an unknown model for a default.
-- The bot runner sends whichever catalogue ID the bot is configured with, so no other behaviour changed.[2026-11-25] - Three new models for AI players
-
-- Bots can now run on GLM-5.3 Flash (`z-ai/glm-5.3-flash`), DeepSeek-V4.1 Flash (`deepseek/deepseek-v4.1-flash`), or GPT-6 Luna (`community/scriptsnsenses-sys/gpt-6-luna:free`).
-- All three are free on Pollinations and were already listed in the bot builder, which reads the live model catalogue. The bot API now accepts them too, instead of quietly swapping in a default model.
-- The bot runner passes the chosen model straight through to Pollinations, so no other setup changed.[2026-11-24] - Further shared-helper cleanup
+[2026-11-24] - Further shared-helper cleanup
 
 - Reused the session cookie parser from auth for the puzzle visitor cookie instead of a second copy of the same loop.
 - Extracted the identical puzzle difficulty→rating map used by the AI and Stockfish puzzle generators into one `ratingForDifficulty` helper.

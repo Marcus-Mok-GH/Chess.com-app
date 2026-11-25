@@ -29,21 +29,7 @@ const router = express.Router();
 
 const BOT_ID_RE = /^[A-Za-z0-9-]{6,100}$/;
 const VALID_PLAY_STYLES = ['aggressive', 'balanced', 'positional', 'tactical', 'defensive', 'random'];
-// Model IDs a bot may be configured with. The trailing entries are Pollinations
-// catalogue IDs for free text models the bot runner can call directly.
-const VALID_MODELS = [
-  'gpt-4o-mini',
-  'gpt-4o',
-  'gpt-4-turbo',
-  'claude-3-haiku',
-  'claude-3-sonnet',
-  'claude-3-opus',
-  'gemini-1.5-flash',
-  'gemini-1.5-pro',
-  'z-ai/glm-5.3-flash',
-  'deepseek/deepseek-v4.1-flash',
-  'community/scriptsnsenses-sys/gpt-6-luna:free',
-];
+const VALID_MODELS = ['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo', 'claude-3-haiku', 'claude-3-sonnet', 'claude-3-opus', 'gemini-1.5-flash', 'gemini-1.5-pro'];
 
 const BOT_COLUMNS = `b.id, b.name, b.avatar, b.personality, b.system_prompt, b.model, b.elo,
        b.is_active, b.play_style, b.chat_frequency, b.community_creator,
