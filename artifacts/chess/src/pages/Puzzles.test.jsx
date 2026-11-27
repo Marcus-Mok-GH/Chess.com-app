@@ -1,9 +1,10 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, createEvent, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Puzzles, { trimToShortConcept } from './Puzzles';
 import { LESSON_CATALOG } from '../engine/lessons/lessonCatalog';
+import { consumePostLoginPath } from '../utils/postLoginPath';
 
 vi.mock('../components/ChessBoard', () => ({
   default: ({ onPieceDrop, onSquareClick, position, customSquareStyles }) => (
@@ -616,14 +617,29 @@ describe('Server-side lesson puzzle generation', () => {
   });
 
   it('asks the player to sign in instead of generating locally when the session expires', async () => {
+    api.generateLessonPuzzle.mockResolvedValueOnce({ success: true, puzzle: serverPuzzle() });
     api.generateLessonPuzzle.mockRejectedValueOnce(Object.assign(new Error('Session expired.'), { status: 401 }));
 
-    renderPuzzles();
+    const originalLesson = LESSON_CATALOG[0].id;
+    const selectedLesson = LESSON_CATALOG[1].id;
+    renderPuzzles([`/puzzles?lesson=${originalLesson}&source=home`]);
+    await screen.findByTestId('chessboard');
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Select puzzle in lesson scheme' }), {
+      target: { value: '1' },
+    });
 
     expect((await screen.findByRole('alert')).textContent).toBe('Session expired. Please start over.');
-    expect(screen.getByRole('link', { name: 'Log In' }).getAttribute('href')).toBe('/login');
+    expect(api.generateLessonPuzzle).toHaveBeenLastCalledWith(expect.objectContaining({ lessonId: selectedLesson }));
     expect(screen.queryByTestId('chessboard')).toBeNull();
     expect(generatePuzzleForThemes).not.toHaveBeenCalled();
+
+    const loginLink = screen.getByRole('link', { name: 'Log In' });
+    expect(loginLink.getAttribute('href')).toBe('/login');
+    const click = createEvent.click(loginLink);
+    click.preventDefault();
+    fireEvent(loginLink, click);
+    expect(consumePostLoginPath()).toBe(`/puzzles?lesson=${selectedLesson}&source=home`);
   });
 
   it('falls back to local generation when the API returns an unplayable puzzle', async () => {

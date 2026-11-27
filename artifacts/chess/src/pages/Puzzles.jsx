@@ -845,7 +845,11 @@ export default function Puzzles() {
         <Link
           to="/login"
           reloadDocument
-          onClick={() => rememberPostLoginPath(`${location.pathname}${location.search}`)}
+          onClick={() => {
+            const returnParams = new URLSearchParams(location.search);
+            returnParams.set("lesson", currentLesson.id);
+            rememberPostLoginPath(`${location.pathname}?${returnParams.toString()}`);
+          }}
         >
           {t("Log In")}
         </Link>
