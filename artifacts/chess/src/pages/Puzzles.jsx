@@ -922,7 +922,7 @@ export default function Puzzles() {
 
         {/* ── Daily Puzzle Streak ─────────────────────────── */}
         <section className="daily-streak-section">
-          <DailyPuzzleStreak />
+          <DailyPuzzleStreak onSessionRejected={() => setSessionRejected(true)} />
         </section>
 
         {/* ── Lesson Scheme Header ─────────────────────────── */}

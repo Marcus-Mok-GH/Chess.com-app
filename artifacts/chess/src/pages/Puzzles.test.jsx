@@ -642,6 +642,22 @@ describe('Server-side lesson puzzle generation', () => {
     expect(consumePostLoginPath()).toBe(`/puzzles?lesson=${selectedLesson}&source=home`);
   });
 
+  it('prompts for sign-in when the session expires before opening the daily puzzle', async () => {
+    api.generateLessonPuzzle.mockResolvedValueOnce({ success: true, puzzle: serverPuzzle() });
+
+    renderPuzzles();
+    await screen.findByTestId('chessboard');
+    expect(api.getPuzzleStreak).toHaveBeenCalledTimes(1);
+    api.getPuzzleStreak.mockRejectedValueOnce(Object.assign(new Error('Session expired.'), { status: 401 }));
+
+    fireEvent.click(screen.getByRole('button', { name: /Solve Today's Puzzle/i }));
+
+    expect((await screen.findByRole('alert')).textContent).toBe('Session expired. Please start over.');
+    expect(api.getPuzzleStreak).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole('link', { name: 'Log In' }).getAttribute('href')).toBe('/login');
+    expect(screen.queryByTestId('chessboard')).toBeNull();
+  });
+
   it('falls back to local generation when the API returns an unplayable puzzle', async () => {
     api.generateLessonPuzzle.mockResolvedValue({
       success: true,

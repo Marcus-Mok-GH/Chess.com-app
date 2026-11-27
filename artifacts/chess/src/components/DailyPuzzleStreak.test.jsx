@@ -352,7 +352,7 @@ describe('DailyPuzzleStreak persistence', () => {
       });
     });
 
-    it('keeps guests on device storage and never calls the server', async () => {
+    it('does not start a daily puzzle or record a solve for a guest', async () => {
       mockUserGuest();
 
       const { default: DailyPuzzleStreak } = await import('./DailyPuzzleStreak');
@@ -365,11 +365,10 @@ describe('DailyPuzzleStreak persistence', () => {
       });
 
       fireEvent.click(screen.getByRole('button', { name: /Solve Today's Puzzle/i }));
-      fireEvent.click(await screen.findByTestId('solve-c3c4'));
 
-      await waitFor(() => {
-        expect(loadStreakData(null).completedToday).toBe(true);
-      });
+      expect(screen.queryByTestId('solve-c3c4')).toBeNull();
+      expect(loadStreakData(null).completedToday).toBe(false);
+      expect(api.getPuzzleStreak).not.toHaveBeenCalled();
       expect(api.recordPuzzleStreak).not.toHaveBeenCalled();
     });
   });
@@ -407,8 +406,10 @@ describe('Solve Today\u2019s Puzzle button navigation', () => {
     expect(getByTestId('location-probe').textContent).toBe('/puzzles');
   });
 
-  it('still expands the inline board when linkToPuzzles is not set', async () => {
-    mockUserGuest();
+  it('expands the inline board only after the session check succeeds', async () => {
+    mockUserLoggedIn();
+    const streak = { currentStreak: 0, bestStreak: 0, lastSolvedOn: null, solvedToday: false };
+    api.getPuzzleStreak.mockResolvedValue({ success: true, streak });
     const { default: DailyPuzzleStreak } = await import('./DailyPuzzleStreak');
 
     const { container } = render(
@@ -420,9 +421,15 @@ describe('Solve Today\u2019s Puzzle button navigation', () => {
       </MemoryRouter>
     );
 
-    const btn = container.querySelector('.daily-puzzle-solve-btn');
-    act(() => {
-      btn.click();
+    let resolveCheck;
+    api.getPuzzleStreak.mockImplementationOnce(() => new Promise((resolve) => {
+      resolveCheck = resolve;
+    }));
+    fireEvent.click(screen.getByRole('button', { name: /Solve Today's Puzzle/i }));
+    expect(container.querySelector('.daily-puzzle-board-area')).toBeNull();
+
+    await act(async () => {
+      resolveCheck({ success: true, streak });
     });
 
     expect(container.querySelector('.daily-puzzle-board-area')).not.toBeNull();

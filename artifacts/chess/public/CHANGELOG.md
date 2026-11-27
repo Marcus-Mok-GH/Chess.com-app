@@ -2,6 +2,7 @@
 
 - Signed-out players who open Puzzles are sent to sign in and returned to the puzzle or lesson they requested. The home page's daily puzzle card is shown only to signed-in players.
 - Puzzle API requests now require a valid session. If that session expires, the page asks the player to sign in again instead of generating a puzzle locally, then returns them to the selected lesson. Daily allowances are tracked per account; existing free and unlimited allowances are unchanged.
+- Opening the daily puzzle checks that the session is still valid before showing the board.
 
 [2026-11-24] - Further shared-helper cleanup
 
