@@ -2,7 +2,7 @@
  * Lesson Routes
  * API endpoints for the curated lessons catalog and per-user progress.
  *
- * The catalog GET endpoints are public (like puzzles); progress reads and
+ * The catalog GET endpoints are public; progress reads and
  * writes require an authenticated user.
  */
 

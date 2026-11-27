@@ -87,9 +87,11 @@ export default function Home() {
         </section>
 
         {/* Daily Puzzle Streak */}
-        <section className="daily-streak-section">
-          <DailyPuzzleStreak linkToPuzzles />
-        </section>
+        {isLoggedIn && (
+          <section className="daily-streak-section">
+            <DailyPuzzleStreak linkToPuzzles />
+          </section>
+        )}
 
         {/* Stats Overview */}
         {isLoggedIn && user ? (

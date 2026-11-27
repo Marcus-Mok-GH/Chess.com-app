@@ -615,6 +615,17 @@ describe('Server-side lesson puzzle generation', () => {
     expect(generatePuzzleForThemes).toHaveBeenCalled();
   });
 
+  it('asks the player to sign in instead of generating locally when the session expires', async () => {
+    api.generateLessonPuzzle.mockRejectedValueOnce(Object.assign(new Error('Session expired.'), { status: 401 }));
+
+    renderPuzzles();
+
+    expect((await screen.findByRole('alert')).textContent).toBe('Session expired. Please start over.');
+    expect(screen.getByRole('link', { name: 'Log In' }).getAttribute('href')).toBe('/login');
+    expect(screen.queryByTestId('chessboard')).toBeNull();
+    expect(generatePuzzleForThemes).not.toHaveBeenCalled();
+  });
+
   it('falls back to local generation when the API returns an unplayable puzzle', async () => {
     api.generateLessonPuzzle.mockResolvedValue({
       success: true,

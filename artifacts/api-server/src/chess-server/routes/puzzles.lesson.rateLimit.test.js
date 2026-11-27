@@ -6,8 +6,8 @@ vi.mock('../db.js', () => ({
   query: vi.fn(),
 }));
 
-vi.mock('../coachAuth.js', () => ({
-  authenticatedUserId: vi.fn(async () => null),
+vi.mock('../db/query.js', () => ({
+  query: async () => ({ rows: [{ user_id: 'user-42', expires_at: '2099-01-01' }] }),
 }));
 
 vi.mock('../services/puzzleService.js', () => ({
@@ -24,7 +24,8 @@ function loopback(app, path) {
   return new Promise((resolve, reject) => {
     const server = app.listen(0, () => {
       const { port } = server.address();
-      const req = http.request({ host: '127.0.0.1', port, path, method: 'GET' }, (res) => {
+      const headers = { cookie: 'chess_session=test-session' };
+      const req = http.request({ host: '127.0.0.1', port, path, method: 'GET', headers }, (res) => {
         let buf = '';
         res.on('data', (c) => (buf += c));
         res.on('end', () =>
@@ -59,7 +60,7 @@ describe('GET /api/puzzles/lesson rate limit', () => {
     expect(second.status).toBe(200);
     expect(first.headers['x-ratelimit-limit']).toBe('2');
 
-    // Generation is CPU work on a public endpoint: over-budget requests are
+    // Generation is CPU work: over-budget requests are
     // rejected instead of spinning the generator.
     expect(third.status).toBe(429);
     expect(third.body.error.message).toMatch(/Too many puzzle requests/);

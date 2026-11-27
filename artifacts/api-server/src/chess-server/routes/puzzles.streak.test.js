@@ -6,8 +6,8 @@ vi.mock('../db.js', () => ({
   query: vi.fn(),
 }));
 
-vi.mock('../coachAuth.js', () => ({
-  authenticatedUserId: vi.fn(async () => 'user-42'),
+vi.mock('../db/query.js', () => ({
+  query: async () => ({ rows: [{ user_id: 'user-42', expires_at: '2099-01-01' }] }),
 }));
 
 vi.mock('../services/puzzleService.js', () => ({
@@ -15,7 +15,6 @@ vi.mock('../services/puzzleService.js', () => ({
 }));
 
 import { query } from '../db.js';
-import { authenticatedUserId } from '../coachAuth.js';
 
 function buildApp(routes) {
   const app = express();
@@ -24,11 +23,11 @@ function buildApp(routes) {
   return app;
 }
 
-function loopback(app, method, path) {
+function loopback(app, method, path, headers = { cookie: 'chess_session=test-session' }) {
   return new Promise((resolve, reject) => {
     const server = app.listen(0, () => {
       const { port } = server.address();
-      const req = http.request({ host: '127.0.0.1', port, path, method }, (res) => {
+      const req = http.request({ host: '127.0.0.1', port, path, method, headers }, (res) => {
         let buf = '';
         res.on('data', (c) => (buf += c));
         res.on('end', () =>
@@ -53,7 +52,6 @@ let app;
 
 beforeEach(async () => {
   vi.clearAllMocks();
-  authenticatedUserId.mockResolvedValue('user-42');
   app = buildApp((await import('./puzzles.js')).default);
 });
 
@@ -76,8 +74,7 @@ describe('GET /api/puzzles/streak', () => {
   });
 
   it('requires an account — a guest has no streak to read', async () => {
-    authenticatedUserId.mockResolvedValue(null);
-    const res = await loopback(app, 'GET', '/api/puzzles/streak');
+    const res = await loopback(app, 'GET', '/api/puzzles/streak', {});
     expect(res.status).toBe(401);
     expect(query).not.toHaveBeenCalled();
   });
@@ -99,8 +96,7 @@ describe('POST /api/puzzles/streak', () => {
   });
 
   it('refuses a guest write', async () => {
-    authenticatedUserId.mockResolvedValue(null);
-    const res = await loopback(app, 'POST', '/api/puzzles/streak');
+    const res = await loopback(app, 'POST', '/api/puzzles/streak', {});
     expect(res.status).toBe(401);
     expect(query).not.toHaveBeenCalled();
   });

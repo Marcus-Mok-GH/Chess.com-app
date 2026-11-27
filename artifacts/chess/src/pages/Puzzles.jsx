@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Chess } from "chess.js";
 import ChessBoard from "../components/ChessBoard";
 import DailyPuzzleStreak from "../components/DailyPuzzleStreak";
@@ -9,6 +9,7 @@ import {
   randomPuzzleSeed,
 } from "../engine/puzzles/lessonPuzzle";
 import api from "../services/api";
+import { rememberPostLoginPath } from "../utils/postLoginPath";
 import { useUser } from "../contexts/UserContext";
 import AccountRequired from "../components/AccountRequired";
 import PuzzleLimitNotice from "../components/PuzzleLimitNotice";
@@ -128,9 +129,7 @@ async function requestLessonPuzzle({ lesson, seed, difficulty }) {
       return { puzzle: candidate, usage: data?.usage ?? null };
     }
   } catch (error) {
-    // A daily-limit refusal is a decision, not an outage: generating the
-    // puzzle locally instead would quietly hand out the fourth puzzle.
-    if (error?.status === 402) throw error;
+    if (error?.status === 401 || error?.status === 402) throw error;
     // Any other failure falls through to local generation.
   }
   return {
@@ -364,6 +363,7 @@ export default function Puzzles() {
   // this mirrors it so the counter and the paywall can be shown immediately.
   const [dailyUsage, setDailyUsage] = useState(null);
   const [limitReached, setLimitReached] = useState(false);
+  const [sessionRejected, setSessionRejected] = useState(false);
 
   const [solvedCount, setSolvedCount] = useState(0);
   const [attemptedCount, setAttemptedCount] = useState(0);
@@ -440,7 +440,8 @@ export default function Puzzles() {
         setDailyUsage(usage);
         if (usage && !usage.unlimited && !usage.allowed) setLimitReached(true);
       })
-      .catch(() => {
+      .catch((error) => {
+        if (!cancelled && error?.status === 401) setSessionRejected(true);
         // Usage is advisory on failure: the server still refuses the next
         // puzzle, and that refusal is handled where puzzles are loaded.
       });
@@ -517,7 +518,9 @@ export default function Puzzles() {
       return true;
     } catch (error) {
       if (generationRequestRef.current === requestId) {
-        if (error?.status === 402) {
+        if (error?.status === 401) {
+          setSessionRejected(true);
+        } else if (error?.status === 402) {
           // Out of free puzzles: the server said no, so show the paywall.
           setDailyUsage(error.payload?.usage || null);
           setLimitReached(true);
@@ -834,6 +837,21 @@ export default function Puzzles() {
   const boardStyles = solved
     ? lastMoveSquares(game)
     : { ...hintSquareStyles(), ...selectedSquareStyles() };
+
+  if (sessionRejected) {
+    return (
+      <div className="puzzles-page">
+        <p role="alert">{t("Session expired. Please start over.")}</p>
+        <Link
+          to="/login"
+          reloadDocument
+          onClick={() => rememberPostLoginPath(`${location.pathname}${location.search}`)}
+        >
+          {t("Log In")}
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="puzzles-page">

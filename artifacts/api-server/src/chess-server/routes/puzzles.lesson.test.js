@@ -7,8 +7,8 @@ vi.mock('../db.js', () => ({
   query: vi.fn(),
 }));
 
-vi.mock('../coachAuth.js', () => ({
-  authenticatedUserId: vi.fn(async () => null),
+vi.mock('../db/query.js', () => ({
+  query: async () => ({ rows: [{ user_id: 'user-42', expires_at: '2099-01-01' }] }),
 }));
 
 // Keep the route module light: only the lesson endpoint under test needs the
@@ -28,7 +28,8 @@ function loopback(app, method, path) {
   return new Promise((resolve, reject) => {
     const server = app.listen(0, () => {
       const { port } = server.address();
-      const req = http.request({ host: '127.0.0.1', port, path, method }, (res) => {
+      const headers = { cookie: 'chess_session=test-session' };
+      const req = http.request({ host: '127.0.0.1', port, path, method, headers }, (res) => {
         let buf = '';
         res.on('data', (c) => (buf += c));
         res.on('end', () =>

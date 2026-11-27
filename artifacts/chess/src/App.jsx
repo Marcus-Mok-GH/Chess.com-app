@@ -413,7 +413,7 @@ export default function App({ Router = BrowserRouter, routerProps = {}, initialU
                   <Route path="/terms" element={<Suspense fallback={<RouteFallback />}><Terms /></Suspense>} />
                   <Route path="/privacy" element={<Suspense fallback={<RouteFallback />}><Privacy /></Suspense>} />
                   <Route path="/changelog" element={<Changelog />} />
-                  <Route path="/puzzles" element={<Suspense fallback={<RouteFallback />}><Puzzles /></Suspense>} />
+                  <Route path="/puzzles" element={<RequireAuth fallback={<RouteFallback />}><Suspense fallback={<RouteFallback />}><Puzzles /></Suspense></RequireAuth>} />
                   <Route path="/openings" element={<Suspense fallback={<RouteFallback />}><Openings /></Suspense>} />
                   <Route path="/lessons" element={<LessonsRedirect />} />
                   <Route path="/friends" element={<RequireAuth fallback={<RouteFallback />}><Suspense fallback={<RouteFallback />}><Friends /></Suspense></RequireAuth>} />

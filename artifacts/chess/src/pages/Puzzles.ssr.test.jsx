@@ -8,6 +8,7 @@ import { LESSON_CATALOG } from '../engine/lessons/lessonCatalog';
 // Lets one test simulate the lesson-puzzle generator breaking while the
 // daily streak card (which requests `type`, not `difficulty`) keeps working.
 const generatorControl = vi.hoisted(() => ({ failLessonGeneration: false }));
+const signedIn = { user: { id: 'user-1', username: 'puzzle-player', elo: 1200 } };
 
 vi.mock('../engine/puzzles/puzzleGenerator', async (importOriginal) => {
   const actual = await importOriginal();
@@ -40,9 +41,19 @@ beforeEach(() => {
 });
 
 describe('Puzzle page server-side rendering', () => {
+  it.each(['/puzzles', '/puzzles?lesson=forks', '/lessons?lesson=forks'])(
+    'does not render a playable puzzle or embed its solution for guests at %s',
+    async (url) => {
+      const html = await render(url);
+      expect(html).not.toContain('puzzles-page');
+      expect(html).not.toContain('/custom-pieces/');
+      expect(extractInitialPuzzle(html)).toBeNull();
+    },
+  );
+
   it('serves a fully rendered puzzle board with an adoptable payload on /puzzles', async () => {
     const startedAt = Date.now();
-    const html = await render('/puzzles');
+    const html = await render('/puzzles', signedIn);
     const renderMs = Date.now() - startedAt;
 
     // The page shell and lesson content are part of the initial HTML.
@@ -81,7 +92,7 @@ describe('Puzzle page server-side rendering', () => {
 
   it('embeds the payload for the lesson requested in the URL', async () => {
     const lesson = LESSON_CATALOG[2];
-    const html = await render(`/puzzles?lesson=${lesson.id}`);
+    const html = await render(`/puzzles?lesson=${lesson.id}`, signedIn);
 
     expect(html).toContain(lesson.title);
     const payload = extractInitialPuzzle(html);
@@ -93,7 +104,7 @@ describe('Puzzle page server-side rendering', () => {
   it('falls back to the loading placeholder when server-side generation fails', async () => {
     generatorControl.failLessonGeneration = true;
 
-    const html = await render('/puzzles');
+    const html = await render('/puzzles', signedIn);
 
     // Degrades to the previous behaviour (placeholder + client-side
     // generation) instead of failing the whole SSR response.
