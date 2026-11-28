@@ -20,16 +20,9 @@
   --land-green-press: #6f9e3f;
   --land-green-soft: rgba(129, 182, 76, 0.12);
   --land-board-light: #ebecd0;
-  --land-board-dark: #779556;
   --land-radius: 12px;
   --land-radius-sm: 8px;
-  --land-radius-xs: 6px;
   --land-sidebar-w: 232px;
-  --land-amber: #f0a732;
-  --land-blue: #4a8fdb;
-  --land-purple: #9b7bf5;
-  --land-red: #e54b4b;
-  --land-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.04);
   --land-shadow-elev: 0 4px 20px rgba(0, 0, 0, 0.45);
   --land-font: Nunito, Inter, system-ui, sans-serif;
 }
@@ -222,11 +215,8 @@
   padding: 0 6px 12px;
 }
 
-/* ---------- Sidebar buttons (sidebar-primary / sidebar-secondary) ---------- */
+/* ---------- Buttons ---------- */
 
-.landing .sidebar-primary,
-.landing .sidebar-secondary,
-.landing .btn-chess,
 .landing .btn-ghost,
 .landing .btn-green {
   display: inline-flex;
@@ -242,31 +232,6 @@
   border: none;
   text-decoration: none;
   transition: background 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
-}
-
-.landing .sidebar-primary {
-  width: 100%;
-  background: var(--land-green);
-  color: #1a1a1a;
-}
-
-.landing .sidebar-primary:hover {
-  background: #8cc857;
-}
-
-.landing .sidebar-primary:active {
-  background: var(--land-green-press);
-}
-
-.landing .sidebar-secondary {
-  width: 100%;
-  background: var(--land-surface-2);
-  color: var(--land-text);
-  border: 1px solid var(--land-border);
-}
-
-.landing .sidebar-secondary:hover {
-  background: var(--land-surface-3);
 }
 
 /* ---------- Chess.com-style button variants ---------- */
@@ -299,16 +264,6 @@
   background: var(--land-surface-2);
 }
 
-.landing .btn-chess {
-  background: var(--land-surface-2);
-  color: var(--land-text);
-  border: 1px solid var(--land-border);
-}
-
-.landing .btn-chess:hover {
-  background: var(--land-surface-3);
-}
-
 /* button size modifiers */
 
 .landing .btn-lg {
@@ -316,29 +271,8 @@
   font-size: 15px;
 }
 
-.landing .btn-xl {
-  padding: 18px 36px;
-  font-size: 17px;
-  font-weight: 800;
-  letter-spacing: 0.2px;
-}
-
 .landing .btn-block {
   width: 100%;
-}
-
-.landing .btn-link {
-  background: transparent;
-  border: none;
-  padding: 0;
-  color: var(--land-green);
-  font-weight: 700;
-  cursor: pointer;
-  text-decoration: none;
-}
-
-.landing .btn-link:hover {
-  text-decoration: underline;
 }
 
 /* ---------- Mobile burger / backdrop ---------- */
@@ -528,285 +462,58 @@
   margin: auto;
 }
 
-/* ---------- Compact feature cards ---------- */
+/* ---------- Feature list ---------- */
 
-.landing .features-section {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  padding: 48px 56px 24px;
+.landing-feature-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
   max-width: 1240px;
   margin: 0 auto;
-  width: 100%;
+  padding: 16px 56px 0;
+  list-style: none;
 }
 
-.landing .features-title {
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: -0.2px;
-  color: var(--land-text);
-}
-
-.landing .features-grid {
+.landing-feature-item {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.landing .feature-card {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 22px 20px;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  padding: 16px;
   background: var(--land-surface);
   border: 1px solid var(--land-border-soft);
   border-radius: var(--land-radius);
-  transition: transform 0.15s ease, border-color 0.15s ease;
 }
 
-.landing .feature-card:hover {
-  border-color: var(--land-green);
-}
-
-.landing .feature-icon-wrap,
-.landing .feature-card-icon,
-.landing .feature-card-cta,
-.landing .feature-card-title,
-.landing .feature-card-description {
-  display: block;
-}
-
-.landing .feature-icon-wrap,
-.landing .feature-card-icon {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  background: var(--land-green-soft);
+.landing-feature-item > svg {
+  margin-top: 2px;
   color: var(--land-green);
-  margin-bottom: 6px;
 }
 
-.landing .feature-card-title {
+.landing-feature-item h2 {
   font-size: 16px;
   font-weight: 800;
-  color: var(--land-text);
 }
 
-.landing .feature-card-description,
-.landing .feature-card-desc {
-  font-size: 13px;
-  line-height: 1.5;
+.landing-feature-item p {
+  margin: 4px 0 8px;
   color: var(--land-text-muted);
-  flex: 1;
+  font-size: 14px;
+  line-height: 1.4;
 }
 
-.landing .feature-card-cta,
-.landing .feature-block-cta,
-.landing .feature-card .btn-link,
-.landing .btn-link.feature-block-cta {
-  align-self: flex-start;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--land-green);
-  background: transparent;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-}
-
-/* ---------- Alternating feature blocks ---------- */
-
-.landing .feature-blocks {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  padding: 32px 0 0;
-  max-width: 1240px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-.landing .feature-block {
-  display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
-  gap: 56px;
-  align-items: center;
-  padding: 48px 56px;
-}
-
-.landing .feature-block.flip {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
-}
-
-.landing .feature-block.flip .feature-block-text {
-  order: 2;
-}
-
-.landing .feature-block-text {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.landing .feature-block-eyebrow {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--land-green);
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-}
-
-.landing .feature-block-title {
-  font-size: 30px;
-  line-height: 1.15;
-  font-weight: 800;
-  letter-spacing: -0.3px;
-  color: var(--land-text);
-}
-
-.landing .feature-block-desc {
-  font-size: 16px;
-  line-height: 1.6;
-  color: var(--land-text-muted);
-  max-width: 48ch;
-}
-
-.landing .feature-block-visual,
-.landing .feature-block-board {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.landing .feature-block-board {
-  position: relative;
-  width: 100%;
-  max-width: 380px;
-  aspect-ratio: 1 / 1;
-  border-radius: var(--land-radius);
-  overflow: hidden;
-  box-shadow: var(--land-shadow-card);
-  background: var(--land-board-light);
-  margin: 0 auto;
-}
-
-.landing .feature-block-board > .chess-board-wrapper {
-  width: 100%;
-  height: 100%;
-}
-
-.landing .feature-block-board-tag {
-  position: absolute;
-  left: 12px;
-  bottom: 12px;
-  z-index: 2;
+.landing-feature-link {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin: 0;
-  width: auto;
-  height: auto;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--land-text-dim);
-  background: var(--land-surface-2);
-  padding: 4px 10px;
-  border-radius: 9999px;
-  border: 1px solid var(--land-border);
-}
-
-/* ---------- App promo ---------- */
-
-.landing .app-promo,
-.landing .final-cta {
-  width: min(calc(100% - 112px), 1240px);
-  margin: 40px auto 0;
-  padding: 28px 36px;
-  background: var(--land-surface);
-  border: 1px solid var(--land-border-soft);
-  border-radius: var(--land-radius);
-  display: flex;
-  align-items: center;
-  gap: 24px;
-}
-
-.landing .app-promo-content {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex: 1;
-}
-
-.landing .app-promo-icon,
-.landing .app-promo-icon-wrap {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  background: var(--land-green-soft);
   color: var(--land-green);
-  flex-shrink: 0;
-}
-
-.landing .app-promo-title {
-  font-size: 18px;
-  font-weight: 800;
-  color: var(--land-text);
-}
-
-.landing .app-promo-sub,
-.landing .app-promo-subtitle,
-.landing .app-promo-description {
   font-size: 14px;
-  color: var(--land-text-muted);
-  margin-top: 4px;
-}
-
-.landing .app-promo-actions,
-.landing .app-promo-buttons {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.landing .app-store-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 18px;
-  background: var(--land-surface-3);
-  border: 1px solid var(--land-border);
-  border-radius: var(--land-radius-sm);
-  color: var(--land-text);
-  text-decoration: none;
   font-weight: 700;
-  font-size: 14px;
 }
 
-.landing .app-store-label {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  line-height: 1.1;
-}
-
-/* ---------- Final CTA ---------- */  .landing .final-cta {
-    flex-direction: column;
-    text-align: center;
-    gap: 18px;
-    padding: 56px 36px;
-    background: var(--land-surface);
-    border: 1px solid var(--land-border-soft);
-  }
-
-.landing .final-cta-title {
-  font-size: 30px;
-  font-weight: 800;
-  letter-spacing: -0.3px;
-  color: var(--land-text);
+.landing-feature-link:hover {
+  text-decoration: underline;
 }
 
 /* ---------- Footer ---------- */
@@ -825,24 +532,21 @@
   margin-right: auto;
 }
 
-.landing .footer-links,
-.landing .footer-link-group {
+.landing .footer-links {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 22px;
 }
 
-.landing .footer-link,
-.landing .footer-link-item {
+.landing .footer-link {
   color: var(--land-text-dim);
   font-size: 13px;
   font-weight: 600;
   text-decoration: none;
 }
 
-.landing .footer-link:hover,
-.landing .footer-link-item:hover {
+.landing .footer-link:hover {
   color: var(--land-text);
 }
 
@@ -851,31 +555,6 @@
   color: var(--land-text-dim);
   font-weight: 600;
   text-align: center;
-}
-
-.landing .footer-social {
-  display: flex;
-  gap: 10px;
-}
-
-.landing .footer-social-btn {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--land-surface-2);
-  color: var(--land-text-muted);
-  font-size: 13px;
-  font-weight: 700;
-  text-decoration: none;
-  transition: background 0.15s ease, color 0.15s ease;
-  touch-action: manipulation;
-}
-
-.landing .footer-social-btn:hover {
-  background: var(--land-green);
-  color: #1a1a1a;
 }
 
 /* ---------- Responsive ---------- */
@@ -930,31 +609,8 @@
     display: none;
   }
 
-  .landing .features-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .landing .feature-block {
-    width: auto;
-    margin-inline: 16px;
-    grid-template-columns: 1fr !important;
-    gap: 24px;
-    padding: 32px 24px;
-  }
-
-  .landing .feature-block.flip .feature-block-text {
-    order: unset;
-  }
-
-  .landing .app-promo,
-  .landing .final-cta {
-    margin: 24px 16px 0;
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .landing .final-cta {
-    align-items: center;
+  .landing-feature-list {
+    padding-inline: 24px;
   }
 
   .landing-footer {
@@ -963,10 +619,6 @@
 }
 
 @media (max-width: 768px) {
-  .landing-page {
-    min-height: 100svh;
-  }
-
   .landing-main {
     width: 100%;
   }
@@ -1025,70 +677,25 @@
     padding: 16px 20px 28px;
   }
 
-  .landing .feature-block,
-  .landing .feature-block.flip {
+  .landing-feature-list {
     grid-template-columns: 1fr;
-    gap: 24px;
-    padding: 36px 20px;
-  }
-
-  .landing .feature-block.flip .feature-block-visual {
-    order: 0;
-  }
-
-  .landing .feature-block-text {
-    order: 1;
-  }
-
-  .landing .feature-block-board {
-    width: min(100%, 320px);
-    margin: 0 auto;
-  }
-
-  .landing .app-promo,
-  .landing .final-cta {
-    width: auto;
-    margin-inline: 20px;
-  }
-
-  .landing .app-promo {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 20px;
-  }
-
-  .landing .app-promo-actions,
-  .landing .app-promo-actions .btn-ghost {
-    width: 100%;
-  }
-
-  .landing .final-cta {
-    padding: 40px 20px;
-  }
-
-  .landing .final-cta .btn-green {
-    width: 100%;
+    gap: 12px;
+    padding-inline: 20px;
   }
 
   .landing-footer {
     /* Bottom padding clears the floating feedback control (fixed, ~58px up
-       from the bottom) so the last row of social buttons is never covered. */
+       from the bottom) so the footer links remain accessible. */
     padding: 32px max(20px, var(--safe-right)) calc(72px + var(--safe-bottom)) max(20px, var(--safe-left));
   }
 
-  /* Larger touch targets for footer links and social buttons on phones */
-  .landing .footer-link,
-  .landing .footer-link-item {
+  /* Larger touch targets for footer links on phones */
+  .landing .footer-link {
     display: inline-flex;
     align-items: center;
     min-height: 40px;
     padding: 8px 6px;
     margin: -8px -6px;
-  }
-
-  .landing .footer-social-btn {
-    width: 40px;
-    height: 40px;
   }
 }
 
@@ -1097,14 +704,8 @@
     padding-inline: 14px;
   }
 
-  .landing .stats-bar,
-  .landing .feature-block {
+  .landing .stats-bar {
     padding-inline: 14px;
-  }
-
-  .landing .app-promo,
-  .landing .final-cta {
-    margin-inline: 14px;
   }
 }
 
@@ -1118,19 +719,9 @@
   }
 
   .landing .stats-bar,
-  .landing .features-section,
-  .landing .feature-blocks,
-  .landing .app-promo,
-  .landing .final-cta,
+  .landing-feature-list,
   .landing-footer {
     padding-left: 16px;
     padding-right: 16px;
-  }
-
-  .landing .app-promo,
-  .landing .final-cta {
-    width: auto;
-    margin-left: 16px;
-    margin-right: 16px;
   }
 }

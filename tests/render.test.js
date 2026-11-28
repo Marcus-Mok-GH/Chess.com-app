@@ -64,6 +64,7 @@ const rendererPath = path.join(
   'entry-server.js',
 );
 const templatePath = path.join(process.cwd(), 'dist', 'index.html');
+const hasBuiltRenderer = fs.existsSync(rendererPath);
 const created = [];
 
 function ensureStub(filePath, content) {
@@ -150,6 +151,21 @@ describe('Vercel SSR packaging', () => {
 });
 
 describe('session-aware SSR render handler', () => {
+  it.skipIf(!hasBuiltRenderer).each([false, true])('renders the compact landing page (signed in: %s)', async (signedIn) => {
+    if (signedIn) mockValidSession();
+    const response = await runHandler(signedIn ? { cookie: `chess_session=${TOKEN}` } : {}, '/');
+
+    expect(response.status).toBe(200);
+    expect(response.body.match(/class="chess-board-wrapper /g)).toHaveLength(1);
+    const featureLinks = Array.from(response.body.matchAll(/<a\b[^>]*class="landing-feature-link"[^>]*>/g),
+      ([link]) => link.match(/href="([^"]+)"/)?.[1]);
+    expect(featureLinks).toEqual(['/play', '/puzzles', '/history']);
+    expect(response.body).toContain('Play a Bot');
+    expect(response.body).toContain(signedIn ? 'Get Started' : 'Create an account');
+    expect(response.body).not.toContain(signedIn ? 'Create an account' : 'Get Started');
+    expect(response.body).not.toMatch(/app-promo|final-cta|footer-social/);
+  });
+
   it('renders the personalized shell for a valid session cookie with private, no-store', async () => {
     mockValidSession();
 
