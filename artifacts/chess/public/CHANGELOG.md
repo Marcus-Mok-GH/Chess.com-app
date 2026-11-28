@@ -1,3 +1,7 @@
+[2026-11-28] - Simpler PlayChess landing page
+
+- Replaced the large Bots, Puzzles, and Archive previews with three compact links. The interactive hero, navigation, and live stats remain, while the repeated sign-up and play sections and placeholder social links are gone.
+
 [2026-11-28] - Puzzles require an account
 
 - Signed-out players who open Puzzles are sent to sign in and returned to the puzzle or lesson they requested. The home page's daily puzzle card is shown only to signed-in players.

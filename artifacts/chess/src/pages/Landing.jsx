@@ -7,16 +7,11 @@ import ChessBoard from '../components/ChessBoard'
 import { Chess } from 'chess.js'
 import {
   Cpu,
-  Globe,
-  BarChart3,
-  BookOpen,
   TrendingUp,
-  Settings2,
   Users,
   Gamepad2,
   ArrowRight,
   Crown,
-  GraduationCap,
   Bot,
   Play,
   Puzzle,
@@ -27,8 +22,6 @@ import {
   Search,
   Menu,
   X,
-  Smartphone,
-  Pencil,
 } from 'lucide-react'
 import './Landing.css'
 import { useT } from '../i18n/I18nContext';
@@ -52,57 +45,28 @@ const OTHER_LINKS = [
 
 const DEMO_FEN = 'r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3'
 
-// Alternating image/text feature blocks (chess.com style)
-const FEATURE_BLOCKS = [
+const FEATURES = [
   {
     icon: Bot,
-    eyebrow: 'Bots',
-    title: 'Play against the bots',
-    description:
-      'Twelve opponents from 400 to 2200. Nelson talks a big game; Magnus backs his up. Pick a strength and play.',
+    title: 'Bots',
+    description: 'Choose a difficulty',
     to: '/play',
     cta: 'Play a bot',
-    boardTheme: 'brown',
-    fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-    flip: true,
   },
   {
     icon: Puzzle,
-    eyebrow: 'Puzzles',
-    title: 'Puzzles, tied to lessons',
-    description:
-      'Every puzzle comes from a lesson topic — pins, forks, back-rank threats — so solving one teaches you the idea behind it.',
+    title: 'Puzzles',
+    description: 'Practice chess tactics',
     to: '/puzzles',
     cta: 'Solve a puzzle',
-    boardTheme: 'blue',
-    fen: 'r2qkb1r/pp2nppp/3p4/2pNN1B1/2BnP3/3P4/PPP2PPP/R2bK2R b KQkq - 1 9',
-    flip: false,
   },
   {
     icon: Eye,
-    eyebrow: 'Archive',
-    title: 'Keep every game you play',
-    description:
-      'Finished games are saved to your archive. Step through them move by move, or let the coach explain where it went wrong.',
+    title: 'Archive',
+    description: 'Review your past games',
     to: '/history',
     cta: 'Open the archive',
-    boardTheme: 'green',
-    fen: 'r1bq1rk1/ppp2ppp/2n2n2/3pp3/2P5/2N1PN2/PP3PPP/R1BQ1RK1 b - - 4 8',
-    flip: true,
   },
-]
-
-const FEATURE_POSITIONS = FEATURE_BLOCKS.map(
-  (block) => new Chess(block.fen)
-)
-
-const SOCIAL_LINKS = [
-  { label: 'TikTok', href: '#' },
-  { label: 'X', href: '#' },
-  { label: 'YouTube', href: '#' },
-  { label: 'Twitch', href: '#' },
-  { label: 'Instagram', href: '#' },
-  { label: 'Discord', href: '#' },
 ]
 
 const FOOTER_LINKS = [
@@ -130,7 +94,7 @@ export default function Landing() {
     n: HERO_RANK_SLOT,
   }).split(HERO_RANK_SLOT);
   const navigate = useNavigate()
-  const { isLoggedIn, isOnline } = useUser()
+  const { isLoggedIn } = useUser()
   const [stats, setStats] = useState({
     registeredPlayers: 0,
     gamesRecorded: 0,
@@ -382,79 +346,20 @@ export default function Landing() {
           </section>
         ) : null}
 
-        {/* === Alternating image/text feature blocks === */}
-        <section className="feature-blocks">
-          {FEATURE_BLOCKS.map((block, index) => {
-            const Icon = block.icon
-            const position = FEATURE_POSITIONS[index]
-            return (
-              <article className={`feature-block ${block.flip ? 'flip' : ''}`} key={block.title}>
-                <div className="feature-block-visual">
-                  <div className="feature-block-board">
-                    <ChessBoard
-                      position={position}
-                      showCoordinates={false}
-                      boardTheme={block.boardTheme}
-                    />
-                    <span className="feature-block-board-tag">
-                      <Icon size={14} /> {t(block.eyebrow)}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="feature-block-text">
-                  <span className="feature-block-eyebrow">
-                    <Icon size={14} /> {t(block.eyebrow)}
-                  </span>
-                  <h2 className="feature-block-title">{t(block.title)}</h2>
-                  <p className="feature-block-desc">{t(block.description)}</p>
-                  <button
-                    className="btn-link feature-block-cta"
-                    onClick={() => goTo(block.to)}
-                    type="button"
-                  >
-                    {t(block.cta)}
-                    <ArrowRight size={16} />
-                  </button>
-                </div>
-              </article>
-            )
-          })}
-        </section>
-
-        {/* === App promo (mirrors chess.com's mobile app block) === */}
-        <section className="app-promo">
-          <div className="app-promo-content">
-            <Smartphone size={20} className="app-promo-icon" />
-            <div>
-              <h3 className="app-promo-title">{t("Works on your phone")}</h3>
-              <p className="app-promo-sub">
-                {t("The whole site runs in the browser — same account, same games, on desktop and mobile.")}</p>
-            </div>
-          </div>
-          <div className="app-promo-actions">
-            <button
-              className="btn-ghost btn-lg"
-              onClick={() => goTo(isLoggedIn ? '/home' : '/login?mode=signup')}
-              type="button"
-            >
-              {t(isLoggedIn ? 'Open Dashboard' : 'Create an account')}
-              <ArrowRight size={18} />
-            </button>
-          </div>
-        </section>
-
-        {/* === Final CTA === */}
-        <section className="final-cta">
-          <h2 className="final-cta-title">{t("Set up the board.")}</h2>
-          <button
-            className="btn-green btn-xl"
-            onClick={() => goTo(isLoggedIn ? '/online' : '/play')}
-            type="button"
-          >
-            {t(isLoggedIn ? 'Get Started' : 'Play a Bot')}<ArrowRight size={20} />
-          </button>
-        </section>
+        <ul className="landing-feature-list" role="list">
+          {FEATURES.map(({ icon: Icon, title, description, to, cta }) => (
+            <li className="landing-feature-item" key={to}>
+              <Icon size={20} aria-hidden="true" />
+              <div>
+                <h2>{t(title)}</h2>
+                <p>{t(description)}</p>
+                <Link to={to} className="landing-feature-link" onClick={() => setMobileNavOpen(false)}>
+                  {t(cta)} <ArrowRight size={16} aria-hidden="true" />
+                </Link>
+              </div>
+            </li>
+          ))}
+        </ul>
 
         {/* === Footer === */}
         <footer className="landing-footer">
@@ -477,14 +382,6 @@ export default function Landing() {
             <a href="https://www.chess.com" target="_blank" rel="noopener noreferrer">
               {t("Chess.com")}</a>
           </p>
-
-          <div className="footer-social">
-            {SOCIAL_LINKS.map((s) => (
-              <a key={s.label} href={s.href} className="footer-social-btn" aria-label={t(s.label)}>
-                {s.label[0]}
-              </a>
-            ))}
-          </div>
         </footer>
       </main>
     </div>
