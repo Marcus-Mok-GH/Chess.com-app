@@ -7,7 +7,7 @@ import { Router } from 'express';
 import { Chess } from 'chess.js';
 import puzzleService from '../services/puzzleService.js';
 import puzzleStatsService from '../services/puzzleStatsService.js';
-import { authenticatedUserId } from '../coachAuth.js';
+import { requireSession } from '../auth.js';
 import { LESSON_CATALOG, getLessonById } from '../lessons/lessonCatalog.js';
 import {
   buildLessonPuzzle,
@@ -16,12 +16,13 @@ import {
   DEFAULT_LESSON_PUZZLE_DIFFICULTY,
 } from '../puzzles/lessonPuzzle.js';
 import { createRateLimiter, requestIp } from '../middleware/rateLimit.js';
-import { consumePuzzle, getUsage, ownerKeyFor } from '../services/puzzleQuota.js';
+import { consumePuzzle, getUsage } from '../services/puzzleQuota.js';
 import { getStreak, recordSolve } from '../services/puzzleStreakService.js';
 
 const router = Router();
+router.use(requireSession);
 
-// Generating a lesson puzzle is real CPU work (~170ms) on a public endpoint,
+// Generating a lesson puzzle is real CPU work (~170ms),
 // so it is rate limited per IP: one puzzle per second sustained is far above
 // what the puzzles page needs (it fetches one per lesson), while a script
 // cannot spin the generator. Override the budget with
@@ -38,13 +39,6 @@ const lessonPuzzleRateLimit = createRateLimiter({
   message: 'Too many puzzle requests. Please try again in a minute.',
 });
 
-async function requirePuzzleUser(req, res, requestedUserId = null) {
-  const userId = await authenticatedUserId(req);
-  if (!userId) { res.status(401).json({ success: false, error: { message: 'Authentication required' } }); return null; }
-  if (requestedUserId != null && String(requestedUserId) !== String(userId)) { res.status(403).json({ success: false, error: { message: 'You can only access your own puzzles' } }); return null; }
-  return String(userId);
-}
-
 /**
  * Gate one puzzle handout against the free daily allowance and charge it.
  *
@@ -53,14 +47,13 @@ async function requirePuzzleUser(req, res, requestedUserId = null) {
  * database, transient error) never blocks play: the puzzle is served with
  * `usage: null` and the player is simply not charged.
  *
- * @param {import('express').Request} req
+ * @param {string} userId
  * @param {import('express').Response} res
  * @returns {Promise<object|null|false>}
  */
-async function chargeDailyPuzzle(req, res) {
+async function chargeDailyPuzzle(userId, res) {
   try {
-    const ownerKey = await ownerKeyFor(req, res);
-    const before = await getUsage(ownerKey);
+    const before = await getUsage(userId);
     if (!before.allowed) {
       res.status(402).json({
         success: false,
@@ -70,8 +63,8 @@ async function chargeDailyPuzzle(req, res) {
       });
       return false;
     }
-    await consumePuzzle(ownerKey);
-    return await getUsage(ownerKey);
+    await consumePuzzle(userId);
+    return await getUsage(userId);
   } catch (error) {
     console.error('Puzzle quota unavailable:', error);
     return null;
@@ -136,7 +129,7 @@ router.get('/random', async (req, res) => {
     }
 
     // Free players get three puzzles a day; subscribers are unlimited.
-    const usage = await chargeDailyPuzzle(req, res);
+    const usage = await chargeDailyPuzzle(req.userId, res);
     if (usage === false) return;
 
     res.json({
@@ -250,12 +243,8 @@ router.post('/validate', async (req, res) => {
  */
 router.get('/streak', async (req, res) => {
   try {
-    const userId = await authenticatedUserId(req);
-    if (!userId) {
-      return res.status(401).json({ success: false, error: { message: 'Authentication required' } });
-    }
     res.setHeader('Cache-Control', 'no-store');
-    res.json({ success: true, streak: await getStreak(userId) });
+    res.json({ success: true, streak: await getStreak(req.userId) });
   } catch (error) {
     console.error('Get puzzle streak error:', error);
     res.status(500).json({ success: false, error: { message: 'Failed to load puzzle streak' } });
@@ -269,12 +258,8 @@ router.get('/streak', async (req, res) => {
  */
 router.post('/streak', async (req, res) => {
   try {
-    const userId = await authenticatedUserId(req);
-    if (!userId) {
-      return res.status(401).json({ success: false, error: { message: 'Authentication required' } });
-    }
     res.setHeader('Cache-Control', 'no-store');
-    res.json({ success: true, streak: await recordSolve(userId) });
+    res.json({ success: true, streak: await recordSolve(req.userId) });
   } catch (error) {
     console.error('Record puzzle streak error:', error);
     res.status(500).json({ success: false, error: { message: 'Failed to record puzzle streak' } });
@@ -283,15 +268,12 @@ router.post('/streak', async (req, res) => {
 
 /**
  * GET /api/puzzles/usage
- * Public. How many puzzles the caller has left today, plus the reset time.
- * Signed-in callers are counted per account and get unlimited usage when
- * their subscription is active; guests are counted per device cookie.
+ * How many puzzles the account has left today, plus the reset time.
  */
 router.get('/usage', async (req, res) => {
   try {
-    const ownerKey = await ownerKeyFor(req, res);
     res.setHeader('Cache-Control', 'no-store');
-    res.json({ success: true, usage: await getUsage(ownerKey) });
+    res.json({ success: true, usage: await getUsage(req.userId) });
   } catch (error) {
     console.error('Get puzzle usage error:', error);
     res.status(500).json({ success: false, error: { message: 'Failed to load puzzle usage' } });
@@ -328,11 +310,7 @@ router.get('/stats', async (req, res) => {
  */
 router.get('/stats/user', async (req, res) => {
   try {
-    const userId = await authenticatedUserId(req);
-    if (!userId) {
-      return res.status(401).json({ success: false, error: { message: 'Authentication required' } });
-    }
-    const stats = await puzzleStatsService.getStats(userId);
+    const stats = await puzzleStatsService.getStats(req.userId);
     res.json({ success: true, stats: stats || puzzleStatsService.emptyStats() });
   } catch (error) {
     console.error('Get user puzzle stats error:', error);
@@ -347,10 +325,6 @@ router.get('/stats/user', async (req, res) => {
  */
 router.put('/stats/user', async (req, res) => {
   try {
-    const userId = await authenticatedUserId(req);
-    if (!userId) {
-      return res.status(401).json({ success: false, error: { message: 'Authentication required' } });
-    }
     const body = req.body || {};
     const fields = ['solvedCount', 'attemptedCount', 'currentStreak', 'bestStreak', 'rating'];
     for (const field of fields) {
@@ -359,7 +333,7 @@ router.put('/stats/user', async (req, res) => {
         return res.status(400).json({ success: false, error: { message: `${field} must be a finite number` } });
       }
     }
-    const stats = await puzzleStatsService.saveStats(userId, body);
+    const stats = await puzzleStatsService.saveStats(req.userId, body);
     res.json({ success: true, stats });
   } catch (error) {
     console.error('Save user puzzle stats error:', error);
@@ -369,7 +343,7 @@ router.put('/stats/user', async (req, res) => {
 
 /**
  * GET /api/puzzles/lesson
- * Public. Generate the puzzle for one lesson-scheme entry ON THE SERVER, so
+ * Generate the puzzle for one lesson-scheme entry ON THE SERVER, so
  * devices that are slow (or without module worker support) never have to run
  * the generator locally.
  * Query params: lesson (catalog id, required), difficulty
@@ -417,7 +391,7 @@ router.get('/lesson', lessonPuzzleRateLimit, async (req, res) => {
     // Free players get three puzzles a day; subscribers and reviewers are
     // unlimited. Charged only once a puzzle actually exists, so a bad request
     // or a generator failure never costs the player one of their three.
-    const usage = await chargeDailyPuzzle(req, res);
+    const usage = await chargeDailyPuzzle(req.userId, res);
     if (usage === false) return;
 
     // Fresh position per request (and, with a seed, deterministic).
@@ -543,8 +517,9 @@ router.post('/stockfish', async (req, res) => {
 router.get('/user/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    const authenticatedId = await requirePuzzleUser(req, res, userId);
-    if (!authenticatedId) return;
+    if (userId !== req.userId) {
+      return res.status(403).json({ success: false, error: { message: 'You can only access your own puzzles' } });
+    }
     const puzzles = puzzleService.getPuzzlesByUser(userId);
     
     res.json({
@@ -599,10 +574,8 @@ router.get('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const authenticatedId = await requirePuzzleUser(req, res);
-    if (!authenticatedId) return;
     const puzzle = puzzleService.getPuzzleById(id);
-    if (!puzzle || String(puzzle.userId) !== authenticatedId) return res.status(404).json({ success: false, error: { message: 'Puzzle not found' } });
+    if (!puzzle || String(puzzle.userId) !== req.userId) return res.status(404).json({ success: false, error: { message: 'Puzzle not found' } });
     const success = puzzleService.deletePuzzle(id);
     
     if (!success) {

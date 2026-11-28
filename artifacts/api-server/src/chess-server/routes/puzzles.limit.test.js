@@ -6,8 +6,8 @@ vi.mock('../db.js', () => ({
   query: vi.fn(),
 }));
 
-vi.mock('../coachAuth.js', () => ({
-  authenticatedUserId: vi.fn(async () => null),
+vi.mock('../db/query.js', () => ({
+  query: vi.fn(async () => ({ rows: [{ user_id: 'user-42', expires_at: '2099-01-01' }] })),
 }));
 
 // The lesson endpoint is the one under test; keep the rest of the route module
@@ -17,6 +17,7 @@ vi.mock('../services/puzzleService.js', () => ({
 }));
 
 import { query } from '../db.js';
+import { query as sessionQuery } from '../db/query.js';
 
 function buildApp(routes) {
   const app = express();
@@ -25,11 +26,11 @@ function buildApp(routes) {
   return app;
 }
 
-function loopback(app, method, path) {
+function loopback(app, method, path, headers = { cookie: 'chess_session=test-session' }) {
   return new Promise((resolve, reject) => {
     const server = app.listen(0, () => {
       const { port } = server.address();
-      const req = http.request({ host: '127.0.0.1', port, path, method }, (res) => {
+      const req = http.request({ host: '127.0.0.1', port, path, method, headers }, (res) => {
         let buf = '';
         res.on('data', (c) => (buf += c));
         res.on('end', () =>
@@ -50,7 +51,7 @@ function loopback(app, method, path) {
   });
 }
 
-/** Answer the quota reads as if the visitor had already used `used` puzzles. */
+/** Answer the quota reads as if the account had already used `used` puzzles. */
 function withUsedCounts(used) {
   let count = used;
   query.mockImplementation(async (sql) => {
@@ -66,8 +67,53 @@ function withUsedCounts(used) {
 let app;
 
 beforeEach(async () => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
   app = buildApp((await import('./puzzles.js')).default);
+});
+
+describe('puzzle API authentication', () => {
+  it.each([
+    ['GET', ''],
+    ['GET', '/random'],
+    ['GET', '/generate'],
+    ['POST', '/generate'],
+    ['POST', '/validate'],
+    ['GET', '/streak'],
+    ['POST', '/streak'],
+    ['GET', '/usage'],
+    ['GET', '/stats'],
+    ['GET', '/stats/user'],
+    ['PUT', '/stats/user'],
+    ['GET', '/lesson?lesson=pins'],
+    ['GET', '/base'],
+    ['POST', '/ai'],
+    ['POST', '/stockfish'],
+    ['GET', '/user/user-42'],
+    ['GET', '/puzzle-42'],
+    ['DELETE', '/puzzle-42'],
+  ])('returns 401 without a session for %s /api/puzzles%s', async (method, path) => {
+    const res = await loopback(app, method, `/api/puzzles${path}`, {});
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.message).toBe('Authentication required.');
+    expect(res.headers['set-cookie']).toBeUndefined();
+    expect(sessionQuery).not.toHaveBeenCalled();
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  it('rejects an expired session before the lesson handler runs', async () => {
+    sessionQuery.mockResolvedValueOnce({
+      rows: [{ user_id: 'user-42', expires_at: '2000-01-01' }],
+    });
+    const res = await loopback(app, 'GET', '/api/puzzles/lesson?lesson=pins', {
+      authorization: 'Bearer expired-session',
+    });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.message).toBe('Session expired.');
+    expect(res.body.puzzle).toBeUndefined();
+    expect(query).not.toHaveBeenCalled();
+  });
 });
 
 describe('free daily puzzle allowance', () => {
@@ -81,16 +127,8 @@ describe('free daily puzzle allowance', () => {
 
     const inserts = query.mock.calls.filter(([sql]) => /INSERT INTO puzzle_usage/.test(sql));
     expect(inserts).toHaveLength(1);
-  });
-
-  it('issues a device cookie for a signed-out visitor', async () => {
-    withUsedCounts(0);
-    const res = await loopback(app, 'GET', '/api/puzzles/lesson?lesson=pins');
-
-    expect(res.status).toBe(200);
-    const setCookie = String(res.headers['set-cookie'] || '');
-    expect(setCookie).toMatch(/chess_visitor=[a-f0-9]{32}/);
-    expect(setCookie).toMatch(/HttpOnly/i);
+    expect(inserts[0][1]).toEqual(['user:user-42']);
+    expect(res.headers['set-cookie']).toBeUndefined();
   });
 
   it('refuses the fourth puzzle with 402 and charges nothing', async () => {

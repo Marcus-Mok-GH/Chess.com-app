@@ -98,7 +98,7 @@ export function useStreakData() {
   return { streak, refresh: () => setStreak(getStreakState(null)) };
 }
 
-export default function DailyPuzzleStreak({ compact = false, linkToPuzzles = false }) {
+export default function DailyPuzzleStreak({ compact = false, linkToPuzzles = false, onSessionRejected }) {
   const t = useT();
   const { user, token, isLoggedIn } = useUser();
   const navigate = useNavigate();
@@ -113,6 +113,8 @@ export default function DailyPuzzleStreak({ compact = false, linkToPuzzles = fal
       : getStreakState(null)
   ));
   const [showBoard, setShowBoard] = useState(false);
+  const [openingBoard, setOpeningBoard] = useState(false);
+  const [openFailed, setOpenFailed] = useState(false);
   const [position, setPosition] = useState(puzzle.fen);
   const [solved, setSolved] = useState(streakData.completedToday);
   const [failed, setFailed] = useState(false);
@@ -233,6 +235,29 @@ export default function DailyPuzzleStreak({ compact = false, linkToPuzzles = fal
     setSolved(true);
   }, [isLoggedIn, userId, streakData.completedToday]);
 
+  async function openDailyPuzzle() {
+    if (linkToPuzzles) {
+      navigate("/puzzles");
+      return;
+    }
+    if (!isLoggedIn || openingBoard) return;
+
+    setOpeningBoard(true);
+    setOpenFailed(false);
+    try {
+      await api.getPuzzleStreak();
+      setShowBoard(true);
+    } catch (error) {
+      if (error?.status === 401 && onSessionRejected) {
+        onSessionRejected();
+      } else {
+        setOpenFailed(true);
+      }
+    } finally {
+      setOpeningBoard(false);
+    }
+  }
+
   function handlePieceDrop(sourceSquare, targetSquare) {
     if (solved || streakData.completedToday) return false;
 
@@ -324,18 +349,16 @@ export default function DailyPuzzleStreak({ compact = false, linkToPuzzles = fal
       ) : (
         <>
           {!showBoard ? (
-            <button
-              className="daily-puzzle-solve-btn"
-              onClick={() => {
-                if (linkToPuzzles) {
-                  navigate("/puzzles");
-                  return;
-                }
-                setShowBoard(true);
-              }}
-            >
-              <Flame size={18} />
-              {t("Solve Today's Puzzle")}</button>
+            <>
+              <button
+                className="daily-puzzle-solve-btn"
+                onClick={openDailyPuzzle}
+                disabled={openingBoard || (!linkToPuzzles && !isLoggedIn)}
+              >
+                <Flame size={18} />
+                {t("Solve Today's Puzzle")}</button>
+              {openFailed && <p role="alert">{t("Puzzle generation is unavailable")}</p>}
+            </>
           ) : (
             <div className="daily-puzzle-board-area">
               <div className="daily-puzzle-board-info">

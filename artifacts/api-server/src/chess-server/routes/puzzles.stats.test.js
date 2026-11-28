@@ -6,8 +6,8 @@ vi.mock('../db.js', () => ({
   query: vi.fn(),
 }));
 
-vi.mock('../coachAuth.js', () => ({
-  authenticatedUserId: vi.fn(),
+vi.mock('../db/query.js', () => ({
+  query: async () => ({ rows: [{ user_id: 'user_1', expires_at: '2099-01-01' }] }),
 }));
 
 // Keep the route module light: only the stats endpoints under test touch the DB.
@@ -16,7 +16,6 @@ vi.mock('../services/puzzleService.js', () => ({
 }));
 
 import { query } from '../db.js';
-import { authenticatedUserId } from '../coachAuth.js';
 
 let puzzleRoutes;
 
@@ -26,13 +25,13 @@ function buildApp() {
   return app;
 }
 
-function loopback(app, method, path, body) {
+function loopback(app, method, path, body, headers = { cookie: 'chess_session=test-session' }) {
   return new Promise((resolve, reject) => {
     const server = app.listen(0, () => {
       const { port } = server.address();
       const hasBody = body !== undefined && method !== 'GET';
       const data = hasBody ? JSON.stringify(body) : '';
-      const reqHeaders = {};
+      const reqHeaders = { ...headers };
       if (hasBody) {
         reqHeaders['content-type'] = 'application/json';
         reqHeaders['content-length'] = Buffer.byteLength(data);
@@ -63,18 +62,16 @@ beforeEach(async () => {
 
 describe('GET /api/puzzles/stats/user', () => {
   it('requires authentication', async () => {
-    authenticatedUserId.mockResolvedValue(null);
     const app = buildApp();
     app.use('/api/puzzles', puzzleRoutes);
 
-    const res = await loopback(app, 'GET', '/api/puzzles/stats/user');
+    const res = await loopback(app, 'GET', '/api/puzzles/stats/user', undefined, {});
 
     expect(res.status).toBe(401);
-    expect(res.body.success).toBe(false);
+    expect(res.body.error.message).toBe('Authentication required.');
   });
 
   it('returns empty stats for a user with no saved row', async () => {
-    authenticatedUserId.mockResolvedValue('user_1');
     query.mockResolvedValue({ rows: [] });
     const app = buildApp();
     app.use('/api/puzzles', puzzleRoutes);
@@ -94,7 +91,6 @@ describe('GET /api/puzzles/stats/user', () => {
   });
 
   it('returns the saved stats for the caller', async () => {
-    authenticatedUserId.mockResolvedValue('user_1');
     query.mockResolvedValue({
       rows: [{
         solved_count: 7, attempted_count: 10, current_streak: 3,
@@ -121,20 +117,18 @@ describe('GET /api/puzzles/stats/user', () => {
 
 describe('PUT /api/puzzles/stats/user', () => {
   it('requires authentication', async () => {
-    authenticatedUserId.mockResolvedValue(null);
     const app = buildApp();
     app.use('/api/puzzles', puzzleRoutes);
 
     const res = await loopback(app, 'PUT', '/api/puzzles/stats/user', {
       solvedCount: 1, attemptedCount: 1, currentStreak: 1, bestStreak: 1, rating: 480,
-    });
+    }, {});
 
     expect(res.status).toBe(401);
     expect(query).not.toHaveBeenCalled();
   });
 
   it('rejects non-numeric fields', async () => {
-    authenticatedUserId.mockResolvedValue('user_1');
     const app = buildApp();
     app.use('/api/puzzles', puzzleRoutes);
 
@@ -148,7 +142,6 @@ describe('PUT /api/puzzles/stats/user', () => {
   });
 
   it('upserts the stats and returns the saved row', async () => {
-    authenticatedUserId.mockResolvedValue('user_1');
     query.mockResolvedValue({
       rows: [{
         solved_count: 1, attempted_count: 1, current_streak: 1,
@@ -173,7 +166,6 @@ describe('PUT /api/puzzles/stats/user', () => {
   });
 
   it('clamps out-of-range values before writing', async () => {
-    authenticatedUserId.mockResolvedValue('user_1');
     query.mockResolvedValue({
       rows: [{
         solved_count: 0, attempted_count: 0, current_streak: 0,
